@@ -54,6 +54,8 @@ def RegisterView(page: ft.Page):
         options=[ft.dropdown.Option(estado) for estado in ESTADOS_VE],
         bgcolor=colors.INPUT_BG,
         color=colors.TEXT_DARK,
+        text_size=14,
+        content_padding=10,
     )
     
     address_input = ft.TextField(
