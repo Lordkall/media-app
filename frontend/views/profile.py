@@ -139,19 +139,15 @@ class ProfileView(ft.Container):
         import os
         import shutil
         
-        def on_file_picked(e):
-            pass # No longer used directly as on_result
-
-        async def on_pick_file_click(e):
-            files = await self.file_picker.pick_files(allow_multiple=False)
-            if files and len(files) > 0:
-                file_path = files[0].path
+        def on_file_picked(e: ft.FilePickerResultEvent):
+            if e.files and len(e.files) > 0:
+                file_path = e.files[0].path
                 if not file_path:
                     snack = ft.SnackBar(ft.Text("La carga de archivos no está soportada en modo web de prueba."), bgcolor="red")
-                    if hasattr(self, 'page') and self.page:
-                        self.page.overlay.append(snack)
+                    if hasattr(self, 'ft_page') and self.ft_page:
+                        self.ft_page.overlay.append(snack)
                         snack.open = True
-                        self.page.update()
+                        self.ft_page.update()
                     return
                 filename = os.path.basename(file_path)
                 dest_dir = os.path.join(os.path.dirname(__file__), "..", "assets", "avatars")
@@ -160,8 +156,12 @@ class ProfileView(ft.Container):
                 shutil.copy(file_path, dest_path)
                 self.avatar_src = f"frontend/assets/avatars/{self.user.id}_{filename}"
                 self.update_avatar_preview(self.avatar_src)
+
+        async def on_pick_file_click(e):
+            self.file_picker.pick_files(allow_multiple=False)
                 
-        self.file_picker = ft.FilePicker()
+        self.file_picker = ft.FilePicker(on_result=on_file_picked)
+        self.ft_page.overlay.append(self.file_picker)
 
         role_str = self.user.role.value if hasattr(self.user.role, 'value') else str(self.user.role) if self.user and hasattr(self.user, 'role') else "patient"
         role_name = "Doctor" if role_str == "doctor" else ("Administrador" if role_str == "admin" else ("Asistente" if role_str == "assistant" or role_str == "ASSISTANT" else "Paciente"))

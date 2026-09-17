@@ -237,6 +237,14 @@ def HomeView(page: ft.Page, user):
                 )
             ], width=35, height=35)
             
+        import time
+        def handle_click(e):
+            now = time.time()
+            if now - getattr(page, "_last_click_time", 0) < 1.0:
+                return
+            page._last_click_time = now
+            if on_click: on_click(e)
+            
         return ft.Container(
             content=ft.Row(
                 [
@@ -264,7 +272,7 @@ def HomeView(page: ft.Page, user):
             border_radius=14,
             padding=14,
             border=ft.border.Border.all(1, colors.INPUT_BORDER),
-            on_click=on_click,
+            on_click=handle_click,
             shadow=ft.BoxShadow(
                 spread_radius=0,
                 blur_radius=6,
