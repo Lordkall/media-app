@@ -1,0 +1,9 @@
+flet
+requests
+SQLAlchemy
+pg8000
+APScheduler
+beautifulsoup4
+tenacity
+python-jose
+urllib3
