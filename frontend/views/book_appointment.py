@@ -3,7 +3,7 @@ Vista para Agendar Cita Médica.
 Permite seleccionar especialidad, médico, motivo de consulta y fecha (por turnos).
 """
 import flet as ft
-from frontend.core import colors
+from core import colors
 from datetime import datetime, date
 import calendar
 import sys
@@ -51,7 +51,7 @@ class BookAppointmentView(ft.Container):
     def get_sync_session(self):
         from sqlalchemy import create_engine
         from sqlalchemy.orm import sessionmaker
-        from frontend.core.config import SYNC_DB_URL
+        from core.config import SYNC_DB_URL
         sync_engine = create_engine(SYNC_DB_URL)
         return sessionmaker(bind=sync_engine)()
 

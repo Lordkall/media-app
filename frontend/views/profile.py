@@ -3,7 +3,7 @@ Vista de Perfil de Usuario (Doctores y Pacientes).
 Permite visualizar y editar la información personal, datos profesionales/médicos y foto de perfil.
 """
 import flet as ft
-from frontend.core import colors
+from core import colors
 
 PRIMARY_COLOR = colors.PRIMARY
 BG_COLOR = colors.BACKGROUND
@@ -29,7 +29,7 @@ class ProfileView(ft.Container):
         self.build_ui()
 
     def open_assistant_manager(self, e):
-        from frontend.views.assistant_manager import AssistantManagerView
+        from views.assistant_manager import AssistantManagerView
         self.ft_page.views.append(ft.View(
             route="/assistant-manager",
             controls=[AssistantManagerView(self.ft_page, user=self.user, on_navigate=lambda: self.ft_page.views.pop() or self.ft_page.update())],
@@ -87,7 +87,7 @@ class ProfileView(ft.Container):
             new_pwd = new_pwd_input.value or ""
             
             try:
-                from frontend.core.api_client import client
+                from core.api_client import client
                 client.put("/users/me/password", json={
                     "current_password": curr_pwd,
                     "new_password": new_pwd
@@ -198,7 +198,7 @@ class ProfileView(ft.Container):
             doc_bio = "Especialista dedicado al cuidado integral del paciente."
             doc_fee = "50"
             try:
-                from frontend.core.api_client import client
+                from core.api_client import client
                 doc_data = client.get("/doctors/me")
                 if doc_data:
                     doc_bio = doc_data.get("bio", doc_bio)
@@ -296,7 +296,7 @@ class ProfileView(ft.Container):
                 self.user.address = self.address_input.value.strip()
             
             try:
-                from frontend.core.api_client import client
+                from core.api_client import client
                 
                 user_payload = {
                     "first_name": self.user.first_name,

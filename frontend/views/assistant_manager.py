@@ -1,5 +1,5 @@
 import flet as ft
-from frontend.core import colors
+from core import colors
 import sys, os
 
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -10,7 +10,7 @@ from sqlalchemy.orm import sessionmaker
 from app.models.users import User, RoleEnum
 from app.models.doctors import Doctor
 
-from frontend.core.config import SYNC_DB_URL
+from core.config import SYNC_DB_URL
 
 def get_engine():
     return create_engine(SYNC_DB_URL)

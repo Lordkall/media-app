@@ -1,5 +1,5 @@
 import flet as ft
-from frontend.core import colors
+from core import colors
 import sys
 import os
 
@@ -9,8 +9,8 @@ sys.path.append(os.path.join(base_path, 'backend'))
 from app.core.database import async_session_maker
 from app.models.users import User
 from sqlalchemy import select
-from frontend.views.register import RegisterView
-from frontend.views.password_recovery import PasswordRecoveryView
+from views.register import RegisterView
+from views.password_recovery import PasswordRecoveryView
 
 def LoginView(page: ft.Page):
     
@@ -45,7 +45,7 @@ def LoginView(page: ft.Page):
             return
 
         try:
-            from frontend.core.api_client import client
+            from core.api_client import client
             
             # 1. Login to get token
             auth_data = client.login(email, password)
@@ -90,7 +90,7 @@ def LoginView(page: ft.Page):
             user.avatar_url = me_data.get("avatar_url")
 
             # Exito: Navegar al Home
-            from frontend.views.home import HomeView
+            from views.home import HomeView
             home_view = HomeView(page, user)
             page.views.clear()
             page.views.append(home_view)

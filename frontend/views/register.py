@@ -1,5 +1,5 @@
 import flet as ft
-from frontend.core import colors
+from core import colors
 import sys
 import os
 import re
@@ -393,7 +393,7 @@ def RegisterView(page: ft.Page):
             cleaned_phone = re.sub(r"[\s\-\(\)]+", "", phone)
             
             try:
-                from frontend.core.api_client import client
+                from core.api_client import client
                 payload = {
                     "email": email,
                     "first_name": first_name,

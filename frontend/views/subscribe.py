@@ -4,7 +4,7 @@ Muestra el estado actual de la suscripción, los planes disponibles (Patrocinado
 y permite seleccionar un plan para suscribirse o renovar con pasarela de pago simulada.
 """
 import flet as ft
-from frontend.core import colors
+from core import colors
 
 PRIMARY_COLOR = colors.PRIMARY
 BG_COLOR = colors.BACKGROUND
@@ -53,7 +53,7 @@ class SubscribeView(ft.Container):
                 self.on_navigate("login")
             else:
                 self.ft_page.views.clear()
-                from frontend.views.login import LoginView
+                from views.login import LoginView
                 self.ft_page.views.append(LoginView(self.ft_page))
             self.ft_page.update()
 
@@ -150,7 +150,7 @@ class SubscribeView(ft.Container):
             from app.models.subscriptions import Subscription, SubscriptionStatus
             from app.models.doctors import Doctor
             
-            from frontend.core.config import SYNC_DB_URL
+            from core.config import SYNC_DB_URL
             sync_engine = create_engine(SYNC_DB_URL)
             Session = sessionmaker(bind=sync_engine)
 
@@ -198,7 +198,7 @@ class SubscribeView(ft.Container):
                 self.on_navigate("login")
             else:
                 self.ft_page.views.clear()
-                from frontend.views.login import LoginView
+                from views.login import LoginView
                 self.ft_page.views.append(LoginView(self.ft_page))
             self.ft_page.update()
 
@@ -375,7 +375,7 @@ class SubscribeView(ft.Container):
         import decimal
         
         # Leer tasa BCV de la BD
-        from frontend.core.config import SYNC_DB_URL
+        from core.config import SYNC_DB_URL
         sync_engine = create_engine(SYNC_DB_URL)
         Session = sessionmaker(bind=sync_engine)
         
@@ -438,7 +438,7 @@ class SubscribeView(ft.Container):
 
                 ref_number = reference_input.value.strip()
 
-                from frontend.core.config import SYNC_DB_URL
+                from core.config import SYNC_DB_URL
                 sync_engine = create_engine(SYNC_DB_URL)
                 Session = sessionmaker(bind=sync_engine)
 

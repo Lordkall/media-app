@@ -1,5 +1,5 @@
 import flet as ft
-from frontend.core import colors
+from core import colors
 
 def HomeView(page: ft.Page, user):
     """Vista principal después del login. Muestra contenido según el rol."""
@@ -18,7 +18,7 @@ def HomeView(page: ft.Page, user):
         from sqlalchemy import create_engine, select
         from sqlalchemy.orm import sessionmaker
         from app.models.subscriptions import Subscription, SubscriptionStatus, SubscriptionPlan
-        from frontend.core.config import SYNC_DB_URL
+        from core.config import SYNC_DB_URL
         engine = create_engine(SYNC_DB_URL)
         Session = sessionmaker(bind=engine)
         
@@ -41,7 +41,7 @@ def HomeView(page: ft.Page, user):
             def force_logout(e):
                 page.session.clear()
                 page.views.clear()
-                from frontend.views.welcome import WelcomeView
+                from views.welcome import WelcomeView
                 page.views.append(WelcomeView(page))
                 page.update()
                 
@@ -70,7 +70,7 @@ def HomeView(page: ft.Page, user):
         
         has_active_sub = False
         try:
-            from frontend.core.config import SYNC_DB_URL
+            from core.config import SYNC_DB_URL
             engine = create_engine(SYNC_DB_URL)
             Session = sessionmaker(bind=engine)
             with Session() as session:
@@ -88,7 +88,7 @@ def HomeView(page: ft.Page, user):
             print("Error checking subscription:", e)
             
         if not has_active_sub:
-            from frontend.views.subscribe import SubscribeView
+            from views.subscribe import SubscribeView
             return ft.View(route="/home", controls=[SubscribeView(page, user=user, is_root=True)], bgcolor=colors.BACKGROUND)
 
     def handle_logout(e=None, forced=False):
@@ -111,7 +111,7 @@ def HomeView(page: ft.Page, user):
             
             # Volver al login
             page.views.clear()
-            from frontend.views.login import LoginView
+            from views.login import LoginView
             page.views.append(LoginView(page))
             
             if forced:
@@ -164,17 +164,17 @@ def HomeView(page: ft.Page, user):
 
 
     def go_to_browse_doctors(e):
-        from frontend.views.browse_doctors import BrowseDoctorsView
+        from views.browse_doctors import BrowseDoctorsView
         page.views.append(BrowseDoctorsView(page, user))
         page.update()
 
     def go_to_subscribe(e):
-        from frontend.views.subscribe import SubscribeView
+        from views.subscribe import SubscribeView
         page.views.append(ft.View(route="/subscribe", controls=[SubscribeView(page, user=user)], bgcolor=colors.BACKGROUND))
         page.update()
 
     def go_to_notifications(e):
-        from frontend.views.notifications_view import NotificationsView
+        from views.notifications_view import NotificationsView
         page.views.append(ft.View(route="/notifications", controls=[NotificationsView(page, user=user)], bgcolor=colors.BACKGROUND))
         page.update()
 
@@ -189,7 +189,7 @@ def HomeView(page: ft.Page, user):
         if base_path not in sys.path: sys.path.append(base_path)
         from app.models.notifications import Notification
         from app.models.support import SupportTicket, TicketMessage
-        from frontend.core.config import SYNC_DB_URL
+        from core.config import SYNC_DB_URL
         sync_engine = create_engine(SYNC_DB_URL)
         Session = sessionmaker(bind=sync_engine)
         with Session() as session:
@@ -290,7 +290,7 @@ def HomeView(page: ft.Page, user):
         from app.models.patients import Patient
         from app.models.doctors import Doctor
         
-        from frontend.core.config import SYNC_DB_URL
+        from core.config import SYNC_DB_URL
         sync_engine = create_engine(SYNC_DB_URL)
         Session = sessionmaker(bind=sync_engine)
         
@@ -496,7 +496,7 @@ def HomeView(page: ft.Page, user):
         page.update()
 
     def go_to_book_appointment(e):
-        from frontend.views.book_appointment import BookAppointmentView
+        from views.book_appointment import BookAppointmentView
         page.views.append(ft.View(
             route="/book-appointment",
             controls=[BookAppointmentView(page, user=user)],
@@ -536,7 +536,7 @@ def HomeView(page: ft.Page, user):
         )
         
         def go_to_support_user(e):
-            from frontend.views.support import SupportUserView
+            from views.support import SupportUserView
             page.views.append(ft.View(route="/support-user", controls=[SupportUserView(page, user=user, on_navigate=lambda: page.views.pop() or page.update())], bgcolor=colors.BACKGROUND))
             page.update()
 
@@ -569,12 +569,12 @@ def HomeView(page: ft.Page, user):
             page.update()
 
         def go_to_availability(e):
-            from frontend.views.doctor_availability import DoctorAvailabilityView
+            from views.doctor_availability import DoctorAvailabilityView
             page.views.append(DoctorAvailabilityView(page, user))
             page.update()
 
         def go_to_doctor_appointments(e):
-            from frontend.views.doctor_appointments import show_doctor_appointments
+            from views.doctor_appointments import show_doctor_appointments
             show_doctor_appointments(page, user)
 
         menu_items.append(
@@ -606,7 +606,7 @@ def HomeView(page: ft.Page, user):
         )
         
         def go_to_support_user_doc(e):
-            from frontend.views.support import SupportUserView
+            from views.support import SupportUserView
             page.views.append(ft.View(route="/support-user", controls=[SupportUserView(page, user=user, on_navigate=lambda: page.views.pop() or page.update())], bgcolor=colors.BACKGROUND))
             page.update()
 
@@ -633,12 +633,12 @@ def HomeView(page: ft.Page, user):
         )
     elif role_val == "admin":
         def go_to_admin_subscriptions(e):
-            from frontend.views.admin_subscriptions import AdminSubscriptionsView
+            from views.admin_subscriptions import AdminSubscriptionsView
             page.views.append(ft.View(route="/admin-subscriptions", controls=[AdminSubscriptionsView(page, user=user)], bgcolor=colors.BACKGROUND))
             page.update()
 
         def go_to_statistics(e):
-            from frontend.views.statistics import StatisticsView
+            from views.statistics import StatisticsView
             page.views.append(ft.View(route="/statistics", controls=[StatisticsView(page, user=user)], bgcolor=colors.BACKGROUND))
             page.update()
 
@@ -671,7 +671,7 @@ def HomeView(page: ft.Page, user):
         )
         
         def go_to_support_admin(e):
-            from frontend.views.support import SupportAdminView
+            from views.support import SupportAdminView
             page.views.append(ft.View(route="/support-admin", controls=[SupportAdminView(page, user=user, on_navigate=lambda: page.views.pop() or page.update())], bgcolor=colors.BACKGROUND))
             page.update()
 
@@ -698,12 +698,12 @@ def HomeView(page: ft.Page, user):
         )
     elif role_val == "assistant":
         def go_to_availability(e):
-            from frontend.views.doctor_availability import DoctorAvailabilityView
+            from views.doctor_availability import DoctorAvailabilityView
             page.views.append(DoctorAvailabilityView(page, user))
             page.update()
 
         def go_to_doctor_appointments(e):
-            from frontend.views.doctor_appointments import show_doctor_appointments
+            from views.doctor_appointments import show_doctor_appointments
             show_doctor_appointments(page, user)
             
         menu_items.append(
@@ -727,7 +727,7 @@ def HomeView(page: ft.Page, user):
 
     def go_to_profile(e):
         try:
-            from frontend.views.profile import ProfileView
+            from views.profile import ProfileView
             page.views.append(ft.View(
                 route="/profile",
                 controls=[ProfileView(page, user=user, on_navigate=lambda route: page.views.pop() if page.views else None)],
@@ -842,7 +842,7 @@ def HomeView(page: ft.Page, user):
                 from sqlalchemy import create_engine
                 from sqlalchemy.orm import sessionmaker
                 from app.models.support import SupportTicket, TicketMessage
-                from frontend.core.config import SYNC_DB_URL
+                from core.config import SYNC_DB_URL
                 engine = create_engine(SYNC_DB_URL)
                 Session = sessionmaker(bind=engine)
                 with Session() as session:

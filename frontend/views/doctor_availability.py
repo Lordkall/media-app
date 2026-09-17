@@ -1,7 +1,7 @@
 import flet as ft
 import sys
 import os
-from frontend.core import colors
+from core import colors
 
 def DoctorAvailabilityView(page: ft.Page, user, on_navigate=None):
     def handle_back(e):
@@ -18,7 +18,7 @@ def DoctorAvailabilityView(page: ft.Page, user, on_navigate=None):
     from app.models.users import User
     from app.models.doctors import Doctor, Availability
 
-    from frontend.core.config import SYNC_DB_URL
+    from core.config import SYNC_DB_URL
     sync_engine = create_engine(SYNC_DB_URL)
     Session = sessionmaker(bind=sync_engine)
 

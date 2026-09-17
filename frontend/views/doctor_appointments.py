@@ -1,7 +1,7 @@
 import flet as ft
 import sys
 import os
-from frontend.core import colors
+from core import colors
 
 def show_doctor_appointments(page: ft.Page, user):
     base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -15,7 +15,7 @@ def show_doctor_appointments(page: ft.Page, user):
     from app.models.users import User
     from app.models.patients import Patient
 
-    from frontend.core.config import SYNC_DB_URL
+    from core.config import SYNC_DB_URL
     sync_engine = create_engine(SYNC_DB_URL)
     Session = sessionmaker(bind=sync_engine)
 

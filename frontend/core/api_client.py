@@ -1,6 +1,6 @@
 import requests
 from requests.exceptions import RequestException
-from frontend.core.config import API_BASE_URL as BASE_URL
+from core.config import API_BASE_URL as BASE_URL
 
 class APIClient:
     def __init__(self):

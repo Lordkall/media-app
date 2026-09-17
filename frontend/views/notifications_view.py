@@ -3,7 +3,7 @@ Vista del Centro de Notificaciones.
 Muestra alertas en tiempo real sobre suscripciones, renovaciones, avisos administrativos y citas.
 """
 import flet as ft
-from frontend.core import colors
+from core import colors
 
 PRIMARY_COLOR = colors.PRIMARY
 BG_COLOR = colors.BACKGROUND
@@ -70,7 +70,7 @@ class NotificationsView(ft.Container):
             from sqlalchemy.orm import sessionmaker
             from app.models.notifications import Notification
 
-            from frontend.core.config import SYNC_DB_URL
+            from core.config import SYNC_DB_URL
             sync_engine = create_engine(SYNC_DB_URL)
             Session = sessionmaker(bind=sync_engine)
 
@@ -118,7 +118,7 @@ class NotificationsView(ft.Container):
             from app.models.doctors import Doctor
             from app.models.notifications import Notification, NotificationType
 
-            from frontend.core.config import SYNC_DB_URL
+            from core.config import SYNC_DB_URL
             sync_engine = create_engine(SYNC_DB_URL)
             Session = sessionmaker(bind=sync_engine)
 
@@ -157,7 +157,7 @@ class NotificationsView(ft.Container):
         from app.models.notifications import Notification, NotificationType
 
         try:
-            from frontend.core.config import SYNC_DB_URL
+            from core.config import SYNC_DB_URL
             engine = create_engine(SYNC_DB_URL)
             Session = sessionmaker(bind=engine)
             with Session() as session:
@@ -300,7 +300,7 @@ class NotificationsView(ft.Container):
         from app.models.notifications import Notification
 
         try:
-            from frontend.core.config import SYNC_DB_URL
+            from core.config import SYNC_DB_URL
             sync_engine = create_engine(SYNC_DB_URL)
             Session = sessionmaker(bind=sync_engine)
             with Session() as session:

@@ -1,5 +1,5 @@
 import flet as ft
-from frontend.core import colors
+from core import colors
 from sqlalchemy import create_engine, select, func
 from sqlalchemy.orm import sessionmaker
 from app.models.users import User, RoleEnum
@@ -16,7 +16,7 @@ def StatisticsView(page: ft.Page, user):
     stats_content = ft.Column(scroll=ft.ScrollMode.AUTO, expand=True, spacing=20)
 
     try:
-        from frontend.core.config import SYNC_DB_URL
+        from core.config import SYNC_DB_URL
         engine = create_engine(SYNC_DB_URL)
         Session = sessionmaker(bind=engine)
         

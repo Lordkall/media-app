@@ -1,15 +1,15 @@
 import flet as ft
-from frontend.core import colors
+from core import colors
 
 def WelcomeView(page: ft.Page):
     
     def go_to_login(e):
-        from frontend.views.login import LoginView
+        from views.login import LoginView
         page.views.append(LoginView(page))
         page.update()
 
     def go_to_register(e):
-        from frontend.views.register import RegisterView
+        from views.register import RegisterView
         page.views.append(RegisterView(page))
         page.update()
 

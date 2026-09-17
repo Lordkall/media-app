@@ -1,5 +1,5 @@
 import flet as ft
-from frontend.core import colors
+from core import colors
 import requests
 
 def PasswordRecoveryView(page: ft.Page):
@@ -24,7 +24,7 @@ def PasswordRecoveryView(page: ft.Page):
             return
             
         try:
-            from frontend.core.api_client import client
+            from core.api_client import client
             client.post("/password-reset/request", json={"email": email})
             success_text.value = "Enlace enviado. Revisa tu correo (o la consola)."
             email_input.value = ""
@@ -63,7 +63,7 @@ def PasswordRecoveryView(page: ft.Page):
             return
             
         try:
-            from frontend.core.api_client import client
+            from core.api_client import client
             client.post("/password-reset/confirm", json={"token": token, "new_password": new_pwd})
             success_text.value = "Contraseña actualizada exitosamente. Puedes volver a iniciar sesión."
             token_field.value = ""

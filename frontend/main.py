@@ -2,7 +2,7 @@ import flet as ft
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from frontend.views.login import LoginView
+from views.login import LoginView
 
 async def main(page: ft.Page):
     page.title = "Salud Now"
@@ -48,13 +48,13 @@ async def main(page: ft.Page):
         from sqlalchemy.orm import sessionmaker
         
         try:
-            from frontend.core.config import SYNC_DB_URL
+            from core.config import SYNC_DB_URL
             sync_engine = create_engine(SYNC_DB_URL, pool_pre_ping=True)
             SyncSession = sessionmaker(bind=sync_engine)
             with SyncSession() as session:
                 user = session.execute(select(User).where(User.id == user_id)).scalars().first()
                 if user and user.session_token == session_token:
-                    from frontend.views.home import HomeView
+                    from views.home import HomeView
                     page.views.clear()
                     page.views.append(HomeView(page, user))
                     page.update()

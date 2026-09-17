@@ -1,5 +1,5 @@
 import flet as ft
-from frontend.core import colors
+from core import colors
 import sys
 import os
 
@@ -40,7 +40,7 @@ def _doctor_card(doctor: Doctor, page: ft.Page = None) -> ft.Container:
         if not page:
             return
             
-        from frontend.views.doctor_profile import DoctorProfileView
+        from views.doctor_profile import DoctorProfileView
         page.views.append(DoctorProfileView(page, doctor=doctor))
         page.update()
 
@@ -123,7 +123,7 @@ def BrowseDoctorsView(page: ft.Page, current_user):
             from sqlalchemy import create_engine, select
             from sqlalchemy.orm import sessionmaker, joinedload
             
-            from frontend.core.config import SYNC_DB_URL
+            from core.config import SYNC_DB_URL
             sync_engine = create_engine(SYNC_DB_URL)
             SyncSession = sessionmaker(bind=sync_engine)
             

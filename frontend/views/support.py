@@ -1,11 +1,11 @@
 import flet as ft
-from frontend.core import colors
+from core import colors
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker, joinedload
 from app.models.support import SupportTicket, TicketMessage
 from datetime import datetime
 
-from frontend.core.config import SYNC_DB_URL
+from core.config import SYNC_DB_URL
 
 def get_session():
     engine = create_engine(SYNC_DB_URL)

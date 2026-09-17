@@ -6,7 +6,7 @@ Permite al Administrador:
 3. Revocar o remover el rango VIP / Destacado inmediatamente.
 """
 import flet as ft
-from frontend.core import colors
+from core import colors
 
 PRIMARY_COLOR = colors.PRIMARY
 BG_COLOR = colors.BACKGROUND
@@ -70,7 +70,7 @@ class AdminSubscriptionsView(ft.Container):
             from app.models.doctors import Doctor
             from app.models.subscriptions import Subscription, SubscriptionStatus, SubscriptionPlan
             
-            from frontend.core.config import SYNC_DB_URL
+            from core.config import SYNC_DB_URL
             sync_engine = create_engine(SYNC_DB_URL)
             SyncSession = sessionmaker(bind=sync_engine)
 
@@ -191,7 +191,7 @@ class AdminSubscriptionsView(ft.Container):
             from app.models.subscriptions import Subscription, SubscriptionStatus, SubscriptionPlan
             from datetime import datetime, timedelta, timezone
 
-            from frontend.core.config import SYNC_DB_URL
+            from core.config import SYNC_DB_URL
             sync_engine = create_engine(SYNC_DB_URL)
             SyncSession = sessionmaker(bind=sync_engine)
 
@@ -264,7 +264,7 @@ class AdminSubscriptionsView(ft.Container):
             from app.models.subscriptions import Subscription, SubscriptionStatus
             from app.models.doctors import Doctor
 
-            from frontend.core.config import SYNC_DB_URL
+            from core.config import SYNC_DB_URL
             sync_engine = create_engine(SYNC_DB_URL)
             SyncSession = sessionmaker(bind=sync_engine)
 
