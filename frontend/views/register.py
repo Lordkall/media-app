@@ -7,7 +7,6 @@ import re
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 sys.path.append(base_path)
 sys.path.append(os.path.join(base_path, 'backend'))
-from app.core.database import async_session_maker
 from app.models.users import User, RoleEnum
 from sqlalchemy.exc import IntegrityError
 

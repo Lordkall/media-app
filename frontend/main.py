@@ -69,23 +69,5 @@ async def main(page: ft.Page):
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-from apscheduler.schedulers.background import BackgroundScheduler
-
-def start_scheduler():
-    from app.tasks.bcv_scraper import update_db_with_rate
-    from app.tasks.reminders import send_appointment_reminders
-    import asyncio
-    
-    # Since update_db_with_rate is an async function, we need a wrapper to run it in BackgroundScheduler
-    def sync_wrapper():
-        asyncio.run(update_db_with_rate())
-
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(sync_wrapper, 'cron', hour='6,14', minute=0)
-    scheduler.add_job(send_appointment_reminders, 'cron', minute=0) # Cada hora en punto
-    scheduler.start()
-    print("Scheduler iniciado (Tasa BCV y Recordatorios).")
-
 if __name__ == "__main__":
-    start_scheduler()
     ft.app(target=main, view=ft.AppView.WEB_BROWSER, host="0.0.0.0", port=8550, assets_dir="assets")
