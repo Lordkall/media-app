@@ -478,6 +478,7 @@ def RegisterView(page: ft.Page):
         ],
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         scroll=ft.ScrollMode.AUTO,
+        expand=True
     )
 
     return ft.View(
