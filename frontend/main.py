@@ -70,9 +70,4 @@ import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 if __name__ == "__main__":
-    try:
-        ft.app(target=main, view=ft.AppView.WEB_BROWSER, host="0.0.0.0", port=8550, assets_dir="assets")
-    except AttributeError:
-        # En Android/iOS via serious_python a veces 'flet' no exporta 'app'
-        # El contenedor nativo ya invoca 'main' automáticamente.
-        pass
+    ft.app(main)
