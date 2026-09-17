@@ -2,7 +2,7 @@ import asyncio
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from app.models.base import Base
 from app.models.users import User, RoleEnum
-from app.models.doctors import Doctor, SpecialtyEnum
+from app.models.doctors import Doctor
 import os
 
 # Usamos la base por defecto de postgres para facilitar la prueba
@@ -75,7 +75,7 @@ async def init_db():
             # 🟡 PATROCINADOS (aparecen primero)
             Doctor(is_approved=True, 
                 user_id=doc_users[0].id,
-                specialty=SpecialtyEnum.CARDIOLOGY,
+                specialties=["Cardiología"],
                 bio="Cardiólogo con 15 años de experiencia en el Hospital Central de Caracas. Especialista en ecocardiografía y cateterismo cardíaco.",
                 clinic_info="Centro Médico Caracas, Piso 3, Consultorio 301",
                 is_sponsored=True, sponsored_priority=1,
@@ -84,7 +84,7 @@ async def init_db():
             ),
             Doctor(is_approved=True, 
                 user_id=doc_users[1].id,
-                specialty=SpecialtyEnum.DERMATOLOGY,
+                specialties=["Dermatología"],
                 bio="Dermatóloga certificada. Experta en dermatología estética, acné y tratamientos láser.",
                 clinic_info="Clínica Bella Piel, Altamira",
                 is_sponsored=True, sponsored_priority=2,
@@ -95,7 +95,7 @@ async def init_db():
             # 🟢 DESTACADOS (aparecen después de patrocinados)
             Doctor(is_approved=True, 
                 user_id=doc_users[2].id,
-                specialty=SpecialtyEnum.PEDIATRICS,
+                specialties=["Pediatría"],
                 bio="Pediatra neonatólogo con atención integral para niños desde recién nacidos hasta 14 años. Control de crecimiento y vacunación.",
                 clinic_info="Hospital de Niños J.M. de los Ríos",
                 is_sponsored=False, sponsored_priority=99,
@@ -104,7 +104,7 @@ async def init_db():
             ),
             Doctor(is_approved=True, 
                 user_id=doc_users[3].id,
-                specialty=SpecialtyEnum.GYNECOLOGY,
+                specialties=["Ginecología y Obstetricia"],
                 bio="Ginecóloga obstetra. Control prenatal, planificación familiar y cirugía ginecológica mínimamente invasiva.",
                 clinic_info="Centro Clínico La Trinidad, Torre C",
                 is_sponsored=False, sponsored_priority=99,
@@ -115,7 +115,7 @@ async def init_db():
             # 🔵 DOCTORES REGULARES
             Doctor(is_approved=True, 
                 user_id=doc_users[4].id,
-                specialty=SpecialtyEnum.NEUROLOGY,
+                specialties=["Neurología"],
                 bio="Neurólogo clínico. Diagnóstico y tratamiento de migrañas, epilepsia y trastornos del sueño.",
                 clinic_info="Policlínica Metropolitana, Consultorio 510",
                 is_sponsored=False, sponsored_priority=99,
@@ -124,7 +124,7 @@ async def init_db():
             ),
             Doctor(is_approved=True, 
                 user_id=doc_users[5].id,
-                specialty=SpecialtyEnum.NUTRITION,
+                specialties=["Nutrición"],
                 bio="Nutricionista clínica y deportiva. Planes personalizados para pérdida de peso, diabetes y alimentación saludable.",
                 clinic_info="Consultorio privado, Las Mercedes",
                 is_sponsored=False, sponsored_priority=99,
@@ -133,7 +133,7 @@ async def init_db():
             ),
             Doctor(is_approved=True, 
                 user_id=doc_users[6].id,
-                specialty=SpecialtyEnum.ORTHOPEDICS,
+                specialties=["Traumatología", "Cirugía Ortopédica"],
                 bio="Traumatólogo deportivo. Artroscopias de rodilla y hombro, fracturas y rehabilitación de lesiones deportivas.",
                 clinic_info="Centro Médico Docente La Trinidad",
                 is_sponsored=False, sponsored_priority=99,
@@ -142,7 +142,7 @@ async def init_db():
             ),
             Doctor(is_approved=True, 
                 user_id=doc_users[7].id,
-                specialty=SpecialtyEnum.OPHTHALMOLOGY,
+                specialties=["Oftalmología"],
                 bio="Oftalmóloga especializada en cirugía refractiva (LASIK), glaucoma y cataratas.",
                 clinic_info="Instituto Oftalmológico del Este",
                 is_sponsored=False, sponsored_priority=99,
@@ -151,7 +151,7 @@ async def init_db():
             ),
             Doctor(is_approved=True, 
                 user_id=doc_users[8].id,
-                specialty=SpecialtyEnum.GENERAL,
+                specialties=["Medicina Familiar y Comunitaria (o Medicina General)", "Medicina Interna"],
                 bio="Médico internista con enfoque integral. Chequeos preventivos, control de hipertensión y diabetes.",
                 clinic_info="Ambulatorio del Sur, Consultorio 2",
                 is_sponsored=False, sponsored_priority=99,
@@ -160,7 +160,7 @@ async def init_db():
             ),
             Doctor(is_approved=True, 
                 user_id=doc_users[9].id,
-                specialty=SpecialtyEnum.PSYCHIATRY,
+                specialties=["Psiquiatría"],
                 bio="Psiquiatra clínica. Tratamiento de ansiedad, depresión y trastornos del ánimo. Terapia combinada con psicofármacos.",
                 clinic_info="Clínica Santa Sofía, Torre Sur, Piso 8",
                 is_sponsored=False, sponsored_priority=99,

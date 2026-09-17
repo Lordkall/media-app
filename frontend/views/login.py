@@ -142,7 +142,8 @@ def LoginView(page: ft.Page):
                     tooltip="Ingresar con Huella Dactilar",
                     on_click=lambda e: [setattr(error_text, "value", "⚠️ Huella Dactilar: Esta función requiere integración nativa del navegador. Revisa la documentación (webauthn_auth_module.md)"), page.update()]
                 ),
-                alignment=ft.alignment.Alignment.CENTER
+                alignment=ft.alignment.Alignment.CENTER,
+                visible=False
             ),
             ft.Container(expand=True),
             # Footer con links
