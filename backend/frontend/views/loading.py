@@ -34,12 +34,9 @@ def LoadingView(page: ft.Page, user):
 
     view = ft.View(
         route="/loading",
-        controls=[
-            ft.Container(
-                content=content,
-                expand=True
-            )
-        ],
+        controls=[content],
+        vertical_alignment=ft.MainAxisAlignment.CENTER,
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         bgcolor=colors.BACKGROUND
     )
     
