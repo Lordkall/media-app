@@ -48,6 +48,7 @@ jobs:
       - name: Build APK with Flet
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SERIOUS_PYTHON_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cd frontend
           flet build apk --project SaludNow --org com.saludnow.app --yes -v
