@@ -14,10 +14,18 @@ app.add_middleware(
 
 app.include_router(api_router, prefix="/api/v1")
 
-@app.get("/")
-def read_root():
-    return {"message": "Welcome to MedIA API"}
+import flet.fastapi as flet_fastapi
+import sys
+import os
 
+# Add backend root to sys.path so frontend can import app.models
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from frontend.main import main as flet_main
+
+app.mount("/", flet_fastapi.app(
+    flet_main, 
+    assets_dir=os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "assets"))
+))
 from fastapi import Request
 from fastapi.responses import JSONResponse
 import traceback
