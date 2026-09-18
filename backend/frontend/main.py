@@ -39,10 +39,10 @@ async def main(page: ft.Page):
     session_token = None
     user_id = None
     try:
-        session_token = await page.shared_preferences.get("session_token")
-        user_id = await page.shared_preferences.get("user_id")
+        session_token = page.client_storage.get("session_token")
+        user_id = page.client_storage.get("user_id")
     except Exception as e:
-        print("Error getting shared_preferences:", e)
+        print("Error getting client_storage:", e)
     
     if session_token and user_id:
         from app.models.users import User

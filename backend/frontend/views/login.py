@@ -52,14 +52,14 @@ def LoginView(page: ft.Page):
             # 2. Guardar sesión
             try:
                 # El token viene en auth_data["access_token"]
-                await page.shared_preferences.set("session_token", auth_data["access_token"])
+                page.client_storage.set("session_token", auth_data["access_token"])
                 
                 import jwt
                 decoded = jwt.decode(auth_data["access_token"], options={"verify_signature": False})
                 user_id = decoded.get("id")
-                await page.shared_preferences.set("user_id", str(user_id))
+                page.client_storage.set("user_id", str(user_id))
             except Exception as e:
-                print("Error setting shared_preferences:", e)
+                print("Error setting client_storage:", e)
                 
             # Desconectar handlers obsoletos de esta pagina
             if hasattr(page, "my_pubsub_topic") and hasattr(page, "my_pubsub_handler"):
