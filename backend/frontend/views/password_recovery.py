@@ -9,8 +9,25 @@ def PasswordRecoveryView(page: ft.Page):
         color=colors.TEXT_DARK
     )
     
+    token_input = ft.TextField(
+        label="Token (Cópialo de tu correo/consola)",
+        bgcolor=colors.INPUT_BG,
+        color=colors.TEXT_DARK
+    )
+    
+    new_password_input = ft.TextField(
+        label="Nueva Contraseña",
+        password=True,
+        can_reveal_password=True,
+        bgcolor=colors.INPUT_BG,
+        color=colors.TEXT_DARK
+    )
+    
     error_text = ft.Text(value="", color="red", size=12)
     success_text = ft.Text(value="", color="green", size=12)
+    
+    confirm_error_text = ft.Text(value="", color="red", size=12)
+    confirm_success_text = ft.Text(value="", color="green", size=12)
     
     async def handle_request(e):
         error_text.value = ""
@@ -42,24 +59,15 @@ def PasswordRecoveryView(page: ft.Page):
         page.update()
         
     async def handle_confirm(e):
-        error_text.value = ""
-        success_text.value = ""
+        confirm_error_text.value = ""
+        confirm_success_text.value = ""
         page.update()
         
-        # We need to find the textfields since they were added to the view
-        token_field = None
-        new_password_field = None
-        for ctrl in page.views[-1].controls[2].controls:
-            if getattr(ctrl, "key", None) == "token_input":
-                token_field = ctrl
-            elif getattr(ctrl, "key", None) == "new_password_input":
-                new_password_field = ctrl
-                
-        token = token_field.value.strip() if token_field else ""
-        new_pwd = new_password_field.value if new_password_field else ""
+        token = token_input.value.strip() if token_input.value else ""
+        new_pwd = new_password_input.value if new_password_input.value else ""
         
         if not token or not new_pwd:
-            error_text.value = "Ingresa el token y la nueva contraseña."
+            confirm_error_text.value = "Ingresa el token y la nueva contraseña."
             page.update()
             return
             
@@ -67,18 +75,18 @@ def PasswordRecoveryView(page: ft.Page):
             from core.api_client import client
             import asyncio
             await asyncio.to_thread(client.post, "/password-reset/confirm", {"token": token, "new_password": new_pwd})
-            success_text.value = "Contraseña actualizada exitosamente. Puedes volver a iniciar sesión."
-            token_field.value = ""
-            new_password_field.value = ""
+            confirm_success_text.value = "Contraseña actualizada exitosamente. Puedes volver a iniciar sesión."
+            token_input.value = ""
+            new_password_input.value = ""
         except Exception as ex:
             if hasattr(ex, "response") and ex.response is not None:
                 try:
                     error_data = ex.response.json()
-                    error_text.value = error_data.get("detail", "Error al procesar la solicitud.")
+                    confirm_error_text.value = error_data.get("detail", "Error al procesar la solicitud.")
                 except:
-                    error_text.value = f"Error del servidor: {ex.response.status_code}"
+                    confirm_error_text.value = f"Error del servidor: {ex.response.status_code}"
             else:
-                error_text.value = f"Error: {ex}"
+                confirm_error_text.value = f"Error: {ex}"
             
         page.update()
         
@@ -113,26 +121,16 @@ def PasswordRecoveryView(page: ft.Page):
                     ),
                     ft.Divider(height=40, color=colors.TEXT_LIGHT),
                     ft.Text("¿Ya tienes tu token?", weight=ft.FontWeight.BOLD, color=colors.PRIMARY),
-                    ft.TextField(
-                        label="Token (Cópialo de tu correo/consola)",
-                        bgcolor=colors.INPUT_BG,
-                        color=colors.TEXT_DARK,
-                        key="token_input"
-                    ),
-                    ft.TextField(
-                        label="Nueva Contraseña",
-                        password=True,
-                        can_reveal_password=True,
-                        bgcolor=colors.INPUT_BG,
-                        color=colors.TEXT_DARK,
-                        key="new_password_input"
-                    ),
+                    token_input,
+                    new_password_input,
+                    confirm_error_text,
+                    confirm_success_text,
                     ft.Button(
                         "Restablecer",
                         bgcolor=colors.PRIMARY,
                         color="white",
                         width=200,
-                        on_click=lambda e: handle_confirm(e)
+                        on_click=handle_confirm
                     )
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
