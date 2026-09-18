@@ -475,7 +475,7 @@ def RegisterView(page: ft.Page):
             password_repeat_input,
             error_text,
             ft.Container(height=20),
-            ft.ElevatedButton(
+            ft.Button(
                 "Registrarse",
                 bgcolor=colors.PRIMARY,
                 color="white",

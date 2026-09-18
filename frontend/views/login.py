@@ -148,7 +148,7 @@ def LoginView(page: ft.Page):
             password_input,
             error_text,
             ft.Container(
-                content=ft.ElevatedButton(
+                content=ft.Button(
                     "Ingresar",
                     style=ft.ButtonStyle(bgcolor=colors.PRIMARY, color="white"),
                     on_click=handle_login,

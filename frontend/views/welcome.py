@@ -33,7 +33,7 @@ def WelcomeView(page: ft.Page):
             ft.Container(
                 content=ft.Column(
                     [
-                        ft.ElevatedButton(
+                        ft.Button(
                             "Crear una cuenta", 
                             bgcolor=colors.PRIMARY, 
                             color="white",

@@ -122,7 +122,7 @@ def DoctorProfileView(page: ft.Page, doctor, on_navigate=None):
         
         ft.Container(height=30),
         
-        ft.ElevatedButton(
+        ft.Button(
             "Contactar por WhatsApp",
             icon=ft.Icons.CHAT,
             url=whatsapp_url,

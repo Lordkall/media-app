@@ -120,7 +120,7 @@ class ProfileView(ft.Container):
             content=ft.Column([current_pwd_input, new_pwd_input], tight=True),
             actions=[
                 ft.TextButton("Cancelar", on_click=close_pwd_dialog),
-                ft.ElevatedButton("Guardar Contraseña", on_click=submit_pwd_change, bgcolor=PRIMARY_COLOR, color="white")
+                ft.Button("Guardar Contraseña", on_click=submit_pwd_change, style=ft.ButtonStyle(style=ft.ButtonStyle(bgcolor=PRIMARY_COLOR), color="white"))
             ]
         )
         
@@ -178,7 +178,7 @@ class ProfileView(ft.Container):
         )
 
         presets_row = ft.Row([
-            ft.ElevatedButton("Subir Foto de Perfil", icon=ft.Icons.UPLOAD_FILE, on_click=on_pick_file_click)
+            ft.Button("Subir Foto de Perfil", icon=ft.Icons.UPLOAD_FILE, on_click=on_pick_file_click)
         ], alignment=ft.MainAxisAlignment.CENTER)
 
         avatar_section = ft.Column([
@@ -235,7 +235,7 @@ class ProfileView(ft.Container):
                 extra_fields.extend([
                     ft.Divider(height=10, color=BORDER_COLOR),
                     ft.Text("Beneficios VIP", size=14, weight=ft.FontWeight.BOLD, color="#f39c12"),
-                    ft.ElevatedButton(
+                    ft.Button(
                         "Gestión de Asistente",
                         icon=ft.Icons.MANAGE_ACCOUNTS,
                         on_click=self.open_assistant_manager,
@@ -246,7 +246,7 @@ class ProfileView(ft.Container):
                     )
                 ])
 
-        save_btn = ft.ElevatedButton(
+        save_btn = ft.Button(
             "Guardar Cambios de Perfil",
             icon=ft.Icons.SAVE,
             style=ft.ButtonStyle(

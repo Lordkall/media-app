@@ -235,7 +235,7 @@ class BookAppointmentView(ft.Container):
         self.calendar_container = ft.Column(spacing=6)
         self.render_calendar()
 
-        book_btn = ft.ElevatedButton(
+        book_btn = ft.Button(
             "Confirmar Turno",
             style=ft.ButtonStyle(
                 bgcolor=PRIMARY_COLOR,

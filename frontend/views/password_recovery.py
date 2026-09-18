@@ -102,7 +102,7 @@ def PasswordRecoveryView(page: ft.Page):
                     error_text,
                     success_text,
                     ft.Container(height=10),
-                    ft.ElevatedButton(
+                    ft.Button(
                         "Enviar Enlace",
                         bgcolor=colors.PRIMARY,
                         color="white",
@@ -125,7 +125,7 @@ def PasswordRecoveryView(page: ft.Page):
                         color=colors.TEXT_DARK,
                         key="new_password_input"
                     ),
-                    ft.ElevatedButton(
+                    ft.Button(
                         "Restablecer",
                         bgcolor=colors.PRIMARY,
                         color="white",

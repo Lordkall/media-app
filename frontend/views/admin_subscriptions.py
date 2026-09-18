@@ -128,7 +128,7 @@ class AdminSubscriptionsView(ft.Container):
 
         actions = []
         if pending_sub:
-            actions.append(ft.ElevatedButton(
+            actions.append(ft.Button(
                 "Validar Pago",
                 icon=ft.Icons.DOMAIN_VERIFICATION,
                 style=ft.ButtonStyle(bgcolor=SUCCESS_COLOR, color="white"),
@@ -136,13 +136,13 @@ class AdminSubscriptionsView(ft.Container):
             ))
             
         actions.extend([
-            ft.ElevatedButton(
+            ft.Button(
                 "Asignar VIP Manual",
                 icon=ft.Icons.STAR,
                 style=ft.ButtonStyle(bgcolor=PRIMARY_COLOR, color="white"),
                 on_click=approve_vip
             ),
-            ft.ElevatedButton(
+            ft.Button(
                 "Asignar Básico Manual",
                 icon=ft.Icons.CHECK_CIRCLE,
                 style=ft.ButtonStyle(bgcolor=ACCENT_COLOR, color="white"),

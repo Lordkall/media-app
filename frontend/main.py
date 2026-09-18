@@ -70,7 +70,4 @@ import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 if __name__ == "__main__":
-    try:
-        ft.app(main)
-    except AttributeError:
-        ft.run(main)
+    ft.run(main)

@@ -53,7 +53,7 @@ def HomeView(page: ft.Page, user):
                             ft.Icon(ft.Icons.LOCK, size=60, color="red"),
                             ft.Text("Acceso Denegado", size=24, weight=ft.FontWeight.BOLD),
                             ft.Text("El doctor asociado ya no cuenta con un plan VIP activo.", text_align=ft.TextAlign.CENTER),
-                            ft.ElevatedButton("Cerrar Sesión", on_click=force_logout, bgcolor=colors.PRIMARY, color="white")
+                            ft.Button("Cerrar Sesión", on_click=force_logout, style=ft.ButtonStyle(style=ft.ButtonStyle(bgcolor=colors.PRIMARY), color="white"))
                         ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=20),
                         expand=True,
                         alignment=ft.alignment.center
@@ -350,7 +350,7 @@ def HomeView(page: ft.Page, user):
                 height=400,
             ),
             actions=[
-                ft.ElevatedButton("Cerrar", bgcolor=colors.PRIMARY, color="white", on_click=close_dlg)
+                ft.Button("Cerrar", style=ft.ButtonStyle(style=ft.ButtonStyle(bgcolor=colors.PRIMARY), color="white"), on_click=close_dlg)
             ],
             actions_alignment=ft.MainAxisAlignment.END,
         )
@@ -870,7 +870,7 @@ def HomeView(page: ft.Page, user):
             modal = ft.AlertDialog(
                 title=ft.Text("Soporte Técnico"),
                 content=ft.Column([subject_field, message_field], tight=True),
-                actions=[ft.TextButton("Cancelar", on_click=lambda ev: setattr(modal, 'open', False) or page.update()), ft.ElevatedButton("Enviar", on_click=submit_ticket)]
+                actions=[ft.TextButton("Cancelar", on_click=lambda ev: setattr(modal, 'open', False) or page.update()), ft.Button("Enviar", on_click=submit_ticket)]
             )
             page.overlay.append(modal)
             modal.open = True

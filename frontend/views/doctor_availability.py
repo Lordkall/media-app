@@ -202,7 +202,7 @@ def DoctorAvailabilityView(page: ft.Page, user, on_navigate=None):
         snack.open = True
         page.update()
 
-    save_btn = ft.ElevatedButton(
+    save_btn = ft.Button(
         "Guardar Disponibilidad",
         icon=ft.Icons.SAVE,
         style=ft.ButtonStyle(

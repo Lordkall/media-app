@@ -248,7 +248,7 @@ class NotificationsView(ft.Container):
         if n.get("action_url"):
             if n["action_url"].startswith("approve_doctor:"):
                 doc_id = int(n["action_url"].split(":")[1])
-                btn_action = ft.ElevatedButton(
+                btn_action = ft.Button(
                     "Aprobar Doctor",
                     icon=ft.Icons.CHECK_CIRCLE,
                     style=ft.ButtonStyle(bgcolor=SUCCESS_COLOR, color="white"),
@@ -256,14 +256,14 @@ class NotificationsView(ft.Container):
                 )
             elif n["action_url"].startswith("approve_subscription:"):
                 sub_id = int(n["action_url"].split(":")[1])
-                btn_action = ft.ElevatedButton(
+                btn_action = ft.Button(
                     "Validar Pago",
                     icon=ft.Icons.CHECK_CIRCLE,
                     style=ft.ButtonStyle(bgcolor=SUCCESS_COLOR, color="white"),
                     on_click=lambda e, s=sub_id, nid=n["id"]: self.handle_approve_subscription(s, nid)
                 )
             else:
-                btn_action = ft.ElevatedButton(
+                btn_action = ft.Button(
                     "Ir a Renovar / Ver",
                     icon=ft.Icons.OPEN_IN_NEW,
                     style=ft.ButtonStyle(bgcolor=PRIMARY_COLOR, color="white"),
