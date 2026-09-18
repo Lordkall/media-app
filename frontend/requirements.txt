@@ -4,4 +4,3 @@ pg8000
 python-jose
 urllib3
 flet>=1.0.0
-flet-local-auth>=1.0.0
