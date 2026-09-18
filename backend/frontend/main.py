@@ -4,6 +4,15 @@ import os
 frontend_dir = os.path.dirname(__file__)
 sys.path.append(os.path.abspath(os.path.join(frontend_dir, '..')))
 sys.path.append(os.path.abspath(frontend_dir))
+
+# MONKEY PATCH PARA EVITAR FUGAS DE CONEXIONES EN TODAS LAS VISTAS
+import sqlalchemy
+from core.config import global_sync_engine
+
+def fake_create_engine(*args, **kwargs):
+    return global_sync_engine
+
+sqlalchemy.create_engine = fake_create_engine
 from views.login import LoginView
 
 async def main(page: ft.Page):
