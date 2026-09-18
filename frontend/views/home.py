@@ -749,6 +749,11 @@ def HomeView(page: ft.Page, user):
             page.update()
 
     avatar_url = getattr(user, 'avatar_url', None)
+    if avatar_url and not str(avatar_url).strip():
+        avatar_url = None
+    elif avatar_url:
+        avatar_url = str(avatar_url).strip()
+        
     initials = (user.first_name[0] + user.last_name[0]).upper() if user and user.first_name else "U"
 
     user_avatar = ft.Container(
