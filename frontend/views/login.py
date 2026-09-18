@@ -43,6 +43,31 @@ def LoginView(page: ft.Page):
                 if token:
                     error_text.value = "Huella aceptada. Ingresando..."
                     error_text.color = "green"
+                    page.update()
+                    try:
+                        from core.api_client import client
+                        client.set_token(token)
+                        me_data = client.get("/users/me")
+                        class UserMock:
+                            pass
+                        user = UserMock()
+                        user.id = me_data.get("id")
+                        user.email = me_data.get("email")
+                        user.first_name = me_data.get("first_name")
+                        user.last_name = me_data.get("last_name")
+                        user.role = me_data.get("role")
+                        user.phone = me_data.get("phone")
+                        user.state = me_data.get("state")
+                        user.address = me_data.get("address")
+                        user.gender = me_data.get("gender")
+                        user.avatar_url = me_data.get("avatar_url")
+
+                        from views.home import HomeView
+                        page.views.clear()
+                        page.views.append(HomeView(page, user))
+                    except Exception as e:
+                        error_text.value = f"Error al recuperar usuario: {e}"
+                        error_text.color = "red"
                 else:
                     error_text.value = "No hay sesión guardada. Inicia sesión con correo primero."
                     error_text.color = "orange"
