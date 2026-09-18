@@ -2,6 +2,7 @@ import flet as ft
 from core import colors
 import sys
 import os
+import flet_local_auth as auth
 
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 sys.path.append(base_path)
@@ -12,6 +13,8 @@ from views.register import RegisterView
 from views.password_recovery import PasswordRecoveryView
 
 def LoginView(page: ft.Page):
+    local_auth = auth.LocalAuthentication()
+    page.overlay.append(local_auth)
     
     email_input = ft.TextField(
         label="Correo Electrónico",
@@ -29,7 +32,28 @@ def LoginView(page: ft.Page):
 
     error_text = ft.Text(value="", color="red", size=12)
 
-
+    async def handle_fingerprint(e):
+        try:
+            autorizado = await local_auth.authenticate(
+                localized_reason="Inicia sesión con tu huella dactilar"
+            )
+            if autorizado:
+                token = await page.shared_preferences.get("session_token")
+                if token:
+                    error_text.value = "Huella aceptada. Ingresando..."
+                    error_text.color = "green"
+                    # Aquí deberías cargar el usuario desde el token guardado e ir a Home.
+                    # Por ahora solo mostramos éxito.
+                else:
+                    error_text.value = "No hay sesión guardada. Inicia sesión con correo primero."
+                    error_text.color = "orange"
+            else:
+                error_text.value = "Autenticación cancelada."
+                error_text.color = "red"
+        except Exception as ex:
+            error_text.value = f"Biometría no disponible o error: {ex}"
+            error_text.color = "red"
+        page.update()
 
     async def handle_login(e):
         error_text.value = ""
@@ -140,9 +164,10 @@ def LoginView(page: ft.Page):
                     icon_color=colors.PRIMARY,
                     icon_size=50,
                     tooltip="Ingresar con Huella Dactilar",
-                    on_click=lambda e: [setattr(error_text, "value", "⚠️ Huella Dactilar: Esta función requiere integración nativa del navegador. Revisa la documentación (webauthn_auth_module.md)"), page.update()]
+                    on_click=handle_fingerprint
                 ),
-                alignment=ft.alignment.Alignment.CENTER
+                alignment=ft.alignment.Alignment.CENTER,
+                visible=True
             ),
             ft.Container(expand=True),
             # Footer con links
