@@ -86,7 +86,7 @@ def send_reset_email(to_email: str, reset_url: str):
     msg.attach(MIMEText(html_content, "html"))
     
     try:
-        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10)
         server.starttls()
         if SMTP_PASSWORD:
             server.login(SMTP_USER, SMTP_PASSWORD)

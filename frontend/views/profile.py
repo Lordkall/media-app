@@ -151,8 +151,8 @@ class ProfileView(ft.Container):
                         self.ft_page.update()
                     return
                 filename = os.path.basename(file_path)
-                app_dir = os.path.expanduser("~")
-                dest_dir = os.path.join(app_dir, "saludnow_avatars")
+                import tempfile
+                dest_dir = os.path.join(tempfile.gettempdir(), "saludnow_avatars")
                 os.makedirs(dest_dir, exist_ok=True)
                 dest_path = os.path.join(dest_dir, f"{self.user.id}_{filename}")
                 shutil.copy(file_path, dest_path)
