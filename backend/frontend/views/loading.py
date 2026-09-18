@@ -24,7 +24,7 @@ def LoadingView(page: ft.Page, user):
                 animate=True,
                 width=300,
                 height=300,
-                fit=ft.ImageFit.CONTAIN
+                fit="contain"
             ),
         ],
         alignment=ft.MainAxisAlignment.CENTER,
