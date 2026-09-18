@@ -3,5 +3,5 @@ SQLAlchemy
 pg8000
 python-jose
 urllib3
-flet==0.86.5
- 
+flet>=1.0.0
+flet-local-auth 

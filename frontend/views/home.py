@@ -53,43 +53,8 @@ def HomeView(page: ft.Page, user):
                             ft.Icon(ft.Icons.LOCK, size=60, color="red"),
                             ft.Text("Acceso Denegado", size=24, weight=ft.FontWeight.BOLD),
                             ft.Text("El doctor asociado ya no cuenta con un plan VIP activo.", text_align=ft.TextAlign.CENTER),
-                            ft.ElevatedButton("Cerrar Sesión", on_click=force_logout, bgcolor=colors.PRIMARY, color="white")
-                        ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=20),
-                        expand=True,
-                        alignment=ft.alignment.center
-                    )
-                ],
-                bgcolor=colors.BACKGROUND
-            )
-
-    if role_val == "doctor":
-        from sqlalchemy import create_engine, select
-        from sqlalchemy.orm import sessionmaker
-        from app.models.subscriptions import Subscription, SubscriptionStatus
-        from app.models.doctors import Doctor
-        
-        has_active_sub = False
-        try:
-            from core.config import SYNC_DB_URL
-            engine = create_engine(SYNC_DB_URL)
-            Session = sessionmaker(bind=engine)
-            with Session() as session:
-                doc = session.execute(select(Doctor).where(Doctor.user_id == user.id)).scalar_one_or_none()
-                if doc:
-                    sub = session.execute(
-                        select(Subscription).where(
-                            Subscription.doctor_id == doc.id, 
-                            Subscription.status == SubscriptionStatus.ACTIVE
-                        ).order_by(Subscription.created_at.desc())
-                    ).scalars().first()
-                    if sub:
-                        has_active_sub = True
-        except Exception as e:
-            print("Error checking subscription:", e)
-            
-        if not has_active_sub:
-            from views.subscribe import SubscribeView
-            return ft.View(route="/home", controls=[SubscribeView(page, user=user, is_root=True)], bgcolor=colors.BACKGROUND)
+                            ft.ElevatedButton("Cerrar Sesión", on_click=force_logout, bgstyle=ft.ButtonStyle(color=colors.PRIMARY, style=ft.ButtonStyle(bgcolor=colors.BACKGROUND
+            , color=colors.BACKGROUND))
 
     def handle_logout(e=None, forced=False):
         async def _run():
@@ -331,26 +296,7 @@ def HomeView(page: ft.Page, user):
             filter_date["value"].strftime("%d/%m/%Y"),
             icon=ft.Icons.CALENDAR_MONTH,
             on_click=open_date_picker,
-            style=ft.ButtonStyle(color=colors.PRIMARY)
-        )
-        
-        dialog = ft.AlertDialog(
-            modal=True,
-            title=ft.Row([
-                ft.Icon(ft.Icons.CALENDAR_MONTH, color=colors.ACCENT_GREEN),
-                ft.Text("Mis Citas Médicas", size=16, weight=ft.FontWeight.BOLD, color=colors.TEXT_DARK)
-            ], spacing=8),
-            content=ft.Container(
-                content=ft.Column([
-                    ft.Row([ft.Text("Fecha:", weight=ft.FontWeight.BOLD), date_btn], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                    ft.Divider(height=1),
-                    appointments_list
-                ]),
-                width=340,
-                height=400,
-            ),
-            actions=[
-                ft.ElevatedButton("Cerrar", bgcolor=colors.PRIMARY, color="white", on_click=close_dlg)
+            style=ft.ButtonStyle(style=ft.ButtonStyle(color=colors.PRIMARY, style=ft.ButtonStyle(bgcolor=colors.PRIMARY, color="white"), on_click=close_dlg)
             ],
             actions_alignment=ft.MainAxisAlignment.END,
         )
@@ -462,42 +408,7 @@ def HomeView(page: ft.Page, user):
                             bottom_row_items.append(
                                 ft.TextButton(
                                     "Cancelar Cita", 
-                                    style=ft.ButtonStyle(color="#ff9b9b", padding=0), 
-                                    on_click=cancel_appointment(a.id)
-                                )
-                            )
-                        else:
-                            bottom_row_items.append(ft.Container(expand=True))
-                        
-                        # Espaciador si hay botón, sino expande
-                        if status_val == "scheduled":
-                            bottom_row_items.append(ft.Container(expand=True))
-
-                        bottom_row_items.append(
-                            ft.Column([
-                                ft.Text(date_str, size=11, color=text_secondary, text_align=ft.TextAlign.RIGHT),
-                                ft.Text(f"Turno #{turn}", size=11, color=text_secondary, text_align=ft.TextAlign.RIGHT),
-                            ], spacing=2, alignment=ft.MainAxisAlignment.END, horizontal_alignment=ft.CrossAxisAlignment.END)
-                        )
-
-                        bottom_row = ft.Row(bottom_row_items, alignment=ft.MainAxisAlignment.SPACE_BETWEEN, vertical_alignment=ft.CrossAxisAlignment.END)
-
-                        card_content = [
-                            top_row,
-                            middle_section,
-                            bottom_row
-                        ]
-                        
-                        appointments_list.controls.append(
-                            ft.Container(
-                                content=ft.Column(card_content, spacing=0),
-                                padding=16,
-                                bgcolor=card_bg,
-                                border_radius=15
-                            )
-                        )
-            except Exception as ex:
-                appointments_list.controls.append(ft.Text(f"Error: {ex}", color=getattr(colors, 'ERROR_COLOR', '#e74c3c')))
+                                    style=ft.ButtonStyle(style=ft.ButtonStyle(color="#ff9b9b", style=ft.ButtonStyle(bgcolor=card_bg, color=getattr(colors), 'ERROR_COLOR', '#e74c3c')))
 
         load_appointments()
         dialog.open = True
@@ -782,42 +693,7 @@ def HomeView(page: ft.Page, user):
                             "Mi Perfil",
                             icon=ft.Icons.PERSON,
                             on_click=go_to_profile,
-                            style=ft.ButtonStyle(color=colors.PRIMARY)
-                        ),
-                        ft.TextButton(
-                            "Cerrar sesión",
-                            icon=ft.Icons.LOGOUT,
-                            icon_color="#e74c3c",
-                            on_click=handle_logout,
-                            style=ft.ButtonStyle(color="#e74c3c")
-                        )
-                    ], horizontal_alignment=ft.CrossAxisAlignment.END, spacing=0)
-                ],
-                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=10
-            ),
-            ft.Container(height=15),
-            # Greeting with Avatar
-            ft.Row(
-                [
-                    user_avatar,
-                    ft.Column([
-                        ft.Text(
-                            f"¡Hola, {user.first_name}!",
-                            size=22,
-                            weight=ft.FontWeight.W_800,
-                            color=colors.TEXT_DARK,
-                        ),
-                        ft.Row(
-                            [
-                                ft.Container(
-                                    content=ft.Text(role_label, size=10, color="white", weight=ft.FontWeight.W_600),
-                                    bgcolor=colors.SECONDARY,
-                                    border_radius=10,
-                                    padding=ft.padding.Padding.only(left=8, right=8, top=3, bottom=3),
-                                ),
-                                ft.Text(user.email, size=11, color=colors.TEXT_LIGHT),
+                            style=ft.ButtonStyle(style=ft.ButtonStyle(color=colors.PRIMARY, style=ft.ButtonStyle(bgcolor=colors.SECONDARY, color=colors.TEXT_LIGHT)),
                             ],
                             spacing=6,
                         )
@@ -886,27 +762,5 @@ def HomeView(page: ft.Page, user):
         support_fab_container = ft.Container(
             content=ft.GestureDetector(
                 on_pan_update=on_pan_update,
-                content=ft.FloatingActionButton(icon=ft.Icons.CHAT, bgcolor=colors.PRIMARY, on_click=open_support_modal)
-            ),
-            right=20,
-            bottom=20,
-            width=56,
-            height=56
-        )
-
-    main_container = ft.Container(
-        content=content,
-        padding=20,
-        expand=True,
-    )
-    
-    if support_fab_container:
-        view_content = ft.Stack([main_container, support_fab_container], expand=True)
-    else:
-        view_content = main_container
-
-    return ft.View(
-        route="/home",
-        controls=[view_content],
-        bgcolor=colors.BACKGROUND,
+                content=ft.FloatingActionButton(icon=ft.Icons.CHAT, bgstyle=ft.ButtonStyle(color=colors.PRIMARY, bgcolor=colors.BACKGROUND),
     )

@@ -136,31 +136,8 @@ class AssistantManagerView(ft.Container):
             content=ft.Column([fname_input, lname_input, email_input, pwd_input], tight=True),
             actions=[
                 ft.TextButton("Cancelar", on_click=lambda _: setattr(modal, 'open', False) or self.ft_page.update()),
-                ft.ElevatedButton("Crear Asistente", on_click=save_assistant, bgcolor=colors.PRIMARY, color="white")
-            ]
-        )
-        self.ft_page.overlay.append(modal)
-        modal.open = True
-        self.ft_page.update()
-
-    def build_ui(self):
-        header = ft.Row([
-            ft.IconButton(
-                icon=ft.Icons.ARROW_BACK,
-                icon_color=colors.PRIMARY,
-                on_click=lambda e: self.on_navigate() if self.on_navigate else None
-            ),
-            ft.Text("Gestión de Asistentes", size=24, weight=ft.FontWeight.BOLD, color=colors.TEXT_DARK)
-        ], alignment=ft.MainAxisAlignment.START)
-
-        create_btn = ft.ElevatedButton(
-            "Añadir Nuevo Asistente",
-            icon=ft.Icons.ADD,
-            on_click=self.open_create_modal,
-            style=ft.ButtonStyle(
-                bgcolor=colors.PRIMARY,
-                color="white"
-            )
+                ft.ElevatedButton("Crear Asistente", on_click=save_assistant, bgstyle=ft.ButtonStyle(color=colors.PRIMARY, style=ft.ButtonStyle(bgcolor=colors.PRIMARY, color="white"
+            ))
         )
 
         content = ft.Column([

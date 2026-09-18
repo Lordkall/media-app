@@ -35,21 +35,7 @@ def WelcomeView(page: ft.Page):
                     [
                         ft.ElevatedButton(
                             "Crear una cuenta", 
-                            bgcolor=colors.PRIMARY, 
-                            color="white",
-                            on_click=go_to_register
-                        ),
-
-                    ],
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                ),
-                bgcolor=colors.INPUT_BG,
-                padding=30,
-            ),
-            ft.Container(height=20),
-            ft.Row(
-                [
-                    ft.Text("¿Ya tienes una cuenta?", color=colors.TEXT_LIGHT, size=12),
+                            bgstyle=ft.ButtonStyle(color=colors.PRIMARY, style=ft.ButtonStyle(bgcolor=colors.INPUT_BG, color=colors.TEXT_LIGHT), size=12),
                     ft.TextButton("Iniciar sesión", on_click=go_to_login)
                 ],
                 alignment=ft.MainAxisAlignment.CENTER
@@ -67,5 +53,5 @@ def WelcomeView(page: ft.Page):
                 expand=True
             )
         ],
-        bgcolor=colors.BACKGROUND,
+        style=ft.ButtonStyle(bgcolor=colors.BACKGROUND),
     )

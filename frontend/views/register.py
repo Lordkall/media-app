@@ -477,25 +477,5 @@ def RegisterView(page: ft.Page):
             ft.Container(height=20),
             ft.ElevatedButton(
                 "Registrarse",
-                bgcolor=colors.PRIMARY,
-                color="white",
-                on_click=handle_register
-            ),
-            ft.Container(expand=True)
-        ],
-        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-        scroll=ft.ScrollMode.AUTO,
-        expand=True
-    )
-
-    return ft.View(
-        route="/register",
-        controls=[
-            ft.Container(
-                content=content,
-                padding=20,
-                expand=True
-            )
-        ],
-        bgcolor=colors.BACKGROUND,
+                bgstyle=ft.ButtonStyle(color=colors.PRIMARY, bgcolor=colors.BACKGROUND),
     )

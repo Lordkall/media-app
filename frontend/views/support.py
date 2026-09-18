@@ -39,17 +39,7 @@ class SupportAdminView(ft.Container):
             ft.IconButton(ft.Icons.SEND, icon_color=colors.PRIMARY, on_click=self.send_reply)
         ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
         
-        self.close_btn = ft.ElevatedButton("Cerrar Ticket", color="white", bgcolor=colors.ERROR_COLOR, on_click=self.close_ticket)
-        self.chat_header = ft.Row([
-            ft.IconButton(ft.Icons.ARROW_BACK, on_click=self.close_chat),
-            ft.Text("Chat", size=18, weight=ft.FontWeight.BOLD),
-            self.close_btn
-        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
-        
-        self.chat_view.content = ft.Column([
-            self.chat_header,
-            ft.Divider(),
-            ft.Container(content=self.chat_messages, expand=True, bgcolor=colors.INPUT_BG, border_radius=10),
+        self.close_btn = ft.ElevatedButton("Cerrar Ticket", style=ft.ButtonStyle(color="white", style=ft.ButtonStyle(bgcolor=colors.ERROR_COLOR, color=colors.INPUT_BG), border_radius=10),
             self.chat_input
         ], expand=True)
         

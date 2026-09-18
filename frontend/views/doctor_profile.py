@@ -127,16 +127,5 @@ def DoctorProfileView(page: ft.Page, doctor, on_navigate=None):
             icon=ft.Icons.CHAT,
             url=whatsapp_url,
             style=ft.ButtonStyle(
-                bgcolor="#25D366", # WhatsApp green
-                color="white",
-                padding=15,
-                shape=ft.RoundedRectangleBorder(radius=10)
-            )
-        )
-    ], scroll=ft.ScrollMode.AUTO, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
-
-    return ft.View(
-        route=f"/doctor/{doctor.id}",
-        controls=[ft.Container(content=content, padding=20, expand=True)],
-        bgcolor=colors.BACKGROUND
-    )
+                bgstyle=ft.ButtonStyle(color="#25D366", bgcolor=colors.BACKGROUND
+    ))

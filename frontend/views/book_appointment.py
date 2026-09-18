@@ -238,33 +238,7 @@ class BookAppointmentView(ft.Container):
         book_btn = ft.ElevatedButton(
             "Confirmar Turno",
             style=ft.ButtonStyle(
-                bgcolor=PRIMARY_COLOR,
-                color="white",
-                shape=ft.RoundedRectangleBorder(radius=25),
-                padding=ft.padding.Padding.all(16),
-            ),
-            width=300,
-            on_click=self.confirm_booking
-        )
-
-        self.content = ft.Column([
-            header,
-            ft.Divider(height=15, color="transparent"),
-            self.state_dropdown,
-            ft.Container(height=10),
-            self.specialty_dropdown,
-            ft.Container(height=10),
-            self.doctor_dropdown,
-            ft.Container(height=10),
-            self.reason_dropdown,
-            ft.Container(height=10),
-            ft.Container(
-                content=ft.Column([
-                    ft.Text("Seleccione la fecha de atención", size=13, weight=ft.FontWeight.W_600, color=TEXT_PRIMARY),
-                    ft.Row([
-                        ft.Row([
-                            ft.Container(width=12, height=12, bgcolor="#FFF59D", border_radius=6),
-                            ft.Text("Día No Laborable", size=10, color=TEXT_SECONDARY)
+                bgstyle=ft.ButtonStyle(color=PRIMARY_COLOR, style=ft.ButtonStyle(bgcolor="#FFF59D", color=TEXT_SECONDARY))
                         ], spacing=4),
                         ft.Row([
                             ft.Container(width=12, height=12, bgcolor=ERROR_COLOR, border_radius=6),
@@ -483,7 +457,7 @@ class BookAppointmentView(ft.Container):
             print(f"[ERROR] confirm_booking failed: {ex}")
             import traceback
             traceback.print_exc()
-            snack = ft.SnackBar(content=ft.Text(f"Error al agendar: {str(ex)}"), bgcolor=colors.ERROR_COLOR)
+            snack = ft.SnackBar(content=ft.Text(f"Error al agendar: {str(ex)}"), style=ft.ButtonStyle(bgcolor=colors.ERROR_COLOR))
             self.ft_page.overlay.append(snack)
             snack.open = True
             self.ft_page.update()
