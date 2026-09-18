@@ -46,7 +46,8 @@ os.makedirs(upload_dir_path, exist_ok=True)
 app.mount("/", flet_fastapi.app(
     flet_main, 
     assets_dir=os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "assets")),
-    upload_dir=upload_dir_path
+    upload_dir=upload_dir_path,
+    secret_key=os.getenv("FLET_SECRET_KEY", "saludnow_super_secret_key_12345")
 ))
 from fastapi import Request
 from fastapi.responses import JSONResponse
