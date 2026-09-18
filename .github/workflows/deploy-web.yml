@@ -32,7 +32,7 @@ jobs:
       - name: Build Flet app
         run: |
           cd frontend
-          flet build web --base-url /
+          flet build web --yes --base-url /
           echo "saludnow.site" > build/web/CNAME
 
       - name: Upload Pages artifact
