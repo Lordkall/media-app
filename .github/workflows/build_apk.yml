@@ -31,7 +31,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cd frontend
-          flet build apk --project SaludNow --org com.saludnow.app --include-packages flet_local_auth --yes
+          flet build apk --project SaludNow --org com.saludnow.app --yes
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
