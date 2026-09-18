@@ -13,7 +13,7 @@ html_template = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Recuperación de Contraseña - MedIA</title>
+    <title>Recuperación de Contraseña - Salud Now</title>
     <style>
         body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 0; color: #333333; }
         .container { max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
@@ -33,15 +33,15 @@ html_template = """
 <body>
     <div class="container">
         <div class="header">
-            <img src="https://via.placeholder.com/150x50/ffffff/0056b3?text=MedIA+Logo" alt="MedIA Logo">
+            <img src="https://saludnow.site/assets/logo.png" alt="Salud Now Logo" onerror="this.onerror=null; this.src='https://via.placeholder.com/150x50/ffffff/0056b3?text=Salud+Now';">
         </div>
         <div class="content">
             <h1>Restablece tu contraseña</h1>
             <p>Hola,</p>
-            <p>Hemos recibido una solicitud para restablecer la contraseña de tu cuenta en <strong>MedIA</strong>. Si fuiste tú, por favor copia el siguiente token de seguridad e ingrésalo en la aplicación:</p>
+            <p>Hemos recibido una solicitud para restablecer la contraseña de tu cuenta en <strong>Salud Now</strong>. Si fuiste tú, por favor copia el siguiente token de seguridad e ingrésalo en la aplicación:</p>
             
             <div class="btn-container">
-                <div style="background-color: #f4f4f4; border: 1px dashed #0056b3; padding: 15px; font-size: 18px; font-weight: bold; letter-spacing: 2px; color: #0056b3;">
+                <div style="background-color: #f4f4f4; border: 1px dashed #0056b3; padding: 15px; font-size: 16px; font-weight: bold; letter-spacing: 1px; color: #0056b3; word-break: break-all; user-select: all;">
                     {{ token }}
                 </div>
             </div>
@@ -49,10 +49,10 @@ html_template = """
             <p class="warning">Este token <strong>expirará en 15 minutos</strong> por razones de seguridad.</p>
             <p>Si no solicitaste un cambio de contraseña, puedes ignorar este correo de forma segura. Tu cuenta sigue protegida.</p>
             
-            <p>Saludos,<br>El equipo de MedIA</p>
+            <p>Saludos,<br>El equipo de Salud Now</p>
         </div>
         <div class="footer">
-            <p>&copy; 2026 MedIA. Todos los derechos reservados.</p>
+            <p>&copy; 2026 Salud Now. Todos los derechos reservados.</p>
             <p>Si prefieres, también puedes hacer clic en el siguiente enlace:<br>
             <a href="{{ reset_url }}" style="color: #0056b3; word-break: break-all;">{{ reset_url }}</a></p>
         </div>
