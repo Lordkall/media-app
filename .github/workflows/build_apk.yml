@@ -43,18 +43,18 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install "flet>=1.0.0"
-          if [ -f frontend/requirements.txt ]; then pip install -r frontend/requirements.txt; fi
+          if [ -f backend/frontend/requirements.txt ]; then pip install -r backend/frontend/requirements.txt; fi
 
       - name: Build APK with Flet
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SERIOUS_PYTHON_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cd frontend
+          cd backend/frontend
           flet build apk --project SaludNow --org com.saludnow.app --yes -v
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: app-release
-          path: frontend/build/apk/*.apk
+          path: backend/frontend/build/apk/*.apk
