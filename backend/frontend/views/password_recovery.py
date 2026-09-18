@@ -12,7 +12,7 @@ def PasswordRecoveryView(page: ft.Page):
     error_text = ft.Text(value="", color="red", size=12)
     success_text = ft.Text(value="", color="green", size=12)
     
-    def handle_request(e):
+    async def handle_request(e):
         error_text.value = ""
         success_text.value = ""
         page.update()
@@ -25,7 +25,8 @@ def PasswordRecoveryView(page: ft.Page):
             
         try:
             from core.api_client import client
-            client.post("/password-reset/request", json={"email": email})
+            import asyncio
+            await asyncio.to_thread(client.post, "/password-reset/request", {"email": email})
             success_text.value = "Enlace enviado. Revisa tu correo (o la consola)."
             email_input.value = ""
         except Exception as ex:
@@ -40,7 +41,7 @@ def PasswordRecoveryView(page: ft.Page):
             
         page.update()
         
-    def handle_confirm(e):
+    async def handle_confirm(e):
         error_text.value = ""
         success_text.value = ""
         page.update()
@@ -64,7 +65,8 @@ def PasswordRecoveryView(page: ft.Page):
             
         try:
             from core.api_client import client
-            client.post("/password-reset/confirm", json={"token": token, "new_password": new_pwd})
+            import asyncio
+            await asyncio.to_thread(client.post, "/password-reset/confirm", {"token": token, "new_password": new_pwd})
             success_text.value = "Contraseña actualizada exitosamente. Puedes volver a iniciar sesión."
             token_field.value = ""
             new_password_field.value = ""

@@ -172,11 +172,12 @@ class ProfileView(ft.Container):
 
         self.file_picker = ft.FilePicker(on_result=on_file_picked, on_upload=on_file_uploaded)
         
-        # Flet 1.0 requires non-visual controls like FilePicker to be in page.services, not overlay
         if not hasattr(self.ft_page, "services"):
             self.ft_page.overlay.append(self.file_picker)
         else:
             self.ft_page.services.append(self.file_picker)
+            
+        self.ft_page.update() # CRITICAL: Update page so client registers the control
 
         def on_pick_file_click(e):
             self.file_picker.pick_files(allow_multiple=False, allowed_extensions=["png", "jpg", "jpeg", "gif", "webp"])
@@ -184,7 +185,6 @@ class ProfileView(ft.Container):
         role_str = self.user.role.value if hasattr(self.user.role, 'value') else str(self.user.role) if self.user and hasattr(self.user, 'role') else "patient"
         role_name = "Doctor" if role_str == "doctor" else ("Administrador" if role_str == "admin" else ("Asistente" if role_str == "assistant" or role_str == "ASSISTANT" else "Paciente"))
 
-        # Visual de avatar
         initials = (self.user.first_name[0] + self.user.last_name[0]).upper() if self.user else "U"
         
         self.avatar_circle = ft.CircleAvatar(
@@ -204,7 +204,6 @@ class ProfileView(ft.Container):
             presets_row
         ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=6)
 
-        # Contenido adicional por rol
         extra_fields = []
         if role_str == "doctor":
             self.address_input = ft.TextField(
@@ -217,7 +216,8 @@ class ProfileView(ft.Container):
             doc_fee = "50"
             try:
                 from core.api_client import client
-                doc_data = client.get("/doctors/me")
+                import asyncio
+                doc_data = client.get("/doctors/me") # Ideally should be to_thread, but it's in build_ui which is sync... wait! build_ui is sync so we just swallow it, it might block briefly on load. 
                 if doc_data:
                     doc_bio = doc_data.get("bio", doc_bio)
                     doc_fee = str(doc_data.get("consultation_fee", doc_fee))
@@ -304,7 +304,7 @@ class ProfileView(ft.Container):
             self.avatar_circle.content = ft.Text(initials, size=24, weight=ft.FontWeight.BOLD, color="white")
         self.ft_page.update()
 
-    def save_profile(self, e):
+    async def save_profile(self, e):
         if self.user:
             self.user.first_name = self.first_name_input.value.strip()
             self.user.last_name = self.last_name_input.value.strip()
@@ -315,6 +315,7 @@ class ProfileView(ft.Container):
             
             try:
                 from core.api_client import client
+                import asyncio
                 
                 user_payload = {
                     "first_name": self.user.first_name,
@@ -326,7 +327,7 @@ class ProfileView(ft.Container):
                 if hasattr(self, 'address_input'):
                     user_payload["address"] = self.user.address
                     
-                client.put("/users/me", json=user_payload)
+                await asyncio.to_thread(client.put, "/users/me", user_payload)
                 
                 if hasattr(self, 'bio_input'):
                     doc_payload = {
@@ -337,7 +338,7 @@ class ProfileView(ft.Container):
                     except:
                         pass
                         
-                    client.put("/doctors/me", json=doc_payload)
+                    await asyncio.to_thread(client.put, "/doctors/me", doc_payload)
                         
                 snack = ft.SnackBar(
                     content=ft.Text("¡Perfil actualizado con éxito!"),
