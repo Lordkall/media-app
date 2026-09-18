@@ -151,7 +151,7 @@ class ProfileView(ft.Container):
                 f = e.files[0]
                 if self.ft_page.web:
                     upload_url = self.ft_page.get_upload_url(f.name, 60)
-                    self.file_picker.upload([ft.FilePickerUploadFile(f.name, upload_url=upload_url)])
+                    self.file_picker.upload([ft.FilePickerUploadFile(name=f.name, upload_url=upload_url)])
                 else:
                     with open(f.path, "rb") as file:
                         process_avatar_bytes(file.read())
