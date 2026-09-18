@@ -131,13 +131,49 @@ class AdminSubscriptionsView(ft.Container):
             actions.append(ft.ElevatedButton(
                 "Validar Pago",
                 icon=ft.Icons.DOMAIN_VERIFICATION,
-                style=ft.ButtonStyle(bgstyle=ft.ButtonStyle(color=SUCCESS_COLOR, style=ft.ButtonStyle(bgcolor=PRIMARY_COLOR, color="white")),
+                style=ft.ButtonStyle(bgcolor=SUCCESS_COLOR, color="white"),
+                on_click=validate_payment
+            ))
+            
+        actions.extend([
+            ft.ElevatedButton(
+                "Asignar VIP Manual",
+                icon=ft.Icons.STAR,
+                style=ft.ButtonStyle(bgcolor=PRIMARY_COLOR, color="white"),
                 on_click=approve_vip
             ),
             ft.ElevatedButton(
                 "Asignar Básico Manual",
                 icon=ft.Icons.CHECK_CIRCLE,
-                style=ft.ButtonStyle(bgstyle=ft.ButtonStyle(color=ACCENT_COLOR, style=ft.ButtonStyle(bgcolor=badge_color, color=BORDER_COLOR)),
+                style=ft.ButtonStyle(bgcolor=ACCENT_COLOR, color="white"),
+                on_click=approve_basic
+            ),
+            ft.OutlinedButton(
+                "Remover Suscripción",
+                icon=ft.Icons.BLOCK,
+                style=ft.ButtonStyle(color=ERROR_COLOR),
+                on_click=remove_plan
+            )
+        ])
+
+        actions_row = ft.Row(actions, wrap=True, spacing=8)
+
+        return ft.Card(
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Row([
+                        ft.Column([
+                            ft.Text(doc_name, size=16, weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
+                            ft.Text(f"Especialidad: {specialty} | {doctor.user.email}", size=12, color=TEXT_SECONDARY),
+                        ], expand=True),
+                        ft.Container(
+                            content=ft.Text(badge_text, size=11, color="white", weight=ft.FontWeight.BOLD),
+                            bgcolor=badge_color,
+                            padding=5,
+                            border_radius=10
+                        )
+                    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                    ft.Divider(height=10, color=BORDER_COLOR),
                     ft.Text("Acciones de Administrador:", size=12, weight=ft.FontWeight.W_600, color=TEXT_PRIMARY),
                     actions_row
                 ], spacing=8),

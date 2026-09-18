@@ -100,7 +100,15 @@ class SubscribeView(ft.Container):
 
         self.btn_mensual = ft.ElevatedButton(
             "Mensual", 
-            bgstyle=ft.ButtonStyle(color=PRIMARY_COLOR, style=ft.ButtonStyle(bgcolor=SURFACE_COLOR, color=TEXT_PRIMARY), 
+            bgcolor=PRIMARY_COLOR, 
+            color="white", 
+            on_click=lambda e: switch_billing(e, "Mensual"),
+            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=20))
+        )
+        self.btn_anual = ft.ElevatedButton(
+            "Anual", 
+            bgcolor=SURFACE_COLOR, 
+            color=TEXT_PRIMARY, 
             on_click=lambda e: switch_billing(e, "Anual"),
             style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=20))
         )
@@ -201,7 +209,48 @@ class SubscribeView(ft.Container):
                     ft.Text("Cuenta inactiva o pendiente", size=22, weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
                     ft.Text("Para utilizar la plataforma como Especialista Médico, debe suscribirse a un plan y esperar la validación del administrador.", size=13, color=TEXT_SECONDARY, text_align=ft.TextAlign.CENTER),
                     ft.Divider(height=20, color="transparent"),
-                    ft.ElevatedButton("Volver a reportar el pago", bgstyle=ft.ButtonStyle(color=PRIMARY_COLOR, style=ft.ButtonStyle(bgcolor=PRIMARY_COLOR + "15", color=SURFACE_COLOR),
+                    ft.ElevatedButton("Volver a reportar el pago", bgcolor=PRIMARY_COLOR, color="white", on_click=on_re_report),
+                    ft.TextButton("Cerrar Sesión", on_click=on_logout)
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, alignment=ft.MainAxisAlignment.CENTER),
+                alignment=ft.Alignment.CENTER,
+                expand=True,
+                padding=20
+            )
+        ]
+        self.content.alignment = ft.MainAxisAlignment.CENTER
+        self.content.horizontal_alignment = ft.CrossAxisAlignment.CENTER
+
+    def render_current_status(self):
+        if getattr(self, 'pending_sub', None):
+            self.show_pending_screen()
+            return
+            
+        self.content.controls = self.normal_controls.copy()
+        self.content.alignment = ft.MainAxisAlignment.START
+        self.content.horizontal_alignment = ft.CrossAxisAlignment.START
+        
+        if self.current_sub:
+            plan_str = "Plan VIP" if "sponsored" in str(self.current_sub.plan).lower() else "Plan Básico"
+            days_left = (self.current_sub.end_date.replace(tzinfo=None) - __import__('datetime').datetime.utcnow()).days
+            self.status_container.content = ft.Container(
+                content=ft.Column([
+                    ft.Row([
+                        ft.Icon(ft.Icons.VERIFIED, color=SUCCESS_COLOR, size=24),
+                        ft.Column([
+                            ft.Text(f"Suscripción Activa: {plan_str}", size=15, weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
+                            ft.Text("Posicionamiento prioritario TOP en tu especialidad", size=12, color=TEXT_SECONDARY)
+                        ], expand=True),
+                        ft.Container(
+                            content=ft.Text(f"Vence en {max(0, days_left)} días", color=PRIMARY_COLOR, weight=ft.FontWeight.BOLD, size=11),
+                            bgcolor=PRIMARY_COLOR + "15",
+                            padding=6,
+                            border_radius=12
+                        )
+                    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                ], spacing=8),
+                padding=15,
+                border_radius=12,
+                bgcolor=SURFACE_COLOR,
                 border=ft.border.Border.all(1, PRIMARY_COLOR + "40")
             )
         else:
@@ -305,7 +354,56 @@ class SubscribeView(ft.Container):
                     btn_text,
                     icon=ft.Icons.CREDIT_CARD,
                     style=ft.ButtonStyle(
-                        bgstyle=ft.ButtonStyle(color=PRIMARY_COLOR if is_current else ACCENT_COLOR, style=ft.ButtonStyle(bgcolor=SURFACE_COLOR, color=TEXT_PRIMARY),
+                        bgcolor=PRIMARY_COLOR if is_current else ACCENT_COLOR,
+                        color="white",
+                        shape=ft.RoundedRectangleBorder(radius=8),
+                        padding=ft.padding.Padding.all(12)
+                    ),
+                    on_click=lambda e, t=title, p=price_val: self.open_payment_modal(t, p),
+                )
+            ], spacing=6),
+            padding=16,
+            border_radius=12,
+            bgcolor=SURFACE_COLOR,
+            border=ft.border.Border.all(2 if is_current else 1, PRIMARY_COLOR if is_current else BORDER_COLOR)
+        )
+
+    def open_payment_modal(self, plan_name, price_val):
+        from sqlalchemy import create_engine, select
+        from sqlalchemy.orm import sessionmaker
+        from app.models.exchange_rate import ExchangeRate
+        import decimal
+        
+        # Leer tasa BCV de la BD
+        from core.config import SYNC_DB_URL
+        sync_engine = create_engine(SYNC_DB_URL)
+        Session = sessionmaker(bind=sync_engine)
+        
+        tasa_bcv = 36.50 # Failsafe default
+        try:
+            with Session() as session:
+                rate_entry = session.execute(
+                    select(ExchangeRate).where(
+                        ExchangeRate.moneda_origen == 'USD',
+                        ExchangeRate.moneda_destino == 'VES'
+                    )
+                ).scalar_one_or_none()
+                if rate_entry:
+                    tasa_bcv = float(rate_entry.tasa)
+        except Exception as ex:
+            print("Error leyendo tasa BCV:", ex)
+            
+        # Calcular el monto en VES
+        precio_usd = float(price_val.replace("$", "").replace(",", ""))
+        precio_ves = precio_usd * tasa_bcv
+        precio_ves_str = f"{precio_ves:,.2f} VES"
+        reference_input = ft.TextField(
+            label="N° de Referencia",
+            width=300,
+            keyboard_type=ft.KeyboardType.NUMBER,
+            input_filter=ft.NumbersOnlyInputFilter(),
+            max_length=20,
+            color=TEXT_PRIMARY,
             bgcolor=SURFACE_COLOR
         )
         
@@ -416,7 +514,7 @@ class SubscribeView(ft.Container):
             ], width=360, height=330, spacing=5),
             actions=[
                 ft.TextButton("Cancelar", on_click=close_dlg),
-                ft.ElevatedButton("Realizar Pago de Suscripción", style=ft.ButtonStyle(bgcolor=SUCCESS_COLOR, color="white"), on_click=confirm_pay)
+                ft.ElevatedButton("Realizar Pago de Suscripción", bgcolor=SUCCESS_COLOR, color="white", on_click=confirm_pay)
             ],
             actions_alignment=ft.MainAxisAlignment.END,
         )

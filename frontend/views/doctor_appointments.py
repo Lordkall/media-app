@@ -50,7 +50,79 @@ def show_doctor_appointments(page: ft.Page, user):
         filter_date["value"].strftime("%d/%m/%Y"),
         icon=ft.Icons.CALENDAR_MONTH,
         on_click=open_date_picker,
-        style=ft.ButtonStyle(style=ft.ButtonStyle(color=colors.PRIMARY, style=ft.ButtonStyle(bgcolor=colors.SUCCESS if hasattr(colors, color="red"))
+        style=ft.ButtonStyle(color=colors.PRIMARY)
+    )
+
+    def load_appointments():
+        appointments_list.controls.clear()
+        try:
+            with Session() as session:
+                from app.models.users import RoleEnum
+                role_val = getattr(user.role, 'value', str(user.role))
+                if role_val == RoleEnum.ASSISTANT.value:
+                    doc = session.execute(select(Doctor).where(Doctor.id == user.linked_doctor_id)).scalar_one_or_none()
+                else:
+                    doc = session.execute(select(Doctor).where(Doctor.user_id == user.id)).scalar_one_or_none()
+                if not doc:
+                    appointments_list.controls.append(ft.Text("No se encontró su perfil de doctor.", color="red"))
+                    return
+                
+                query = select(Appointment).where(
+                    Appointment.doctor_id == doc.id,
+                    Appointment.appointment_date == filter_date["value"]
+                ).options(joinedload(Appointment.patient).joinedload(Patient.user)).order_by(Appointment.appointment_date.asc())
+                
+                apps = session.execute(query).scalars().all()
+                
+                if not apps:
+                    appointments_list.controls.append(ft.Text("No tienes citas médicas agendadas para esta fecha.", color=colors.TEXT_LIGHT, text_align=ft.TextAlign.CENTER))
+                
+                for a in apps:
+                    pat_name = f"{a.patient.user.first_name} {a.patient.user.last_name}"
+                    pat_phone = getattr(a.patient.user, "phone", "")
+                    date_str = a.appointment_date.strftime("%d/%m/%Y")
+                    turn = a.turn_number
+                    
+                    status_val = a.status.value if hasattr(a.status, 'value') else str(a.status)
+                    status_color = colors.ACCENT_GREEN if status_val == "scheduled" else ("red" if status_val == "cancelled" else colors.SECONDARY)
+                    status_text = "Confirmada" if status_val == "scheduled" else ("Cancelada" if status_val == "cancelled" else "Completada")
+                    
+                    def cancel_appointment(app_id):
+                        def handler(e):
+                            try:
+                                with Session() as sess:
+                                    app_to_cancel = sess.get(Appointment, app_id)
+                                    if app_to_cancel:
+                                        app_to_cancel.status = AppointmentStatus.CANCELLED
+                                        
+                                        # Notificar al paciente
+                                        from app.models.notifications import Notification, NotificationType
+                                        doc_name = f"Dr. {user.first_name} {user.last_name}"
+                                        notif = Notification(
+                                            user_id=app_to_cancel.patient.user_id,
+                                            type=NotificationType.APPOINTMENT_CANCELLED,
+                                            title="Cita Cancelada",
+                                            message=f"El {doc_name} ha cancelado su cita agendada para el {app_to_cancel.appointment_date.strftime('%d/%m/%Y')}."
+                                        )
+                                        sess.add(notif)
+                                        sess.commit()
+                                        
+                                        snack = ft.SnackBar(content=ft.Text("Cita cancelada con éxito"), bgcolor=colors.SUCCESS if hasattr(colors, 'SUCCESS') else colors.ACCENT_GREEN)
+                                        page.overlay.append(snack)
+                                        snack.open = True
+                                    load_appointments()
+                                    page.update()
+                            except Exception as ex:
+                                print(f"Error cancelando cita: {ex}")
+                        return handler
+
+                    def make_wa_handler(p):
+                        async def handler(e):
+                            if p and str(p).strip() and str(p).strip() != "0000000000":
+                                clean_phone = ''.join(c for c in str(p) if c.isdigit())
+                                await e.page.launch_url(f"https://wa.me/{clean_phone}")
+                            else:
+                                snack = ft.SnackBar(ft.Text("El paciente no tiene un número de teléfono válido registrado."), bgcolor="red")
                                 e.page.overlay.append(snack)
                                 snack.open = True
                                 e.page.update()
@@ -87,7 +159,13 @@ def show_doctor_appointments(page: ft.Page, user):
                             ft.Container(height=10)
                         )
                         card_content.controls.append(
-                            ft.ElevatedButton("Cancelar Cita", icon=ft.Icons.CANCEL, style=ft.ButtonStyle(style=ft.ButtonStyle(color="white", style=ft.ButtonStyle(bgcolor="red", color=colors.CARD_BG),
+                            ft.ElevatedButton("Cancelar Cita", icon=ft.Icons.CANCEL, style=ft.ButtonStyle(color="white", bgcolor="red"), on_click=cancel_appointment(a.id))
+                        )
+
+                    appointments_list.controls.append(
+                        ft.Container(
+                            content=card_content,
+                            bgcolor=colors.CARD_BG,
                             padding=15,
                             border_radius=10,
                             shadow=ft.BoxShadow(spread_radius=1, blur_radius=5, color="#E0E0E0")
@@ -118,7 +196,7 @@ def show_doctor_appointments(page: ft.Page, user):
             height=400,
         ),
         actions=[
-            ft.ElevatedButton("Cerrar", style=ft.ButtonStyle(bgcolor=colors.PRIMARY, color="white"), on_click=close_dlg)
+            ft.ElevatedButton("Cerrar", bgcolor=colors.PRIMARY, color="white", on_click=close_dlg)
         ],
         actions_alignment=ft.MainAxisAlignment.END,
     )

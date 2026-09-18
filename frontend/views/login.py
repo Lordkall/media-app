@@ -43,7 +43,6 @@ def LoginView(page: ft.Page):
                 if token:
                     error_text.value = "Huella aceptada. Ingresando..."
                     error_text.color = "green"
-                    # Aquí faltaría el flujo para re-hidratar el usuario y redirigir
                 else:
                     error_text.value = "No hay sesión guardada. Inicia sesión con correo primero."
                     error_text.color = "orange"
@@ -151,5 +150,55 @@ def LoginView(page: ft.Page):
             ft.Container(
                 content=ft.ElevatedButton(
                     "Ingresar",
-                    style=ft.ButtonStyle(bgstyle=ft.ButtonStyle(color=colors.PRIMARY, style=ft.ButtonStyle(bgcolor=colors.INPUT_BG, color=colors.BACKGROUND
-    ))
+                    style=ft.ButtonStyle(bgcolor=colors.PRIMARY, color="white"),
+                    on_click=handle_login,
+                ),
+                width=200,
+                height=45
+            ),
+            ft.Container(
+                content=ft.IconButton(
+                    icon=ft.Icons.FINGERPRINT,
+                    icon_color=colors.PRIMARY,
+                    icon_size=50,
+                    tooltip="Ingresar con Huella Dactilar",
+                    on_click=handle_fingerprint
+                ),
+                alignment=ft.alignment.Alignment.CENTER
+            ),
+            ft.Container(expand=True),
+            # Footer con links
+            ft.Container(
+                content=ft.Column(
+                    [
+                        ft.Row([
+                            ft.Text("¿Aún no te has registrado?", color=colors.TEXT_LIGHT, size=12),
+                            ft.TextButton("Crear cuenta", on_click=lambda _: [page.views.append(RegisterView(page)), page.update()])
+                        ], alignment=ft.MainAxisAlignment.CENTER),
+                        ft.Row([
+                            ft.Text("¿Olvidaste tu contraseña?", color=colors.TEXT_LIGHT, size=12),
+                            ft.TextButton("Recupérala aquí", on_click=lambda _: [page.views.append(PasswordRecoveryView(page)), page.update()])
+                        ], alignment=ft.MainAxisAlignment.CENTER),
+                    ],
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    spacing=0
+                ),
+                bgcolor=colors.INPUT_BG,
+                padding=10,
+            )
+        ],
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        expand=True
+    )
+
+    return ft.View(
+        route="/login",
+        controls=[
+            ft.Container(
+                content=content,
+                padding=20,
+                expand=True
+            )
+        ],
+        bgcolor=colors.BACKGROUND
+    )

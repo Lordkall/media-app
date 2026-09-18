@@ -104,7 +104,17 @@ def PasswordRecoveryView(page: ft.Page):
                     ft.Container(height=10),
                     ft.ElevatedButton(
                         "Enviar Enlace",
-                        bgstyle=ft.ButtonStyle(color=colors.PRIMARY, style=ft.ButtonStyle(bgcolor=colors.INPUT_BG, color=colors.TEXT_DARK),
+                        bgcolor=colors.PRIMARY,
+                        color="white",
+                        on_click=handle_request,
+                        width=200,
+                    ),
+                    ft.Divider(height=40, color=colors.TEXT_LIGHT),
+                    ft.Text("¿Ya tienes tu token?", weight=ft.FontWeight.BOLD, color=colors.PRIMARY),
+                    ft.TextField(
+                        label="Token (Cópialo de tu correo/consola)",
+                        bgcolor=colors.INPUT_BG,
+                        color=colors.TEXT_DARK,
                         key="token_input"
                     ),
                     ft.TextField(
@@ -117,7 +127,8 @@ def PasswordRecoveryView(page: ft.Page):
                     ),
                     ft.ElevatedButton(
                         "Restablecer",
-                        style=ft.ButtonStyle(bgcolor=colors.PRIMARY, color="white"),
+                        bgcolor=colors.PRIMARY,
+                        color="white",
                         width=200,
                         on_click=lambda e: handle_confirm(e)
                     )

@@ -206,5 +206,41 @@ def DoctorAvailabilityView(page: ft.Page, user, on_navigate=None):
         "Guardar Disponibilidad",
         icon=ft.Icons.SAVE,
         style=ft.ButtonStyle(
-            bgstyle=ft.ButtonStyle(color=colors.PRIMARY, bgcolor=colors.BACKGROUND
-    ))
+            bgcolor=colors.PRIMARY,
+            color="white",
+            padding=12,
+            shape=ft.RoundedRectangleBorder(radius=10)
+        ),
+        on_click=save_availability
+    )
+
+    # Removed days_column
+
+    content = ft.Column([
+        ft.Row([
+            ft.IconButton(ft.Icons.ARROW_BACK, icon_color=colors.TEXT_DARK, on_click=handle_back),
+            ft.Text("Mi Disponibilidad", size=20, weight=ft.FontWeight.W_700, color=colors.TEXT_DARK, expand=True)
+        ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
+        
+        ft.Container(height=20),
+        
+        ft.Text("Configuración de Pacientes", size=16, weight=ft.FontWeight.BOLD, color=colors.TEXT_DARK),
+        ft.Text("Establece cuántos pacientes deseas atender como máximo por día.", size=12, color=colors.TEXT_LIGHT),
+        ft.Container(height=10),
+        max_patients_row,
+        
+        ft.Container(height=20),
+        
+        ft.Text("Días Laborales", size=16, weight=ft.FontWeight.BOLD, color=colors.TEXT_DARK),
+        week_container,
+        
+        ft.Container(height=30),
+        save_btn,
+        ft.Container(height=20)
+    ], scroll=ft.ScrollMode.AUTO, expand=True)
+
+    return ft.View(
+        route="/doctor-availability",
+        controls=[ft.Container(content=content, padding=20, expand=True)],
+        bgcolor=colors.BACKGROUND
+    )

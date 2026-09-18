@@ -120,7 +120,58 @@ class ProfileView(ft.Container):
             content=ft.Column([current_pwd_input, new_pwd_input], tight=True),
             actions=[
                 ft.TextButton("Cancelar", on_click=close_pwd_dialog),
-                ft.ElevatedButton("Guardar Contraseña", on_click=submit_pwd_change, bgstyle=ft.ButtonStyle(color=PRIMARY_COLOR, style=ft.ButtonStyle(bgcolor="red", color="white")) if not self.avatar_src else None,
+                ft.ElevatedButton("Guardar Contraseña", on_click=submit_pwd_change, bgcolor=PRIMARY_COLOR, color="white")
+            ]
+        )
+        
+        def open_pwd_dialog(e):
+            self.ft_page.overlay.append(pwd_dialog)
+            pwd_dialog.open = True
+            self.ft_page.update()
+
+        change_pwd_btn = ft.OutlinedButton(
+            "Cambiar Contraseña",
+            icon=ft.Icons.LOCK,
+            on_click=open_pwd_dialog,
+            style=ft.ButtonStyle(color=PRIMARY_COLOR)
+        )
+
+        import os
+        import shutil
+        
+        def on_file_picked(e: ft.FilePickerResultEvent):
+            if e.files and len(e.files) > 0:
+                file_path = e.files[0].path
+                if not file_path:
+                    snack = ft.SnackBar(ft.Text("La carga de archivos no está soportada en modo web de prueba."), bgcolor="red")
+                    if hasattr(self, 'ft_page') and self.ft_page:
+                        self.ft_page.overlay.append(snack)
+                        snack.open = True
+                        self.ft_page.update()
+                    return
+                filename = os.path.basename(file_path)
+                dest_dir = os.path.join(os.path.dirname(__file__), "..", "assets", "avatars")
+                os.makedirs(dest_dir, exist_ok=True)
+                dest_path = os.path.join(dest_dir, f"{self.user.id}_{filename}")
+                shutil.copy(file_path, dest_path)
+                self.avatar_src = f"frontend/assets/avatars/{self.user.id}_{filename}"
+                self.update_avatar_preview(self.avatar_src)
+
+        async def on_pick_file_click(e):
+            self.file_picker.pick_files(allow_multiple=False)
+                
+        self.file_picker = ft.FilePicker()
+        self.file_picker.on_result = on_file_picked
+        self.ft_page.overlay.append(self.file_picker)
+
+        role_str = self.user.role.value if hasattr(self.user.role, 'value') else str(self.user.role) if self.user and hasattr(self.user, 'role') else "patient"
+        role_name = "Doctor" if role_str == "doctor" else ("Administrador" if role_str == "admin" else ("Asistente" if role_str == "assistant" or role_str == "ASSISTANT" else "Paciente"))
+
+        # Visual de avatar
+        initials = (self.user.first_name[0] + self.user.last_name[0]).upper() if self.user else "U"
+        
+        self.avatar_circle = ft.CircleAvatar(
+            content=ft.Text(initials, size=24, weight=ft.FontWeight.BOLD, color="white") if not self.avatar_src else None,
             foreground_image_src=self.avatar_src if self.avatar_src else None,
             radius=45,
             bgcolor=PRIMARY_COLOR,
@@ -132,7 +183,39 @@ class ProfileView(ft.Container):
 
         avatar_section = ft.Column([
             self.avatar_circle,
-            ft.Text(f"{role_name}", size=12, weight=ft.FontWeight.W_600, style=ft.ButtonStyle(color=ACCENT_COLOR, style=ft.ButtonStyle(bgcolor=colors.INPUT_BG, color=colors.INPUT_BG),
+            ft.Text(f"{role_name}", size=12, weight=ft.FontWeight.W_600, color=ACCENT_COLOR),
+            presets_row
+        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=6)
+
+        # Contenido adicional por rol
+        extra_fields = []
+        if role_str == "doctor":
+            self.address_input = ft.TextField(
+                label="Ubicación / Dirección",
+                value=self.user.address if self.user and getattr(self.user, 'address', None) else "",
+                border_radius=10,
+                bgcolor=colors.INPUT_BG,
+            )
+            doc_bio = "Especialista dedicado al cuidado integral del paciente."
+            doc_fee = "50"
+            try:
+                from core.api_client import client
+                doc_data = client.get("/doctors/me")
+                if doc_data:
+                    doc_bio = doc_data.get("bio", doc_bio)
+                    doc_fee = str(doc_data.get("consultation_fee", doc_fee))
+                    self.is_vip = doc_data.get("is_vip", False)
+            except Exception as e:
+                print(f"Error cargando datos del doctor: {e}")
+                self.is_vip = False
+
+            self.bio_input = ft.TextField(
+                label="Biografía / Presentación Profesional",
+                value=doc_bio,
+                multiline=True,
+                min_lines=3,
+                border_radius=10,
+                bgcolor=colors.INPUT_BG,
             )
             self.fee_input = ft.TextField(
                 label="Costo de Consulta ($ USD)",
@@ -157,7 +240,18 @@ class ProfileView(ft.Container):
                         icon=ft.Icons.MANAGE_ACCOUNTS,
                         on_click=self.open_assistant_manager,
                         style=ft.ButtonStyle(
-                            bgstyle=ft.ButtonStyle(color="#f39c12", style=ft.ButtonStyle(bgcolor=PRIMARY_COLOR, color="white"),
+                            bgcolor="#f39c12",
+                            color="white"
+                        )
+                    )
+                ])
+
+        save_btn = ft.ElevatedButton(
+            "Guardar Cambios de Perfil",
+            icon=ft.Icons.SAVE,
+            style=ft.ButtonStyle(
+                bgcolor=PRIMARY_COLOR,
+                color="white",
                 padding=12,
                 shape=ft.RoundedRectangleBorder(radius=10)
             ),
