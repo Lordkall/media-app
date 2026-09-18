@@ -14,4 +14,3 @@ python-multipart
 requests
 pg8000
 flet>=1.0.0
-flet-fastapi>=1.0.0
