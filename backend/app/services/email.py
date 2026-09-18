@@ -1,13 +1,9 @@
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 import os
 import logging
+import requests
 
-SMTP_SERVER = os.getenv("SMTP_SERVER")
-SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
-SMTP_USER = os.getenv("SMTP_USER")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
+RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+SENDER_EMAIL = os.getenv("SENDER_EMAIL", "onboarding@resend.dev")
 
 logger = logging.getLogger(__name__)
 
@@ -67,32 +63,36 @@ html_template = """
 
 def send_reset_email(to_email: str, reset_url: str, raw_token: str):
     """
-    Envía el correo HTML con el enlace de recuperación.
-    Si no hay credenciales SMTP configuradas, lanza error para avisar al frontend.
+    Envía el correo HTML con el enlace de recuperación usando el API de Resend.
     """
-    html_content = html_template.replace("{{ reset_url }}", reset_url).replace("{{ token }}", raw_token)
-    
-    if not SMTP_SERVER or not SMTP_USER:
+    if not RESEND_API_KEY:
         print(f"\n--- [MOCK EMAIL] ---")
         print(f"To: {to_email}")
         print(f"Token: {raw_token}")
         print(f"--------------------\n")
-        raise Exception("Las variables de entorno SMTP_SERVER o SMTP_USER no están configuradas en el servidor. El correo no pudo ser enviado.")
+        raise Exception("Falta configurar la variable RESEND_API_KEY en Railway.")
 
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = "Recuperación de Contraseña - MedIA"
-    msg["From"] = f"MedIA Soporte <{SMTP_USER}>"
-    msg["To"] = to_email
+    html_content = html_template.replace("{{ reset_url }}", reset_url).replace("{{ token }}", raw_token)
     
-    msg.attach(MIMEText(html_content, "html"))
+    headers = {
+        "Authorization": f"Bearer {RESEND_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    
+    data = {
+        "from": f"MedIA Soporte <{SENDER_EMAIL}>",
+        "to": [to_email],
+        "subject": "Recuperación de Contraseña - MedIA",
+        "html": html_content
+    }
     
     try:
-        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10)
-        server.starttls()
-        if SMTP_PASSWORD:
-            server.login(SMTP_USER, SMTP_PASSWORD)
-        server.sendmail(SMTP_USER, to_email, msg.as_string())
-        server.quit()
+        response = requests.post("https://api.resend.com/emails", headers=headers, json=data, timeout=10)
+        
+        if response.status_code >= 400:
+            logger.error(f"Error de Resend: {response.text}")
+            raise Exception(f"Error enviando correo: {response.text}")
+            
     except Exception as e:
-        logger.error(f"Error enviando correo a {to_email}: {e}")
-        print(f"Error enviando correo a {to_email}: {e}")
+        logger.error(f"Fallo al contactar Resend: {e}")
+        raise Exception(f"Fallo conectando al servidor de correos: {str(e)}")
