@@ -139,25 +139,42 @@ class ProfileView(ft.Container):
         import os
         import shutil
         
-        async def on_pick_file_click(e):
-            files = await ft.FilePicker().pick_files(allow_multiple=False)
-            if files and len(files) > 0:
-                file_path = files[0].path
-                if not file_path:
-                    snack = ft.SnackBar(ft.Text("La carga de archivos no está soportada en modo web de prueba."), bgcolor="red")
-                    if hasattr(self, 'ft_page') and self.ft_page:
-                        self.ft_page.overlay.append(snack)
-                        snack.open = True
-                        self.ft_page.update()
-                    return
-                filename = os.path.basename(file_path)
+        def process_avatar_bytes(file_bytes):
+            import base64
+            b64 = base64.b64encode(file_bytes).decode("utf-8")
+            self.avatar_src = f"data:image/png;base64,{b64}"
+            self.update_avatar_preview(self.avatar_src)
+            self.ft_page.update()
+
+        def on_file_picked(e: ft.FilePickerResultEvent):
+            if e.files and len(e.files) > 0:
+                f = e.files[0]
+                if self.ft_page.web:
+                    upload_url = self.ft_page.get_upload_url(f.name, 60)
+                    self.file_picker.upload([ft.FilePickerUploadFile(f.name, upload_url=upload_url)])
+                else:
+                    with open(f.path, "rb") as file:
+                        process_avatar_bytes(file.read())
+
+        def on_file_uploaded(e: ft.FilePickerUploadEvent):
+            if not getattr(e, "error", None):
                 import tempfile
-                dest_dir = os.path.join(tempfile.gettempdir(), "saludnow_avatars")
-                os.makedirs(dest_dir, exist_ok=True)
-                dest_path = os.path.join(dest_dir, f"{self.user.id}_{filename}")
-                shutil.copy(file_path, dest_path)
-                self.avatar_src = dest_path
-                self.update_avatar_preview(self.avatar_src)
+                import os
+                upload_dir_path = os.path.join(tempfile.gettempdir(), "saludnow_uploads")
+                file_path = os.path.join(upload_dir_path, e.file_name)
+                if os.path.exists(file_path):
+                    with open(file_path, "rb") as file:
+                        process_avatar_bytes(file.read())
+                    try:
+                        os.remove(file_path)
+                    except:
+                        pass
+
+        self.file_picker = ft.FilePicker(on_result=on_file_picked, on_upload=on_file_uploaded)
+        self.ft_page.overlay.append(self.file_picker)
+
+        def on_pick_file_click(e):
+            self.file_picker.pick_files(allow_multiple=False, allowed_extensions=["png", "jpg", "jpeg", "gif", "webp"])
 
         role_str = self.user.role.value if hasattr(self.user.role, 'value') else str(self.user.role) if self.user and hasattr(self.user, 'role') else "patient"
         role_name = "Doctor" if role_str == "doctor" else ("Administrador" if role_str == "admin" else ("Asistente" if role_str == "assistant" or role_str == "ASSISTANT" else "Paciente"))

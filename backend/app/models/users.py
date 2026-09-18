@@ -1,5 +1,5 @@
 from typing import Optional, List
-from sqlalchemy import String, Enum, ForeignKey
+from sqlalchemy import String, Enum, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base
 import enum
@@ -23,7 +23,7 @@ class User(Base):
     state: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     address: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     gender: Mapped[Optional[str]] = mapped_column(String(20), default="No Especificado")
-    avatar_url: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    avatar_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     session_token: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     fcm_token: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     linked_doctor_id: Mapped[Optional[int]] = mapped_column(ForeignKey("doctors.id", ondelete="CASCADE"), nullable=True)

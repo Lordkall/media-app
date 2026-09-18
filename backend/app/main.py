@@ -2,7 +2,21 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.router import api_router
 
-app = FastAPI(title="MedIA Backend", version="1.0.0")
+from contextlib import asynccontextmanager
+from app.core.database import engine
+from sqlalchemy import text
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Migration on startup
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(text("ALTER TABLE users ALTER COLUMN avatar_url TYPE TEXT;"))
+    except Exception as e:
+        print(f"Migration error (might already be TEXT): {e}")
+    yield
+
+app = FastAPI(title="MedIA Backend", version="1.0.0", lifespan=lifespan)
 
 from app.core.firebase import init_firebase
 init_firebase()
@@ -25,9 +39,14 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from frontend.main import main as flet_main
 
+import tempfile
+upload_dir_path = os.path.join(tempfile.gettempdir(), "saludnow_uploads")
+os.makedirs(upload_dir_path, exist_ok=True)
+
 app.mount("/", flet_fastapi.app(
     flet_main, 
-    assets_dir=os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "assets"))
+    assets_dir=os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "assets")),
+    upload_dir=upload_dir_path
 ))
 from fastapi import Request
 from fastapi.responses import JSONResponse
