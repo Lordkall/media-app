@@ -37,8 +37,7 @@ def LoadingView(page: ft.Page, user):
         controls=[
             ft.Container(
                 content=content,
-                expand=True,
-                alignment=ft.alignment.center
+                expand=True
             )
         ],
         bgcolor=colors.BACKGROUND
