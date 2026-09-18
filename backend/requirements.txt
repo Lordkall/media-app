@@ -13,4 +13,4 @@ tenacity
 python-multipart
 requests
 pg8000
-flet>=1.0.0
+flet[web]>=1.0.0
