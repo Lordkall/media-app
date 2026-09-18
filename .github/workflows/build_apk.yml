@@ -29,7 +29,7 @@ jobs:
       - name: Build APK with Flet
         run: |
           cd frontend
-          flet build apk --project SaludNow --org com.saludnow.app --yes
+          flet build apk --project SaludNow --org com.saludnow.app --yes --android-permissions USE_BIOMETRIC
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
