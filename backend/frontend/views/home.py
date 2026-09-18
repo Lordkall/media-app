@@ -545,7 +545,7 @@ def HomeView(page: ft.Page, user):
         
         def go_to_support_user(e):
             from views.support import SupportUserView
-            page.views.append(ft.View(route="/support-user", controls=[SupportUserView(page, user=user, on_navigate=lambda: page.views.pop() or page.update())], bgcolor=colors.BACKGROUND))
+            page.views.append(ft.View(route="/support-user", controls=[SupportUserView(page, user=user, on_navigate=lambda: [page.views.pop(), page.update()])], bgcolor=colors.BACKGROUND))
             page.update()
 
         menu_items.append(
@@ -615,7 +615,7 @@ def HomeView(page: ft.Page, user):
         
         def go_to_support_user_doc(e):
             from views.support import SupportUserView
-            page.views.append(ft.View(route="/support-user", controls=[SupportUserView(page, user=user, on_navigate=lambda: page.views.pop() or page.update())], bgcolor=colors.BACKGROUND))
+            page.views.append(ft.View(route="/support-user", controls=[SupportUserView(page, user=user, on_navigate=lambda: [page.views.pop(), page.update()])], bgcolor=colors.BACKGROUND))
             page.update()
 
         menu_items.append(
@@ -680,7 +680,7 @@ def HomeView(page: ft.Page, user):
         
         def go_to_support_admin(e):
             from views.support import SupportAdminView
-            page.views.append(ft.View(route="/support-admin", controls=[SupportAdminView(page, user=user, on_navigate=lambda: page.views.pop() or page.update())], bgcolor=colors.BACKGROUND))
+            page.views.append(ft.View(route="/support-admin", controls=[SupportAdminView(page, user=user, on_navigate=lambda: [page.views.pop(), page.update()])], bgcolor=colors.BACKGROUND))
             page.update()
 
         menu_items.append(

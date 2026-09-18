@@ -56,6 +56,10 @@ async def main(page: ft.Page):
             with SyncSession() as session:
                 user = session.execute(select(User).where(User.id == user_id)).scalars().first()
                 if user:
+                    fcm_token = os.environ.get("FCM_TOKEN")
+                    if fcm_token and user.fcm_token != fcm_token:
+                        user.fcm_token = fcm_token
+                        session.commit()
                     from views.home import HomeView
                     page.views.clear()
                     page.views.append(HomeView(page, user))

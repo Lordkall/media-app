@@ -89,6 +89,10 @@ def LoginView(page: ft.Page):
             user.gender = me_data.get("gender")
             user.avatar_url = me_data.get("avatar_url")
 
+            fcm_token = os.environ.get("FCM_TOKEN")
+            if fcm_token:
+                await asyncio.to_thread(client.put, "/users/me", {"fcm_token": fcm_token})
+
             # Exito: Navegar al Home
             from views.home import HomeView
             home_view = HomeView(page, user)

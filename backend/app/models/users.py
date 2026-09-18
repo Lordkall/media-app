@@ -25,6 +25,7 @@ class User(Base):
     gender: Mapped[Optional[str]] = mapped_column(String(20), default="No Especificado")
     avatar_url: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     session_token: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    fcm_token: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     linked_doctor_id: Mapped[Optional[int]] = mapped_column(ForeignKey("doctors.id", ondelete="CASCADE"), nullable=True)
     
     # Relaciones

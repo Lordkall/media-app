@@ -34,3 +34,29 @@ class Notification(Base):
 
     # Relaciones
     user: Mapped["User"] = relationship(back_populates="notifications")
+
+from sqlalchemy import event
+from sqlalchemy.engine import Connection
+
+@event.listens_for(Notification, 'after_insert')
+def receive_after_insert(mapper, connection: Connection, target: Notification):
+    """
+    Sends a Firebase push notification whenever a Notification is inserted into the DB.
+    """
+    try:
+        from app.models.users import User
+        from sqlalchemy import select
+        # Query the user's FCM token using the current connection
+        result = connection.execute(select(User.fcm_token).where(User.id == target.user_id)).fetchone()
+        if result and result[0]:
+            fcm_token = result[0]
+            # Send push notification in a background thread to not block the DB transaction
+            from app.core.firebase import send_push_notification
+            import threading
+            threading.Thread(
+                target=send_push_notification, 
+                args=(fcm_token, target.title, target.message),
+                daemon=True
+            ).start()
+    except Exception as e:
+        print(f"Error triggering push notification: {e}")

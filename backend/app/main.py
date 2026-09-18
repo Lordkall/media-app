@@ -4,6 +4,9 @@ from app.api.v1.router import api_router
 
 app = FastAPI(title="MedIA Backend", version="1.0.0")
 
+from app.core.firebase import init_firebase
+init_firebase()
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Permits all origins (including saludnow.site)

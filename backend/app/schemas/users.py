@@ -28,6 +28,7 @@ class UserUpdate(BaseModel):
     address: Optional[str] = None
     gender: Optional[str] = None
     avatar_url: Optional[str] = None
+    fcm_token: Optional[str] = None
 
 class PasswordChange(BaseModel):
     current_password: str
