@@ -11,7 +11,8 @@ SYNC_DB_URL = "postgresql+pg8000://postgres:nPWDQARrlHWjEGyACJJxfdTEGSKKEkRr@alt
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import NullPool
 
 # Motor global para Flet para evitar fugas de conexiones y congelamientos
-global_sync_engine = create_engine(SYNC_DB_URL, pool_size=20, max_overflow=30, pool_pre_ping=True)
+global_sync_engine = create_engine(SYNC_DB_URL, poolclass=NullPool)
 GlobalSession = sessionmaker(bind=global_sync_engine)
