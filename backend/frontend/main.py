@@ -1,7 +1,9 @@
 import flet as ft
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+frontend_dir = os.path.dirname(__file__)
+sys.path.append(os.path.abspath(os.path.join(frontend_dir, '..')))
+sys.path.append(os.path.abspath(frontend_dir))
 from views.login import LoginView
 
 async def main(page: ft.Page):
