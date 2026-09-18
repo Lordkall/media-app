@@ -60,9 +60,9 @@ async def main(page: ft.Page):
                     if fcm_token and user.fcm_token != fcm_token:
                         user.fcm_token = fcm_token
                         session.commit()
-                    from views.home import HomeView
+                    from views.loading import LoadingView
                     page.views.clear()
-                    page.views.append(HomeView(page, user))
+                    page.views.append(LoadingView(page, user))
                     page.update()
                     return
         except Exception as e:
