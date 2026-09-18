@@ -160,7 +160,8 @@ class ProfileView(ft.Container):
         async def on_pick_file_click(e):
             self.file_picker.pick_files(allow_multiple=False)
                 
-        self.file_picker = ft.FilePicker(on_result=on_file_picked)
+        self.file_picker = ft.FilePicker()
+        self.file_picker.on_result = on_file_picked
         self.ft_page.overlay.append(self.file_picker)
 
         role_str = self.user.role.value if hasattr(self.user.role, 'value') else str(self.user.role) if self.user and hasattr(self.user, 'role') else "patient"

@@ -56,6 +56,7 @@ def RegisterView(page: ft.Page):
         color=colors.TEXT_DARK,
         text_size=14,
         content_padding=10,
+        menu_height=200,
     )
     
     address_input = ft.TextField(
@@ -65,11 +66,15 @@ def RegisterView(page: ft.Page):
     )
 
     gender_radio = ft.RadioGroup(
-        content=ft.Row([
-            ft.Radio(value="Masculino", label="Masculino"),
-            ft.Radio(value="Femenino", label="Femenino"),
-            ft.Radio(value="Prefiero no decirlo", label="Prefiero no decirlo"),
-        ], alignment=ft.MainAxisAlignment.CENTER),
+        content=ft.Column([
+            ft.Row([
+                ft.Radio(value="Masculino", label="Masculino"),
+                ft.Radio(value="Femenino", label="Femenino"),
+            ], alignment=ft.MainAxisAlignment.CENTER),
+            ft.Row([
+                ft.Radio(value="Prefiero no decirlo", label="Prefiero no decirlo"),
+            ], alignment=ft.MainAxisAlignment.CENTER),
+        ], alignment=ft.MainAxisAlignment.CENTER, spacing=0),
         value="Prefiero no decirlo"
     )
 
