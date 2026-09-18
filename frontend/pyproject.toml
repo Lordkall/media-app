@@ -4,7 +4,7 @@ version = "1.0.0"
 description = "Aplicación Salud Now"
 dependencies = [
     "flet>=1.0.0",
-    "flet-local-auth",
+    "flet-local-auth>=1.0.0",
     "requests",
     "SQLAlchemy",
     "pg8000",
