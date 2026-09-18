@@ -27,13 +27,13 @@ jobs:
       - name: Build Flet app
         run: |
           cd frontend
-          flet publish main.py --base-url /
-          echo "saludnow.site" > dist/CNAME
+          flet build web --base-url /
+          echo "saludnow.site" > build/web/CNAME
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './frontend/dist'
+          path: './frontend/build/web'
 
   deploy:
     environment:
