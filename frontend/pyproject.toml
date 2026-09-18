@@ -4,6 +4,7 @@ version = "1.0.0"
 description = "Aplicación Salud Now"
 dependencies = [
     "flet>=1.0.0",
+    "flet-file-picker",
     "requests",
     "SQLAlchemy",
     "pg8000",

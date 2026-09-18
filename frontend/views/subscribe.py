@@ -511,7 +511,7 @@ class SubscribeView(ft.Container):
                 ft.Divider(height=10, color="transparent"),
                 ft.Text("Indicar Referencia de Pago:", size=12, weight=ft.FontWeight.BOLD),
                 reference_input
-            ], width=360, height=330, spacing=5),
+            ], width=360, spacing=5),
             actions=[
                 ft.TextButton("Cancelar", on_click=close_dlg),
                 ft.Button("Realizar Pago de Suscripción", style=ft.ButtonStyle(bgcolor=SUCCESS_COLOR, color="white"), on_click=confirm_pay)
