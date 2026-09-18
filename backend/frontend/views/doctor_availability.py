@@ -13,14 +13,11 @@ def DoctorAvailabilityView(page: ft.Page, user, on_navigate=None):
     if base_path not in sys.path:
         sys.path.append(base_path)
 
-    from sqlalchemy import create_engine
-    from sqlalchemy.orm import sessionmaker
     from app.models.users import User
     from app.models.doctors import Doctor, Availability
 
-    from core.config import SYNC_DB_URL
-    sync_engine = create_engine(SYNC_DB_URL)
-    Session = sessionmaker(bind=sync_engine)
+    from core.config import GlobalSession
+    Session = GlobalSession
 
     # Initial data
     doc = None
@@ -161,46 +158,58 @@ def DoctorAvailabilityView(page: ft.Page, user, on_navigate=None):
 
     def save_availability(e):
         try:
-            val = int(max_patients_input.value)
-            if val < 1:
-                raise ValueError()
-        except:
-            snack = ft.SnackBar(content=ft.Text("Por favor ingresa un número válido para los pacientes."), bgcolor="red")
-            page.overlay.append(snack)
-            snack.open = True
-            page.update()
-            return
-
-        with Session() as session:
-            doc_record = session.query(Doctor).filter(Doctor.user_id == user.id).first()
-            if not doc_record:
-                snack = ft.SnackBar(content=ft.Text("Error: Perfil de doctor no encontrado."), bgcolor="red")
+            try:
+                val = int(max_patients_input.value)
+                if val < 1:
+                    raise ValueError()
+            except:
+                snack = ft.SnackBar(content=ft.Text("Por favor ingresa un número válido para los pacientes."), bgcolor="red")
                 page.overlay.append(snack)
                 snack.open = True
                 page.update()
                 return
 
-            doc_record.max_patients_per_day = val
+            with Session() as session:
+                from app.models.users import RoleEnum
+                role_val = getattr(user.role, 'value', str(user.role))
+                if role_val == RoleEnum.ASSISTANT.value:
+                    doc_record = session.query(Doctor).filter(Doctor.id == user.linked_doctor_id).first()
+                else:
+                    doc_record = session.query(Doctor).filter(Doctor.user_id == user.id).first()
+                if not doc_record:
+                    snack = ft.SnackBar(content=ft.Text("Error: Perfil de doctor no encontrado."), bgcolor="red")
+                    page.overlay.append(snack)
+                    snack.open = True
+                    page.update()
+                    return
 
-            # Delete old availabilities
-            session.query(Availability).filter(Availability.doctor_id == doc_record.id).delete()
+                doc_record.max_patients_per_day = val
 
-            # Insert new ones
-            for d_str in existing_days:
-                new_av = Availability(
-                    doctor_id=doc_record.id,
-                    date=date.fromisoformat(d_str),
-                    start_time="09:00",
-                    end_time="17:00"
-                )
-                session.add(new_av)
+                # Delete old availabilities
+                session.query(Availability).filter(Availability.doctor_id == doc_record.id).delete()
 
-            session.commit()
+                # Insert new ones
+                for d_str in existing_days:
+                    new_av = Availability(
+                        doctor_id=doc_record.id,
+                        date=date.fromisoformat(d_str),
+                        start_time="09:00",
+                        end_time="17:00"
+                    )
+                    session.add(new_av)
 
-        snack = ft.SnackBar(content=ft.Text("Disponibilidad guardada con éxito"), bgcolor=colors.ACCENT_GREEN)
-        page.overlay.append(snack)
-        snack.open = True
-        page.update()
+                session.commit()
+
+            snack = ft.SnackBar(content=ft.Text("Disponibilidad guardada con éxito"), bgcolor=colors.ACCENT_GREEN)
+            page.overlay.append(snack)
+            snack.open = True
+            page.update()
+            
+        except Exception as ex:
+            snack = ft.SnackBar(content=ft.Text(f"Error al guardar: {str(ex)}"), bgcolor="red")
+            page.overlay.append(snack)
+            snack.open = True
+            page.update()
 
     save_btn = ft.Button(
         "Guardar Disponibilidad",
