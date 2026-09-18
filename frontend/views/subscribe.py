@@ -209,7 +209,7 @@ class SubscribeView(ft.Container):
                     ft.Text("Cuenta inactiva o pendiente", size=22, weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
                     ft.Text("Para utilizar la plataforma como Especialista Médico, debe suscribirse a un plan y esperar la validación del administrador.", size=13, color=TEXT_SECONDARY, text_align=ft.TextAlign.CENTER),
                     ft.Divider(height=20, color="transparent"),
-                    ft.Button("Volver a reportar el pago", style=ft.ButtonStyle(style=ft.ButtonStyle(bgcolor=PRIMARY_COLOR), color="white"), on_click=on_re_report),
+                    ft.Button("Volver a reportar el pago", style=ft.ButtonStyle(bgcolor=PRIMARY_COLOR, color="white"), on_click=on_re_report),
                     ft.TextButton("Cerrar Sesión", on_click=on_logout)
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, alignment=ft.MainAxisAlignment.CENTER),
                 alignment=ft.Alignment.CENTER,
@@ -514,7 +514,7 @@ class SubscribeView(ft.Container):
             ], width=360, height=330, spacing=5),
             actions=[
                 ft.TextButton("Cancelar", on_click=close_dlg),
-                ft.Button("Realizar Pago de Suscripción", style=ft.ButtonStyle(style=ft.ButtonStyle(bgcolor=SUCCESS_COLOR), color="white"), on_click=confirm_pay)
+                ft.Button("Realizar Pago de Suscripción", style=ft.ButtonStyle(bgcolor=SUCCESS_COLOR, color="white"), on_click=confirm_pay)
             ],
             actions_alignment=ft.MainAxisAlignment.END,
         )

@@ -120,7 +120,7 @@ class ProfileView(ft.Container):
             content=ft.Column([current_pwd_input, new_pwd_input], tight=True),
             actions=[
                 ft.TextButton("Cancelar", on_click=close_pwd_dialog),
-                ft.Button("Guardar Contraseña", on_click=submit_pwd_change, style=ft.ButtonStyle(style=ft.ButtonStyle(bgcolor=PRIMARY_COLOR), color="white"))
+                ft.Button("Guardar Contraseña", on_click=submit_pwd_change, style=ft.ButtonStyle(bgcolor=PRIMARY_COLOR, color="white"))
             ]
         )
         

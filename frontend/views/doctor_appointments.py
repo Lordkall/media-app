@@ -159,7 +159,7 @@ def show_doctor_appointments(page: ft.Page, user):
                             ft.Container(height=10)
                         )
                         card_content.controls.append(
-                            ft.Button("Cancelar Cita", icon=ft.Icons.CANCEL, style=ft.ButtonStyle(style=ft.ButtonStyle(color="white", style=ft.ButtonStyle(bgcolor="red"))), on_click=cancel_appointment(a.id))
+                            ft.Button("Cancelar Cita", icon=ft.Icons.CANCEL, style=ft.ButtonStyle(color="white", bgcolor="red"), on_click=cancel_appointment(a.id))
                         )
 
                     appointments_list.controls.append(
@@ -196,7 +196,7 @@ def show_doctor_appointments(page: ft.Page, user):
             height=400,
         ),
         actions=[
-            ft.Button("Cerrar", style=ft.ButtonStyle(style=ft.ButtonStyle(bgcolor=colors.PRIMARY), color="white"), on_click=close_dlg)
+            ft.Button("Cerrar", style=ft.ButtonStyle(bgcolor=colors.PRIMARY, color="white"), on_click=close_dlg)
         ],
         actions_alignment=ft.MainAxisAlignment.END,
     )

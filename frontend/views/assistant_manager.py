@@ -136,7 +136,7 @@ class AssistantManagerView(ft.Container):
             content=ft.Column([fname_input, lname_input, email_input, pwd_input], tight=True),
             actions=[
                 ft.TextButton("Cancelar", on_click=lambda _: setattr(modal, 'open', False) or self.ft_page.update()),
-                ft.Button("Crear Asistente", on_click=save_assistant, style=ft.ButtonStyle(style=ft.ButtonStyle(bgcolor=colors.PRIMARY), color="white"))
+                ft.Button("Crear Asistente", on_click=save_assistant, style=ft.ButtonStyle(bgcolor=colors.PRIMARY, color="white"))
             ]
         )
         self.ft_page.overlay.append(modal)
