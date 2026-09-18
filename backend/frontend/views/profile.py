@@ -179,9 +179,6 @@ class ProfileView(ft.Container):
             
         self.ft_page.update() # CRITICAL: Update page so client registers the control
 
-        def on_pick_file_click(e):
-            self.file_picker.pick_files(allow_multiple=False, allowed_extensions=["png", "jpg", "jpeg", "gif", "webp"])
-
         role_str = self.user.role.value if hasattr(self.user.role, 'value') else str(self.user.role) if self.user and hasattr(self.user, 'role') else "patient"
         role_name = "Doctor" if role_str == "doctor" else ("Administrador" if role_str == "admin" else ("Asistente" if role_str == "assistant" or role_str == "ASSISTANT" else "Paciente"))
 
@@ -195,7 +192,15 @@ class ProfileView(ft.Container):
         )
 
         presets_row = ft.Row([
-            ft.Button("Subir Foto de Perfil", icon=ft.Icons.UPLOAD_FILE, on_click=on_pick_file_click)
+            ft.Button(
+                "Subir Foto de Perfil", 
+                icon=ft.Icons.UPLOAD_FILE, 
+                action=ft.PickFiles(
+                    self.file_picker, 
+                    allow_multiple=False, 
+                    allowed_extensions=["png", "jpg", "jpeg", "gif", "webp"]
+                )
+            )
         ], alignment=ft.MainAxisAlignment.CENTER)
 
         avatar_section = ft.Column([

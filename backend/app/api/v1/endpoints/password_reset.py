@@ -40,7 +40,7 @@ async def request_password_reset(
         FRONTEND_URL = "http://localhost:3000/reset-password"
         reset_link = f"{FRONTEND_URL}?token={raw_token}"
         
-        send_reset_email(user.email, reset_link)
+        send_reset_email(user.email, reset_link, raw_token)
 
     return {"message": "Si el correo está registrado, recibirás un enlace de recuperación pronto."}
 

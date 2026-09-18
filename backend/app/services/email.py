@@ -42,20 +42,22 @@ html_template = """
         <div class="content">
             <h1>Restablece tu contraseña</h1>
             <p>Hola,</p>
-            <p>Hemos recibido una solicitud para restablecer la contraseña de tu cuenta en <strong>MedIA</strong>. Si fuiste tú, puedes configurar una nueva contraseña haciendo clic en el botón de abajo:</p>
+            <p>Hemos recibido una solicitud para restablecer la contraseña de tu cuenta en <strong>MedIA</strong>. Si fuiste tú, por favor copia el siguiente token de seguridad e ingrésalo en la aplicación:</p>
             
             <div class="btn-container">
-                <a href="{{ reset_url }}" class="btn" style="color: #ffffff;">Restablecer Contraseña</a>
+                <div style="background-color: #f4f4f4; border: 1px dashed #0056b3; padding: 15px; font-size: 18px; font-weight: bold; letter-spacing: 2px; color: #0056b3;">
+                    {{ token }}
+                </div>
             </div>
             
-            <p class="warning">Este enlace <strong>expirará en 15 minutos</strong> por razones de seguridad.</p>
+            <p class="warning">Este token <strong>expirará en 15 minutos</strong> por razones de seguridad.</p>
             <p>Si no solicitaste un cambio de contraseña, puedes ignorar este correo de forma segura. Tu cuenta sigue protegida.</p>
             
             <p>Saludos,<br>El equipo de MedIA</p>
         </div>
         <div class="footer">
             <p>&copy; 2026 MedIA. Todos los derechos reservados.</p>
-            <p>Si el botón no funciona, copia y pega el siguiente enlace en tu navegador:<br>
+            <p>Si prefieres, también puedes hacer clic en el siguiente enlace:<br>
             <a href="{{ reset_url }}" style="color: #0056b3; word-break: break-all;">{{ reset_url }}</a></p>
         </div>
     </div>
@@ -63,20 +65,19 @@ html_template = """
 </html>
 """
 
-def send_reset_email(to_email: str, reset_url: str):
+def send_reset_email(to_email: str, reset_url: str, raw_token: str):
     """
     Envía el correo HTML con el enlace de recuperación.
-    Si no hay credenciales SMTP configuradas, imprime el enlace en consola (útil para desarrollo).
+    Si no hay credenciales SMTP configuradas, lanza error para avisar al frontend.
     """
-    html_content = html_template.replace("{{ reset_url }}", reset_url)
+    html_content = html_template.replace("{{ reset_url }}", reset_url).replace("{{ token }}", raw_token)
     
     if not SMTP_SERVER or not SMTP_USER:
         print(f"\n--- [MOCK EMAIL] ---")
         print(f"To: {to_email}")
-        print(f"Subject: Recuperación de Contraseña - MedIA")
-        print(f"Reset Link: {reset_url}")
+        print(f"Token: {raw_token}")
         print(f"--------------------\n")
-        return
+        raise Exception("Las variables de entorno SMTP_SERVER o SMTP_USER no están configuradas en el servidor. El correo no pudo ser enviado.")
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = "Recuperación de Contraseña - MedIA"
