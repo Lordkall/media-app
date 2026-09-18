@@ -16,4 +16,6 @@ dependencies = [
 permissions = ["biometric"]
 
 [tool.flet.flutter.pubspec.dependencies]
-local_auth = "^2.2.3"
+local_auth = "^3.0.2"
+
+
