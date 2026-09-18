@@ -46,7 +46,8 @@ def LoginView(page: ft.Page):
             from core.api_client import client
             
             # 1. Login to get token
-            auth_data = client.login(email, password)
+            import asyncio
+            auth_data = await asyncio.to_thread(client.login, email, password)
             
             # 2. Guardar sesión
             try:
@@ -72,7 +73,8 @@ def LoginView(page: ft.Page):
                 page.pubsub.send_all_on_topic(f"user_{user_id}", f"force_logout:{getattr(page, 'session_id', '')}")
 
             # Como HomeView necesita un objeto User por ahora, lo llenamos con los datos del endpoint
-            me_data = client.get("/users/me")
+            import asyncio
+            me_data = await asyncio.to_thread(client.get, "/users/me")
             class UserMock:
                 pass
             user = UserMock()

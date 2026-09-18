@@ -412,7 +412,8 @@ def RegisterView(page: ft.Page):
                     "role": "doctor" if role_value["value"] == "doctor" else "patient",
                     "specialties": list(selected_specialties) if role_value["value"] == "doctor" else []
                 }
-                client.post("/auth/register", json=payload)
+                import asyncio
+                await asyncio.to_thread(client.post, "/auth/register", json=payload)
                 
                 snack = ft.SnackBar(ft.Text("¡Cuenta creada exitosamente!"), bgcolor=colors.PRIMARY)
                 page.overlay.append(snack)
