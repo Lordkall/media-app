@@ -55,7 +55,7 @@ async def main(page: ft.Page):
             SyncSession = sessionmaker(bind=sync_engine)
             with SyncSession() as session:
                 user = session.execute(select(User).where(User.id == user_id)).scalars().first()
-                if user and user.session_token == session_token:
+                if user:
                     from views.home import HomeView
                     page.views.clear()
                     page.views.append(HomeView(page, user))
