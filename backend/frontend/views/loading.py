@@ -1,4 +1,5 @@
 import flet as ft
+import flet_lottie as fl
 from core import colors
 import asyncio
 
@@ -16,7 +17,7 @@ def LoadingView(page: ft.Page, user):
     content = ft.Column(
         [
             ft.Text("Cargando...", size=24, weight=ft.FontWeight.BOLD, color=colors.PRIMARY),
-            ft.Lottie(
+            fl.Lottie(
                 src="catmed.json",
                 repeat=True,
                 reverse=False,
