@@ -171,7 +171,12 @@ class ProfileView(ft.Container):
                         pass
 
         self.file_picker = ft.FilePicker(on_result=on_file_picked, on_upload=on_file_uploaded)
-        self.ft_page.overlay.append(self.file_picker)
+        
+        # Flet 1.0 requires non-visual controls like FilePicker to be in page.services, not overlay
+        if not hasattr(self.ft_page, "services"):
+            self.ft_page.overlay.append(self.file_picker)
+        else:
+            self.ft_page.services.append(self.file_picker)
 
         def on_pick_file_click(e):
             self.file_picker.pick_files(allow_multiple=False, allowed_extensions=["png", "jpg", "jpeg", "gif", "webp"])
