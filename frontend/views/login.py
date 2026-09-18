@@ -131,6 +131,7 @@ def LoginView(page: ft.Page):
                 ),
                 width=200,
                 height=45
+            ),
 
             # Footer con links
             ft.Container(
