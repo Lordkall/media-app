@@ -1,0 +1,16 @@
+[project]
+name = "SaludNow"
+version = "1.0.0"
+description = "Aplicación Salud Now"
+dependencies = [
+    "flet>=1.0.0",
+    "flet-local-auth",
+    "requests",
+    "SQLAlchemy",
+    "pg8000",
+    "python-jose",
+    "urllib3"
+]
+
+[tool.flet]
+permissions = ["biometric"]
