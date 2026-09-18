@@ -10,7 +10,7 @@ def PasswordRecoveryView(page: ft.Page):
     )
     
     token_input = ft.TextField(
-        label="Token (Cópialo de tu correo/consola)",
+        label="Token de Seguridad",
         bgcolor=colors.INPUT_BG,
         color=colors.TEXT_DARK
     )
@@ -44,7 +44,7 @@ def PasswordRecoveryView(page: ft.Page):
             from core.api_client import client
             import asyncio
             await asyncio.to_thread(client.post, "/password-reset/request", {"email": email})
-            success_text.value = "Enlace enviado. Revisa tu correo (o la consola)."
+            success_text.value = "Si el correo está registrado, recibirás un enlace."
             email_input.value = ""
         except Exception as ex:
             if hasattr(ex, "response") and ex.response is not None:
