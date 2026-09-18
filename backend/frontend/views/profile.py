@@ -146,12 +146,12 @@ class ProfileView(ft.Container):
             self.update_avatar_preview(self.avatar_src)
             self.ft_page.update()
 
-        def on_file_picked(e: ft.FilePickerResultEvent):
+        async def on_file_picked(e: ft.FilePickerResultEvent):
             if e.files and len(e.files) > 0:
                 f = e.files[0]
                 if self.ft_page.web:
                     upload_url = self.ft_page.get_upload_url(f.name, 60)
-                    self.file_picker.upload([ft.FilePickerUploadFile(name=f.name, upload_url=upload_url)])
+                    await self.file_picker.upload([ft.FilePickerUploadFile(name=f.name, upload_url=upload_url)])
                 else:
                     with open(f.path, "rb") as file:
                         process_avatar_bytes(file.read())
