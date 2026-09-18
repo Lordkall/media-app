@@ -64,7 +64,7 @@ def _doctor_card(doctor: Doctor, page: ft.Page = None) -> ft.Container:
             ),
             ft.Container(height=5),
             ft.Text(
-                f"Dr{'a' if user.first_name[-1].lower() == 'a' else ''}. {user.first_name} {user.last_name}",
+                f"Dr{'a' if getattr(user, 'gender', '') == 'F' else ''}. {user.first_name} {user.last_name}",
                 size=13, weight=ft.FontWeight.BOLD, color=colors.TEXT_DARK, text_align=ft.TextAlign.CENTER
             ),
             ft.Text(

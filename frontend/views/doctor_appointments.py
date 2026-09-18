@@ -97,7 +97,7 @@ def show_doctor_appointments(page: ft.Page, user):
                                         
                                         # Notificar al paciente
                                         from app.models.notifications import Notification, NotificationType
-                                        doc_name = f"Dr. {user.first_name} {user.last_name}"
+                                        doc_name = f"Dr{'a' if getattr(user, 'gender', '') == 'F' else ''}. {user.first_name} {user.last_name}"
                                         notif = Notification(
                                             user_id=app_to_cancel.patient.user_id,
                                             type=NotificationType.APPOINTMENT_CANCELLED,

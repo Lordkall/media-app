@@ -151,11 +151,12 @@ class ProfileView(ft.Container):
                         self.ft_page.update()
                     return
                 filename = os.path.basename(file_path)
-                dest_dir = os.path.join(os.path.dirname(__file__), "..", "assets", "avatars")
+                app_dir = os.path.expanduser("~")
+                dest_dir = os.path.join(app_dir, "saludnow_avatars")
                 os.makedirs(dest_dir, exist_ok=True)
                 dest_path = os.path.join(dest_dir, f"{self.user.id}_{filename}")
                 shutil.copy(file_path, dest_path)
-                self.avatar_src = f"frontend/assets/avatars/{self.user.id}_{filename}"
+                self.avatar_src = dest_path
                 self.update_avatar_preview(self.avatar_src)
 
         role_str = self.user.role.value if hasattr(self.user.role, 'value') else str(self.user.role) if self.user and hasattr(self.user, 'role') else "patient"

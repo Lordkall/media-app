@@ -8,7 +8,7 @@ def DoctorProfileView(page: ft.Page, doctor, on_navigate=None):
         page.update()
 
     doc_u = doctor.user
-    doc_name = f"Dr{'a' if doc_u.first_name[-1].lower()=='a' else ''}. {doc_u.first_name} {doc_u.last_name}"
+    doc_name = f"Dr{'a' if getattr(doc_u, 'gender', '') == 'F' else ''}. {doc_u.first_name} {doc_u.last_name}"
     
     avatar_src = doc_u.avatar_url if doc_u.avatar_url else None
     initials = (doc_u.first_name[0] + doc_u.last_name[0]).upper()

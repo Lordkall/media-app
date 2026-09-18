@@ -377,7 +377,7 @@ def HomeView(page: ft.Page, user):
                         appointments_list.controls.append(ft.Text("No tienes citas médicas.", color=colors.TEXT_LIGHT, text_align=ft.TextAlign.CENTER))
                     
                     for a in apps:
-                        doc_name = f"Dr{'a' if a.doctor.user.first_name[-1].lower()=='a' else ''}. {a.doctor.user.first_name} {a.doctor.user.last_name}"
+                        doc_name = f"Dr{'a' if getattr(a.doctor.user, 'gender', '') == 'F' else ''}. {a.doctor.user.first_name} {a.doctor.user.last_name}"
                         spec = a.doctor.specialties[0] if getattr(a.doctor, 'specialties', None) else "Especialista Médico"
                         date_str = a.appointment_date.strftime("%d/%m/%Y")
                         turn = a.turn_number
