@@ -23,7 +23,7 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install flet==0.86.5
+          pip install "flet>=1.0.0"
           if [ -f frontend/requirements.txt ]; then pip install -r frontend/requirements.txt; fi
 
       - name: Build APK with Flet
