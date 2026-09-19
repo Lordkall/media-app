@@ -294,7 +294,7 @@ class BookAppointmentView(ft.Container):
             ft.Divider(height=20, color="transparent"),
             ft.Row([book_btn], alignment=ft.MainAxisAlignment.CENTER),
             ft.Container(height=20),
-        ], scroll=ft.ScrollMode.AUTO, expand=True, horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
+        ], expand=True, horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
 
         self.content = ft.Column(
             [

@@ -51,11 +51,12 @@ def main(page: ft.Page):
             
     page.on_view_pop = view_pop
 
-    def try_auto_login(e=None):
+    async def try_auto_login():
         """
-        Se ejecuta con page.on_load, DESPUÉS de que el browser sincronizó
-        su localStorage con page.client_storage. Así el token siempre está disponible.
+        Se ejecuta como tarea asíncrona DESPUÉS de que el browser sincronizó
+        su localStorage con page.client_storage.
         """
+        import asyncio
         session_token = None
         user_id = None
         try:
@@ -69,8 +70,8 @@ def main(page: ft.Page):
                 from core.api_client import client
                 client.set_token(session_token)
 
-                # Validar token contra el backend
-                me_data = client.get("/users/me")
+                # Llamada HTTP en un thread separado para no bloquear el event loop
+                me_data = await asyncio.to_thread(client.get, "/users/me")
 
                 class UserMock:
                     pass
@@ -95,20 +96,18 @@ def main(page: ft.Page):
                 return
             except Exception as ex:
                 print("[AUTO-LOGIN ERROR]", ex)
-                # Token inválido o expirado - limpiar sesión
                 try:
                     page.client_storage.remove("session_token")
                     page.client_storage.remove("user_id")
                 except: pass
 
-        # Sin sesión válida: mostrar login
+        # Sin sesión válida: ya se muestra login (fue cargado antes)
         page.views.clear()
         page.views.append(LoginView(page))
         page.update()
 
-    # page.on_load se dispara cuando el WebSocket con el browser está listo
-    # y client_storage ya fue sincronizado desde localStorage del navegador
-    page.on_load = try_auto_login
+    # on_load se dispara cuando el WebSocket está listo y client_storage fue sincronizado
+    page.on_load = lambda e: page.run_task(try_auto_login)
 
     # Mostrar login inmediatamente para no dejar la pantalla en blanco
     # on_load lo reemplazará si hay sesión válida
