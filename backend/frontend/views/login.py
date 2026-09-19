@@ -175,7 +175,8 @@ def LoginView(page: ft.Page):
             ft.Container(
                 content=content,
                 padding=20,
-                expand=True
+                expand=True,
+                alignment=ft.alignment.center
             )
         ],
         bgcolor=colors.BACKGROUND
