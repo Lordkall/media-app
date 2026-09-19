@@ -15,7 +15,7 @@ def fake_create_engine(*args, **kwargs):
 sqlalchemy.create_engine = fake_create_engine
 from views.login import LoginView
 
-async def main(page: ft.Page):
+def main(page: ft.Page):
     page.title = "Salud Now"
     page.theme_mode = ft.ThemeMode.LIGHT
     page.fonts = {
@@ -25,13 +25,13 @@ async def main(page: ft.Page):
     page.window.min_width = 360
     page.window.min_height = 600
     
-    async def view_pop(e):
+    def view_pop(e):
         if len(page.views) > 1:
             page.views.pop()
             # If returning to home, refresh it
             if len(page.views) == 1:
                 try:
-                    uid = await page.shared_preferences.get("user_id")
+                    uid = page.client_storage.get("user_id")
                     if uid:
                         page.pubsub.send_all_on_topic(f"user_{uid}", "refresh_home")
                 except: pass

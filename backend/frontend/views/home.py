@@ -92,36 +92,31 @@ def HomeView(page: ft.Page, user):
             return ft.View(route="/home", controls=[SubscribeView(page, user=user, is_root=True)], bgcolor=colors.BACKGROUND)
 
     def handle_logout(e=None, forced=False):
-        async def _run():
-            # Limpiar almacenamiento local
-            try:
-                await page.shared_preferences.remove("session_token")
-                await page.shared_preferences.remove("user_id")
-            except Exception as e:
-                print("Error removing shared_preferences:", e)
-                
-            try:
-                if hasattr(page, "my_pubsub_topic") and hasattr(page, "my_pubsub_handler"):
-                    page.pubsub.unsubscribe_topic(page.my_pubsub_topic, page.my_pubsub_handler)
-                    delattr(page, "my_pubsub_topic")
-                    delattr(page, "my_pubsub_handler")
-                page.pubsub.unsubscribe_topic(f"user_{user.id}", on_pubsub_message)
-            except Exception:
-                pass
+        # Limpiar almacenamiento local
+        try:
+            page.client_storage.remove("session_token")
+            page.client_storage.remove("user_id")
+        except Exception as ex:
+            print("Error removing client_storage:", ex)
             
-            # Volver al login
-            page.views.clear()
-            from views.login import LoginView
-            page.views.append(LoginView(page))
-            
-            if forced:
-                snack = ft.SnackBar(ft.Text("Sesión cerrada porque iniciaste en otro dispositivo."), bgcolor="red")
-                page.overlay.append(snack)
-                snack.open = True
-                
-            page.update()
-            
-        page.run_task(_run)
+        try:
+            if hasattr(page, "my_pubsub_topic") and hasattr(page, "my_pubsub_handler"):
+                page.pubsub.unsubscribe_topic(page.my_pubsub_topic, page.my_pubsub_handler)
+                delattr(page, "my_pubsub_topic")
+                delattr(page, "my_pubsub_handler")
+            page.pubsub.unsubscribe_topic(f"user_{user.id}", on_pubsub_message)
+        except Exception:
+            pass
+        
+        # Volver al login
+        page.views.clear()
+        from views.login import LoginView
+        page.views.append(LoginView(page))
+        
+        if forced:
+            snack = ft.SnackBar(ft.Text("Sesión cerrada porque iniciaste en otro dispositivo."), bgcolor="red")
+            page.overlay.append(snack)
+            snack.open = True
             
         page.update()
 
