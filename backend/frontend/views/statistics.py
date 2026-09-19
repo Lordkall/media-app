@@ -135,7 +135,7 @@ def StatisticsView(page: ft.Page, user):
             ],
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         ),
-        padding=ft.padding.Padding.only(top=10, bottom=20),
+        padding=ft.padding.only(top=10, bottom=20),
     )
 
     return ft.Container(

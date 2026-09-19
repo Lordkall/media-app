@@ -171,7 +171,7 @@ class AssistantManagerView(ft.Container):
             ft.Container(
                 content=self.assistants_list,
                 expand=True,
-                margin=ft.margin.Margin(top=10, right=0, bottom=0, left=0)
+                margin=ft.margin.margin(top=10, right=0, bottom=0, left=0)
             )
         ], expand=True, spacing=10)
 

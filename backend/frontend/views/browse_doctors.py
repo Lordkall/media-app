@@ -82,7 +82,7 @@ def _doctor_card(doctor: Doctor, page: ft.Page = None) -> ft.Container:
             ft.Container(
                 content=star_icon,
                 alignment=ft.alignment.top_right,
-                margin=ft.margin.Margin(top=0, right=0, bottom=0, left=0)
+                margin=ft.margin.margin(top=0, right=0, bottom=0, left=0)
             )
         )
 
@@ -228,7 +228,7 @@ def BrowseDoctorsView(page: ft.Page, current_user):
                 ),
                 bgcolor=colors.PRIMARY if is_all else colors.INPUT_BG,
                 border_radius=20,
-                padding=ft.padding.Padding.only(left=14, right=14, top=8, bottom=8),
+                padding=ft.padding.only(left=14, right=14, top=8, bottom=8),
                 on_click=on_specialty_click(None),
             )
         )
@@ -244,7 +244,7 @@ def BrowseDoctorsView(page: ft.Page, current_user):
                     ),
                     bgcolor=colors.PRIMARY if is_sel else colors.INPUT_BG,
                     border_radius=20,
-                    padding=ft.padding.Padding.only(left=12, right=12, top=8, bottom=8),
+                    padding=ft.padding.only(left=12, right=12, top=8, bottom=8),
                     on_click=on_specialty_click(spec),
                 )
             )
@@ -271,7 +271,7 @@ def BrowseDoctorsView(page: ft.Page, current_user):
         color=colors.TEXT_DARK,
         border_radius=12,
         on_select=on_state_change,
-        content_padding=ft.padding.Padding.only(left=10, right=10, top=8, bottom=8),
+        content_padding=ft.padding.only(left=10, right=10, top=8, bottom=8),
     )
 
     # Search bar
@@ -281,7 +281,7 @@ def BrowseDoctorsView(page: ft.Page, current_user):
         bgcolor=colors.INPUT_BG,
         color=colors.TEXT_DARK,
         border_radius=12,
-        content_padding=ft.padding.Padding.only(left=10, right=10, top=8, bottom=8),
+        content_padding=ft.padding.only(left=10, right=10, top=8, bottom=8),
         on_change=on_search_change,
     )
 
@@ -319,7 +319,7 @@ def BrowseDoctorsView(page: ft.Page, current_user):
         controls=[
             ft.Container(
                 content=content,
-                padding=ft.padding.Padding.only(left=16, right=16, top=10, bottom=10),
+                padding=ft.padding.only(left=16, right=16, top=10, bottom=10),
                 expand=True,
             )
         ],

@@ -357,7 +357,7 @@ class SubscribeView(ft.Container):
                         bgcolor=PRIMARY_COLOR if is_current else ACCENT_COLOR,
                         color="white",
                         shape=ft.RoundedRectangleBorder(radius=8),
-                        padding=ft.padding.Padding.all(12)
+                        padding=ft.padding.all(12)
                     ),
                     on_click=lambda e, t=title, p=price_val: self.open_payment_modal(t, p),
                 )

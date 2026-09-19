@@ -816,7 +816,7 @@ def HomeView(page: ft.Page, user):
                                     content=ft.Text(role_label, size=10, color="white", weight=ft.FontWeight.W_600),
                                     bgcolor=colors.SECONDARY,
                                     border_radius=10,
-                                    padding=ft.padding.Padding.only(left=8, right=8, top=3, bottom=3),
+                                    padding=ft.padding.only(left=8, right=8, top=3, bottom=3),
                                 ),
                                 ft.Text(user.email, size=11, color=colors.TEXT_LIGHT),
                             ],

@@ -255,7 +255,7 @@ class BookAppointmentView(ft.Container):
                 bgcolor=PRIMARY_COLOR,
                 color="white",
                 shape=ft.RoundedRectangleBorder(radius=25),
-                padding=ft.padding.Padding.all(16),
+                padding=ft.padding.all(16),
             ),
             width=300,
             on_click=self.confirm_booking
