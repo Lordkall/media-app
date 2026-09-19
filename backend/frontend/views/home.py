@@ -726,9 +726,15 @@ def HomeView(page: ft.Page, user):
     def go_to_profile(e):
         try:
             from views.profile import ProfileView
+            
+            def handle_profile_back(route=None):
+                if len(page.views) > 1:
+                    page.views.pop()
+                    page.update()
+                    
             page.views.append(ft.View(
                 route="/profile",
-                controls=[ProfileView(page, user=user, on_navigate=lambda route: page.views.pop() if page.views else None)],
+                controls=[ProfileView(page, user=user, on_navigate=handle_profile_back)],
                 bgcolor=colors.BACKGROUND
             ))
             page.update()
