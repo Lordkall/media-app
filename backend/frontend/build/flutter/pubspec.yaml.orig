@@ -1,30 +1,27 @@
+name: 'saludnow'
+description: 'Aplicación Salud Now'
+publish_to: none
+version: 1.0.0+1
+environment:
+  sdk: '>=3.1.5 <4.0.0'
 dependencies:
-  cupertino_icons: ^1.0.8
-  flet: 1.0.0
   flutter:
     sdk: flutter
   flutter_web_plugins:
     sdk: flutter
+  cupertino_icons: ^1.0.8
+  flet: 1.0.0
+  serious_python: 4.7.0
   msgpack_dart: ^1.0.1
   package_info_plus: ^9.0.0
-  path: ^1.9.0
   path_provider: ^2.1.4
-  serious_python: 4.7.0
+  path: ^1.9.0
   window_manager: ^0.5.1
 dependency_overrides:
   flet: 1.0.0
-  jni: 1.0.0
   screen_retriever: 0.2.1
-description: "Aplicaci\xF3n Salud Now"
+  jni: 1.0.0
 dev_dependencies:
   flutter_lints: ^2.0.0
-environment:
-  sdk: '>=3.1.5 <4.0.0'
 flutter:
-  assets:
-  - app/app.zip
-  - app/app.zip.hash
   uses-material-design: true
-name: saludnow
-publish_to: none
-version: 1.0.0+1

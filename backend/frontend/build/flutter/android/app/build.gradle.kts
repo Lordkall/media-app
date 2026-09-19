@@ -78,7 +78,7 @@ android {
 // flet: split_per_abi 
         ndk {
             
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+            abiFilters += listOf("arm64-v8a", "x86_64", "armeabi-v7a")
             
         }
 // flet: end of split_per_abi 
