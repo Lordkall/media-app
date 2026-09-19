@@ -187,6 +187,19 @@ def LoginView(page: ft.Page):
                     ),
                     bgcolor=colors.INPUT_BG,
                     padding=10,
+                ),
+                
+                # Botón de descarga de APP (Solo visible en la Web)
+                ft.Container(
+                    content=ft.ElevatedButton(
+                        "Descargar App (Android)",
+                        icon=ft.icons.ANDROID,
+                        color="white",
+                        bgcolor="#3DDC84", # Color oficial de Android
+                        on_click=lambda e: page.launch_url("https://github.com/Lordkall/media-app/releases/latest/download/app-release.apk")
+                    ),
+                    margin=ft.margin.only(top=15),
+                    visible=page.web
                 )
             ],
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
