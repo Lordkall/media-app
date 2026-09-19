@@ -493,9 +493,21 @@ def RegisterView(page: ft.Page):
         route="/register",
         controls=[
             ft.Container(
-                content=content,
+                content=ft.Column(
+                    [
+                        ft.Container(
+                            content=content,
+                            width=400,
+                        )
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    alignment=ft.MainAxisAlignment.START,
+                    scroll=ft.ScrollMode.AUTO,
+                    expand=True,
+                ),
                 padding=20,
-                expand=True
+                expand=True,
+                alignment=ft.alignment.top_center,
             )
         ],
         bgcolor=colors.BACKGROUND,
