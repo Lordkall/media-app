@@ -93,11 +93,11 @@ def LoginView(page: ft.Page):
             if fcm_token:
                 await asyncio.to_thread(client.put, "/users/me", {"fcm_token": fcm_token})
 
-            # Exito: Navegar al Loading Screen
-            from views.loading import LoadingView
-            loading_view = LoadingView(page, user)
+            # Exito: Navegar al Home
+            from views.home import HomeView
+            home_view = HomeView(page, user)
             page.views.clear()
-            page.views.append(loading_view)
+            page.views.append(home_view)
             page.update()
             
         except Exception as ex:
