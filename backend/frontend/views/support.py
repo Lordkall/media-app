@@ -80,7 +80,10 @@ class SupportAdminView(ft.Container):
                 icon_color = colors.ACCENT_GREEN if t.status == "ABIERTO" else colors.TEXT_LIGHT
                 icon_ctrl = ft.Icon(ft.Icons.HELP, color=icon_color)
                 if getattr(t, '_has_unread', False):
-                    icon_ctrl = ft.Badge(content=icon_ctrl, bgcolor="red", small_size=10)
+                    icon_ctrl = ft.Stack([
+                        ft.Container(icon_ctrl, padding=5),
+                        ft.Container(bgcolor="red", width=10, height=10, border_radius=5, right=0, top=0)
+                    ], width=35, height=35)
                     
                 self.tickets_list.controls.append(
                     ft.ListTile(
@@ -238,7 +241,10 @@ class SupportUserView(ft.Container):
                 icon_color = colors.ACCENT_GREEN if t.status == "ABIERTO" else colors.TEXT_LIGHT
                 icon_ctrl = ft.Icon(ft.Icons.HELP, color=icon_color)
                 if getattr(t, '_has_unread', False):
-                    icon_ctrl = ft.Badge(content=icon_ctrl, bgcolor="red", small_size=10)
+                    icon_ctrl = ft.Stack([
+                        ft.Container(icon_ctrl, padding=5),
+                        ft.Container(bgcolor="red", width=10, height=10, border_radius=5, right=0, top=0)
+                    ], width=35, height=35)
                     
                 self.tickets_list.controls.append(
                     ft.ListTile(
