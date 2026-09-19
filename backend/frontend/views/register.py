@@ -96,7 +96,7 @@ def RegisterView(page: ft.Page):
         content=search_results_list,
         bgcolor=colors.INPUT_BG,
         border_radius=12,
-        border=ft.Border.all(1, colors.INPUT_BORDER if hasattr(colors, 'INPUT_BORDER') else "#e0e0e0"),
+        border=ft.border.all(1, colors.INPUT_BORDER if hasattr(colors, 'INPUT_BORDER') else "#e0e0e0"),
         padding=10,
         visible=False,
         width=300
