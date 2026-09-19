@@ -50,56 +50,68 @@ def main(page: ft.Page):
             page.update()
             
     page.on_view_pop = view_pop
-    
-    # Auto-login if session token exists
-    session_token = None
-    user_id = None
-    try:
-        session_token = page.client_storage.get("session_token")
-        user_id = page.client_storage.get("user_id")
-    except Exception as e:
-        print("Error getting client_storage:", e)
-    
-    if session_token and user_id:
+
+    def try_auto_login(e=None):
+        """
+        Se ejecuta con page.on_load, DESPUÉS de que el browser sincronizó
+        su localStorage con page.client_storage. Así el token siempre está disponible.
+        """
+        session_token = None
+        user_id = None
         try:
-            from core.api_client import client
-            import asyncio
+            session_token = page.client_storage.get("session_token")
+            user_id = page.client_storage.get("user_id")
+        except Exception as ex:
+            print("[SESSION] Error leyendo client_storage:", ex)
 
-            # Restaurar token en el cliente API con el header correcto
-            client.set_token(session_token)
-
-            # Validar el token contra el backend (no usa DB directamente)
-            me_data = client.get("/users/me")
-
-            class UserMock:
-                pass
-            u = UserMock()
-            u.id = me_data.get("id")
-            u.email = me_data.get("email")
-            u.first_name = me_data.get("first_name")
-            u.last_name = me_data.get("last_name")
-            u.role = me_data.get("role")
-            u.phone = me_data.get("phone")
-            u.state = me_data.get("state")
-            u.address = me_data.get("address")
-            u.gender = me_data.get("gender")
-            u.avatar_url = me_data.get("avatar_url")
-            u.linked_doctor_id = me_data.get("linked_doctor_id")
-            u.fcm_token = me_data.get("fcm_token")
-
-            from views.home import HomeView
-            page.views.clear()
-            page.views.append(HomeView(page, u))
-            page.update()
-            return
-        except Exception as e:
-            print("[AUTO-LOGIN ERROR]", e)
-            # Token inválido o expirado - limpiar y mostrar login
+        if session_token and user_id:
             try:
-                page.client_storage.remove("session_token")
-                page.client_storage.remove("user_id")
-            except: pass
+                from core.api_client import client
+                client.set_token(session_token)
 
+                # Validar token contra el backend
+                me_data = client.get("/users/me")
+
+                class UserMock:
+                    pass
+                u = UserMock()
+                u.id = me_data.get("id")
+                u.email = me_data.get("email")
+                u.first_name = me_data.get("first_name")
+                u.last_name = me_data.get("last_name")
+                u.role = me_data.get("role")
+                u.phone = me_data.get("phone")
+                u.state = me_data.get("state")
+                u.address = me_data.get("address")
+                u.gender = me_data.get("gender")
+                u.avatar_url = me_data.get("avatar_url")
+                u.linked_doctor_id = me_data.get("linked_doctor_id")
+                u.fcm_token = me_data.get("fcm_token")
+
+                from views.home import HomeView
+                page.views.clear()
+                page.views.append(HomeView(page, u))
+                page.update()
+                return
+            except Exception as ex:
+                print("[AUTO-LOGIN ERROR]", ex)
+                # Token inválido o expirado - limpiar sesión
+                try:
+                    page.client_storage.remove("session_token")
+                    page.client_storage.remove("user_id")
+                except: pass
+
+        # Sin sesión válida: mostrar login
+        page.views.clear()
+        page.views.append(LoginView(page))
+        page.update()
+
+    # page.on_load se dispara cuando el WebSocket con el browser está listo
+    # y client_storage ya fue sincronizado desde localStorage del navegador
+    page.on_load = try_auto_login
+
+    # Mostrar login inmediatamente para no dejar la pantalla en blanco
+    # on_load lo reemplazará si hay sesión válida
     page.views.clear()
     page.views.append(LoginView(page))
     page.update()
