@@ -15,5 +15,4 @@ requests
 pg8000
 flet[web]==0.25.0
 firebase-admin
-flet-lottie  
  
