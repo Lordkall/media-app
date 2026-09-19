@@ -81,7 +81,7 @@ def _doctor_card(doctor: Doctor, page: ft.Page = None) -> ft.Container:
         stack_items.append(
             ft.Container(
                 content=star_icon,
-                alignment=ft.alignment.Alignment.TOP_RIGHT,
+                alignment=ft.alignment.top_right,
                 margin=ft.margin.Margin(top=0, right=0, bottom=0, left=0)
             )
         )
@@ -93,7 +93,7 @@ def _doctor_card(doctor: Doctor, page: ft.Page = None) -> ft.Container:
         padding=14,
         width=160,
         height=190,
-        border=ft.border.Border.all(1.5, border_color),
+        border=ft.border.all(1.5, border_color),
         on_click=show_doctor_details,
         shadow=ft.BoxShadow(
             spread_radius=0,
@@ -178,7 +178,7 @@ def BrowseDoctorsView(page: ft.Page, current_user):
                                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                                 spacing=8,
                             ),
-                            alignment=ft.alignment.Alignment.CENTER,
+                            alignment=ft.alignment.center,
                             padding=40,
                         )
                     )

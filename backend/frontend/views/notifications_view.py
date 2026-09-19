@@ -101,7 +101,7 @@ class NotificationsView(ft.Container):
             self.list_container.controls.append(
                 ft.Container(
                     content=ft.Text("No tienes notificaciones en este momento", color=TEXT_SECONDARY),
-                    alignment=ft.alignment.Alignment.CENTER,
+                    alignment=ft.alignment.center,
                     padding=40
                 )
             )
@@ -290,7 +290,7 @@ class NotificationsView(ft.Container):
                 ], vertical_alignment=ft.CrossAxisAlignment.START, spacing=15),
                 padding=15,
                 bgcolor=SURFACE_COLOR if n["read"] else SURFACE_COLOR,
-                border=ft.border.Border.all(1, BORDER_COLOR if n["read"] else PRIMARY_COLOR)
+                border=ft.border.all(1, BORDER_COLOR if n["read"] else PRIMARY_COLOR)
             )
         )
 

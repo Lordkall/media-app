@@ -178,7 +178,7 @@ def RegisterView(page: ft.Page):
         expand=True,
         padding=15,
         border_radius=10,
-        border=ft.border.Border.all(2, colors.PRIMARY),
+        border=ft.border.all(2, colors.PRIMARY),
         bgcolor=colors.PRIMARY,
         ink=True,
     )
@@ -188,7 +188,7 @@ def RegisterView(page: ft.Page):
         expand=True,
         padding=15,
         border_radius=10,
-        border=ft.border.Border.all(2, colors.INPUT_BORDER),
+        border=ft.border.all(2, colors.INPUT_BORDER),
         bgcolor="transparent",
         ink=True,
     )
@@ -199,12 +199,12 @@ def RegisterView(page: ft.Page):
         
         # Actualizar estilos
         patient_btn.bgcolor = "transparent" if is_doc else colors.PRIMARY
-        patient_btn.border = ft.border.Border.all(2, colors.INPUT_BORDER if is_doc else colors.PRIMARY)
+        patient_btn.border = ft.border.all(2, colors.INPUT_BORDER if is_doc else colors.PRIMARY)
         patient_btn.content.controls[0].color = colors.TEXT_DARK if is_doc else "white"
         patient_btn.content.controls[1].color = colors.TEXT_DARK if is_doc else "white"
         
         doctor_btn.bgcolor = colors.PRIMARY if is_doc else "transparent"
-        doctor_btn.border = ft.border.Border.all(2, colors.PRIMARY if is_doc else colors.INPUT_BORDER)
+        doctor_btn.border = ft.border.all(2, colors.PRIMARY if is_doc else colors.INPUT_BORDER)
         doctor_btn.content.controls[0].color = "white" if is_doc else colors.TEXT_DARK
         doctor_btn.content.controls[1].color = "white" if is_doc else colors.TEXT_DARK
         

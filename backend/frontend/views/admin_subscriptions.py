@@ -179,7 +179,7 @@ class AdminSubscriptionsView(ft.Container):
                 ], spacing=8),
                 padding=15,
                 bgcolor=SURFACE_COLOR,
-                border=ft.border.Border.all(1, BORDER_COLOR)
+                border=ft.border.all(1, BORDER_COLOR)
             )
         )
 

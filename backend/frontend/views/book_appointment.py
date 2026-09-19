@@ -379,7 +379,7 @@ class BookAppointmentView(ft.Container):
                         height=32,
                         border_radius=16,
                         bgcolor=bg_col,
-                        alignment=ft.alignment.Alignment.CENTER,
+                        alignment=ft.alignment.center,
                         on_click=select_day_fn(day, is_disabled)
                     )
                     row_controls.append(btn)

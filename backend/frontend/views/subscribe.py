@@ -80,7 +80,7 @@ class SubscribeView(ft.Container):
         self.status_container = ft.Container(
             content=ft.ProgressRing(color=PRIMARY_COLOR),
             padding=15,
-            alignment=ft.alignment.Alignment.CENTER
+            alignment=ft.alignment.center
         )
 
         self.plans_container = ft.Column(
@@ -212,7 +212,7 @@ class SubscribeView(ft.Container):
                     ft.Button("Volver a reportar el pago", style=ft.ButtonStyle(bgcolor=PRIMARY_COLOR, color="white"), on_click=on_re_report),
                     ft.TextButton("Cerrar Sesión", on_click=on_logout)
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, alignment=ft.MainAxisAlignment.CENTER),
-                alignment=ft.Alignment.CENTER,
+                alignment=ft.alignment.center,
                 expand=True,
                 padding=20
             )
@@ -251,7 +251,7 @@ class SubscribeView(ft.Container):
                 padding=15,
                 border_radius=12,
                 bgcolor=SURFACE_COLOR,
-                border=ft.border.Border.all(1, PRIMARY_COLOR + "40")
+                border=ft.border.all(1, PRIMARY_COLOR + "40")
             )
         else:
             self.status_container.content = ft.Container(
@@ -267,7 +267,7 @@ class SubscribeView(ft.Container):
                 padding=15,
                 border_radius=12,
                 bgcolor=SURFACE_COLOR,
-                border=ft.border.Border.all(1, BORDER_COLOR)
+                border=ft.border.all(1, BORDER_COLOR)
             )
 
         self.render_plans()
@@ -365,7 +365,7 @@ class SubscribeView(ft.Container):
             padding=16,
             border_radius=12,
             bgcolor=SURFACE_COLOR,
-            border=ft.border.Border.all(2 if is_current else 1, PRIMARY_COLOR if is_current else BORDER_COLOR)
+            border=ft.border.all(2 if is_current else 1, PRIMARY_COLOR if is_current else BORDER_COLOR)
         )
 
     def open_payment_modal(self, plan_name, price_val):
@@ -506,7 +506,7 @@ class SubscribeView(ft.Container):
                     bgcolor=SURFACE_COLOR,
                     padding=10,
                     border_radius=8,
-                    border=ft.border.Border.all(1, BORDER_COLOR)
+                    border=ft.border.all(1, BORDER_COLOR)
                 ),
                 ft.Divider(height=10, color="transparent"),
                 ft.Text("Indicar Referencia de Pago:", size=12, weight=ft.FontWeight.BOLD),

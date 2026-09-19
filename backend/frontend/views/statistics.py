@@ -66,7 +66,7 @@ def StatisticsView(page: ft.Page, user):
                 padding=20,
                 bgcolor=colors.SURFACE,
                 border_radius=12,
-                border=ft.border.Border.all(1, colors.INPUT_BORDER),
+                border=ft.border.all(1, colors.INPUT_BORDER),
                 width=150,
             )
 
@@ -94,7 +94,7 @@ def StatisticsView(page: ft.Page, user):
                 padding=20,
                 bgcolor=colors.SURFACE,
                 border_radius=12,
-                border=ft.border.Border.all(1, colors.INPUT_BORDER),
+                border=ft.border.all(1, colors.INPUT_BORDER),
                 expand=True
             )
 

@@ -243,7 +243,7 @@ def HomeView(page: ft.Page, user):
                         width=50, height=50,
                         bgcolor=colors.INPUT_BG,
                         border_radius=12,
-                        alignment=ft.alignment.Alignment.CENTER,
+                        alignment=ft.alignment.center,
                     ),
                     ft.Column(
                         [
@@ -261,7 +261,7 @@ def HomeView(page: ft.Page, user):
             bgcolor="white",
             border_radius=14,
             padding=14,
-            border=ft.border.Border.all(1, colors.INPUT_BORDER),
+            border=ft.border.all(1, colors.INPUT_BORDER),
             on_click=handle_click,
             shadow=ft.BoxShadow(
                 spread_radius=0,
@@ -420,7 +420,7 @@ def HomeView(page: ft.Page, user):
                             bgcolor=status_color if status_val != "scheduled" else "transparent",
                             padding=4,
                             border_radius=8,
-                            border=ft.border.Border.all(1, "white") if status_val == "scheduled" else None
+                            border=ft.border.all(1, "white") if status_val == "scheduled" else None
                         )
 
                         # Fila superior: Avatar + Info + Estado
