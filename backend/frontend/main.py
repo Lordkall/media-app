@@ -61,57 +61,44 @@ def main(page: ft.Page):
         print("Error getting client_storage:", e)
     
     if session_token and user_id:
-        from app.models.users import User
-        from sqlalchemy import create_engine, select
-        from sqlalchemy.orm import sessionmaker
-        
         try:
-            from core.config import SYNC_DB_URL
             from core.api_client import client
-            
-            # Restaurar token en el cliente API para futuras llamadas
+            import asyncio
+
+            # Restaurar token en el cliente API
             client.token = session_token
-            
-            sync_engine = create_engine(SYNC_DB_URL, pool_pre_ping=True)
-            SyncSession = sessionmaker(bind=sync_engine)
-            with SyncSession() as session:
-                try:
-                    user_id_int = int(user_id)
-                except ValueError:
-                    user_id_int = 0
-                user = session.execute(select(User).where(User.id == user_id_int)).scalars().first()
-                if user:
-                    # Construir UserMock con TODOS los campos necesarios para HomeView
-                    class UserMock:
-                        pass
-                    u = UserMock()
-                    u.id = user.id
-                    u.email = user.email
-                    u.first_name = user.first_name
-                    u.last_name = user.last_name
-                    u.role = user.role
-                    u.phone = getattr(user, 'phone', None)
-                    u.state = getattr(user, 'state', None)
-                    u.address = getattr(user, 'address', None)
-                    u.gender = getattr(user, 'gender', None)
-                    u.avatar_url = getattr(user, 'avatar_url', None)
-                    u.linked_doctor_id = getattr(user, 'linked_doctor_id', None)
-                    u.fcm_token = getattr(user, 'fcm_token', None)
 
-                    fcm_token = os.environ.get("FCM_TOKEN")
-                    if fcm_token and user.fcm_token != fcm_token:
-                        user.fcm_token = fcm_token
-                        session.commit()
-                        u.fcm_token = fcm_token
+            # Validar el token contra el backend (no usa DB directamente)
+            me_data = client.get("/users/me")
 
-                    from views.home import HomeView
-                    page.views.clear()
-                    page.views.append(HomeView(page, u))
-                    page.update()
-                    return
+            class UserMock:
+                pass
+            u = UserMock()
+            u.id = me_data.get("id")
+            u.email = me_data.get("email")
+            u.first_name = me_data.get("first_name")
+            u.last_name = me_data.get("last_name")
+            u.role = me_data.get("role")
+            u.phone = me_data.get("phone")
+            u.state = me_data.get("state")
+            u.address = me_data.get("address")
+            u.gender = me_data.get("gender")
+            u.avatar_url = me_data.get("avatar_url")
+            u.linked_doctor_id = me_data.get("linked_doctor_id")
+            u.fcm_token = me_data.get("fcm_token")
+
+            from views.home import HomeView
+            page.views.clear()
+            page.views.append(HomeView(page, u))
+            page.update()
+            return
         except Exception as e:
-            print("[AUTO-LOGIN ERROR]", e)  # Log para depurar si falla
-            pass # Si falla, caer al login normal
+            print("[AUTO-LOGIN ERROR]", e)
+            # Token inválido o expirado - limpiar y mostrar login
+            try:
+                page.client_storage.remove("session_token")
+                page.client_storage.remove("user_id")
+            except: pass
 
     page.views.clear()
     page.views.append(LoginView(page))

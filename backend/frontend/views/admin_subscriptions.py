@@ -215,6 +215,7 @@ class AdminSubscriptionsView(ft.Container):
                     
                     # Actualizar o crear registro de suscripción
                     now = datetime.now(timezone.utc)
+                    from app.models.notifications import Notification, NotificationType
                     if is_sponsored or is_featured:
                         plan_type = SubscriptionPlan.SPONSORED if is_sponsored else SubscriptionPlan.FEATURED
                         sub = Subscription(
@@ -227,8 +228,17 @@ class AdminSubscriptionsView(ft.Container):
                             auto_renew=True
                         )
                         session.add(sub)
+                        
+                        # Notificar al doctor que su plan fue activado
+                        plan_label = "VIP Patrocinado" if is_sponsored else "Básico Destacado"
+                        notif = Notification(
+                            user_id=doctor.user_id,
+                            type=NotificationType.SUBSCRIPTION_RENEWED,
+                            title=f"¡Plan {plan_label} Activado!",
+                            message=f"El administrador ha activado tu plan {plan_label}. Ya apareces en la lista de doctores y cuentas con todos los beneficios del plan."
+                        )
+                        session.add(notif)
                     else:
-                        from app.models.notifications import Notification, NotificationType
                         notif = Notification(
                             user_id=doctor.user_id,
                             type=NotificationType.SUBSCRIPTION_REVOKED,
@@ -239,7 +249,14 @@ class AdminSubscriptionsView(ft.Container):
                     
                     session.commit()
                     
-                    msg = "Suscripción removida" if (not is_sponsored and not is_featured) else "Suscripción y plan aprobados exitosamente"
+                    # Enviar notificación en tiempo real por pubsub
+                    if is_sponsored or is_featured:
+                        plan_label = "VIP Patrocinado" if is_sponsored else "Básico Destacado"
+                        self.ft_page.pubsub.send_all_on_topic(
+                            f"user_{doctor.user_id}",
+                            f"new_notification:¡Tu plan {plan_label} ha sido activado!"
+                        )
+                    
                     snack = ft.SnackBar(
                         content=ft.Text("Estado de la suscripción actualizado exitosamente."),
                         bgcolor=SUCCESS_COLOR

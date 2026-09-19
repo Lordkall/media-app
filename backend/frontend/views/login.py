@@ -117,14 +117,30 @@ def LoginView(page: ft.Page):
     def open_register(e):
         if page.views and getattr(page.views[-1], "route", None) == "/register":
             return
-        page.views.append(RegisterView(page))
-        page.update()
+        try:
+            from views.register import RegisterView as _RegisterView
+            view = _RegisterView(page)
+            page.views.append(view)
+            page.update()
+        except Exception as ex:
+            snack = ft.SnackBar(ft.Text(f"Error abriendo registro: {ex}"), bgcolor="red")
+            page.overlay.append(snack)
+            snack.open = True
+            page.update()
 
     def open_recovery(e):
         if page.views and getattr(page.views[-1], "route", None) == "/password-recovery":
             return
-        page.views.append(PasswordRecoveryView(page))
-        page.update()
+        try:
+            from views.password_recovery import PasswordRecoveryView as _RecoveryView
+            view = _RecoveryView(page)
+            page.views.append(view)
+            page.update()
+        except Exception as ex:
+            snack = ft.SnackBar(ft.Text(f"Error abriendo recuperación: {ex}"), bgcolor="red")
+            page.overlay.append(snack)
+            snack.open = True
+            page.update()
 
     content = ft.Container(
         content=ft.Column(
