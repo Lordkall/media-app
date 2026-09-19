@@ -158,9 +158,23 @@ class BookAppointmentView(ft.Container):
 
     def on_doctor_change(self, e):
         if self.doctor_dropdown.value:
-            self.load_appointment_counts(int(self.doctor_dropdown.value))
+            doc_id = int(self.doctor_dropdown.value)
+            self.load_appointment_counts(doc_id)
+            
+            # Fetch available dates explicitly using a fresh session to avoid detached instances
+            self.available_dates = set()
+            try:
+                from sqlalchemy import select
+                from app.models.doctors import Availability
+                with self.get_sync_session() as session:
+                    avs = session.execute(select(Availability).where(Availability.doctor_id == doc_id)).scalars().all()
+                    self.available_dates = {a.date.isoformat() for a in avs if getattr(a, 'date', None)}
+            except Exception as ex:
+                print(f"Error fetching availabilities: {ex}")
+                
         else:
             self.appointment_counts = {}
+            self.available_dates = set()
             
         self.render_calendar()
         if self.ft_page:
@@ -301,14 +315,12 @@ class BookAppointmentView(ft.Container):
         today = date.today()
         
         selected_doc = None
-        available_dates = set()
         if self.doctor_dropdown.value:
             doc_id = int(self.doctor_dropdown.value)
             selected_doc = next((d for d in self.db_doctors if d.id == doc_id), None)
-            if selected_doc and hasattr(selected_doc, 'availabilities'):
-                available_dates = {a.date.isoformat() for a in selected_doc.availabilities if getattr(a, 'date', None)}
             
         doc_limit = selected_doc.max_patients_per_day if (selected_doc and hasattr(selected_doc, 'max_patients_per_day')) else 999
+        available_dates = getattr(self, 'available_dates', set())
 
         for week in cal:
             row_controls = []
