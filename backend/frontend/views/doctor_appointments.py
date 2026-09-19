@@ -12,7 +12,7 @@ def show_doctor_appointments(page: ft.Page, user):
     from sqlalchemy.orm import sessionmaker, joinedload
     from app.models.doctors import Doctor
     from app.models.appointments import Appointment, AppointmentStatus
-    from app.models.users import User
+    from app.models.users import User, RoleEnum
     from app.models.patients import Patient
 
     from core.config import SYNC_DB_URL
