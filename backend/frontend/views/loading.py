@@ -1,13 +1,10 @@
 import flet as ft
 import flet_lottie as fl
 from core import colors
-import asyncio
+import threading
 
 def LoadingView(page: ft.Page, user):
-    async def view_loaded():
-        # Wait 3.5 seconds
-        await asyncio.sleep(3.5)
-        
+    def navigate_home():
         # Navigate to home
         from views.home import HomeView
         page.views.clear()
@@ -41,6 +38,7 @@ def LoadingView(page: ft.Page, user):
     )
     
     # We trigger the timeout when the view is created
-    page.run_task(view_loaded)
+    timer = threading.Timer(3.5, navigate_home)
+    timer.start()
     
     return view
