@@ -48,7 +48,10 @@ if os.getenv("DISABLE_FLET", "False").lower() not in ("true", "1", "yes"):
         flet_main, 
         assets_dir=os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "assets")),
         upload_dir=upload_dir_path,
-        secret_key=os.getenv("FLET_SECRET_KEY", "saludnow_super_secret_key_12345")
+        secret_key=os.getenv("FLET_SECRET_KEY", "saludnow_super_secret_key_12345"),
+        app_name="Salud Now",
+        app_short_name="SaludNow",
+        app_description="Salud Now - Cuidado médico a un toque de distancia"
     ))
 else:
     @app.get("/")
