@@ -52,7 +52,7 @@ jobs:
           SERIOUS_PYTHON_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cd backend/frontend
-          flet build apk --project SaludNow --org com.saludnow.app --yes -v
+          flet build apk --project SaludNow --org com.saludnow.app -v
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
