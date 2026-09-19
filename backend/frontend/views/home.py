@@ -1,5 +1,6 @@
 import flet as ft
 from core import colors
+from datetime import datetime, timedelta
 
 def HomeView(page: ft.Page, user):
     """Vista principal después del login. Muestra contenido según el rol."""
@@ -158,23 +159,31 @@ def HomeView(page: ft.Page, user):
     page.pubsub.subscribe_topic(page.my_pubsub_topic, on_pubsub_message)
 
 
+    # Flag para evitar doble navegación por clic rápido
+    _nav_lock = {"locked": False}
+    def nav_push(view):
+        """Agrega una vista si no hay una navegación en curso."""
+        if _nav_lock["locked"]:
+            return
+        _nav_lock["locked"] = True
+        page.views.append(view)
+        page.update()
+        _nav_lock["locked"] = False
+
     def go_to_browse_doctors(e):
         if page.views and getattr(page.views[-1], "route", None) == "/browse-doctors": return
         from views.browse_doctors import BrowseDoctorsView
-        page.views.append(BrowseDoctorsView(page, user))
-        page.update()
+        nav_push(BrowseDoctorsView(page, user))
 
     def go_to_subscribe(e):
         if page.views and getattr(page.views[-1], "route", None) == "/subscribe": return
         from views.subscribe import SubscribeView
-        page.views.append(ft.View(route="/subscribe", controls=[SubscribeView(page, user=user)], bgcolor=colors.BACKGROUND))
-        page.update()
+        nav_push(ft.View(route="/subscribe", controls=[SubscribeView(page, user=user)], bgcolor=colors.BACKGROUND))
 
     def go_to_notifications(e):
         if page.views and getattr(page.views[-1], "route", None) == "/notifications": return
         from views.notifications_view import NotificationsView
-        page.views.append(ft.View(route="/notifications", controls=[NotificationsView(page, user=user)], bgcolor=colors.BACKGROUND))
-        page.update()
+        nav_push(ft.View(route="/notifications", controls=[NotificationsView(page, user=user)], bgcolor=colors.BACKGROUND))
 
     # Obtener count de notificaciones
     unread_count = 0
@@ -498,12 +507,11 @@ def HomeView(page: ft.Page, user):
     def go_to_book_appointment(e):
         if page.views and getattr(page.views[-1], "route", None) == "/book-appointment": return
         from views.book_appointment import BookAppointmentView
-        page.views.append(ft.View(
+        nav_push(ft.View(
             route="/book-appointment",
             controls=[BookAppointmentView(page, user=user)],
             bgcolor=colors.BACKGROUND
         ))
-        page.update()
 
     # Construir menú según rol exclusivo
     menu_items = []
@@ -537,9 +545,9 @@ def HomeView(page: ft.Page, user):
         )
         
         def go_to_support_user(e):
+            if page.views and getattr(page.views[-1], "route", None) == "/support-user": return
             from views.support import SupportUserView
-            page.views.append(ft.View(route="/support-user", controls=[SupportUserView(page, user=user, on_navigate=lambda: [page.views.pop(), page.update()])], bgcolor=colors.BACKGROUND))
-            page.update()
+            nav_push(ft.View(route="/support-user", controls=[SupportUserView(page, user=user, on_navigate=lambda: [page.views.pop(), page.update()])], bgcolor=colors.BACKGROUND))
 
         menu_items.append(
             menu_card(
@@ -607,9 +615,9 @@ def HomeView(page: ft.Page, user):
         )
         
         def go_to_support_user_doc(e):
+            if page.views and getattr(page.views[-1], "route", None) == "/support-user": return
             from views.support import SupportUserView
-            page.views.append(ft.View(route="/support-user", controls=[SupportUserView(page, user=user, on_navigate=lambda: [page.views.pop(), page.update()])], bgcolor=colors.BACKGROUND))
-            page.update()
+            nav_push(ft.View(route="/support-user", controls=[SupportUserView(page, user=user, on_navigate=lambda: [page.views.pop(), page.update()])], bgcolor=colors.BACKGROUND))
 
         menu_items.append(
             menu_card(
@@ -636,14 +644,12 @@ def HomeView(page: ft.Page, user):
         def go_to_admin_subscriptions(e):
             if page.views and getattr(page.views[-1], "route", None) == "/admin-subscriptions": return
             from views.admin_subscriptions import AdminSubscriptionsView
-            page.views.append(ft.View(route="/admin-subscriptions", controls=[AdminSubscriptionsView(page, user=user)], bgcolor=colors.BACKGROUND))
-            page.update()
+            nav_push(ft.View(route="/admin-subscriptions", controls=[AdminSubscriptionsView(page, user=user)], bgcolor=colors.BACKGROUND))
 
         def go_to_statistics(e):
             if page.views and getattr(page.views[-1], "route", None) == "/statistics": return
             from views.statistics import StatisticsView
-            page.views.append(ft.View(route="/statistics", controls=[StatisticsView(page, user=user)], bgcolor=colors.BACKGROUND))
-            page.update()
+            nav_push(ft.View(route="/statistics", controls=[StatisticsView(page, user=user)], bgcolor=colors.BACKGROUND))
 
         menu_items.append(
             menu_card(
@@ -674,9 +680,9 @@ def HomeView(page: ft.Page, user):
         )
         
         def go_to_support_admin(e):
+            if page.views and getattr(page.views[-1], "route", None) == "/support-admin": return
             from views.support import SupportAdminView
-            page.views.append(ft.View(route="/support-admin", controls=[SupportAdminView(page, user=user, on_navigate=lambda: [page.views.pop(), page.update()])], bgcolor=colors.BACKGROUND))
-            page.update()
+            nav_push(ft.View(route="/support-admin", controls=[SupportAdminView(page, user=user, on_navigate=lambda: [page.views.pop(), page.update()])], bgcolor=colors.BACKGROUND))
 
         menu_items.append(
             menu_card(
@@ -729,6 +735,7 @@ def HomeView(page: ft.Page, user):
         )
 
     def go_to_profile(e):
+        if page.views and getattr(page.views[-1], "route", None) == "/profile": return
         try:
             from views.profile import ProfileView
             
@@ -737,12 +744,11 @@ def HomeView(page: ft.Page, user):
                     page.views.pop()
                     page.update()
                     
-            page.views.append(ft.View(
+            nav_push(ft.View(
                 route="/profile",
                 controls=[ProfileView(page, user=user, on_navigate=handle_profile_back)],
                 bgcolor=colors.BACKGROUND
             ))
-            page.update()
         except Exception as ex:
             snack = ft.SnackBar(ft.Text(f"Error al abrir perfil: {str(ex)}"), bgcolor="red")
             page.overlay.append(snack)

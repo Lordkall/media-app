@@ -26,6 +26,13 @@ def main(page: ft.Page):
     page.window.min_height = 600
     
     def view_pop(e):
+        # Ignore view_pop events triggered by dialogs/overlays closing
+        has_open_dialog = any(
+            isinstance(o, (ft.AlertDialog, ft.BottomSheet, ft.DatePicker)) and getattr(o, 'open', False)
+            for o in page.overlay
+        )
+        if has_open_dialog:
+            return
         if len(page.views) > 1:
             page.views.pop()
             # If returning to home, refresh it
