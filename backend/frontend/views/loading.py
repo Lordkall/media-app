@@ -9,10 +9,9 @@ def LoadingView(page: ft.Page, user):
         
         # Navigate to home
         from views.home import HomeView
-        home_view = await asyncio.to_thread(HomeView, page, user)
         
         page.views.clear()
-        page.views.append(home_view)
+        page.views.append(HomeView(page, user))
         page.update()
         
     page.run_task(view_loaded)
