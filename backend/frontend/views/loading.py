@@ -1,6 +1,5 @@
 import asyncio
 import flet as ft
-import flet_lottie as fl
 from core import colors
 
 def LoadingView(page: ft.Page, user):
