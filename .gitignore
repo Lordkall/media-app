@@ -1,9 +1,10 @@
-﻿.venv/
+.venv/
 __pycache__/
 *.pyc
 .env
 .dart_tool/
 frontend/build/
+backend/frontend/app/
 *.db
 backend/service_account.json
 backend/test_fp.py

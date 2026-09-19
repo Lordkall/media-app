@@ -51,6 +51,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SERIOUS_PYTHON_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Copiar la carpeta 'app' del backend dentro del frontend para empaquetar los modelos en el APK
+          cp -r backend/app backend/frontend/app
+          
           cd backend/frontend
           # Run flet build but allow it to fail at Gradle (it still generates the Flutter project)
           flet build apk --project SaludNow --org com.saludnow.app -v 2>&1 | tee /tmp/flet_build.log || true
