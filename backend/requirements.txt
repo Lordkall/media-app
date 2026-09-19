@@ -13,6 +13,6 @@ tenacity
 python-multipart
 requests
 pg8000
-flet==0.25.0
+flet[all]==0.25.0
 firebase-admin
  

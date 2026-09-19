@@ -3,4 +3,4 @@ SQLAlchemy
 pg8000
 python-jose
 urllib3
-flet==0.25.0
+flet[all]==0.25.0
