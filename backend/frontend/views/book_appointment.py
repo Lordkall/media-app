@@ -31,7 +31,7 @@ ESTADOS_VE = [
 
 class BookAppointmentView(ft.Container):
     def __init__(self, page: ft.Page, user=None, doctor=None, on_navigate=None):
-        super().__init__(expand=True)
+        super().__init__(expand=True, alignment=ft.alignment.top_center)
         self.ft_page = page
         self.user = user
         self.selected_doctor_param = doctor
@@ -261,7 +261,7 @@ class BookAppointmentView(ft.Container):
             on_click=self.confirm_booking
         )
 
-        self.content = ft.Column([
+        inner = ft.Column([
             header,
             ft.Divider(height=15, color="transparent"),
             self.state_dropdown,
@@ -294,7 +294,20 @@ class BookAppointmentView(ft.Container):
             ft.Divider(height=20, color="transparent"),
             ft.Row([book_btn], alignment=ft.MainAxisAlignment.CENTER),
             ft.Container(height=20),
-        ], scroll=ft.ScrollMode.AUTO, expand=True)
+        ], scroll=ft.ScrollMode.AUTO, expand=True, horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
+
+        self.content = ft.Column(
+            [
+                ft.Container(
+                    content=inner,
+                    width=480,
+                )
+            ],
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            alignment=ft.MainAxisAlignment.START,
+            scroll=ft.ScrollMode.AUTO,
+            expand=True,
+        )
 
     def render_calendar(self):
         self.calendar_container.controls.clear()
