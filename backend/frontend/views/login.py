@@ -120,7 +120,7 @@ def LoginView(page: ft.Page):
                 src="logo.png",
                 width=140,
                 height=140,
-                fit=ft.BoxFit.CONTAIN,
+                fit=ft.ImageFit.CONTAIN,
             ),
             ft.Text("Inicie sesión", size=22, weight=ft.FontWeight.W_800, color=colors.PRIMARY),
             ft.Text("Ingrese a su cuenta de Salud Now", size=13, color=colors.TEXT_LIGHT, text_align=ft.TextAlign.CENTER),

@@ -22,7 +22,7 @@ def WelcomeView(page: ft.Page):
                 src="logo.png",
                 width=180,
                 height=180,
-                fit=ft.BoxFit.CONTAIN,
+                fit=ft.ImageFit.CONTAIN,
             ),
             ft.Container(height=20),
             ft.Text("Bienvenido", size=26, weight=ft.FontWeight.W_800, color=colors.PRIMARY),

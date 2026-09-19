@@ -772,7 +772,7 @@ def HomeView(page: ft.Page, user):
                         src="logo.png",
                         width=50,
                         height=50,
-                        fit=ft.BoxFit.CONTAIN,
+                        fit=ft.ImageFit.CONTAIN,
                     ),
                     ft.Column([
                         ft.Text("Salud Now", size=18, weight=ft.FontWeight.W_800, color=colors.PRIMARY),

@@ -444,7 +444,7 @@ def RegisterView(page: ft.Page):
                 src="logo.png",
                 width=140,
                 height=140,
-                fit=ft.BoxFit.CONTAIN,
+                fit=ft.ImageFit.CONTAIN,
             ),
             ft.Container(height=5),
             ft.Text("Crear cuenta", size=24, weight=ft.FontWeight.W_800, color=colors.PRIMARY),
