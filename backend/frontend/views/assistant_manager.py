@@ -86,9 +86,22 @@ class AssistantManagerView(ft.Container):
         
         def save_assistant(e):
             if not fname_input.value or not lname_input.value or not email_input.value or not pwd_input.value:
+                snack = ft.SnackBar(ft.Text("Todos los campos son obligatorios."), bgcolor="red")
+                self.ft_page.overlay.append(snack)
+                snack.open = True
+                self.ft_page.update()
                 return
 
             import re
+            # Validar correo
+            email_val = email_input.value.strip()
+            if not re.match(r"^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$", email_val):
+                snack = ft.SnackBar(ft.Text("Ingrese un correo electrónico válido."), bgcolor="red")
+                self.ft_page.overlay.append(snack)
+                snack.open = True
+                self.ft_page.update()
+                return
+
             pwd = pwd_input.value
             if len(pwd) < 8:
                 snack = ft.SnackBar(ft.Text("La contraseña debe tener al menos 8 caracteres."), bgcolor="red")
@@ -126,6 +139,7 @@ class AssistantManagerView(ft.Container):
                 session.commit()
                 
             modal.open = False
+            self.ft_page.update()
             snack = ft.SnackBar(ft.Text("Asistente creado con éxito"), bgcolor=colors.ACCENT_GREEN)
             self.ft_page.overlay.append(snack)
             snack.open = True
@@ -148,7 +162,11 @@ class AssistantManagerView(ft.Container):
             ft.IconButton(
                 icon=ft.Icons.ARROW_BACK,
                 icon_color=colors.PRIMARY,
-                on_click=lambda e: self.on_navigate() if self.on_navigate else None
+                on_click=lambda e: (
+                    self.on_navigate() if self.on_navigate
+                    else (self.ft_page.views.pop() or self.ft_page.update()) if len(self.ft_page.views) > 1
+                    else None
+                )
             ),
             ft.Text("Gestión de Asistentes", size=24, weight=ft.FontWeight.BOLD, color=colors.TEXT_DARK)
         ], alignment=ft.MainAxisAlignment.START)

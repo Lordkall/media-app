@@ -81,16 +81,36 @@ def main(page: ft.Page):
                     user_id_int = 0
                 user = session.execute(select(User).where(User.id == user_id_int)).scalars().first()
                 if user:
+                    # Construir UserMock con TODOS los campos necesarios para HomeView
+                    class UserMock:
+                        pass
+                    u = UserMock()
+                    u.id = user.id
+                    u.email = user.email
+                    u.first_name = user.first_name
+                    u.last_name = user.last_name
+                    u.role = user.role
+                    u.phone = getattr(user, 'phone', None)
+                    u.state = getattr(user, 'state', None)
+                    u.address = getattr(user, 'address', None)
+                    u.gender = getattr(user, 'gender', None)
+                    u.avatar_url = getattr(user, 'avatar_url', None)
+                    u.linked_doctor_id = getattr(user, 'linked_doctor_id', None)
+                    u.fcm_token = getattr(user, 'fcm_token', None)
+
                     fcm_token = os.environ.get("FCM_TOKEN")
                     if fcm_token and user.fcm_token != fcm_token:
                         user.fcm_token = fcm_token
                         session.commit()
+                        u.fcm_token = fcm_token
+
                     from views.home import HomeView
                     page.views.clear()
-                    page.views.append(HomeView(page, user))
+                    page.views.append(HomeView(page, u))
                     page.update()
                     return
         except Exception as e:
+            print("[AUTO-LOGIN ERROR]", e)  # Log para depurar si falla
             pass # Si falla, caer al login normal
 
     page.views.clear()
