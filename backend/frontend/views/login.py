@@ -34,7 +34,7 @@ def LoginView(page: ft.Page):
         error_text.value = ""
         page.update()
         
-        email = (email_input.value or "").strip()
+        email = (email_input.value or "").strip().lower()
         password = (password_input.value or "").strip()
         
         if not email or not password:

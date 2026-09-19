@@ -267,7 +267,7 @@ def RegisterView(page: ft.Page):
             error_text.value = ""
             page.update()
             
-            email = (email_input.value or "").strip()
+            email = (email_input.value or "").strip().lower()
             first_name = (first_name_input.value or "").strip()
             last_name = (last_name_input.value or "").strip()
             phone = (phone_input.value or "").strip()
@@ -354,7 +354,7 @@ def RegisterView(page: ft.Page):
             error_text.value = ""
             page.update()
             
-            email = (email_input.value or "").strip()
+            email = (email_input.value or "").strip().lower()
             first_name = (first_name_input.value or "").strip()
             last_name = (last_name_input.value or "").strip()
             phone = (phone_input.value or "").strip()

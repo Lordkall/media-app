@@ -5,17 +5,29 @@ frontend_dir = os.path.dirname(__file__)
 sys.path.append(os.path.abspath(os.path.join(frontend_dir, '..')))
 sys.path.append(os.path.abspath(frontend_dir))
 
-# MONKEY PATCH PARA EVITAR FUGAS DE CONEXIONES EN TODAS LAS VISTAS
-import sqlalchemy
-from core.config import global_sync_engine
+# Fallback para mostrar errores fatales en pantalla (Android black screen fix)
+error_traceback = None
+try:
+    # MONKEY PATCH PARA EVITAR FUGAS DE CONEXIONES EN TODAS LAS VISTAS
+    import sqlalchemy
+    from core.config import global_sync_engine
 
-def fake_create_engine(*args, **kwargs):
-    return global_sync_engine
+    def fake_create_engine(*args, **kwargs):
+        return global_sync_engine
 
-sqlalchemy.create_engine = fake_create_engine
-from views.login import LoginView
+    sqlalchemy.create_engine = fake_create_engine
+    from views.login import LoginView
+except Exception as e:
+    import traceback
+    error_traceback = traceback.format_exc()
 
 def main(page: ft.Page):
+    if error_traceback:
+        page.add(ft.Text("FATAL ERROR ON STARTUP:", color="red", weight="bold"))
+        page.add(ft.Text(error_traceback, color="red", size=10, selectable=True))
+        page.update()
+        return
+
     page.title = "Salud Now"
     page.theme_mode = ft.ThemeMode.LIGHT
     page.fonts = {
