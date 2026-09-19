@@ -15,8 +15,7 @@ def LoginView(page: ft.Page):
     email_input = ft.TextField(
         label="Correo Electrónico",
         bgcolor=colors.INPUT_BG,
-        color=colors.TEXT_DARK,
-        on_submit=handle_login
+        color=colors.TEXT_DARK
     )
     
     password_input = ft.TextField(
@@ -24,8 +23,7 @@ def LoginView(page: ft.Page):
         password=True,
         can_reveal_password=True,
         bgcolor=colors.INPUT_BG,
-        color=colors.TEXT_DARK,
-        on_submit=handle_login
+        color=colors.TEXT_DARK
     )
 
     error_text = ft.Text(value="", color="red", size=12)
@@ -112,6 +110,9 @@ def LoginView(page: ft.Page):
             else:
                 error_text.value = f"Error al ingresar: {str(ex)}"
             page.update()
+
+    email_input.on_submit = handle_login
+    password_input.on_submit = handle_login
 
 
 
