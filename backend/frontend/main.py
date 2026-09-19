@@ -60,6 +60,11 @@ def main(page: ft.Page):
         
         try:
             from core.config import SYNC_DB_URL
+            from core.api_client import client
+            
+            # Restaurar token en el cliente API para futuras llamadas
+            client.token = session_token
+            
             sync_engine = create_engine(SYNC_DB_URL, pool_pre_ping=True)
             SyncSession = sessionmaker(bind=sync_engine)
             with SyncSession() as session:

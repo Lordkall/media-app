@@ -305,9 +305,8 @@ def HomeView(page: ft.Page, user):
                 
         date_picker = ft.DatePicker(
             on_change=on_date_change,
-            first_date=date(2024, 1, 1),
-            last_date=date(2030, 12, 31),
-            locale=ft.Locale("es", "ES"),
+            first_date=datetime.now(),
+            last_date=datetime.now() + timedelta(days=365),
             cancel_text="Cancelar",
             confirm_text="Aceptar",
             help_text="Seleccionar fecha"

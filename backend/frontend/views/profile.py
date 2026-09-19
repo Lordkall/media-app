@@ -192,12 +192,13 @@ class ProfileView(ft.Container):
         )
 
         presets_row = ft.Row([
-            ft.Button(
-                "Subir Foto de Perfil", 
-                icon=ft.Icons.UPLOAD_FILE, 
-                action=ft.PickFiles(
-                    self.file_picker, 
-                    allow_multiple=False, 
+            ft.Container(
+                content=ft.Row([
+                    ft.Icon(ft.Icons.CLOUD_UPLOAD, color=colors.PRIMARY),
+                    ft.Text("Cambiar Foto de Perfil", color=colors.PRIMARY, weight=ft.FontWeight.W_600)
+                ], alignment=ft.MainAxisAlignment.CENTER),
+                on_click=lambda _: self.file_picker.pick_files(
+                    allow_multiple=False,
                     allowed_extensions=["png", "jpg", "jpeg", "gif", "webp"]
                 )
             )

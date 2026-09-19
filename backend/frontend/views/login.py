@@ -15,7 +15,8 @@ def LoginView(page: ft.Page):
     email_input = ft.TextField(
         label="Correo Electrónico",
         bgcolor=colors.INPUT_BG,
-        color=colors.TEXT_DARK
+        color=colors.TEXT_DARK,
+        on_submit=handle_login
     )
     
     password_input = ft.TextField(
@@ -23,7 +24,8 @@ def LoginView(page: ft.Page):
         password=True,
         can_reveal_password=True,
         bgcolor=colors.INPUT_BG,
-        color=colors.TEXT_DARK
+        color=colors.TEXT_DARK,
+        on_submit=handle_login
     )
 
     error_text = ft.Text(value="", color="red", size=12)
@@ -113,54 +115,57 @@ def LoginView(page: ft.Page):
 
 
 
-    content = ft.Column(
-        [
-            ft.Container(height=10),
-            ft.Image(
-                src="logo.png",
-                width=140,
-                height=140,
-                fit=ft.ImageFit.CONTAIN,
-            ),
-            ft.Text("Inicie sesión", size=22, weight=ft.FontWeight.W_800, color=colors.PRIMARY),
-            ft.Text("Ingrese a su cuenta de Salud Now", size=13, color=colors.TEXT_LIGHT, text_align=ft.TextAlign.CENTER),
-            ft.Container(height=15),
-            email_input,
-            ft.Container(height=5),
-            password_input,
-            error_text,
-            ft.Container(
-                content=ft.Button(
-                    "Ingresar",
-                    style=ft.ButtonStyle(bgcolor=colors.PRIMARY, color="white"),
-                    on_click=handle_login,
+    content = ft.Container(
+        content=ft.Column(
+            [
+                ft.Container(height=10),
+                ft.Image(
+                    src="logo.png",
+                    width=140,
+                    height=140,
+                    fit=ft.ImageFit.CONTAIN,
                 ),
-                width=200,
-                height=45
-            ),
+                ft.Text("Inicie sesión", size=22, weight=ft.FontWeight.W_800, color=colors.PRIMARY),
+                ft.Text("Ingrese a su cuenta de Salud Now", size=13, color=colors.TEXT_LIGHT, text_align=ft.TextAlign.CENTER),
+                ft.Container(height=15),
+                email_input,
+                ft.Container(height=5),
+                password_input,
+                error_text,
+                ft.Container(
+                    content=ft.Button(
+                        "Ingresar",
+                        style=ft.ButtonStyle(bgcolor=colors.PRIMARY, color="white"),
+                        on_click=handle_login,
+                    ),
+                    width=200,
+                    height=45
+                ),
 
-            # Footer con links
-            ft.Container(
-                content=ft.Column(
-                    [
-                        ft.Row([
-                            ft.Text("¿Aún no te has registrado?", color=colors.TEXT_LIGHT, size=12),
-                            ft.TextButton("Crear cuenta", on_click=lambda _: [page.views.append(RegisterView(page)), page.update()])
-                        ], alignment=ft.MainAxisAlignment.CENTER),
-                        ft.Row([
-                            ft.Text("¿Olvidaste tu contraseña?", color=colors.TEXT_LIGHT, size=12),
-                            ft.TextButton("Recupérala aquí", on_click=lambda _: [page.views.append(PasswordRecoveryView(page)), page.update()])
-                        ], alignment=ft.MainAxisAlignment.CENTER),
-                    ],
-                    alignment=ft.MainAxisAlignment.CENTER,
-                    spacing=0
-                ),
-                bgcolor=colors.INPUT_BG,
-                padding=10,
-            )
-        ],
-        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-        expand=True
+                # Footer con links
+                ft.Container(
+                    content=ft.Column(
+                        [
+                            ft.Row([
+                                ft.Text("¿Aún no te has registrado?", color=colors.TEXT_LIGHT, size=12),
+                                ft.TextButton("Crear cuenta", on_click=lambda _: [page.views.append(RegisterView(page)), page.update()])
+                            ], alignment=ft.MainAxisAlignment.CENTER),
+                            ft.Row([
+                                ft.Text("¿Olvidaste tu contraseña?", color=colors.TEXT_LIGHT, size=12),
+                                ft.TextButton("Recupérala aquí", on_click=lambda _: [page.views.append(PasswordRecoveryView(page)), page.update()])
+                            ], alignment=ft.MainAxisAlignment.CENTER),
+                        ],
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        spacing=0
+                    ),
+                    bgcolor=colors.INPUT_BG,
+                    padding=10,
+                )
+            ],
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            expand=True
+        ),
+        width=400
     )
 
     return ft.View(

@@ -270,7 +270,7 @@ def BrowseDoctorsView(page: ft.Page, current_user):
         bgcolor=colors.INPUT_BG,
         color=colors.TEXT_DARK,
         border_radius=12,
-        on_select=on_state_change,
+        on_change=on_state_change,
         content_padding=ft.padding.only(left=10, right=10, top=8, bottom=8),
     )
 

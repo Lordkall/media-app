@@ -209,7 +209,7 @@ class BookAppointmentView(ft.Container):
             border_radius=12,
             border_color="transparent",
             color=TEXT_PRIMARY,
-            on_select=self.on_state_change
+            on_change=self.on_state_change
         )
         
         self.specialty_dropdown = ft.Dropdown(
@@ -219,7 +219,7 @@ class BookAppointmentView(ft.Container):
             border_radius=12,
             border_color="transparent",
             color=TEXT_PRIMARY,
-            on_select=self.on_specialty_change
+            on_change=self.on_specialty_change
         )
 
         self.doctor_dropdown = ft.Dropdown(
@@ -230,7 +230,7 @@ class BookAppointmentView(ft.Container):
             border_color="transparent",
             color=TEXT_PRIMARY,
             disabled=True,
-            on_select=self.on_doctor_change
+            on_change=self.on_doctor_change
         )
 
         self.reason_dropdown = ft.Dropdown(

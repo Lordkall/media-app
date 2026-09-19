@@ -35,7 +35,6 @@ def show_doctor_appointments(page: ft.Page, user):
         on_change=on_date_change,
         first_date=date(2024, 1, 1),
         last_date=date(2030, 12, 31),
-        locale=ft.Locale("es", "ES"),
         cancel_text="Cancelar",
         confirm_text="Aceptar",
         help_text="Seleccionar fecha"
