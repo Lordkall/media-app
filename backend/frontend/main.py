@@ -65,8 +65,8 @@ def main(page: ft.Page):
             from core.api_client import client
             import asyncio
 
-            # Restaurar token en el cliente API
-            client.token = session_token
+            # Restaurar token en el cliente API con el header correcto
+            client.set_token(session_token)
 
             # Validar el token contra el backend (no usa DB directamente)
             me_data = client.get("/users/me")

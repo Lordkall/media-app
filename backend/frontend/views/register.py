@@ -56,7 +56,7 @@ def RegisterView(page: ft.Page):
         color=colors.TEXT_DARK,
         text_size=14,
         content_padding=10,
-        menu_height=200,
+        max_menu_height=200,
     )
     
     address_input = ft.TextField(
