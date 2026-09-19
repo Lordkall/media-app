@@ -159,16 +159,19 @@ def HomeView(page: ft.Page, user):
 
 
     def go_to_browse_doctors(e):
+        if page.views and getattr(page.views[-1], "route", None) == "/browse-doctors": return
         from views.browse_doctors import BrowseDoctorsView
         page.views.append(BrowseDoctorsView(page, user))
         page.update()
 
     def go_to_subscribe(e):
+        if page.views and getattr(page.views[-1], "route", None) == "/subscribe": return
         from views.subscribe import SubscribeView
         page.views.append(ft.View(route="/subscribe", controls=[SubscribeView(page, user=user)], bgcolor=colors.BACKGROUND))
         page.update()
 
     def go_to_notifications(e):
+        if page.views and getattr(page.views[-1], "route", None) == "/notifications": return
         from views.notifications_view import NotificationsView
         page.views.append(ft.View(route="/notifications", controls=[NotificationsView(page, user=user)], bgcolor=colors.BACKGROUND))
         page.update()
@@ -493,6 +496,7 @@ def HomeView(page: ft.Page, user):
         page.update()
 
     def go_to_book_appointment(e):
+        if page.views and getattr(page.views[-1], "route", None) == "/book-appointment": return
         from views.book_appointment import BookAppointmentView
         page.views.append(ft.View(
             route="/book-appointment",
@@ -630,11 +634,13 @@ def HomeView(page: ft.Page, user):
         )
     elif role_val == "admin":
         def go_to_admin_subscriptions(e):
+            if page.views and getattr(page.views[-1], "route", None) == "/admin-subscriptions": return
             from views.admin_subscriptions import AdminSubscriptionsView
             page.views.append(ft.View(route="/admin-subscriptions", controls=[AdminSubscriptionsView(page, user=user)], bgcolor=colors.BACKGROUND))
             page.update()
 
         def go_to_statistics(e):
+            if page.views and getattr(page.views[-1], "route", None) == "/statistics": return
             from views.statistics import StatisticsView
             page.views.append(ft.View(route="/statistics", controls=[StatisticsView(page, user=user)], bgcolor=colors.BACKGROUND))
             page.update()

@@ -68,7 +68,11 @@ def main(page: ft.Page):
             sync_engine = create_engine(SYNC_DB_URL, pool_pre_ping=True)
             SyncSession = sessionmaker(bind=sync_engine)
             with SyncSession() as session:
-                user = session.execute(select(User).where(User.id == user_id)).scalars().first()
+                try:
+                    user_id_int = int(user_id)
+                except ValueError:
+                    user_id_int = 0
+                user = session.execute(select(User).where(User.id == user_id_int)).scalars().first()
                 if user:
                     fcm_token = os.environ.get("FCM_TOKEN")
                     if fcm_token and user.fcm_token != fcm_token:

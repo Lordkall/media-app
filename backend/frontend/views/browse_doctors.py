@@ -82,7 +82,7 @@ def _doctor_card(doctor: Doctor, page: ft.Page = None) -> ft.Container:
             ft.Container(
                 content=star_icon,
                 alignment=ft.alignment.top_right,
-                margin=ft.margin.margin(top=0, right=0, bottom=0, left=0)
+                margin=ft.margin.only(top=0, right=0, bottom=0, left=0)
             )
         )
 

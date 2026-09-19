@@ -149,11 +149,11 @@ def LoginView(page: ft.Page):
                         [
                             ft.Row([
                                 ft.Text("¿Aún no te has registrado?", color=colors.TEXT_LIGHT, size=12),
-                                ft.TextButton("Crear cuenta", on_click=lambda _: [page.views.append(RegisterView(page)), page.update()])
+                                ft.TextButton("Crear cuenta", on_click=lambda _: page.views.append(RegisterView(page)) or page.update() if not (page.views and getattr(page.views[-1], "route", None) == "/register") else None)
                             ], alignment=ft.MainAxisAlignment.CENTER),
                             ft.Row([
                                 ft.Text("¿Olvidaste tu contraseña?", color=colors.TEXT_LIGHT, size=12),
-                                ft.TextButton("Recupérala aquí", on_click=lambda _: [page.views.append(PasswordRecoveryView(page)), page.update()])
+                                ft.TextButton("Recupérala aquí", on_click=lambda _: page.views.append(PasswordRecoveryView(page)) or page.update() if not (page.views and getattr(page.views[-1], "route", None) == "/password-recovery") else None)
                             ], alignment=ft.MainAxisAlignment.CENTER),
                         ],
                         alignment=ft.MainAxisAlignment.CENTER,
