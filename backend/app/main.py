@@ -43,12 +43,17 @@ import tempfile
 upload_dir_path = os.path.join(tempfile.gettempdir(), "saludnow_uploads")
 os.makedirs(upload_dir_path, exist_ok=True)
 
-app.mount("/", flet_fastapi.app(
-    flet_main, 
-    assets_dir=os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "assets")),
-    upload_dir=upload_dir_path,
-    secret_key=os.getenv("FLET_SECRET_KEY", "saludnow_super_secret_key_12345")
-))
+if os.getenv("DISABLE_FLET", "False").lower() not in ("true", "1", "yes"):
+    app.mount("/", flet_fastapi.app(
+        flet_main, 
+        assets_dir=os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "assets")),
+        upload_dir=upload_dir_path,
+        secret_key=os.getenv("FLET_SECRET_KEY", "saludnow_super_secret_key_12345")
+    ))
+else:
+    @app.get("/")
+    def read_root():
+        return {"status": "Backend API is running. Flet frontend is disabled."}
 from fastapi import Request
 from fastapi.responses import JSONResponse
 import traceback

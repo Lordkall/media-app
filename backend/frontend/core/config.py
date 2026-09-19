@@ -1,8 +1,10 @@
 # frontend/core/config.py
 
+import os
+
 # URL base para la API REST del backend.
-# Cambiar por la URL pública cuando se despliegue# API_BASE_URL = "http://127.0.0.1:8000/api/v1"
-API_BASE_URL = "https://media-app-production-7a1f.up.railway.app/api/v1"
+# Se lee de la variable de entorno API_URL, o usa la de Railway por defecto
+API_BASE_URL = os.getenv("API_URL", "https://media-app-production-7a1f.up.railway.app/api/v1")
 
 # URL de conexión directa a la base de datos para vistas que lo requieran.
 # Nota: Se usa pg8000 para compatibilidad con Android.
