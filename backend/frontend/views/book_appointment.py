@@ -496,12 +496,17 @@ class BookAppointmentView(ft.Container):
                 
             def close_success_dialog(e):
                 dialog.open = False
-                self.ft_page.update()
+                try:
+                    self.ft_page.overlay.remove(dialog)
+                except Exception:
+                    pass
+                
                 if self.on_navigate:
                     self.on_navigate("home")
                 elif self.ft_page and len(self.ft_page.views) > 1:
                     self.ft_page.views.pop()
-                    self.ft_page.update()
+                
+                self.ft_page.update()
 
             dialog = ft.AlertDialog(
                 title=ft.Text("¡Cita Creada Exitosamente!", color=SUCCESS_COLOR, weight=ft.FontWeight.BOLD),

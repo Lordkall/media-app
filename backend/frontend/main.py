@@ -65,10 +65,19 @@ def main(page: ft.Page):
                 except: pass
             page.update()
         else:
-            snack = ft.SnackBar(ft.Text("Presiona 'Cerrar sesión' si deseas salir."), duration=3000)
-            page.overlay.append(snack)
-            snack.open = True
-            page.update()
+            # Prevención de spam
+            if not getattr(page, "_exit_snack_shown", False):
+                page._exit_snack_shown = True
+                snack = ft.SnackBar(ft.Text("Presiona 'Cerrar sesión' si deseas salir."), duration=3000)
+                page.overlay.append(snack)
+                snack.open = True
+                page.update()
+                
+                # Reset the flag after 3 seconds so they can see it again later if needed
+                import threading
+                def reset_flag():
+                    page._exit_snack_shown = False
+                threading.Timer(3.0, reset_flag).start()
             
     page.on_view_pop = view_pop
 
