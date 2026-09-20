@@ -214,7 +214,8 @@ def LoginView(page: ft.Page):
                 )
             ],
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            expand=True
+            expand=True,
+            scroll=ft.ScrollMode.AUTO
         ),
         width=400
     )
