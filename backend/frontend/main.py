@@ -33,7 +33,14 @@ def main(page: ft.Page):
     page.fonts = {
         "Inter": "https://raw.githubusercontent.com/rsms/inter/master/docs/font-files/Inter-Regular.woff2"
     }
-    page.theme = ft.Theme(font_family="Inter")
+    page.theme = ft.Theme(
+        font_family="Inter",
+        color_scheme=ft.ColorScheme(
+            surface=ft.colors.WHITE,
+            on_surface=ft.colors.BLACK,
+            surface_tint=ft.colors.WHITE
+        )
+    )
     page.window.min_width = 360
     page.window.min_height = 600
     

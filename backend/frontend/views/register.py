@@ -174,9 +174,9 @@ def RegisterView(page: ft.Page):
 
     # Contenedores visuales para el rol
     patient_btn = ft.Container(
-        content=ft.Row([ft.Icon(ft.Icons.PERSON), ft.Text("Soy Paciente", weight=ft.FontWeight.BOLD)], alignment=ft.MainAxisAlignment.CENTER),
+        content=ft.Row([ft.Icon(ft.Icons.PERSON, size=18), ft.Text("Soy Paciente", weight=ft.FontWeight.BOLD, size=12)], alignment=ft.MainAxisAlignment.CENTER, spacing=5),
         expand=True,
-        padding=15,
+        padding=ft.padding.symmetric(horizontal=5, vertical=12),
         border_radius=10,
         border=ft.border.all(2, colors.PRIMARY),
         bgcolor=colors.PRIMARY,
@@ -184,9 +184,9 @@ def RegisterView(page: ft.Page):
     )
     
     doctor_btn = ft.Container(
-        content=ft.Row([ft.Icon(ft.Icons.MEDICAL_SERVICES, color=colors.TEXT_DARK), ft.Text("Soy Doctor", color=colors.TEXT_DARK, weight=ft.FontWeight.BOLD)], alignment=ft.MainAxisAlignment.CENTER),
+        content=ft.Row([ft.Icon(ft.Icons.MEDICAL_SERVICES, color=colors.TEXT_DARK, size=18), ft.Text("Soy Doctor", color=colors.TEXT_DARK, weight=ft.FontWeight.BOLD, size=12)], alignment=ft.MainAxisAlignment.CENTER, spacing=5),
         expand=True,
-        padding=15,
+        padding=ft.padding.symmetric(horizontal=5, vertical=12),
         border_radius=10,
         border=ft.border.all(2, colors.INPUT_BORDER),
         bgcolor="transparent",
@@ -223,7 +223,7 @@ def RegisterView(page: ft.Page):
 
     role_selector = ft.Column([
         ft.Text("¿Cómo deseas registrarte?", size=14, weight=ft.FontWeight.BOLD, color=colors.TEXT_DARK),
-        ft.Row([patient_btn, doctor_btn], spacing=15)
+        ft.Row([patient_btn, doctor_btn], spacing=10)
     ], spacing=10)
     
     password_input = ft.TextField(
