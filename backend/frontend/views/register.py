@@ -273,8 +273,8 @@ def RegisterView(page: ft.Page):
             phone = (phone_input.value or "").strip()
             state = state_dropdown.value
             address = (address_input.value or "").strip()
-            password = (password_input.value or "").strip()
-            password_repeat = (password_repeat_input.value or "").strip()
+            password = password_input.value or ""
+            password_repeat = password_repeat_input.value or ""
             
             # Validaciones
             if not all([email, first_name, last_name, phone, state, address, password, password_repeat]):
@@ -320,7 +320,7 @@ def RegisterView(page: ft.Page):
                         phone=re.sub(r"[\s\-\(\)]+", "", phone_input.value.strip()),
                         state=state_dropdown.value,
                         address=address_input.value.strip(),
-                        hashed_password=password_input.value.strip(),  # En prod se debería hacer un hash real
+                        hashed_password=password,  # En prod se debería hacer un hash real
                         role=RoleEnum.PATIENT
                     )
                     session.add(new_user)
@@ -360,8 +360,8 @@ def RegisterView(page: ft.Page):
             phone = (phone_input.value or "").strip()
             state = state_dropdown.value
             address = (address_input.value or "").strip()
-            password = (password_input.value or "").strip()
-            password_repeat = (password_repeat_input.value or "").strip()
+            password = password_input.value or ""
+            password_repeat = password_repeat_input.value or ""
             
             if not all([email, first_name, last_name, phone, state, address, password, password_repeat]):
                 error_text.value = "Todos los campos son obligatorios."

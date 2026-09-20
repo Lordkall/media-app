@@ -15,7 +15,8 @@ async def login_for_access_token(
     db: AsyncSession = Depends(get_db),
     form_data: OAuth2PasswordRequestForm = Depends()
 ):
-    query = select(User).where(User.email == form_data.username)
+    from sqlalchemy import func
+    query = select(User).where(func.lower(User.email) == form_data.username.lower())
     result = await db.execute(query)
     user = result.scalars().first()
     
