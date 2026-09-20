@@ -30,8 +30,17 @@ def LoginView(page: ft.Page):
 
 
 
+    login_btn = ft.Button(
+        "Ingresar",
+        style=ft.ButtonStyle(bgcolor=colors.PRIMARY, color="white"),
+    )
+    # The handler will be attached after it's defined
+
+
     async def handle_login(e):
         error_text.value = ""
+        login_btn.disabled = True
+        login_btn.text = "Ingresando..."
         page.update()
         
         email = (email_input.value or "").strip().lower()
@@ -39,6 +48,8 @@ def LoginView(page: ft.Page):
         
         if not email or not password:
             error_text.value = "Por favor ingrese correo y contraseña."
+            login_btn.disabled = False
+            login_btn.text = "Ingresar"
             page.update()
             return
 
@@ -109,8 +120,12 @@ def LoginView(page: ft.Page):
                     error_text.value = f"Error del servidor: {ex.response.status_code}"
             else:
                 error_text.value = f"Error al ingresar: {str(ex)}"
+        finally:
+            login_btn.disabled = False
+            login_btn.text = "Ingresar"
             page.update()
 
+    login_btn.on_click = handle_login
     email_input.on_submit = handle_login
     password_input.on_submit = handle_login
 
@@ -160,11 +175,7 @@ def LoginView(page: ft.Page):
                 password_input,
                 error_text,
                 ft.Container(
-                    content=ft.Button(
-                        "Ingresar",
-                        style=ft.ButtonStyle(bgcolor=colors.PRIMARY, color="white"),
-                        on_click=handle_login,
-                    ),
+                    content=login_btn,
                     width=200,
                     height=45
                 ),
