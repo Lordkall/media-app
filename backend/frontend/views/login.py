@@ -160,18 +160,16 @@ def LoginView(page: ft.Page):
     content = ft.Container(
         content=ft.Column(
             [
-                ft.Container(height=10),
                 ft.Image(
                     src="logo.png",
-                    width=140,
-                    height=140,
+                    width=100,
+                    height=100,
                     fit=ft.ImageFit.CONTAIN,
                 ),
                 ft.Text("Inicie sesión", size=22, weight=ft.FontWeight.W_800, color=colors.PRIMARY),
                 ft.Text("Ingrese a su cuenta de Salud Now", size=13, color=colors.TEXT_LIGHT, text_align=ft.TextAlign.CENTER),
-                ft.Container(height=15),
+                ft.Container(height=10),
                 email_input,
-                ft.Container(height=5),
                 password_input,
                 error_text,
                 ft.Container(
@@ -215,7 +213,7 @@ def LoginView(page: ft.Page):
             ],
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             expand=True,
-            scroll=ft.ScrollMode.AUTO
+            scroll=ft.ScrollMode.HIDDEN
         ),
         width=400
     )
@@ -226,7 +224,7 @@ def LoginView(page: ft.Page):
             ft.Container(
                 content=ft.Container(
                     content=content,
-                    padding=30,
+                    padding=20,
                     bgcolor=colors.CARD_BG,
                     border_radius=25,
                     border=ft.border.all(1, colors.GLASS_BORDER),
