@@ -561,16 +561,6 @@ def HomeView(page: ft.Page, user):
                 badge_count=unread_support_count,
             )
         )
-
-        menu_items.append(
-            menu_card(
-                "icons/notificaciones.png",
-                "Notificaciones",
-                "Centro de alertas y avisos del sistema",
-                on_click=go_to_notifications,
-                badge_count=unread_count,
-            )
-        )
     elif role_val == "doctor":
         def show_in_development_msg(e):
             snack = ft.SnackBar(content=ft.Text("Funcionalidad en desarrollo"), bgcolor=colors.PRIMARY)
@@ -626,16 +616,6 @@ def HomeView(page: ft.Page, user):
                 badge_count=unread_support_count,
             )
         )
-
-        menu_items.append(
-            menu_card(
-                "icons/notificaciones.png",
-                "Notificaciones",
-                "Centro de alertas y renovaciones",
-                on_click=go_to_notifications,
-                badge_count=unread_count,
-            )
-        )
     elif role_val == "admin":
         def go_to_admin_subscriptions(e):
             if page.views and getattr(page.views[-1], "route", None) == "/admin-subscriptions": return
@@ -684,16 +664,6 @@ def HomeView(page: ft.Page, user):
                 "Gestiona los tickets de los usuarios",
                 on_click=go_to_support_admin,
                 badge_count=unread_support_count,
-            )
-        )
-
-        menu_items.append(
-            menu_card(
-                "icons/notificaciones.png",
-                "Centro de Notificaciones",
-                "Alertas en tiempo real",
-                on_click=go_to_notifications,
-                badge_count=unread_count,
             )
         )
     elif role_val == "assistant":
@@ -780,21 +750,31 @@ def HomeView(page: ft.Page, user):
                         ft.Text("Salud Now", size=18, weight=ft.FontWeight.W_800, color=colors.PRIMARY),
                         ft.Text("Plataforma Médica", size=11, color=colors.SECONDARY),
                     ], spacing=0, expand=True),
-                    ft.Column([
-                        ft.OutlinedButton(
-                            "Mi Perfil",
-                            icon=ft.Icons.PERSON,
-                            on_click=go_to_profile,
-                            style=ft.ButtonStyle(color=colors.PRIMARY)
-                        ),
-                        ft.TextButton(
-                            "Cerrar sesión",
-                            icon=ft.Icons.LOGOUT,
-                            icon_color="#e74c3c",
-                            on_click=handle_logout,
-                            style=ft.ButtonStyle(color="#e74c3c")
+                    ft.Row([
+                        ft.Stack([
+                            ft.IconButton(
+                                icon=ft.Icons.NOTIFICATIONS,
+                                icon_color=colors.PRIMARY,
+                                on_click=go_to_notifications,
+                            ),
+                            ft.Container(
+                                content=ft.Text(str(unread_count) if unread_count < 100 else "99+", size=9, color="white", weight=ft.FontWeight.BOLD),
+                                bgcolor="red",
+                                border_radius=10,
+                                padding=2,
+                                right=0, top=0,
+                                visible=unread_count > 0
+                            )
+                        ], width=40, height=40),
+                        ft.PopupMenuButton(
+                            icon=ft.Icons.MORE_VERT,
+                            icon_color=colors.PRIMARY,
+                            items=[
+                                ft.PopupMenuItem(text="Mi Perfil", icon=ft.Icons.PERSON, on_click=go_to_profile),
+                                ft.PopupMenuItem(text="Cerrar sesión", icon=ft.Icons.LOGOUT, on_click=handle_logout),
+                            ]
                         )
-                    ], horizontal_alignment=ft.CrossAxisAlignment.END, spacing=0)
+                    ], spacing=0)
                 ],
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
