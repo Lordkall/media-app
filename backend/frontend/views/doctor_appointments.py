@@ -182,7 +182,8 @@ def show_doctor_appointments(page: ft.Page, user):
 
     dialog = ft.AlertDialog(
         modal=True,
-        bgcolor=colors.CARD_BG,
+        bgcolor="#ffffff",
+        surface_tint_color="transparent",
         title=ft.Row([
             ft.Icon(ft.Icons.CALENDAR_MONTH, color=colors.ACCENT_GREEN),
             ft.Text("Agenda de Citas", size=16, weight=ft.FontWeight.BOLD, color=colors.TEXT_DARK)

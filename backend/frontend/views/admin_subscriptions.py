@@ -229,8 +229,8 @@ class AdminSubscriptionsView(ft.Container):
                             plan=plan_type,
                             status=SubscriptionStatus.ACTIVE,
                             start_date=now,
-                            end_date=now + timedelta(days=30),
-                            grace_end_date=now + timedelta(days=33),
+                            end_date=now + timedelta(days=31),
+                            grace_end_date=now + timedelta(days=34),
                             auto_renew=True
                         )
                         session.add(sub)

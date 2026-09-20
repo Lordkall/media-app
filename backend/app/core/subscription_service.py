@@ -66,7 +66,7 @@ async def create_subscription(session: AsyncSession, doctor_id: int, plan: Subsc
     - Notifica al admin.
     """
     now = _now()
-    end_date = now + timedelta(days=SUBSCRIPTION_DAYS)
+    end_date = now + timedelta(days=31)
     grace_end = end_date + timedelta(days=GRACE_PERIOD_DAYS)
 
     sub = Subscription(
@@ -269,7 +269,7 @@ async def renew_subscription(session: AsyncSession, subscription_id: int) -> Sub
         raise ValueError("Suscripcion no encontrada")
 
     # Extender fechas desde hoy (no desde el vencimiento anterior)
-    sub.end_date = now + timedelta(days=SUBSCRIPTION_DAYS)
+    sub.end_date = now + timedelta(days=31)
     sub.grace_end_date = sub.end_date + timedelta(days=GRACE_PERIOD_DAYS)
     sub.status = SubscriptionStatus.ACTIVE
     sub.updated_at = now

@@ -460,8 +460,8 @@ class SubscribeView(ft.Container):
                             plan=plan_enum,
                             status=SubscriptionStatus.PENDING_APPROVAL,
                             start_date=datetime.utcnow(),
-                            end_date=datetime.utcnow() + timedelta(days=365 if self.billing_cycle == "Anual" else 30),
-                            grace_end_date=datetime.utcnow() + timedelta(days=370 if self.billing_cycle == "Anual" else 35)
+                            end_date=datetime.utcnow() + timedelta(days=366 if self.billing_cycle == "Anual" else 31),
+                            grace_end_date=datetime.utcnow() + timedelta(days=371 if self.billing_cycle == "Anual" else 36)
                         )
                         session.add(new_sub)
                         

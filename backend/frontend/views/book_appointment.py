@@ -47,6 +47,8 @@ class BookAppointmentView(ft.Container):
         self.padding = 20
 
         self.selected_date = date.today()
+        self.calendar_month = self.selected_date.month
+        self.calendar_year = self.selected_date.year
         self.db_doctors = []
         self.appointment_counts = {}
         self.patient_id = None
@@ -284,11 +286,11 @@ class BookAppointmentView(ft.Container):
                     ft.Text("Seleccione la fecha de atención", size=13, weight=ft.FontWeight.W_600, color=TEXT_PRIMARY),
                     ft.Row([
                         ft.Row([
-                            ft.Container(width=12, height=12, bgcolor="#FFF59D", border_radius=6),
+                            ft.Container(width=12, height=12, bgcolor=ERROR_COLOR, border_radius=6),
                             ft.Text("Día No Laborable", size=10, color=TEXT_SECONDARY)
                         ], spacing=4),
                         ft.Row([
-                            ft.Container(width=12, height=12, bgcolor=ERROR_COLOR, border_radius=6),
+                            ft.Container(width=12, height=12, bgcolor="#FFF59D", border_radius=6),
                             ft.Text("Agenda Completa", size=10, color=TEXT_SECONDARY)
                         ], spacing=4)
                     ], spacing=15),
@@ -321,10 +323,30 @@ class BookAppointmentView(ft.Container):
     def render_calendar(self):
         self.calendar_container.controls.clear()
         
-        now = datetime.now()
-        month_name = now.strftime("%B %Y").upper()
+        month_name = date(self.calendar_year, self.calendar_month, 1).strftime("%B %Y").upper()
         
-        month_header = ft.Text(month_name, size=11, weight=ft.FontWeight.BOLD, color=TEXT_SECONDARY, text_align=ft.TextAlign.CENTER)
+        def change_month(delta):
+            def handler(e):
+                new_month = self.calendar_month + delta
+                new_year = self.calendar_year
+                if new_month > 12:
+                    new_month = 1
+                    new_year += 1
+                elif new_month < 1:
+                    new_month = 12
+                    new_year -= 1
+                self.calendar_month = new_month
+                self.calendar_year = new_year
+                self.render_calendar()
+                if self.ft_page:
+                    self.ft_page.update()
+            return handler
+
+        month_header = ft.Row([
+            ft.IconButton(icon=ft.Icons.CHEVRON_LEFT, icon_size=18, on_click=change_month(-1), padding=0, width=30, height=30),
+            ft.Text(month_name, size=11, weight=ft.FontWeight.BOLD, color=TEXT_SECONDARY, text_align=ft.TextAlign.CENTER),
+            ft.IconButton(icon=ft.Icons.CHEVRON_RIGHT, icon_size=18, on_click=change_month(1), padding=0, width=30, height=30),
+        ], alignment=ft.MainAxisAlignment.CENTER, spacing=10)
         
         week_days = ["DOM", "LUN", "MAR", "MIE", "JUE", "VIE", "SAB"]
         days_header = ft.Row(
@@ -332,7 +354,7 @@ class BookAppointmentView(ft.Container):
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN
         )
 
-        cal = calendar.monthcalendar(now.year, now.month)
+        cal = calendar.monthcalendar(self.calendar_year, self.calendar_month)
         grid_rows = []
         today = date.today()
         
@@ -350,7 +372,7 @@ class BookAppointmentView(ft.Container):
                 if day == 0:
                     row_controls.append(ft.Container(width=32, height=32))
                 else:
-                    cell_date = date(now.year, now.month, day)
+                    cell_date = date(self.calendar_year, self.calendar_month, day)
                     is_past = cell_date < today
                     is_too_far = (cell_date - today).days > 14
                     
@@ -369,11 +391,11 @@ class BookAppointmentView(ft.Container):
                     text_col = TEXT_PRIMARY
                     
                     if is_full:
-                        bg_col = ERROR_COLOR
-                        text_col = "white"
-                    elif is_unavailable:
                         bg_col = "#FFF59D"
                         text_col = TEXT_SECONDARY
+                    elif is_unavailable:
+                        bg_col = ERROR_COLOR
+                        text_col = "white"
                     elif is_past or is_too_far:
                         text_col = TEXT_SECONDARY
                     elif is_selected:
@@ -384,7 +406,7 @@ class BookAppointmentView(ft.Container):
                         def handler(e):
                             if disabled:
                                 return
-                            self.selected_date = date(now.year, now.month, d)
+                            self.selected_date = date(self.calendar_year, self.calendar_month, d)
                             self.render_calendar()
                             if self.ft_page:
                                 self.ft_page.update()

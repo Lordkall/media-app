@@ -234,9 +234,51 @@ class ProfileView(ft.Container):
                     doc_bio = doc_data.get("bio", doc_bio)
                     doc_fee = str(doc_data.get("consultation_fee", doc_fee))
                     self.is_vip = doc_data.get("is_vip", False)
+                    self.doc_specialties = doc_data.get("specialties", [])
             except Exception as e:
                 print(f"Error cargando datos del doctor: {e}")
                 self.is_vip = False
+                self.doc_specialties = []
+            
+            from app.models.doctors import SPECIALTIES
+            
+            self.specialties_row = ft.Row(wrap=True, spacing=10)
+            
+            def render_specialties():
+                self.specialties_row.controls.clear()
+                for sp in self.doc_specialties:
+                    def remove_sp(e, s=sp):
+                        self.doc_specialties.remove(s)
+                        render_specialties()
+                        self.specialty_add_dropdown.disabled = len(self.doc_specialties) >= 5
+                        self.ft_page.update()
+                    self.specialties_row.controls.append(
+                        ft.Chip(
+                            label=ft.Text(sp, size=12),
+                            on_delete=remove_sp,
+                            bgcolor=colors.PRIMARY,
+                            label_style=ft.TextStyle(color="white")
+                        )
+                    )
+            
+            def on_add_specialty(e):
+                val = self.specialty_add_dropdown.value
+                if val and val not in self.doc_specialties and len(self.doc_specialties) < 5:
+                    self.doc_specialties.append(val)
+                    render_specialties()
+                    self.specialty_add_dropdown.value = None
+                    self.specialty_add_dropdown.disabled = len(self.doc_specialties) >= 5
+                    self.ft_page.update()
+            
+            self.specialty_add_dropdown = ft.Dropdown(
+                label="Añadir Especialidad (Máx. 5)",
+                options=[ft.dropdown.Option(key=s, text=s) for s in SPECIALTIES],
+                on_change=on_add_specialty,
+                disabled=len(self.doc_specialties) >= 5,
+                border_radius=10,
+                bgcolor=colors.INPUT_BG,
+            )
+            render_specialties()
 
             self.bio_input = ft.TextField(
                 label="Biografía / Presentación Profesional",
@@ -257,7 +299,11 @@ class ProfileView(ft.Container):
                 ft.Text("Información Profesional de Doctor", size=14, weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
                 self.address_input,
                 self.bio_input,
-                self.fee_input
+                self.fee_input,
+                ft.Divider(height=10, color="transparent"),
+                ft.Text("Especialidades", size=14, weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
+                self.specialty_add_dropdown,
+                self.specialties_row
             ])
             
             if getattr(self, 'is_vip', False):
@@ -356,6 +402,9 @@ class ProfileView(ft.Container):
                         doc_payload["consultation_fee"] = float(self.fee_input.value.strip())
                     except:
                         pass
+                        
+                    if hasattr(self, 'doc_specialties'):
+                        doc_payload["specialties"] = self.doc_specialties
                         
                     await asyncio.to_thread(client.put, "/doctors/me", doc_payload)
                         
