@@ -493,22 +493,36 @@ def RegisterView(page: ft.Page):
         route="/register",
         controls=[
             ft.Container(
-                content=ft.Column(
-                    [
-                        ft.Container(
-                            content=content,
-                            width=400,
-                        )
-                    ],
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    alignment=ft.MainAxisAlignment.START,
-                    scroll=ft.ScrollMode.AUTO,
-                    expand=True,
+                content=ft.Container(
+                    content=ft.Column(
+                        [
+                            ft.Container(
+                                content=content,
+                                width=400,
+                            )
+                        ],
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        alignment=ft.MainAxisAlignment.START,
+                        scroll=ft.ScrollMode.AUTO,
+                        expand=True,
+                    ),
+                    padding=30,
+                    bgcolor=colors.CARD_BG,
+                    border_radius=25,
+                    border=ft.border.all(1, colors.GLASS_BORDER),
+                    blur=ft.Blur(20, 20, ft.BlurTileMode.MIRROR),
+                    width=460, # Un poco mas ancho que el contenido
                 ),
                 padding=20,
                 expand=True,
                 alignment=ft.alignment.top_center,
+                gradient=ft.LinearGradient(
+                    begin=ft.alignment.top_left,
+                    end=ft.alignment.bottom_right,
+                    colors=["#E0EAFC", "#CFDEF3", "#B3C6DF"]
+                )
             )
         ],
-        bgcolor=colors.BACKGROUND,
+        padding=0,
+        bgcolor=ft.colors.TRANSPARENT,
     )

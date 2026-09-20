@@ -7,15 +7,17 @@ PRIMARY_DARK = "#0B3C85"  # Azul Oscuro "Salud" / Sombras (#0B3C85)
 SECONDARY = "#29B6F6"    # Azul Celeste Eléctrico "Now" (#29B6F6)
 ACCENT = "#0288D1"       # Azul Medio de transición (#0288D1)
 
-BACKGROUND = "#FFFFFF"   # Fondo Blanco Puro (solicitado explícitamente)
-SURFACE = "#F4F8FC"      # Fondo muy sutil azulado-blanco para tarjetas
-CARD_BG = "#FFFFFF"      # Fondo de tarjetas
+# Glassmorphism (Modo Claro/Azulado)
+BACKGROUND = "#F4F9FF"   # Fondo base (se usará como fallback si no carga el gradiente)
+SURFACE = "#20FFFFFF"    # Fondo cristalino super sutil
+CARD_BG = "#50FFFFFF"    # Cristal esmerilado claro (blanco al 30%)
+GLASS_BORDER = "#80FFFFFF" # Borde brillante para dar efecto de luz en el cristal
 
 TEXT_DARK = "#0B2545"    # Azul Marino Muy Oscuro para textos principales
-TEXT_LIGHT = "#64748B"   # Gris Azulado para textos secundarios
+TEXT_LIGHT = "#475569"   # Gris Azulado oscuro para contraste en fondos claros
 
-INPUT_BG = "#F0F4F9"     # Fondo suave para inputs
-INPUT_BORDER = "#CBD5E1" # Borde limpio para inputs
+INPUT_BG = "#20FFFFFF"     # Cristal para inputs
+INPUT_BORDER = "#60FFFFFF" # Borde cristalino para inputs
 
 ACCENT_GREEN = "#10B981" # Verde Éxito / Confirmación
 WARNING_COLOR = "#F59E0B"# Naranja Alerta

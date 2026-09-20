@@ -212,11 +212,24 @@ def LoginView(page: ft.Page):
         route="/login",
         controls=[
             ft.Container(
-                content=content,
+                content=ft.Container(
+                    content=content,
+                    padding=30,
+                    bgcolor=colors.CARD_BG,
+                    border_radius=25,
+                    border=ft.border.all(1, colors.GLASS_BORDER),
+                    blur=ft.Blur(20, 20, ft.BlurTileMode.MIRROR),
+                ),
                 padding=20,
                 expand=True,
-                alignment=ft.alignment.center
+                alignment=ft.alignment.center,
+                gradient=ft.LinearGradient(
+                    begin=ft.alignment.top_left,
+                    end=ft.alignment.bottom_right,
+                    colors=["#E0EAFC", "#CFDEF3", "#B3C6DF"] # Celeste hielo
+                )
             )
         ],
-        bgcolor=colors.BACKGROUND
+        padding=0,
+        bgcolor=ft.colors.TRANSPARENT
     )

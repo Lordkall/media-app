@@ -230,8 +230,12 @@ def HomeView(page: ft.Page, user):
         print("Error al obtener notificaciones:", ex)
 
     # Tarjeta de opción del menú
-    def menu_card(icon, title, subtitle, on_click=None, icon_color=colors.PRIMARY, badge_count=0):
-        icon_ctrl = ft.Icon(icon, color=icon_color, size=26)
+    def menu_card(icon_or_src, title, subtitle, on_click=None, icon_color=colors.PRIMARY, badge_count=0):
+        if isinstance(icon_or_src, str) and (icon_or_src.endswith(".png") or icon_or_src.endswith(".jpg")):
+            icon_ctrl = ft.Image(src=icon_or_src, width=32, height=32, fit=ft.ImageFit.CONTAIN)
+        else:
+            icon_ctrl = ft.Icon(icon_or_src, color=icon_color, size=26)
+            
         if badge_count > 0:
             icon_ctrl = ft.Stack([
                 ft.Container(icon_ctrl, padding=5),
@@ -253,7 +257,7 @@ def HomeView(page: ft.Page, user):
                     ft.Container(
                         content=icon_ctrl,
                         width=50, height=50,
-                        bgcolor=colors.INPUT_BG,
+                        bgcolor="transparent",
                         border_radius=12,
                         alignment=ft.alignment.center,
                     ),
@@ -270,16 +274,17 @@ def HomeView(page: ft.Page, user):
                 spacing=12,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            bgcolor="white",
+            bgcolor=colors.CARD_BG,
             border_radius=14,
             padding=14,
-            border=ft.border.all(1, colors.INPUT_BORDER),
+            border=ft.border.all(1, colors.GLASS_BORDER),
+            blur=ft.Blur(15, 15, ft.BlurTileMode.MIRROR),
             on_click=handle_click,
             shadow=ft.BoxShadow(
                 spread_radius=0,
-                blur_radius=6,
-                color="#0D000000",
-                offset=ft.Offset(0, 2),
+                blur_radius=10,
+                color="#0A000000",
+                offset=ft.Offset(0, 4),
             ),
         )
 
@@ -519,16 +524,15 @@ def HomeView(page: ft.Page, user):
     if role_val == "patient":
         menu_items.append(
             menu_card(
-                ft.Icons.CALENDAR_MONTH,
+                "icons/agendar_cita.jpg",
                 "Agendar Cita",
                 "Selecciona tu médico, fecha u hora de atención",
                 on_click=go_to_book_appointment,
-                icon_color=colors.PRIMARY,
             )
         )
         menu_items.append(
             menu_card(
-                ft.Icons.SEARCH,
+                "icons/buscar_doctores.jpg",
                 "Buscar Doctores",
                 "Encuentra especialistas por categoría",
                 on_click=go_to_browse_doctors,
@@ -536,11 +540,10 @@ def HomeView(page: ft.Page, user):
         )
         menu_items.append(
             menu_card(
-                ft.Icons.CALENDAR_MONTH,
+                "icons/mis_citas.jpg",
                 "Mis Citas",
                 "Ver y gestionar tus citas médicas",
                 on_click=show_my_appointments,
-                icon_color=colors.ACCENT_GREEN,
             )
         )
         
@@ -551,22 +554,20 @@ def HomeView(page: ft.Page, user):
 
         menu_items.append(
             menu_card(
-                ft.Icons.SUPPORT_AGENT,
+                "icons/mensajes.jpg",
                 "Mis Mensajes",
                 "Historial de soporte técnico",
                 on_click=go_to_support_user,
-                icon_color=colors.PRIMARY,
                 badge_count=unread_support_count,
             )
         )
 
         menu_items.append(
             menu_card(
-                ft.Icons.NOTIFICATIONS,
+                "icons/notificaciones.jpg",
                 "Notificaciones",
                 "Centro de alertas y avisos del sistema",
                 on_click=go_to_notifications,
-                icon_color=colors.PRIMARY,
                 badge_count=unread_count,
             )
         )
@@ -919,6 +920,17 @@ def HomeView(page: ft.Page, user):
 
     return ft.View(
         route="/home",
-        controls=[view_content],
-        bgcolor=colors.BACKGROUND,
+        controls=[
+            ft.Container(
+                content=view_content,
+                expand=True,
+                gradient=ft.LinearGradient(
+                    begin=ft.alignment.top_left,
+                    end=ft.alignment.bottom_right,
+                    colors=["#E0EAFC", "#CFDEF3", "#B3C6DF"]
+                )
+            )
+        ],
+        padding=0,
+        bgcolor=ft.colors.TRANSPARENT,
     )
