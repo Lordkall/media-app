@@ -43,8 +43,11 @@ def WelcomeView(page: ft.Page):
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                bgcolor=colors.INPUT_BG,
+                bgcolor=colors.CARD_BG,
                 padding=30,
+                border_radius=15,
+                border=ft.border.all(1, colors.GLASS_BORDER),
+                blur=ft.Blur(15, 15, ft.BlurTileMode.MIRROR)
             ),
             ft.Container(height=20),
             ft.Row(
@@ -60,12 +63,17 @@ def WelcomeView(page: ft.Page):
 
     return ft.View(
         route="/",
+        bgcolor=ft.colors.TRANSPARENT,
         controls=[
             ft.Container(
                 content=content,
                 padding=20,
-                expand=True
+                expand=True,
+                gradient=ft.LinearGradient(
+                    begin=ft.alignment.top_left,
+                    end=ft.alignment.bottom_right,
+                    colors=["#E0EAFC", "#CFDEF3", "#B3C6DF"]
+                )
             )
-        ],
-        bgcolor=colors.BACKGROUND,
+        ]
     )

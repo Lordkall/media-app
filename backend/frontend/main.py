@@ -131,4 +131,4 @@ import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 if __name__ == "__main__":
-    ft.run(main)
+    ft.app(target=main, assets_dir="assets")

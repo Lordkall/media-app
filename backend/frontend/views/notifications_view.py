@@ -18,11 +18,17 @@ BORDER_COLOR = colors.INPUT_BORDER
 
 class NotificationsView(ft.Container):
     def __init__(self, page: ft.Page, user=None, on_navigate=None):
-        super().__init__(expand=True)
+        super().__init__(
+            expand=True,
+            gradient=ft.LinearGradient(
+                begin=ft.alignment.top_left,
+                end=ft.alignment.bottom_right,
+                colors=["#E0EAFC", "#CFDEF3", "#B3C6DF"]
+            )
+        )
         self.ft_page = page
         self.user = user
         self.on_navigate = on_navigate
-        self.bg_color = BG_COLOR
         self.padding = 30
 
         self.build_ui()
@@ -270,28 +276,28 @@ class NotificationsView(ft.Container):
                     on_click=lambda e: self.on_navigate(n["action_url"]) if self.on_navigate else None
                 )
 
-        return ft.Card(
-            content=ft.Container(
-                content=ft.Row([
-                    ft.Container(
-                        content=icon,
-                        bgcolor=badge_bg,
-                        padding=12,
-                        border_radius=30
-                    ),
-                    ft.Column([
-                        ft.Row([
-                            ft.Text(n["title"], weight=ft.FontWeight.BOLD, size=15, color=TEXT_PRIMARY, expand=True),
-                            ft.Text(n["time"], size=12, color=TEXT_SECONDARY),
-                        ]),
-                        ft.Text(n["message"], size=13, color=TEXT_SECONDARY),
-                        ft.Row([btn_action]) if btn_action else ft.Container()
-                    ], expand=True, spacing=4)
-                ], vertical_alignment=ft.CrossAxisAlignment.START, spacing=15),
-                padding=15,
-                bgcolor=SURFACE_COLOR if n["read"] else SURFACE_COLOR,
-                border=ft.border.all(1, BORDER_COLOR if n["read"] else PRIMARY_COLOR)
-            )
+        return ft.Container(
+            content=ft.Row([
+                ft.Container(
+                    content=icon,
+                    bgcolor=badge_bg,
+                    padding=12,
+                    border_radius=30
+                ),
+                ft.Column([
+                    ft.Row([
+                        ft.Text(n["title"], weight=ft.FontWeight.BOLD, size=15, color=TEXT_PRIMARY, expand=True),
+                        ft.Text(n["time"], size=12, color=TEXT_SECONDARY),
+                    ]),
+                    ft.Text(n["message"], size=13, color=TEXT_SECONDARY),
+                    ft.Row([btn_action]) if btn_action else ft.Container()
+                ], expand=True, spacing=4)
+            ], vertical_alignment=ft.CrossAxisAlignment.START, spacing=15),
+            padding=15,
+            border_radius=15,
+            bgcolor=colors.CARD_BG,
+            border=ft.border.all(1, colors.PRIMARY if not n["read"] else colors.GLASS_BORDER),
+            blur=ft.Blur(15, 15, ft.BlurTileMode.MIRROR)
         )
 
     def mark_all_read(self, e):

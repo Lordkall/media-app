@@ -232,7 +232,7 @@ def HomeView(page: ft.Page, user):
     # Tarjeta de opción del menú
     def menu_card(icon_or_src, title, subtitle, on_click=None, icon_color=colors.PRIMARY, badge_count=0):
         if isinstance(icon_or_src, str) and (icon_or_src.endswith(".png") or icon_or_src.endswith(".jpg")):
-            icon_ctrl = ft.Image(src=icon_or_src, width=50, height=50, fit=ft.ImageFit.CONTAIN)
+            icon_ctrl = ft.Image(src=icon_or_src, width=60, height=60, fit=ft.ImageFit.COVER, border_radius=12)
         else:
             icon_ctrl = ft.Icon(icon_or_src, color=icon_color, size=30)
             
@@ -524,7 +524,7 @@ def HomeView(page: ft.Page, user):
     if role_val == "patient":
         menu_items.append(
             menu_card(
-                "icons/agendar_cita.png",
+                "agendar_cita.jpg",
                 "Agendar Cita",
                 "Selecciona tu médico, fecha u hora de atención",
                 on_click=go_to_book_appointment,
@@ -532,7 +532,7 @@ def HomeView(page: ft.Page, user):
         )
         menu_items.append(
             menu_card(
-                "icons/buscar_doctores.png",
+                "buscar_doctores.jpg",
                 "Buscar Doctores",
                 "Encuentra especialistas por categoría",
                 on_click=go_to_browse_doctors,
@@ -540,7 +540,7 @@ def HomeView(page: ft.Page, user):
         )
         menu_items.append(
             menu_card(
-                "icons/mis_citas.png",
+                "mis_citas.jpg",
                 "Mis Citas",
                 "Ver y gestionar tus citas médicas",
                 on_click=show_my_appointments,
@@ -554,7 +554,7 @@ def HomeView(page: ft.Page, user):
 
         menu_items.append(
             menu_card(
-                "icons/mensajes.png",
+                "mensajes.jpg",
                 "Mis Mensajes",
                 "Historial de soporte técnico",
                 on_click=go_to_support_user,
@@ -579,7 +579,7 @@ def HomeView(page: ft.Page, user):
 
         menu_items.append(
             menu_card(
-                "icons/gestion.png", # Star
+                "gestion.jpg", # Star
                 "Mi Suscripción / Posicionamiento",
                 "Planes Patrocinado y Destacado",
                 on_click=go_to_subscribe,
@@ -587,7 +587,7 @@ def HomeView(page: ft.Page, user):
         )
         menu_items.append(
             menu_card(
-                "icons/disponibilidad.png", # Clock
+                "disponibilidad.jpg", # Clock
                 "Mi Disponibilidad",
                 "Configurar horarios de atención",
                 on_click=go_to_availability,
@@ -595,7 +595,7 @@ def HomeView(page: ft.Page, user):
         )
         menu_items.append(
             menu_card(
-                "icons/mis_citas.png",
+                "mis_citas.jpg",
                 "Agenda de Citas Recibidas",
                 "Ver pacientes agendados",
                 on_click=go_to_doctor_appointments,
@@ -609,7 +609,7 @@ def HomeView(page: ft.Page, user):
 
         menu_items.append(
             menu_card(
-                "icons/mensajes.png",
+                "mensajes.jpg",
                 "Mis Mensajes",
                 "Historial de soporte técnico",
                 on_click=go_to_support_user_doc,
@@ -629,7 +629,7 @@ def HomeView(page: ft.Page, user):
 
         menu_items.append(
             menu_card(
-                "icons/gestion.png",
+                "gestion.jpg",
                 "Gestión Global de Usuarios y Doctores",
                 "Administrar roles, especialidades y doctores",
                 on_click=go_to_browse_doctors,
@@ -637,7 +637,7 @@ def HomeView(page: ft.Page, user):
         )
         menu_items.append(
             menu_card(
-                "icons/supervision.png",
+                "supervision.jpg",
                 "Supervisión de Suscripciones y Pagos",
                 "Aprobar y auditar suscripciones",
                 on_click=go_to_admin_subscriptions,
@@ -645,7 +645,7 @@ def HomeView(page: ft.Page, user):
         )
         menu_items.append(
             menu_card(
-                "icons/estadisticas.png",
+                "estadisticas.jpg",
                 "Estadísticas del Sistema",
                 "Métricas de pacientes y doctores registrados",
                 on_click=go_to_statistics,
@@ -659,7 +659,7 @@ def HomeView(page: ft.Page, user):
 
         menu_items.append(
             menu_card(
-                "icons/mensajes.png",
+                "mensajes.jpg",
                 "Mensajes de Soporte",
                 "Gestiona los tickets de los usuarios",
                 on_click=go_to_support_admin,

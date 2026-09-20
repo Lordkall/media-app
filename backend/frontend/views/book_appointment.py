@@ -31,12 +31,19 @@ ESTADOS_VE = [
 
 class BookAppointmentView(ft.Container):
     def __init__(self, page: ft.Page, user=None, doctor=None, on_navigate=None):
-        super().__init__(expand=True, alignment=ft.alignment.top_center)
+        super().__init__(
+            expand=True, 
+            alignment=ft.alignment.top_center,
+            gradient=ft.LinearGradient(
+                begin=ft.alignment.top_left,
+                end=ft.alignment.bottom_right,
+                colors=["#E0EAFC", "#CFDEF3", "#B3C6DF"]
+            )
+        )
         self.ft_page = page
         self.user = user
         self.selected_doctor_param = doctor
         self.on_navigate = on_navigate
-        self.bg_color = BG_COLOR
         self.padding = 20
 
         self.selected_date = date.today()
@@ -288,8 +295,10 @@ class BookAppointmentView(ft.Container):
                     self.calendar_container
                 ], spacing=8),
                 padding=14,
-                bgcolor=colors.INPUT_BG,
+                bgcolor=colors.CARD_BG,
                 border_radius=14,
+                border=ft.border.all(1, colors.GLASS_BORDER),
+                blur=ft.Blur(15, 15, ft.BlurTileMode.MIRROR)
             ),
             ft.Divider(height=20, color="transparent"),
             ft.Row([book_btn], alignment=ft.MainAxisAlignment.CENTER),

@@ -16,11 +16,17 @@ BORDER_COLOR = colors.INPUT_BORDER
 
 class ProfileView(ft.Container):
     def __init__(self, page: ft.Page, user=None, on_navigate=None):
-        super().__init__(expand=True)
+        super().__init__(
+            expand=True,
+            gradient=ft.LinearGradient(
+                begin=ft.alignment.top_left,
+                end=ft.alignment.bottom_right,
+                colors=["#E0EAFC", "#CFDEF3", "#B3C6DF"]
+            )
+        )
         self.ft_page = page
         self.user = user
         self.on_navigate = on_navigate
-        self.bg_color = BG_COLOR
         self.padding = 20
 
         # Avatar por defecto según nombre o iniciales
@@ -281,21 +287,28 @@ class ProfileView(ft.Container):
             on_click=self.save_profile
         )
 
-        self.content = ft.Column([
-            self.header,
-            ft.Divider(height=10, color="transparent"),
-            avatar_section,
-            ft.Divider(height=15, color=BORDER_COLOR),
-            ft.Text("Información Personal", size=14, weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
-            self.first_name_input,
-            self.last_name_input,
-            self.phone_input,
-            change_pwd_btn,
-            *extra_fields,
-            ft.Divider(height=15, color="transparent"),
-            save_btn,
-            ft.Container(height=20)
-        ], scroll=ft.ScrollMode.AUTO, expand=True)
+        self.content = ft.Container(
+            content=ft.Column([
+                self.header,
+                ft.Divider(height=10, color="transparent"),
+                avatar_section,
+                ft.Divider(height=15, color=BORDER_COLOR),
+                ft.Text("Información Personal", size=14, weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
+                self.first_name_input,
+                self.last_name_input,
+                self.phone_input,
+                change_pwd_btn,
+                *extra_fields,
+                ft.Divider(height=15, color="transparent"),
+                save_btn,
+                ft.Container(height=20)
+            ], scroll=ft.ScrollMode.AUTO, expand=True),
+            bgcolor=colors.CARD_BG,
+            border_radius=15,
+            padding=20,
+            border=ft.border.all(1, colors.GLASS_BORDER),
+            blur=ft.Blur(15, 15, ft.BlurTileMode.MIRROR)
+        )
 
     def on_avatar_change(self, e):
         self.update_avatar_preview(e.control.value)

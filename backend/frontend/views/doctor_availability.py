@@ -144,10 +144,11 @@ def DoctorAvailabilityView(page: ft.Page, user, on_navigate=None):
                 ft.Row(day_cards, wrap=True, spacing=10, run_spacing=10, alignment=ft.MainAxisAlignment.CENTER),
                 ft.Container(content=summary, alignment=ft.alignment.Alignment(0, 0), padding=10)
             ]),
-            bgcolor="white",
+            bgcolor=colors.CARD_BG,
             padding=15,
             border_radius=15,
-            shadow=ft.BoxShadow(spread_radius=1, blur_radius=10, color="#E0E0E0")
+            border=ft.border.all(1, colors.GLASS_BORDER),
+            blur=ft.Blur(15, 15, ft.BlurTileMode.MIRROR)
         )
         
     def change_week(days):
@@ -250,6 +251,13 @@ def DoctorAvailabilityView(page: ft.Page, user, on_navigate=None):
 
     return ft.View(
         route="/doctor-availability",
-        controls=[ft.Container(content=content, padding=20, expand=True)],
-        bgcolor=colors.BACKGROUND
+        controls=[ft.Container(
+            content=content, padding=20, expand=True,
+            gradient=ft.LinearGradient(
+                begin=ft.alignment.top_left,
+                end=ft.alignment.bottom_right,
+                colors=["#E0EAFC", "#CFDEF3", "#B3C6DF"]
+            )
+        )],
+        bgcolor=ft.colors.TRANSPARENT
     )

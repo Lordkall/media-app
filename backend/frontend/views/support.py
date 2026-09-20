@@ -13,10 +13,18 @@ def get_session():
 
 class SupportAdminView(ft.Container):
     def __init__(self, page: ft.Page, user, on_navigate=None):
-        super().__init__(expand=True)
+        super().__init__(
+            expand=True,
+            gradient=ft.LinearGradient(
+                begin=ft.alignment.top_left,
+                end=ft.alignment.bottom_right,
+                colors=["#E0EAFC", "#CFDEF3", "#B3C6DF"]
+            )
+        )
         self.ctx_page = page
         self.user = user
         self.on_navigate = on_navigate
+        self.padding = 20
         
         self.tickets_list = ft.ListView(expand=True, spacing=10)
         self.chat_view = ft.Container(expand=True, visible=False)
@@ -86,12 +94,17 @@ class SupportAdminView(ft.Container):
                     ], width=35, height=35)
                     
                 self.tickets_list.controls.append(
-                    ft.ListTile(
-                        leading=icon_ctrl,
-                        title=ft.Text(t.subject, weight=ft.FontWeight.BOLD),
-                        subtitle=ft.Text(f"De: {t.user.first_name} {t.user.last_name} | {t._latest_msg_date.strftime('%Y-%m-%d %H:%M')} | {t.status}"),
-                        on_click=self.create_open_chat_fn(t.id),
-                        bgcolor="white"
+                    ft.Container(
+                        content=ft.ListTile(
+                            leading=icon_ctrl,
+                            title=ft.Text(t.subject, weight=ft.FontWeight.BOLD),
+                            subtitle=ft.Text(f"De: {t.user.first_name} {t.user.last_name} | {t._latest_msg_date.strftime('%Y-%m-%d %H:%M')} | {t.status}"),
+                            on_click=self.create_open_chat_fn(t.id),
+                        ),
+                        bgcolor=colors.CARD_BG,
+                        border_radius=15,
+                        border=ft.border.all(1, colors.GLASS_BORDER),
+                        blur=ft.Blur(15, 15, ft.BlurTileMode.MIRROR)
                     )
                 )
         if self.ctx_page:
@@ -177,10 +190,18 @@ class SupportAdminView(ft.Container):
 
 class SupportUserView(ft.Container):
     def __init__(self, page: ft.Page, user, on_navigate=None):
-        super().__init__(expand=True)
+        super().__init__(
+            expand=True,
+            gradient=ft.LinearGradient(
+                begin=ft.alignment.top_left,
+                end=ft.alignment.bottom_right,
+                colors=["#E0EAFC", "#CFDEF3", "#B3C6DF"]
+            )
+        )
         self.ctx_page = page
         self.user = user
         self.on_navigate = on_navigate
+        self.padding = 20
         
         self.tickets_list = ft.ListView(expand=True, spacing=10)
         self.chat_view = ft.Container(expand=True, visible=False)
@@ -247,12 +268,17 @@ class SupportUserView(ft.Container):
                     ], width=35, height=35)
                     
                 self.tickets_list.controls.append(
-                    ft.ListTile(
-                        leading=icon_ctrl,
-                        title=ft.Text(t.subject, weight=ft.FontWeight.BOLD),
-                        subtitle=ft.Text(f"{t._latest_msg_date.strftime('%Y-%m-%d %H:%M')} | {t.status}"),
-                        on_click=self.create_open_chat_fn(t.id),
-                        bgcolor="white"
+                    ft.Container(
+                        content=ft.ListTile(
+                            leading=icon_ctrl,
+                            title=ft.Text(t.subject, weight=ft.FontWeight.BOLD),
+                            subtitle=ft.Text(f"{t._latest_msg_date.strftime('%Y-%m-%d %H:%M')} | {t.status}"),
+                            on_click=self.create_open_chat_fn(t.id),
+                        ),
+                        bgcolor=colors.CARD_BG,
+                        border_radius=15,
+                        border=ft.border.all(1, colors.GLASS_BORDER),
+                        blur=ft.Blur(15, 15, ft.BlurTileMode.MIRROR)
                     )
                 )
         if self.ctx_page:

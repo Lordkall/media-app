@@ -35,10 +35,20 @@ def LoadingView(page: ft.Page, user):
 
     view = ft.View(
         route="/loading",
-        controls=[content],
+        controls=[
+            ft.Container(
+                content=content,
+                expand=True,
+                gradient=ft.LinearGradient(
+                    begin=ft.alignment.top_left,
+                    end=ft.alignment.bottom_right,
+                    colors=["#E0EAFC", "#CFDEF3", "#B3C6DF"]
+                )
+            )
+        ],
         vertical_alignment=ft.MainAxisAlignment.CENTER,
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-        bgcolor=colors.BACKGROUND
+        bgcolor=ft.colors.TRANSPARENT
     )
     
     return view

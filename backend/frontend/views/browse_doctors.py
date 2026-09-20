@@ -88,12 +88,13 @@ def _doctor_card(doctor: Doctor, page: ft.Page = None) -> ft.Container:
 
     return ft.Container(
         content=ft.Stack(stack_items, expand=True),
-        bgcolor="white",
+        bgcolor=colors.CARD_BG,
         border_radius=14,
         padding=14,
         width=160,
         height=190,
-        border=ft.border.all(1.5, border_color),
+        border=ft.border.all(1, colors.GLASS_BORDER),
+        blur=ft.Blur(15, 15, ft.BlurTileMode.MIRROR),
         on_click=show_doctor_details,
         shadow=ft.BoxShadow(
             spread_radius=0,
@@ -321,7 +322,12 @@ def BrowseDoctorsView(page: ft.Page, current_user):
                 content=content,
                 padding=ft.padding.only(left=16, right=16, top=10, bottom=10),
                 expand=True,
+                gradient=ft.LinearGradient(
+                    begin=ft.alignment.top_left,
+                    end=ft.alignment.bottom_right,
+                    colors=["#E0EAFC", "#CFDEF3", "#B3C6DF"]
+                )
             )
         ],
-        bgcolor=colors.BACKGROUND,
+        bgcolor=ft.colors.TRANSPARENT,
     )

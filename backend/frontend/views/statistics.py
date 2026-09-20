@@ -64,9 +64,10 @@ def StatisticsView(page: ft.Page, user):
                     ], spacing=2)
                 ]),
                 padding=20,
-                bgcolor=colors.SURFACE,
-                border_radius=12,
-                border=ft.border.all(1, colors.INPUT_BORDER),
+                bgcolor=colors.CARD_BG,
+                border_radius=15,
+                border=ft.border.all(1, colors.GLASS_BORDER),
+                blur=ft.Blur(15, 15, ft.BlurTileMode.MIRROR),
                 width=150,
             )
 
@@ -92,9 +93,10 @@ def StatisticsView(page: ft.Page, user):
                     )
                 ]),
                 padding=20,
-                bgcolor=colors.SURFACE,
-                border_radius=12,
-                border=ft.border.all(1, colors.INPUT_BORDER),
+                bgcolor=colors.CARD_BG,
+                border_radius=15,
+                border=ft.border.all(1, colors.GLASS_BORDER),
+                blur=ft.Blur(15, 15, ft.BlurTileMode.MIRROR),
                 expand=True
             )
 
@@ -142,5 +144,9 @@ def StatisticsView(page: ft.Page, user):
         content=ft.Column([header, stats_content]),
         expand=True,
         padding=20,
-        bgcolor=colors.BACKGROUND
+        gradient=ft.LinearGradient(
+            begin=ft.alignment.top_left,
+            end=ft.alignment.bottom_right,
+            colors=["#E0EAFC", "#CFDEF3", "#B3C6DF"]
+        )
     )

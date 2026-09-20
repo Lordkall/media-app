@@ -167,7 +167,8 @@ def show_doctor_appointments(page: ft.Page, user):
                             bgcolor=colors.CARD_BG,
                             padding=15,
                             border_radius=10,
-                            shadow=ft.BoxShadow(spread_radius=1, blur_radius=5, color="#E0E0E0")
+                            border=ft.border.all(1, colors.GLASS_BORDER),
+                            blur=ft.Blur(15, 15, ft.BlurTileMode.MIRROR)
                         )
                     )
         except Exception as ex:
@@ -181,6 +182,7 @@ def show_doctor_appointments(page: ft.Page, user):
 
     dialog = ft.AlertDialog(
         modal=True,
+        bgcolor=colors.CARD_BG,
         title=ft.Row([
             ft.Icon(ft.Icons.CALENDAR_MONTH, color=colors.ACCENT_GREEN),
             ft.Text("Agenda de Citas", size=16, weight=ft.FontWeight.BOLD, color=colors.TEXT_DARK)

@@ -92,52 +92,69 @@ def PasswordRecoveryView(page: ft.Page):
         
     return ft.View(
         route="/password_recovery",
-        bgcolor=colors.BACKGROUND,
+        bgcolor=ft.colors.TRANSPARENT,
         controls=[
-            ft.Row([
-                ft.IconButton(
-                    icon=ft.Icons.ARROW_BACK,
-                    icon_color=colors.PRIMARY,
-                    on_click=lambda _: [page.views.pop(), page.update()]
-                )
-            ]),
-            ft.Container(expand=True),
-            ft.Column(
-                [
-                    ft.Icon(ft.Icons.LOCK_RESET, size=80, color=colors.PRIMARY),
-                    ft.Text("Recuperar Contraseña", size=24, weight=ft.FontWeight.BOLD, color=colors.PRIMARY),
-                    ft.Text("Ingresa tu correo para recibir un enlace de recuperación.", text_align=ft.TextAlign.CENTER, color=colors.TEXT_LIGHT),
-                    ft.Container(height=20),
-                    email_input,
-                    error_text,
-                    success_text,
-                    ft.Container(height=10),
-                    ft.Button(
-                        "Enviar Enlace",
-                        bgcolor=colors.PRIMARY,
-                        color="white",
-                        on_click=handle_request,
-                        width=200,
+            ft.Container(
+                expand=True,
+                gradient=ft.LinearGradient(
+                    begin=ft.alignment.top_left,
+                    end=ft.alignment.bottom_right,
+                    colors=["#E0EAFC", "#CFDEF3", "#B3C6DF"]
+                ),
+                content=ft.Column([
+                    ft.Row([
+                        ft.IconButton(
+                            icon=ft.Icons.ARROW_BACK,
+                            icon_color=colors.PRIMARY,
+                            on_click=lambda _: [page.views.pop(), page.update()]
+                        )
+                    ]),
+                    ft.Container(expand=True),
+                    ft.Container(
+                        content=ft.Column(
+                            [
+                                ft.Icon(ft.Icons.LOCK_RESET, size=80, color=colors.PRIMARY),
+                                ft.Text("Recuperar Contraseña", size=24, weight=ft.FontWeight.BOLD, color=colors.PRIMARY),
+                                ft.Text("Ingresa tu correo para recibir un enlace de recuperación.", text_align=ft.TextAlign.CENTER, color=colors.TEXT_LIGHT),
+                                ft.Container(height=20),
+                                email_input,
+                                error_text,
+                                success_text,
+                                ft.Container(height=10),
+                                ft.Button(
+                                    "Enviar Enlace",
+                                    bgcolor=colors.PRIMARY,
+                                    color="white",
+                                    on_click=handle_request,
+                                    width=200,
+                                ),
+                                ft.Divider(height=40, color=colors.TEXT_LIGHT),
+                                ft.Text("¿Ya tienes tu token?", weight=ft.FontWeight.BOLD, color=colors.PRIMARY),
+                                token_input,
+                                new_password_input,
+                                confirm_error_text,
+                                confirm_success_text,
+                                ft.Button(
+                                    "Restablecer",
+                                    bgcolor=colors.PRIMARY,
+                                    color="white",
+                                    width=200,
+                                    on_click=handle_confirm
+                                )
+                            ],
+                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                            alignment=ft.MainAxisAlignment.CENTER,
+                        ),
+                        bgcolor=colors.CARD_BG,
+                        padding=30,
+                        border_radius=20,
+                        border=ft.border.all(1, colors.GLASS_BORDER),
+                        blur=ft.Blur(15, 15, ft.BlurTileMode.MIRROR),
+                        width=350,
+                        alignment=ft.alignment.center
                     ),
-                    ft.Divider(height=40, color=colors.TEXT_LIGHT),
-                    ft.Text("¿Ya tienes tu token?", weight=ft.FontWeight.BOLD, color=colors.PRIMARY),
-                    token_input,
-                    new_password_input,
-                    confirm_error_text,
-                    confirm_success_text,
-                    ft.Button(
-                        "Restablecer",
-                        bgcolor=colors.PRIMARY,
-                        color="white",
-                        width=200,
-                        on_click=handle_confirm
-                    )
-                ],
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                alignment=ft.MainAxisAlignment.CENTER,
-                width=300
-            ),
-            ft.Container(expand=True)
+                    ft.Container(expand=True)
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER)
+            )
         ],
-        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
     )

@@ -21,11 +21,17 @@ BORDER_COLOR = colors.INPUT_BORDER
 
 class AdminSubscriptionsView(ft.Container):
     def __init__(self, page: ft.Page, user=None, on_navigate=None):
-        super().__init__(expand=True)
+        super().__init__(
+            expand=True,
+            gradient=ft.LinearGradient(
+                begin=ft.alignment.top_left,
+                end=ft.alignment.bottom_right,
+                colors=["#E0EAFC", "#CFDEF3", "#B3C6DF"]
+            )
+        )
         self.ft_page = page
         self.user = user
         self.on_navigate = on_navigate
-        self.bg_color = BG_COLOR
         self.padding = 20
 
         self.build_ui()
@@ -158,29 +164,29 @@ class AdminSubscriptionsView(ft.Container):
 
         actions_row = ft.Row(actions, wrap=True, spacing=8)
 
-        return ft.Card(
-            content=ft.Container(
-                content=ft.Column([
-                    ft.Row([
-                        ft.Column([
-                            ft.Text(doc_name, size=16, weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
-                            ft.Text(f"Especialidad: {specialty} | {doctor.user.email}", size=12, color=TEXT_SECONDARY),
-                        ], expand=True),
-                        ft.Container(
-                            content=ft.Text(badge_text, size=11, color="white", weight=ft.FontWeight.BOLD),
-                            bgcolor=badge_color,
-                            padding=5,
-                            border_radius=10
-                        )
-                    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                    ft.Divider(height=10, color=BORDER_COLOR),
-                    ft.Text("Acciones de Administrador:", size=12, weight=ft.FontWeight.W_600, color=TEXT_PRIMARY),
-                    actions_row
-                ], spacing=8),
-                padding=15,
-                bgcolor=SURFACE_COLOR,
-                border=ft.border.all(1, BORDER_COLOR)
-            )
+        return ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Column([
+                        ft.Text(doc_name, size=16, weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
+                        ft.Text(f"Especialidad: {specialty} | {doctor.user.email}", size=12, color=TEXT_SECONDARY),
+                    ], expand=True),
+                    ft.Container(
+                        content=ft.Text(badge_text, size=11, color="white", weight=ft.FontWeight.BOLD),
+                        bgcolor=badge_color,
+                        padding=5,
+                        border_radius=10
+                    )
+                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                ft.Divider(height=10, color=BORDER_COLOR),
+                ft.Text("Acciones de Administrador:", size=12, weight=ft.FontWeight.W_600, color=TEXT_PRIMARY),
+                actions_row
+            ], spacing=8),
+            padding=15,
+            bgcolor=colors.CARD_BG,
+            border_radius=15,
+            border=ft.border.all(1, colors.GLASS_BORDER),
+            blur=ft.Blur(15, 15, ft.BlurTileMode.MIRROR)
         )
 
     def update_doctor_plan(self, doctor_id: int, is_sponsored: bool, is_featured: bool):

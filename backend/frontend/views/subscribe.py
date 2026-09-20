@@ -20,12 +20,18 @@ BORDER_COLOR = colors.INPUT_BORDER
 
 class SubscribeView(ft.Container):
     def __init__(self, page: ft.Page, user=None, on_navigate=None, is_root=False):
-        super().__init__(expand=True)
+        super().__init__(
+            expand=True,
+            gradient=ft.LinearGradient(
+                begin=ft.alignment.top_left,
+                end=ft.alignment.bottom_right,
+                colors=["#E0EAFC", "#CFDEF3", "#B3C6DF"]
+            )
+        )
         self.ft_page = page
         self.user = user
         self.on_navigate = on_navigate
         self.is_root = is_root
-        self.bg_color = BG_COLOR
         self.padding = 30
         
         self.current_sub = None
@@ -249,9 +255,10 @@ class SubscribeView(ft.Container):
                     ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                 ], spacing=8),
                 padding=15,
-                border_radius=12,
-                bgcolor=SURFACE_COLOR,
-                border=ft.border.all(1, PRIMARY_COLOR + "40")
+                border_radius=15,
+                bgcolor=colors.CARD_BG,
+                border=ft.border.all(1, colors.GLASS_BORDER),
+                blur=ft.Blur(15, 15, ft.BlurTileMode.MIRROR)
             )
         else:
             self.status_container.content = ft.Container(
@@ -265,9 +272,10 @@ class SubscribeView(ft.Container):
                     ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                 ], spacing=8),
                 padding=15,
-                border_radius=12,
-                bgcolor=SURFACE_COLOR,
-                border=ft.border.all(1, BORDER_COLOR)
+                border_radius=15,
+                bgcolor=colors.CARD_BG,
+                border=ft.border.all(1, colors.GLASS_BORDER),
+                blur=ft.Blur(15, 15, ft.BlurTileMode.MIRROR)
             )
 
         self.render_plans()
@@ -363,9 +371,10 @@ class SubscribeView(ft.Container):
                 )
             ], spacing=6),
             padding=16,
-            border_radius=12,
-            bgcolor=SURFACE_COLOR,
-            border=ft.border.all(2 if is_current else 1, PRIMARY_COLOR if is_current else BORDER_COLOR)
+            border_radius=15,
+            bgcolor=colors.CARD_BG,
+            border=ft.border.all(1, colors.PRIMARY if is_current else colors.GLASS_BORDER),
+            blur=ft.Blur(15, 15, ft.BlurTileMode.MIRROR)
         )
 
     def open_payment_modal(self, plan_name, price_val):

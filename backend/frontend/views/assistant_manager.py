@@ -17,11 +17,17 @@ def get_engine():
 
 class AssistantManagerView(ft.Container):
     def __init__(self, page: ft.Page, user, on_navigate=None):
-        super().__init__()
+        super().__init__(
+            expand=True,
+            gradient=ft.LinearGradient(
+                begin=ft.alignment.top_left,
+                end=ft.alignment.bottom_right,
+                colors=["#E0EAFC", "#CFDEF3", "#B3C6DF"]
+            )
+        )
         self.ft_page = page
         self.user = user
         self.on_navigate = on_navigate
-        self.expand = True
         
         self.engine = get_engine()
         self.Session = sessionmaker(bind=self.engine)
@@ -195,8 +201,10 @@ class AssistantManagerView(ft.Container):
 
         self.content = ft.Container(
             content=content,
-            bgcolor=colors.SURFACE,
+            bgcolor=colors.CARD_BG,
             border_radius=15,
             padding=20,
-            expand=True
+            expand=True,
+            border=ft.border.all(1, colors.GLASS_BORDER),
+            blur=ft.Blur(15, 15, ft.BlurTileMode.MIRROR)
         )
