@@ -526,7 +526,7 @@ def HomeView(page: ft.Page, user):
             menu_card(
                 "icons/agendar_cita_v2.png",
                 "Agendar Cita",
-                "Selecciona tu médico, fecha u hora de atención",
+                "Selecciona tu médico, fecha o turno de atención",
                 on_click=go_to_book_appointment,
             )
         )

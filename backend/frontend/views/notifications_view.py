@@ -53,7 +53,7 @@ class NotificationsView(ft.Container):
                     icon_color=PRIMARY_COLOR,
                     on_click=handle_back
                 ),
-                ft.Text("Notificaciones", size=20, weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY, expand=True),
+                ft.Text("Notificaciones", size=18, weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY, expand=True),
                 ft.TextButton("Leídas", icon=ft.Icons.DONE_ALL, on_click=self.mark_all_read)
             ], alignment=ft.MainAxisAlignment.START, vertical_alignment=ft.CrossAxisAlignment.CENTER),
             ft.Text("Mantente informado sobre suscripciones, avisos y eventos", size=12, color=TEXT_SECONDARY),
