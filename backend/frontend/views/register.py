@@ -23,26 +23,26 @@ def RegisterView(page: ft.Page):
     
     email_input = ft.TextField(
         label="Correo Electrónico",
-        bgcolor=colors.INPUT_BG,
+        fill_color=colors.INPUT_BG, filled=True,
         color=colors.TEXT_DARK,
         keyboard_type=ft.KeyboardType.EMAIL,
     )
 
     first_name_input = ft.TextField(
         label="Nombres",
-        bgcolor=colors.INPUT_BG,
+        fill_color=colors.INPUT_BG, filled=True,
         color=colors.TEXT_DARK,
     )
 
     last_name_input = ft.TextField(
         label="Apellidos",
-        bgcolor=colors.INPUT_BG,
+        fill_color=colors.INPUT_BG, filled=True,
         color=colors.TEXT_DARK,
     )
 
     phone_input = ft.TextField(
         label="Teléfono (ej: 04141234567)",
-        bgcolor=colors.INPUT_BG,
+        fill_color=colors.INPUT_BG, filled=True,
         color=colors.TEXT_DARK,
         keyboard_type=ft.KeyboardType.NUMBER,
         input_filter=ft.NumbersOnlyInputFilter(),
@@ -52,7 +52,7 @@ def RegisterView(page: ft.Page):
     state_dropdown = ft.Dropdown(
         label="Estado",
         options=[ft.dropdown.Option(estado) for estado in ESTADOS_VE],
-        bgcolor=colors.INPUT_BG,
+        fill_color=colors.INPUT_BG, filled=True,
         color=colors.TEXT_DARK,
         text_size=14,
         content_padding=10,
@@ -61,7 +61,7 @@ def RegisterView(page: ft.Page):
     
     address_input = ft.TextField(
         label="Dirección",
-        bgcolor=colors.INPUT_BG,
+        fill_color=colors.INPUT_BG, filled=True,
         color=colors.TEXT_DARK,
     )
 
@@ -85,7 +85,7 @@ def RegisterView(page: ft.Page):
     specialty_search = ft.TextField(
         label="Buscar Especialidad",
         prefix_icon=ft.Icons.SEARCH,
-        bgcolor=colors.INPUT_BG,
+        fill_color=colors.INPUT_BG, filled=True,
         color=colors.TEXT_DARK,
         on_change=lambda e: update_specialties_list(e.control.value),
     )
@@ -94,7 +94,7 @@ def RegisterView(page: ft.Page):
     
     search_results_container = ft.Container(
         content=search_results_list,
-        bgcolor=colors.INPUT_BG,
+        fill_color=colors.INPUT_BG, filled=True,
         border_radius=12,
         border=ft.border.all(1, colors.INPUT_BORDER if hasattr(colors, 'INPUT_BORDER') else "#e0e0e0"),
         padding=10,
@@ -230,7 +230,7 @@ def RegisterView(page: ft.Page):
         label="Contraseña",
         password=True,
         can_reveal_password=True,
-        bgcolor=colors.INPUT_BG,
+        fill_color=colors.INPUT_BG, filled=True,
         color=colors.TEXT_DARK,
     )
     
@@ -238,7 +238,7 @@ def RegisterView(page: ft.Page):
         label="Repetir contraseña",
         password=True,
         can_reveal_password=True,
-        bgcolor=colors.INPUT_BG,
+        fill_color=colors.INPUT_BG, filled=True,
         color=colors.TEXT_DARK,
     )
     

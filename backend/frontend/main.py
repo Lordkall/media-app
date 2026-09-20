@@ -35,6 +35,8 @@ def main(page: ft.Page):
     }
     page.theme = ft.Theme(
         font_family="Inter",
+        canvas_color=ft.colors.WHITE,
+        popup_menu_theme=ft.PopupMenuTheme(color=ft.colors.WHITE),
         color_scheme=ft.ColorScheme(
             surface=ft.colors.WHITE,
             on_surface=ft.colors.BLACK,

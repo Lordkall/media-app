@@ -268,7 +268,7 @@ def BrowseDoctorsView(page: ft.Page, current_user):
         label="Filtrar por Estado",
         options=[ft.dropdown.Option(estado) for estado in ESTADOS_VE],
         value="Todos",
-        bgcolor=colors.INPUT_BG,
+        fill_color=colors.INPUT_BG, filled=True,
         color=colors.TEXT_DARK,
         border_radius=12,
         on_change=on_state_change,
@@ -279,7 +279,7 @@ def BrowseDoctorsView(page: ft.Page, current_user):
     search_bar = ft.TextField(
         hint_text="Buscar doctor o especialidad...",
         prefix_icon=ft.Icons.SEARCH,
-        bgcolor=colors.INPUT_BG,
+        fill_color=colors.INPUT_BG, filled=True,
         color=colors.TEXT_DARK,
         border_radius=12,
         content_padding=ft.padding.only(left=10, right=10, top=8, bottom=8),

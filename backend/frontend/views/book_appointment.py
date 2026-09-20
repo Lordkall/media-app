@@ -212,7 +212,7 @@ class BookAppointmentView(ft.Container):
         self.state_dropdown = ft.Dropdown(
             label="Estado",
             options=[ft.dropdown.Option(key=s, text=s) for s in ESTADOS_VE],
-            bgcolor=colors.INPUT_BG,
+            fill_color=colors.INPUT_BG, filled=True,
             border_radius=12,
             border_color="transparent",
             color=TEXT_PRIMARY,
@@ -222,7 +222,7 @@ class BookAppointmentView(ft.Container):
         self.specialty_dropdown = ft.Dropdown(
             label="Especialidad",
             options=[ft.dropdown.Option(key=s, text=s) for s in specs],
-            bgcolor=colors.INPUT_BG,
+            fill_color=colors.INPUT_BG, filled=True,
             border_radius=12,
             border_color="transparent",
             color=TEXT_PRIMARY,
@@ -232,7 +232,7 @@ class BookAppointmentView(ft.Container):
         self.doctor_dropdown = ft.Dropdown(
             label="Selecciona Médico",
             options=[],
-            bgcolor=colors.INPUT_BG,
+            fill_color=colors.INPUT_BG, filled=True,
             border_radius=12,
             border_color="transparent",
             color=TEXT_PRIMARY,
@@ -247,7 +247,7 @@ class BookAppointmentView(ft.Container):
                 ft.dropdown.Option(key="Entrega de Examenes", text="Entrega de Exámenes"),
                 ft.dropdown.Option(key="Otros", text="Otros")
             ],
-            bgcolor=colors.INPUT_BG,
+            fill_color=colors.INPUT_BG, filled=True,
             border_radius=12,
             border_color="transparent",
             color=TEXT_PRIMARY,
