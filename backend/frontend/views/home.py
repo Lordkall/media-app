@@ -636,15 +636,7 @@ def HomeView(page: ft.Page, user):
                 bgcolor=colors.BACKGROUND
             ))
 
-        menu_items.append(
-            menu_card(
-                ft.Icons.SMART_TOY,
-                "Configurar Asistente de IA",
-                "Gestiona respuestas automáticas",
-                on_click=go_to_assistant_config,
-                icon_color=colors.PRIMARY,
-            )
-        )
+
         menu_items.append(
             menu_card(
                 "icons/buscar_doctores_v2.png",
@@ -832,6 +824,23 @@ def HomeView(page: ft.Page, user):
         tooltip="Editar Mi Perfil"
     )
 
+    popup_items = [
+        ft.PopupMenuItem(text="Mi Perfil", icon=ft.Icons.PERSON, on_click=go_to_profile)
+    ]
+    
+    if role_val == "doctor":
+        popup_items.append(
+            ft.PopupMenuItem(
+                content=ft.Row([
+                    ft.Icon(ft.Icons.SMART_TOY, color="#e6a817"),
+                    ft.Text("Configurar Asistente", color="#e6a817", weight=ft.FontWeight.W_600)
+                ]),
+                on_click=go_to_assistant_config
+            )
+        )
+        
+    popup_items.append(ft.PopupMenuItem(text="Cerrar sesión", icon=ft.Icons.LOGOUT, on_click=handle_logout))
+
     content = ft.Column(
         [
             ft.Container(height=10),
@@ -866,10 +875,7 @@ def HomeView(page: ft.Page, user):
                         ft.PopupMenuButton(
                             icon=ft.Icons.MORE_VERT,
                             icon_color=colors.PRIMARY,
-                            items=[
-                                ft.PopupMenuItem(text="Mi Perfil", icon=ft.Icons.PERSON, on_click=go_to_profile),
-                                ft.PopupMenuItem(text="Cerrar sesión", icon=ft.Icons.LOGOUT, on_click=handle_logout),
-                            ]
+                            items=popup_items
                         )
                     ], spacing=0)
                 ],
