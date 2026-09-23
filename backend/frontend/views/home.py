@@ -629,10 +629,12 @@ def HomeView(page: ft.Page, user):
                 page.update()
                 return
                 
-            snack = ft.SnackBar(ft.Text("Pantalla de Configuración de Asistente (En desarrollo)"), bgcolor=colors.PRIMARY)
-            page.overlay.append(snack)
-            snack.open = True
-            page.update()
+            from views.assistant_manager import AssistantManagerView
+            nav_push(ft.View(
+                route="/assistant-manager",
+                controls=[AssistantManagerView(page, user=user, on_navigate=lambda: [page.views.pop(), page.update()])],
+                bgcolor=colors.BACKGROUND
+            ))
 
         menu_items.append(
             menu_card(
