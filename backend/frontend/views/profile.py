@@ -277,6 +277,7 @@ class ProfileView(ft.Container):
                 disabled=len(self.doc_specialties) >= 5,
                 border_radius=10,
                 bgcolor=colors.INPUT_BG,
+                fill_color=colors.INPUT_BG,
             )
             render_specialties()
 
@@ -294,9 +295,24 @@ class ProfileView(ft.Container):
                 border_radius=10,
                 bgcolor=colors.INPUT_BG,
             )
+            
+            # Fetch start_time
+            doc_start_time = "No configurado"
+            try:
+                from core.config import GlobalSession
+                from app.models.doctors import Doctor, Availability
+                with GlobalSession() as session:
+                    doc = session.query(Doctor).filter(Doctor.user_id == self.user.id).first()
+                    if doc:
+                        av = session.query(Availability).filter(Availability.doctor_id == doc.id).first()
+                        if av and av.start_time:
+                            doc_start_time = av.start_time
+            except: pass
+            
             extra_fields.extend([
                 ft.Divider(height=10, color=BORDER_COLOR),
                 ft.Text("Información Profesional de Doctor", size=14, weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
+                ft.Text(f"Horario de inicio laboral: {doc_start_time}", size=13, color=colors.TEXT_LIGHT, italic=True),
                 self.address_input,
                 self.bio_input,
                 self.fee_input,

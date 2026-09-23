@@ -64,6 +64,24 @@ def DoctorAvailabilityView(page: ft.Page, user, on_navigate=None):
     
     max_patients_row = ft.Row([max_patients_input, no_limit_checkbox], alignment=ft.MainAxisAlignment.START)
 
+    # Initial start time
+    initial_start_time = "09:00"
+    if availabilities and availabilities[0].start_time:
+        initial_start_time = availabilities[0].start_time
+
+    time_options = [f"{str(h).zfill(2)}:00" for h in range(5, 20)] + [f"{str(h).zfill(2)}:30" for h in range(5, 20)]
+    time_options.sort()
+
+    start_time_dropdown = ft.Dropdown(
+        label="Hora de Inicio Laboral",
+        options=[ft.dropdown.Option(key=t, text=t) for t in time_options],
+        value=initial_start_time,
+        width=200,
+        border_radius=10,
+        bgcolor=colors.INPUT_BG,
+        fill_color=colors.INPUT_BG
+    )
+
     days_mapping = [
         (0, "Lunes"), (1, "Martes"), (2, "Miércoles"),
         (3, "Jueves"), (4, "Viernes"), (5, "Sábado"), (6, "Domingo")
@@ -108,14 +126,17 @@ def DoctorAvailabilityView(page: ft.Page, user, on_navigate=None):
             
             border = _b_all(1, "#3498db") if not is_selected else _b_all(1, "#E0E0E0")
             
-            def create_toggle(val=d_str):
+            def create_toggle(val=d_str, is_sunday=(day_val == 6)):
                 def toggle_day(e):
                     if val in existing_days:
                         existing_days.remove(val)
                     else:
                         existing_days.add(val)
-                    render_week()
-                    page.update()
+                    if is_sunday:
+                        change_week(7)
+                    else:
+                        render_week()
+                        page.update()
                 return toggle_day
                 
             day_card = ft.Container(
@@ -131,18 +152,15 @@ def DoctorAvailabilityView(page: ft.Page, user, on_navigate=None):
                 border=border,
                 border_radius=12,
                 padding=5,
-                on_click=create_toggle(d_str),
+                on_click=create_toggle(d_str, day_val == 6),
                 ink=True
             )
             day_cards.append(day_card)
             
-        summary = ft.Text(f"RESUMEN: {len(existing_days)} DÍAS LABORALES ESTA SEMANA", size=12, color=colors.TEXT_DARK, weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER)
-        
         week_container.content = ft.Container(
             content=ft.Column([
                 header,
                 ft.Row(day_cards, wrap=True, spacing=10, run_spacing=10, alignment=ft.MainAxisAlignment.CENTER),
-                ft.Container(content=summary, alignment=ft.alignment.Alignment(0, 0), padding=10)
             ]),
             bgcolor=colors.CARD_BG,
             padding=15,
@@ -189,12 +207,13 @@ def DoctorAvailabilityView(page: ft.Page, user, on_navigate=None):
                 # Delete old availabilities
                 session.query(Availability).filter(Availability.doctor_id == doc_record.id).delete()
 
+                selected_start_time = start_time_dropdown.value or "09:00"
                 # Insert new ones
                 for d_str in existing_days:
                     new_av = Availability(
                         doctor_id=doc_record.id,
                         date=date.fromisoformat(d_str),
-                        start_time="09:00",
+                        start_time=selected_start_time,
                         end_time="17:00"
                     )
                     session.add(new_av)
@@ -238,6 +257,13 @@ def DoctorAvailabilityView(page: ft.Page, user, on_navigate=None):
         ft.Text("Establece cuántos pacientes deseas atender como máximo por día.", size=12, color=colors.TEXT_LIGHT),
         ft.Container(height=10),
         max_patients_row,
+        
+        ft.Container(height=20),
+        
+        ft.Text("Hora de Inicio Laboral", size=16, weight=ft.FontWeight.BOLD, color=colors.TEXT_DARK),
+        ft.Text("Selecciona la hora en la que inician tus consultas.", size=12, color=colors.TEXT_LIGHT),
+        ft.Container(height=10),
+        start_time_dropdown,
         
         ft.Container(height=20),
         

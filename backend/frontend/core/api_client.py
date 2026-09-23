@@ -1,18 +1,28 @@
 import requests
 from requests.exceptions import RequestException
 from core.config import API_BASE_URL as BASE_URL
+import threading
 
 class APIClient:
     def __init__(self):
-        self.session = requests.Session()
-        self.token = None
+        self._local = threading.local()
+
+    @property
+    def session(self):
+        if not hasattr(self._local, 'session'):
+            self._local.session = requests.Session()
+        return self._local.session
+
+    @property
+    def token(self):
+        return getattr(self._local, 'token', None)
 
     def set_token(self, token: str):
-        self.token = token
+        self._local.token = token
         self.session.headers.update({"Authorization": f"Bearer {token}"})
         
     def clear_token(self):
-        self.token = None
+        self._local.token = None
         if "Authorization" in self.session.headers:
             del self.session.headers["Authorization"]
 

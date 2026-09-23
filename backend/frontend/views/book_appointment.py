@@ -374,7 +374,7 @@ class BookAppointmentView(ft.Container):
                 else:
                     cell_date = date(self.calendar_year, self.calendar_month, day)
                     is_past = cell_date < today
-                    is_too_far = (cell_date - today).days > 14
+                    is_too_far = (cell_date - today).days > 30
                     
                     # If doctor is selected, check if this date is in their availabilities
                     is_unavailable = False
@@ -407,6 +407,17 @@ class BookAppointmentView(ft.Container):
                             if disabled:
                                 return
                             self.selected_date = date(self.calendar_year, self.calendar_month, d)
+                            
+                            last_day = calendar.monthrange(self.calendar_year, self.calendar_month)[1]
+                            if d == last_day:
+                                new_month = self.calendar_month + 1
+                                new_year = self.calendar_year
+                                if new_month > 12:
+                                    new_month = 1
+                                    new_year += 1
+                                self.calendar_month = new_month
+                                self.calendar_year = new_year
+
                             self.render_calendar()
                             if self.ft_page:
                                 self.ft_page.update()

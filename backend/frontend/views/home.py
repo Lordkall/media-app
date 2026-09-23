@@ -479,9 +479,35 @@ def HomeView(page: ft.Page, user):
                         if status_val == "scheduled":
                             bottom_row_items.append(ft.Container(expand=True))
 
+                        doc_start_time = "09:00"
+                        from app.models.doctors import Availability
+                        try:
+                            av = session.query(Availability).filter(
+                                Availability.doctor_id == a.doctor_id,
+                                Availability.date == a.appointment_date
+                            ).first()
+                            if av and av.start_time:
+                                doc_start_time = av.start_time
+                            else:
+                                av_first = session.query(Availability).filter(Availability.doctor_id == a.doctor_id).first()
+                                if av_first and av_first.start_time:
+                                    doc_start_time = av_first.start_time
+                        except: pass
+                        
+                        try:
+                            h, m = map(int, doc_start_time.split(':'))
+                            total_mins = h * 60 + m + (turn - 1) * 30
+                            h_res = (total_mins // 60) % 24
+                            m_res = total_mins % 60
+                            ampm = "AM" if h_res < 12 else "PM"
+                            h_12 = h_res if 1 <= h_res <= 12 else (12 if h_res == 0 else h_res - 12)
+                            time_str = f"{h_12:02d}:{m_res:02d} {ampm}"
+                        except:
+                            time_str = doc_start_time
+
                         bottom_row_items.append(
                             ft.Column([
-                                ft.Text(date_str, size=11, color=text_secondary, text_align=ft.TextAlign.RIGHT),
+                                ft.Text(f"{date_str} - {time_str}", size=11, color=text_secondary, text_align=ft.TextAlign.RIGHT),
                                 ft.Text(f"Turno #{turn}", size=11, color=text_secondary, text_align=ft.TextAlign.RIGHT),
                             ], spacing=2, alignment=ft.MainAxisAlignment.END, horizontal_alignment=ft.CrossAxisAlignment.END)
                         )

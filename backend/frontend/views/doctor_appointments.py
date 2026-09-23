@@ -127,6 +127,32 @@ def show_doctor_appointments(page: ft.Page, user):
                                 e.page.update()
                         return handler
 
+                    doc_start_time = "09:00"
+                    from app.models.doctors import Availability
+                    try:
+                        av = session.query(Availability).filter(
+                            Availability.doctor_id == doc.id,
+                            Availability.date == a.appointment_date
+                        ).first()
+                        if av and av.start_time:
+                            doc_start_time = av.start_time
+                        else:
+                            av_first = session.query(Availability).filter(Availability.doctor_id == doc.id).first()
+                            if av_first and av_first.start_time:
+                                doc_start_time = av_first.start_time
+                    except: pass
+                    
+                    try:
+                        h, m = map(int, doc_start_time.split(':'))
+                        total_mins = h * 60 + m + (turn - 1) * 30
+                        h_res = (total_mins // 60) % 24
+                        m_res = total_mins % 60
+                        ampm = "AM" if h_res < 12 else "PM"
+                        h_12 = h_res if 1 <= h_res <= 12 else (12 if h_res == 0 else h_res - 12)
+                        time_str = f"{h_12:02d}:{m_res:02d} {ampm}"
+                    except:
+                        time_str = doc_start_time
+                        
                     card_content = ft.Column([
                         ft.Row([
                             ft.Icon(ft.Icons.PERSON, color=colors.PRIMARY),
@@ -145,7 +171,7 @@ def show_doctor_appointments(page: ft.Page, user):
                         ], spacing=10),
                         ft.Row([
                             ft.Icon(ft.Icons.CALENDAR_TODAY, color=colors.TEXT_LIGHT, size=16),
-                            ft.Text(f"Fecha: {date_str} - Turno: #{turn}", size=14, color=colors.TEXT_LIGHT)
+                            ft.Text(f"Fecha: {date_str} - {time_str} - Turno: #{turn}", size=14, color=colors.TEXT_LIGHT, expand=True)
                         ], spacing=10),
                         ft.Row([
                             ft.Icon(ft.Icons.INFO, color=status_color, size=16),
