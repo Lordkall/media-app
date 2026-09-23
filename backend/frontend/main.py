@@ -164,4 +164,5 @@ import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 if __name__ == "__main__":
-    ft.app(target=main, assets_dir="assets")
+    if hasattr(ft, "app"):
+        ft.app(target=main, assets_dir="assets")
