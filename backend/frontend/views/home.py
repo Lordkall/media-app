@@ -603,6 +603,54 @@ def HomeView(page: ft.Page, user):
             from views.doctor_appointments import show_doctor_appointments
             show_doctor_appointments(page, user)
 
+        def go_to_assistant_config(e):
+            is_vip = False
+            try:
+                from sqlalchemy import create_engine, select
+                from sqlalchemy.orm import sessionmaker
+                from app.models.doctors import Doctor
+                from core.config import SYNC_DB_URL
+                engine = create_engine(SYNC_DB_URL)
+                Session = sessionmaker(bind=engine)
+                with Session() as session:
+                    d = session.execute(select(Doctor).where(Doctor.user_id == user.id)).scalar_one_or_none()
+                    if d and d.is_sponsored:
+                        is_vip = True
+            except:
+                pass
+                
+            if not is_vip:
+                snack = ft.SnackBar(
+                    content=ft.Text("La configuración de Asistente de IA es una función exclusiva del Plan VIP Patrocinado.", color="white"),
+                    bgcolor="#e6a817"
+                )
+                page.overlay.append(snack)
+                snack.open = True
+                page.update()
+                return
+                
+            snack = ft.SnackBar(ft.Text("Pantalla de Configuración de Asistente (En desarrollo)"), bgcolor=colors.PRIMARY)
+            page.overlay.append(snack)
+            snack.open = True
+            page.update()
+
+        menu_items.append(
+            menu_card(
+                ft.Icons.SMART_TOY,
+                "Configurar Asistente de IA",
+                "Gestiona respuestas automáticas",
+                on_click=go_to_assistant_config,
+                icon_color=colors.PRIMARY,
+            )
+        )
+        menu_items.append(
+            menu_card(
+                "icons/buscar_doctores_v2.png",
+                "Buscar Doctores",
+                "Encuentra especialistas por categoría",
+                on_click=go_to_browse_doctors,
+            )
+        )
         menu_items.append(
             menu_card(
                 "icons/gestion_v2.png", # Star
@@ -750,6 +798,25 @@ def HomeView(page: ft.Page, user):
         
     initials = (user.first_name[0] + user.last_name[0]).upper() if user and user.first_name else "U"
 
+    avatar_border_color = "transparent"
+    if role_val == "doctor":
+        try:
+            from sqlalchemy import create_engine, select
+            from sqlalchemy.orm import sessionmaker
+            from app.models.doctors import Doctor
+            from core.config import SYNC_DB_URL
+            engine = create_engine(SYNC_DB_URL)
+            Session = sessionmaker(bind=engine)
+            with Session() as session:
+                d = session.execute(select(Doctor).where(Doctor.user_id == user.id)).scalar_one_or_none()
+                if d:
+                    if d.is_sponsored:
+                        avatar_border_color = "#e6a817" # Gold
+                    elif getattr(d, 'is_featured', False):
+                        avatar_border_color = colors.PRIMARY # Blue
+        except:
+            pass
+
     user_avatar = ft.Container(
         content=ft.CircleAvatar(
             content=ft.Text(initials, size=20, weight=ft.FontWeight.BOLD, color="white") if not avatar_url else None,
@@ -757,6 +824,8 @@ def HomeView(page: ft.Page, user):
             radius=35,
             bgcolor=colors.PRIMARY,
         ),
+        border=ft.border.all(2, avatar_border_color) if avatar_border_color != "transparent" else None,
+        border_radius=40,
         on_click=go_to_profile,
         tooltip="Editar Mi Perfil"
     )
