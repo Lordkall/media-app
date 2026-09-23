@@ -495,8 +495,11 @@ class SubscribeView(ft.Container):
                     snack.open = True
                     self.ft_page.update()
                     
-            import asyncio
-            asyncio.create_task(process_payment())
+            if hasattr(self.ft_page, 'run_task'):
+                self.ft_page.run_task(process_payment)
+            else:
+                import asyncio
+                asyncio.create_task(process_payment())
 
         dialog = ft.AlertDialog(
             modal=True,

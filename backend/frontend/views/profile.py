@@ -226,28 +226,30 @@ class ProfileView(ft.Container):
             )
             doc_bio = "Especialista dedicado al cuidado integral del paciente."
             doc_fee = "50"
-            try:
-                import requests
-                from core.config import API_BASE_URL
-                token = self.ft_page.client_storage.get("session_token")
-                if token:
-                    r = requests.get(f"{API_BASE_URL}/doctors/me", headers={"Authorization": f"Bearer {token}"})
-                    if r.status_code == 200:
-                        doc_data = r.json()
-                        doc_bio = doc_data.get("bio", doc_bio)
-                        doc_fee = str(doc_data.get("consultation_fee", doc_fee))
-                        self.is_vip = doc_data.get("is_vip", False)
-                        self.doc_specialties = doc_data.get("specialties", [])
-                    else:
-                        self.is_vip = False
-                        self.doc_specialties = []
-                else:
-                    self.is_vip = False
-                    self.doc_specialties = []
-            except Exception as e:
-                print(f"Error cargando datos del doctor: {e}")
-                self.is_vip = False
-                self.doc_specialties = []
+            self.is_vip = False
+            self.doc_specialties = []
+            
+            async def load_doctor_data():
+                try:
+                    import requests
+                    from core.config import API_BASE_URL
+                    import asyncio
+                    token = await self.ft_page.client_storage.get_async("session_token")
+                    if token:
+                        def do_get():
+                            r = requests.get(f"{API_BASE_URL}/doctors/me", headers={"Authorization": f"Bearer {token}"})
+                            return r if r.status_code == 200 else None
+                        r = await asyncio.to_thread(do_get)
+                        if r:
+                            doc_data = r.json()
+                            self.bio_input.value = doc_data.get("bio", doc_bio)
+                            self.fee_input.value = str(doc_data.get("consultation_fee", doc_fee))
+                            self.is_vip = doc_data.get("is_vip", False)
+                            self.doc_specialties = doc_data.get("specialties", [])
+                            render_specialties()
+                            self.ft_page.update()
+                except Exception as e:
+                    print(f"Error cargando datos del doctor async: {e}")
             
             from app.models.doctors import SPECIALTIES
             
@@ -283,12 +285,16 @@ class ProfileView(ft.Container):
                 label="Añadir Especialidad (Máx. 5)",
                 options=[ft.dropdown.Option(key=s, text=s) for s in SPECIALTIES],
                 on_change=on_add_specialty,
-                disabled=len(self.doc_specialties) >= 5,
                 border_radius=10,
                 filled=True,
                 fill_color=colors.INPUT_BG,
             )
             render_specialties()
+            if hasattr(self.ft_page, 'run_task'):
+                self.ft_page.run_task(load_doctor_data)
+            else:
+                import asyncio
+                asyncio.create_task(load_doctor_data())
 
             self.bio_input = ft.TextField(
                 label="Biografía / Presentación Profesional",
