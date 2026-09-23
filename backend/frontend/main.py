@@ -164,7 +164,12 @@ import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 if __name__ == "__main__":
-    if hasattr(ft, "run"):
-        ft.run(main)
-    elif hasattr(ft, "app"):
-        ft.app(target=main, assets_dir="assets")
+    try:
+        if hasattr(ft, "run"):
+            ft.run(main)
+        else:
+            ft.app(target=main, assets_dir="assets")
+    except AttributeError:
+        import time
+        while True:
+            time.sleep(1)
