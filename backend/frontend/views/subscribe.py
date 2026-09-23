@@ -39,7 +39,8 @@ class SubscribeView(ft.Container):
         self.billing_cycle = "Mensual"
         
         self.build_ui()
-        self.load_data()
+        import asyncio
+        asyncio.create_task(self.load_data())
 
     def build_ui(self):
         def handle_back(e):
@@ -138,7 +139,7 @@ class SubscribeView(ft.Container):
 
         self.content = ft.Column(self.normal_controls.copy(), scroll=ft.ScrollMode.AUTO, expand=True)
 
-    def load_data(self):
+    async def load_data(self):
         role = self.user.role.value if hasattr(self.user.role, 'value') else str(self.user.role) if self.user and hasattr(self.user, 'role') else "doctor"
         if role not in ("doctor", "admin"):
             self.status_container.content = ft.Container(
@@ -151,32 +152,33 @@ class SubscribeView(ft.Container):
             return
         
         try:
-            from sqlalchemy import create_engine, select
-            from sqlalchemy.orm import sessionmaker
-            from app.models.subscriptions import Subscription, SubscriptionStatus
-            from app.models.doctors import Doctor
+            import requests
+            from core.config import API_BASE_URL
+            import asyncio
             
-            from core.config import SYNC_DB_URL
-            sync_engine = create_engine(SYNC_DB_URL)
-            Session = sessionmaker(bind=sync_engine)
-
-            with Session() as session:
-                doc = session.execute(select(Doctor).where(Doctor.user_id == self.user.id)).scalar_one_or_none()
-                if doc:
-                    sub = session.execute(
-                        select(Subscription).where(
-                            Subscription.doctor_id == doc.id,
-                            Subscription.status == SubscriptionStatus.ACTIVE
-                        ).order_by(Subscription.created_at.desc())
-                    ).scalars().first()
-                    self.current_sub = sub
-                    
-                    self.pending_sub = session.execute(
-                        select(Subscription).where(
-                            Subscription.doctor_id == doc.id,
-                            Subscription.status == SubscriptionStatus.PENDING_APPROVAL
-                        ).order_by(Subscription.created_at.desc())
-                    ).scalars().first()
+            session_token = await self.ft_page.client_storage.get_async("session_token")
+            headers = {"Authorization": f"Bearer {session_token}"}
+            
+            def fetch_subs():
+                r = requests.get(f"{API_BASE_URL}/subscriptions/me", headers=headers)
+                r.raise_for_status()
+                return r.json()
+                
+            data = await asyncio.to_thread(fetch_subs)
+            
+            # Mapear diccionarios a objetos simulados para que render_current_status funcione igual
+            class MockSub:
+                def __init__(self, d):
+                    self.id = d["id"]
+                    self.plan = type("MockEnum", (), {"value": d["plan"]})()
+                    self.status = type("MockEnum", (), {"value": d["status"]})()
+                    from datetime import datetime
+                    self.end_date = datetime.fromisoformat(d["end_date"].replace('Z', '+00:00'))
+                    self.grace_end_date = datetime.fromisoformat(d["grace_end_date"].replace('Z', '+00:00'))
+            
+            self.current_sub = MockSub(data["current"]) if data.get("current") else None
+            self.pending_sub = MockSub(data["pending"]) if data.get("pending") else None
+            
         except Exception as ex:
             print("Error loading subscription:", ex)
 
@@ -367,7 +369,7 @@ class SubscribeView(ft.Container):
                         shape=ft.RoundedRectangleBorder(radius=8),
                         padding=ft.padding.all(12)
                     ),
-                    on_click=lambda e, t=title, p=price_val: self.open_payment_modal(t, p),
+                    on_click=lambda e, t=title, p=price_val, ic=is_current: self.open_payment_modal(t, p, ic),
                 )
             ], spacing=6),
             padding=16,
@@ -377,7 +379,7 @@ class SubscribeView(ft.Container):
             blur=ft.Blur(15, 15, ft.BlurTileMode.MIRROR)
         )
 
-    def open_payment_modal(self, plan_name, price_val):
+    def open_payment_modal(self, plan_name, price_val, is_current=False):
         from sqlalchemy import create_engine, select
         from sqlalchemy.orm import sessionmaker
         from app.models.exchange_rate import ExchangeRate
@@ -435,67 +437,57 @@ class SubscribeView(ft.Container):
                 self.ft_page.update()
                 return
 
-            try:
-                import sys, os, shutil
-                from sqlalchemy import create_engine, select
-                from sqlalchemy.orm import sessionmaker
-                from app.models.subscriptions import Subscription, SubscriptionPlan, SubscriptionStatus
-                from app.models.doctors import Doctor
-                from app.models.notifications import Notification, NotificationType
-                from app.models.users import User, RoleEnum
-                from datetime import datetime, timedelta
-
-                ref_number = reference_input.value.strip()
-
-                from core.config import SYNC_DB_URL
-                sync_engine = create_engine(SYNC_DB_URL)
-                Session = sessionmaker(bind=sync_engine)
-
-                with Session() as session:
-                    doc = session.execute(select(Doctor).where(Doctor.user_id == self.user.id)).scalar_one_or_none()
-                    if doc:
-                        plan_enum = SubscriptionPlan.FEATURED if "Destacado" in plan_name or "Básico" in plan_name else SubscriptionPlan.SPONSORED
-                        new_sub = Subscription(
-                            doctor_id=doc.id,
-                            plan=plan_enum,
-                            status=SubscriptionStatus.PENDING_APPROVAL,
-                            start_date=datetime.utcnow(),
-                            end_date=datetime.utcnow() + timedelta(days=366 if self.billing_cycle == "Anual" else 31),
-                            grace_end_date=datetime.utcnow() + timedelta(days=371 if self.billing_cycle == "Anual" else 36)
-                        )
-                        session.add(new_sub)
-                        
-                        admins = session.execute(select(User).where(User.role == RoleEnum.ADMIN)).scalars().all()
-                        for admin in admins:
-                            notif = Notification(
-                                user_id=admin.id,
-                                type=NotificationType.NEW_SUBSCRIPTION,
-                                title="Nuevo Pago de Suscripción",
-                                message=f"El Dr(a). {self.user.first_name} {self.user.last_name} reportó un pago para el {plan_name} ({self.billing_cycle}). Ref: {ref_number}",
-                                action_url=f"approve_subscription:{new_sub.id}"
-                            )
-                            session.add(notif)
-
-                        session.commit()
-                        
-                        dialog.open = False
-
-                        snack = ft.SnackBar(
-                            content=ft.Text(f"¡Pago reportado! Tu solicitud para el {plan_name} ha sido enviada. El Administrador confirmará el pago."),
-                            bgcolor=SUCCESS_COLOR
-                        )
-                        self.ft_page.overlay.append(snack)
-                        snack.open = True
-                        
-                        self.load_data()
+            async def process_payment():
+                try:
+                    import requests
+                    from core.config import API_BASE_URL
+                    import asyncio
+                    
+                    ref_number = reference_input.value.strip()
+                    session_token = await self.ft_page.client_storage.get_async("session_token")
+                    headers = {"Authorization": f"Bearer {session_token}"}
+                    
+                    if is_current:
+                        payload = {
+                            "billing_cycle": self.billing_cycle,
+                            "reference_number": ref_number,
+                            "plan_name": plan_name
+                        }
+                        endpoint = f"{API_BASE_URL}/subscriptions/renew"
                     else:
-                        dialog.open = False
-                        snack = ft.SnackBar(content=ft.Text("Error: No se encontró perfil de doctor asociado."), bgcolor="red")
-                        self.ft_page.overlay.append(snack)
-                        snack.open = True
-                        self.ft_page.update()
-            except Exception as ex:
-                print(ex)
+                        payload = {
+                            "new_plan_name": plan_name,
+                            "billing_cycle": self.billing_cycle,
+                            "reference_number": ref_number
+                        }
+                        endpoint = f"{API_BASE_URL}/subscriptions/change_plan"
+                        
+                    def do_post():
+                        r = requests.post(endpoint, json=payload, headers=headers)
+                        r.raise_for_status()
+                        return r.json()
+                        
+                    response_data = await asyncio.to_thread(do_post)
+                    
+                    dialog.open = False
+                    snack = ft.SnackBar(
+                        content=ft.Text(response_data.get("message", "Operación exitosa.")),
+                        bgcolor=SUCCESS_COLOR
+                    )
+                    self.ft_page.overlay.append(snack)
+                    snack.open = True
+                    
+                    await self.load_data()
+                    self.ft_page.update()
+                except Exception as ex:
+                    print("Error procesando pago:", ex)
+                    snack = ft.SnackBar(content=ft.Text(f"Error procesando el pago: {ex}"), bgcolor="red")
+                    self.ft_page.overlay.append(snack)
+                    snack.open = True
+                    self.ft_page.update()
+                    
+            import asyncio
+            asyncio.create_task(process_payment())
 
         dialog = ft.AlertDialog(
             modal=True,

@@ -276,7 +276,7 @@ class ProfileView(ft.Container):
                 on_change=on_add_specialty,
                 disabled=len(self.doc_specialties) >= 5,
                 border_radius=10,
-                bgcolor=colors.INPUT_BG,
+                filled=True,
                 fill_color=colors.INPUT_BG,
             )
             render_specialties()
@@ -405,7 +405,8 @@ class ProfileView(ft.Container):
                 self.user.address = self.address_input.value.strip()
             
             try:
-                from core.api_client import client
+                import requests
+                from core.config import API_BASE_URL
                 import asyncio
                 
                 user_payload = {
@@ -418,21 +419,29 @@ class ProfileView(ft.Container):
                 if hasattr(self, 'address_input'):
                     user_payload["address"] = self.user.address
                     
-                await asyncio.to_thread(client.put, "/users/me", user_payload)
+                session_token = await self.ft_page.client_storage.get_async("session_token")
+                headers = {"Authorization": f"Bearer {session_token}"}
                 
-                if hasattr(self, 'bio_input'):
-                    doc_payload = {
-                        "bio": self.bio_input.value.strip()
-                    }
-                    try:
-                        doc_payload["consultation_fee"] = float(self.fee_input.value.strip())
-                    except:
-                        pass
-                        
-                    if hasattr(self, 'doc_specialties'):
-                        doc_payload["specialties"] = self.doc_specialties
-                        
-                    await asyncio.to_thread(client.put, "/doctors/me", doc_payload)
+                def do_put_requests():
+                    r1 = requests.put(f"{API_BASE_URL}/users/me", json=user_payload, headers=headers)
+                    r1.raise_for_status()
+                    
+                    if hasattr(self, 'bio_input'):
+                        doc_payload = {
+                            "bio": self.bio_input.value.strip()
+                        }
+                        try:
+                            doc_payload["consultation_fee"] = float(self.fee_input.value.strip())
+                        except:
+                            pass
+                            
+                        if hasattr(self, 'doc_specialties'):
+                            doc_payload["specialties"] = self.doc_specialties
+                            
+                        r2 = requests.put(f"{API_BASE_URL}/doctors/me", json=doc_payload, headers=headers)
+                        r2.raise_for_status()
+                
+                await asyncio.to_thread(do_put_requests)
                         
                 snack = ft.SnackBar(
                     content=ft.Text("¡Perfil actualizado con éxito!"),
