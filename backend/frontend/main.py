@@ -43,6 +43,14 @@ def main(page: ft.Page):
             surface_tint=ft.colors.WHITE
         )
     )
+    
+    page.locale_configuration = ft.LocaleConfiguration(
+        supported_locales=[
+            ft.Locale("es", "ES")
+        ],
+        current_locale=ft.Locale("es", "ES"),
+    )
+    
     page.window.min_width = 360
     page.window.min_height = 600
     

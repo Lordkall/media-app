@@ -78,8 +78,8 @@ def DoctorAvailabilityView(page: ft.Page, user, on_navigate=None):
         value=initial_start_time,
         width=200,
         border_radius=10,
-        bgcolor=colors.INPUT_BG,
-        fill_color=colors.INPUT_BG
+        bgcolor="white",
+        fill_color="white"
     )
 
     days_mapping = [
@@ -172,6 +172,7 @@ def DoctorAvailabilityView(page: ft.Page, user, on_navigate=None):
     def change_week(days):
         current_week_start[0] += timedelta(days=days)
         render_week()
+        page.update()
         
     render_week()
 

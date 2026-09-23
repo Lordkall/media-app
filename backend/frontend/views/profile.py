@@ -296,22 +296,32 @@ class ProfileView(ft.Container):
                 bgcolor=colors.INPUT_BG,
             )
             
-            # Fetch start_time
+            # Fetch start_time and days
             doc_start_time = "No configurado"
+            working_days_str = "No configurado"
             try:
                 from core.config import GlobalSession
                 from app.models.doctors import Doctor, Availability
+                from datetime import date
                 with GlobalSession() as session:
                     doc = session.query(Doctor).filter(Doctor.user_id == self.user.id).first()
                     if doc:
-                        av = session.query(Availability).filter(Availability.doctor_id == doc.id).first()
-                        if av and av.start_time:
-                            doc_start_time = av.start_time
-            except: pass
+                        avs = session.query(Availability).filter(
+                            Availability.doctor_id == doc.id,
+                            Availability.date >= date.today()
+                        ).all()
+                        if avs:
+                            doc_start_time = avs[0].start_time
+                            days_mapping = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+                            weekdays = sorted(list({a.date.weekday() for a in avs}))
+                            working_days_str = ", ".join([days_mapping[wd] for wd in weekdays])
+            except Exception as e:
+                print("Error loading availability in profile:", e)
             
             extra_fields.extend([
                 ft.Divider(height=10, color=BORDER_COLOR),
                 ft.Text("Información Profesional de Doctor", size=14, weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
+                ft.Text(f"Días Laborales: {working_days_str}", size=13, color=colors.TEXT_DARK, weight=ft.FontWeight.W_500),
                 ft.Text(f"Horario de inicio laboral: {doc_start_time}", size=13, color=colors.TEXT_LIGHT, italic=True),
                 self.address_input,
                 self.bio_input,

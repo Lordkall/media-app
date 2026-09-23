@@ -6,6 +6,29 @@ from contextlib import asynccontextmanager
 from app.core.database import engine
 from sqlalchemy import text
 
+import asyncio
+from datetime import datetime, timedelta
+
+async def bcv_updater_loop():
+    while True:
+        try:
+            now = datetime.now()
+            # Calculate next midnight
+            next_midnight = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+            sleep_seconds = (next_midnight - now).total_seconds()
+            
+            # Wait until midnight
+            await asyncio.sleep(sleep_seconds)
+            
+            # Run the scraper
+            from app.tasks.bcv_scraper import update_db_with_rate
+            await update_db_with_rate()
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print(f"Error en tarea programada de BCV: {e}")
+            await asyncio.sleep(3600)  # Retry in an hour if there's an unexpected error
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Migration on startup
@@ -14,7 +37,14 @@ async def lifespan(app: FastAPI):
             await conn.execute(text("ALTER TABLE users ALTER COLUMN avatar_url TYPE TEXT;"))
     except Exception as e:
         print(f"Migration error (might already be TEXT): {e}")
+        
+    # Start BCV background updater
+    bcv_task = asyncio.create_task(bcv_updater_loop())
+    
     yield
+    
+    # Cleanup on shutdown
+    bcv_task.cancel()
 
 app = FastAPI(title="MedIA Backend", version="1.0.0", lifespan=lifespan)
 
