@@ -156,9 +156,15 @@ def main(page: ft.Page):
 
     # Mostrar login inmediatamente para no dejar la pantalla en blanco
     # on_load lo reemplazará si hay sesión válida
-    page.views.clear()
-    page.views.append(LoginView(page))
-    page.update()
+    try:
+        page.views.clear()
+        page.views.append(LoginView(page))
+        page.update()
+    except Exception as e:
+        import traceback
+        page.add(ft.Text("ERROR AL CARGAR LOGIN:", color="red", weight="bold"))
+        page.add(ft.Text(traceback.format_exc(), color="red", size=10, selectable=True))
+        page.update()
 
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -170,6 +176,4 @@ if __name__ == "__main__":
         else:
             ft.app(target=main, assets_dir="assets")
     except AttributeError:
-        import time
-        while True:
-            time.sleep(1)
+        pass  # On Android, ft.app is missing but flet-embed calls main() automatically
