@@ -193,8 +193,7 @@ def HomeView(page: ft.Page, user):
         from sqlalchemy.orm import sessionmaker
         import sys, os
         base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-        if base_path not in sys.path: sys.path.append(base_path)
-        from app.models.notifications import Notification
+        if base_path not in sys.path:         from app.models.notifications import Notification
         from app.models.support import SupportTicket, TicketMessage
         from core.config import SYNC_DB_URL
         sync_engine = create_engine(SYNC_DB_URL)
@@ -299,8 +298,7 @@ def HomeView(page: ft.Page, user):
         import os
         base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
         if base_path not in sys.path:
-            sys.path.append(base_path)
-            
+                        
         from app.models.appointments import Appointment, AppointmentStatus
         from app.models.patients import Patient
         from app.models.doctors import Doctor

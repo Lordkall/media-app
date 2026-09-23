@@ -6,8 +6,7 @@ from core import colors
 def show_doctor_appointments(page: ft.Page, user):
     base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
     if base_path not in sys.path:
-        sys.path.append(base_path)
-
+        
     from sqlalchemy import create_engine, select
     from sqlalchemy.orm import sessionmaker, joinedload
     from app.models.doctors import Doctor

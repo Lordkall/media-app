@@ -2,8 +2,6 @@ import flet as ft
 import sys
 import os
 frontend_dir = os.path.dirname(__file__)
-sys.path.append(os.path.abspath(os.path.join(frontend_dir, '..')))
-sys.path.append(os.path.abspath(frontend_dir))
 
 # Fallback para mostrar errores fatales en pantalla (Android black screen fix)
 error_traceback = None
@@ -170,10 +168,4 @@ import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 if __name__ == "__main__":
-    try:
-        if hasattr(ft, "run"):
-            ft.run(main)
-        else:
-            ft.app(target=main, assets_dir="assets")
-    except AttributeError:
-        pass  # On Android, ft.app is missing but flet-embed calls main() automatically
+    ft.app(target=main, assets_dir="assets")

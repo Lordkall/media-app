@@ -4,8 +4,7 @@ import sys, os
 
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 if base_path not in sys.path:
-    sys.path.append(base_path)
-from sqlalchemy import create_engine
+    from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.models.users import User, RoleEnum
 from app.models.doctors import Doctor
