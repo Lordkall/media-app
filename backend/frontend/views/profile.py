@@ -227,14 +227,23 @@ class ProfileView(ft.Container):
             doc_bio = "Especialista dedicado al cuidado integral del paciente."
             doc_fee = "50"
             try:
-                from core.api_client import client
-                import asyncio
-                doc_data = client.get("/doctors/me") # Ideally should be to_thread, but it's in build_ui which is sync... wait! build_ui is sync so we just swallow it, it might block briefly on load. 
-                if doc_data:
-                    doc_bio = doc_data.get("bio", doc_bio)
-                    doc_fee = str(doc_data.get("consultation_fee", doc_fee))
-                    self.is_vip = doc_data.get("is_vip", False)
-                    self.doc_specialties = doc_data.get("specialties", [])
+                import requests
+                from core.config import API_BASE_URL
+                token = self.ft_page.client_storage.get("session_token")
+                if token:
+                    r = requests.get(f"{API_BASE_URL}/doctors/me", headers={"Authorization": f"Bearer {token}"})
+                    if r.status_code == 200:
+                        doc_data = r.json()
+                        doc_bio = doc_data.get("bio", doc_bio)
+                        doc_fee = str(doc_data.get("consultation_fee", doc_fee))
+                        self.is_vip = doc_data.get("is_vip", False)
+                        self.doc_specialties = doc_data.get("specialties", [])
+                    else:
+                        self.is_vip = False
+                        self.doc_specialties = []
+                else:
+                    self.is_vip = False
+                    self.doc_specialties = []
             except Exception as e:
                 print(f"Error cargando datos del doctor: {e}")
                 self.is_vip = False

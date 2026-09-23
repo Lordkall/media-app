@@ -291,8 +291,9 @@ class SubscribeView(ft.Container):
         self.render_plans()
 
     def render_plans(self):
-        is_basic = bool(self.current_sub and "featured" in str(self.current_sub.plan).lower())
-        is_vip = bool(self.current_sub and "sponsored" in str(self.current_sub.plan).lower())
+        plan_str = str(self.current_sub.plan.value).lower() if self.current_sub else ""
+        is_basic = bool(plan_str in ("featured", "basic"))
+        is_vip = bool(plan_str == "sponsored")
         
         is_anual = self.billing_cycle == "Anual"
         
@@ -317,7 +318,7 @@ class SubscribeView(ft.Container):
             ],
             badge=basic_badge,
             badge_color=ACCENT_COLOR,
-            btn_text=f"Plan Actual ({basic_price})" if is_basic else f"Seleccionar {basic_price}",
+            btn_text="Renovar" if is_basic else f"Seleccionar {basic_price}",
             price_val=basic_price_val,
             is_current=is_basic
         )
@@ -337,7 +338,7 @@ class SubscribeView(ft.Container):
             ],
             badge=vip_badge,
             badge_color=PRIMARY_COLOR,
-            btn_text=f"Plan Actual ({vip_price})" if is_vip else f"Seleccionar {vip_price}",
+            btn_text="Renovar" if is_vip else f"Seleccionar {vip_price}",
             price_val=vip_price_val,
             is_current=is_vip
         )
