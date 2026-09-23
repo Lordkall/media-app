@@ -47,7 +47,6 @@ jobs:
       - name: Flet Pre-Build (generate Flutter project + package Python)
         run: |
           cd backend/frontend
-          # Run flet build but allow Gradle to fail (we'll fix resources and re-run)
           flet build apk --project SaludNow --org com.saludnow.app -v 2>&1 | tee /tmp/flet_build.log || true
 
       - name: Fix duplicate ic_launcher_background resource
@@ -57,28 +56,18 @@ jobs:
             rm -f "$DUPE"
             echo "✅ Removed duplicate ic_launcher_background.xml"
           else
-            echo "❌ Flutter project was not generated. Flet build log:"
+            echo "❌ Flutter project was not generated. Flet build log (last 80 lines):"
             cat /tmp/flet_build.log | tail -80
             exit 1
           fi
 
-      - name: Fix compileSdk to 35 (required by flutter_plugin_android_lifecycle)
-        run: |
-          BUILD_GRADLE="backend/frontend/build/flutter/android/app/build.gradle"
-          if [ -f "$BUILD_GRADLE" ]; then
-            # Replace compileSdkVersion or compileSdk with 35
-            sed -i 's/compileSdk = [0-9]*/compileSdk = 35/g' "$BUILD_GRADLE"
-            sed -i 's/compileSdkVersion [0-9]*/compileSdkVersion 35/g' "$BUILD_GRADLE"
-            echo "✅ Fixed compileSdk to 35"
-            grep -n "compileSdk" "$BUILD_GRADLE"
-          else
-            echo "⚠️ build.gradle not found, skipping"
-          fi
-
       - name: Final Gradle Build
+        env:
+          # Required by serious_python Gradle plugin to locate packaged Python dependencies
+          SERIOUS_PYTHON_SITE_PACKAGES: ${{ github.workspace }}/backend/frontend/build/site-packages
         run: |
           cd backend/frontend/build/flutter
-          flutter build apk --build-name 1.0.0 --release
+          flutter build apk --build-name 1.0.0
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
