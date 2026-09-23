@@ -621,7 +621,7 @@ def HomeView(page: ft.Page, user):
                 
             if not is_vip:
                 snack = ft.SnackBar(
-                    content=ft.Text("La configuración de Asistente de IA es una función exclusiva del Plan VIP Patrocinado.", color="white"),
+                    content=ft.Text("La configuración de Asistente es una función exclusiva del Plan VIP Patrocinado.", color="white"),
                     bgcolor="#e6a817"
                 )
                 page.overlay.append(snack)
