@@ -237,7 +237,7 @@ class SubscribeView(ft.Container):
         self.content.horizontal_alignment = ft.CrossAxisAlignment.CENTER
 
     def render_current_status(self):
-        if getattr(self, 'pending_sub', None):
+        if getattr(self, 'pending_sub', None) and not getattr(self, 'current_sub', None):
             self.show_pending_screen()
             return
             
@@ -248,6 +248,21 @@ class SubscribeView(ft.Container):
         if self.current_sub:
             plan_str = "Plan VIP" if "sponsored" in str(self.current_sub.plan.value).lower() else "Plan Básico"
             days_left = (self.current_sub.end_date.replace(tzinfo=None) - __import__('datetime').datetime.utcnow()).days
+            pending_notice = []
+            if getattr(self, 'pending_sub', None):
+                pending_notice = [
+                    ft.Container(
+                        content=ft.Row([
+                            ft.Icon(ft.Icons.ACCESS_TIME, color=WARNING_COLOR, size=20),
+                            ft.Text("Tienes un pago pendiente de validación por el administrador.", color=WARNING_COLOR, size=12, weight=ft.FontWeight.W_500)
+                        ]),
+                        bgcolor=WARNING_COLOR + "15",
+                        padding=10,
+                        border_radius=10,
+                        margin=ft.margin.only(top=10)
+                    )
+                ]
+
             self.status_container.content = ft.Container(
                 content=ft.Column([
                     ft.Row([
@@ -263,6 +278,7 @@ class SubscribeView(ft.Container):
                             border_radius=12
                         )
                     ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                    *pending_notice
                 ], spacing=8),
                 padding=15,
                 border_radius=15,
@@ -271,6 +287,21 @@ class SubscribeView(ft.Container):
                 blur=ft.Blur(15, 15, ft.BlurTileMode.MIRROR)
             )
         else:
+            pending_notice = []
+            if getattr(self, 'pending_sub', None):
+                pending_notice = [
+                    ft.Container(
+                        content=ft.Row([
+                            ft.Icon(ft.Icons.ACCESS_TIME, color=WARNING_COLOR, size=20),
+                            ft.Text("Tienes un pago pendiente de validación por el administrador.", color=WARNING_COLOR, size=12, weight=ft.FontWeight.W_500)
+                        ]),
+                        bgcolor=WARNING_COLOR + "15",
+                        padding=10,
+                        border_radius=10,
+                        margin=ft.margin.only(top=10)
+                    )
+                ]
+
             self.status_container.content = ft.Container(
                 content=ft.Column([
                     ft.Row([
@@ -280,6 +311,7 @@ class SubscribeView(ft.Container):
                             ft.Text("No cuentas con prioridad en los resultados de búsqueda.", size=12, color=TEXT_SECONDARY)
                         ], expand=True),
                     ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                    *pending_notice
                 ], spacing=8),
                 padding=15,
                 border_radius=15,
