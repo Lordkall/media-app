@@ -49,9 +49,7 @@ def DoctorProfileView(page: ft.Page, doctor, on_navigate=None):
         try:
             import sys
             import os
-            base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-            if base_path not in sys.path:
-                            from sqlalchemy import create_engine
+            from sqlalchemy import create_engine
             from sqlalchemy.orm import sessionmaker
             from app.models.doctors import Availability
             

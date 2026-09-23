@@ -3,7 +3,6 @@ from core import colors
 import sys
 import os
 
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 from app.models.users import User
 from sqlalchemy import select
 from views.register import RegisterView

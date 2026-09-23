@@ -4,7 +4,6 @@ import sys
 import os
 import re
 
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 from app.models.users import User, RoleEnum
 from sqlalchemy.exc import IntegrityError
 

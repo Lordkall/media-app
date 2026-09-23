@@ -9,8 +9,6 @@ def DoctorAvailabilityView(page: ft.Page, user, on_navigate=None):
         page.update()
 
     # Base path for importing backend
-    base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-    if base_path not in sys.path:
         
     from app.models.users import User
     from app.models.doctors import Doctor, Availability
