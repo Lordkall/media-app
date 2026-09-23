@@ -8,7 +8,8 @@ def DoctorProfileView(page: ft.Page, doctor, on_navigate=None):
         page.update()
 
     doc_u = doctor.user
-    doc_name = f"Dr{'a' if getattr(doc_u, 'gender', '') == 'F' else ''}. {doc_u.first_name} {doc_u.last_name}"
+    is_female = getattr(doc_u, 'gender', '') in ('F', 'Femenino', 'femenino')
+    doc_name = f"Dr{'a' if is_female else ''}. {doc_u.first_name} {doc_u.last_name}"
     
     avatar_src = doc_u.avatar_url if doc_u.avatar_url else None
     initials = (doc_u.first_name[0] + doc_u.last_name[0]).upper()
@@ -60,12 +61,17 @@ def DoctorProfileView(page: ft.Page, doctor, on_navigate=None):
             Session = sessionmaker(bind=sync_engine)
             with Session() as session:
                 avs = session.query(Availability).filter(Availability.doctor_id == doctor.id).all()
-                av_days = sorted([a.day_of_week for a in avs])
+                av_days = sorted(list({a.date.weekday() for a in avs}))
+                
+                if avs:
+                    doc_start_time = avs[0].start_time
         except Exception as e:
             print("Error loading availabilities:", e)
 
     if av_days:
         working_days_str = ", ".join([days_mapping[d] for d in av_days])
+        if 'doc_start_time' in locals() and doc_start_time:
+            working_days_str += f" (Inicio: {doc_start_time})"
     else:
         working_days_str = "No especificado"
 

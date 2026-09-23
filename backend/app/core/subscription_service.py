@@ -97,7 +97,8 @@ async def create_subscription(session: AsyncSession, doctor_id: int, plan: Subsc
         )).scalars().all()
 
         plan_label = PLAN_LABELS[plan]
-        doc_name = f"Dr. {doctor.user.first_name} {doctor.user.last_name}"
+        is_female = getattr(doctor.user, 'gender', '') in ('F', 'Femenino', 'femenino')
+        doc_name = f"Dr{'a' if is_female else ''}. {doctor.user.first_name} {doctor.user.last_name}"
 
         for admin in admins:
             notif = Notification(
@@ -298,7 +299,8 @@ async def renew_subscription(session: AsyncSession, subscription_id: int) -> Sub
         select(User).where(User.role == RoleEnum.ADMIN)
     )).scalars().all()
 
-    doc_name = f"Dr. {doctor.user.first_name} {doctor.user.last_name}"
+    is_female = getattr(doctor.user, 'gender', '') in ('F', 'Femenino', 'femenino')
+    doc_name = f"Dr{'a' if is_female else ''}. {doctor.user.first_name} {doctor.user.last_name}"
     for admin in admins:
         notif_admin = Notification(
             user_id=admin.id,
