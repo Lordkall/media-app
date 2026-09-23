@@ -168,4 +168,8 @@ import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 if __name__ == "__main__":
-    ft.app(target=main, assets_dir="assets")
+    if hasattr(ft, "app"):
+        ft.app(target=main, assets_dir="assets")
+    else:
+        # En Android flet 0.25.0 no existe ft.app, flet-embed llama a main automáticamente
+        pass
