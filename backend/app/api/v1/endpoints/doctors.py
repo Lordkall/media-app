@@ -57,6 +57,9 @@ async def update_doctor_me(
     update_data = doc_in.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(doc, field, value)
+        if field == "specialties":
+            from sqlalchemy.orm.attributes import flag_modified
+            flag_modified(doc, "specialties")
         
     db.add(doc)
     await db.commit()

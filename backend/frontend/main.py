@@ -140,18 +140,19 @@ def main(page: ft.Page):
                 return
             except Exception as ex:
                 print("[AUTO-LOGIN ERROR]", ex)
-                try:
-                    await page.client_storage.remove_async("session_token")
-                    await page.client_storage.remove_async("user_id")
-                except: pass
+                if hasattr(ex, 'response') and ex.response is not None and ex.response.status_code == 401:
+                    try:
+                        await page.client_storage.remove_async("session_token")
+                        await page.client_storage.remove_async("user_id")
+                    except: pass
 
         # Sin sesión válida: ya se muestra login (fue cargado antes)
         page.views.clear()
         page.views.append(LoginView(page))
         page.update()
 
-    # on_load se dispara cuando el WebSocket está listo y client_storage fue sincronizado
-    page.on_load = lambda e: page.run_task(try_auto_login)
+    # Lanzar auto-login inmediatamente
+    page.run_task(try_auto_login)
 
     # Mostrar login inmediatamente para no dejar la pantalla en blanco
     # on_load lo reemplazará si hay sesión válida

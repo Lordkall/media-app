@@ -39,8 +39,16 @@ class SubscribeView(ft.Container):
         self.billing_cycle = "Mensual"
         
         self.build_ui()
-        import asyncio
-        asyncio.create_task(self.load_data())
+        if hasattr(self.ft_page, 'run_task'):
+            self.ft_page.run_task(self.load_data)
+        else:
+            import asyncio
+            try:
+                asyncio.create_task(self.load_data())
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                loop.create_task(self.load_data())
 
     def build_ui(self):
         def handle_back(e):
