@@ -43,14 +43,16 @@ def _doctor_card(doctor: Doctor, page: ft.Page = None) -> ft.Container:
         page.views.append(DoctorProfileView(page, doctor=doctor))
         page.update()
 
-    # Estrella para VIPs
+    border_width = 1
+    border_color = colors.GLASS_BORDER
     star_icon = None
-    border_color = colors.INPUT_BORDER
     if doctor.is_sponsored:
         border_color = "#e6a817"
+        border_width = 2
         star_icon = ft.Icon(ft.Icons.STAR, color="#e6a817", size=20)
     elif doctor.is_featured:
         border_color = colors.PRIMARY
+        border_width = 2
         star_icon = ft.Icon(ft.Icons.STAR_BORDER, color=colors.PRIMARY, size=20)
 
     card_content = ft.Column(
@@ -93,7 +95,7 @@ def _doctor_card(doctor: Doctor, page: ft.Page = None) -> ft.Container:
         padding=14,
         width=160,
         height=190,
-        border=ft.border.all(1, colors.GLASS_BORDER),
+        border=ft.border.all(border_width, border_color),
         blur=ft.Blur(15, 15, ft.BlurTileMode.MIRROR),
         on_click=show_doctor_details,
         shadow=ft.BoxShadow(
