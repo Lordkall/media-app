@@ -197,6 +197,31 @@ class ProfileView(ft.Container):
             bgcolor=PRIMARY_COLOR,
         )
 
+        avatar_border_color = "transparent"
+        if role_str == "doctor":
+            try:
+                from sqlalchemy import create_engine, select
+                from sqlalchemy.orm import sessionmaker
+                from app.models.doctors import Doctor
+                from core.config import SYNC_DB_URL
+                engine = create_engine(SYNC_DB_URL)
+                Session = sessionmaker(bind=engine)
+                with Session() as session:
+                    d = session.execute(select(Doctor).where(Doctor.user_id == self.user.id)).scalar_one_or_none()
+                    if d:
+                        if d.is_sponsored:
+                            avatar_border_color = "#e6a817" # Gold
+                        elif getattr(d, 'is_featured', False):
+                            avatar_border_color = PRIMARY_COLOR # Blue
+            except:
+                pass
+
+        self.avatar_container = ft.Container(
+            content=self.avatar_circle,
+            border=ft.border.all(3, avatar_border_color) if avatar_border_color != "transparent" else None,
+            border_radius=55,
+        )
+
         presets_row = ft.Row([
             ft.Container(
                 content=ft.Row([
@@ -211,7 +236,7 @@ class ProfileView(ft.Container):
         ], alignment=ft.MainAxisAlignment.CENTER)
 
         avatar_section = ft.Column([
-            self.avatar_circle,
+            self.avatar_container,
             ft.Text(f"{role_name}", size=12, weight=ft.FontWeight.W_600, color=ACCENT_COLOR),
             presets_row
         ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=6)
