@@ -3,7 +3,6 @@ name = "SaludNow"
 version = "1.0.0"
 description = "Aplicación Salud Now"
 dependencies = [
-    "flet>=1.0.0",
     "requests",
     "SQLAlchemy",
     "pg8000",
@@ -13,7 +12,4 @@ dependencies = [
 
 [tool.flet]
 permissions = ["biometric"]
-
-
-
-
+app.module = "main"
