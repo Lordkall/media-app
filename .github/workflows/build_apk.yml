@@ -15,73 +15,43 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Python
+      - name: Setup Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
-      - name: Install System Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y cmake ninja-build pkg-config libgtk-3-dev mesa-utils
-
-      - name: Setup Java
+      - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
+          distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Flutter
+      - name: Setup Flutter 3.24.5
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          flutter-version: '3.24.x'
+          flutter-version: '3.24.5'
+          cache: true
 
       - name: Accept Android Licenses
-        run: yes | flutter doctor --android-licenses
+        run: yes | flutter doctor --android-licenses || true
 
-      - name: Install Dependencies
+      - name: Install Flet CLI
         run: |
           python -m pip install --upgrade pip
-          pip install "flet==0.25.1"
-          if [ -f backend/frontend/requirements.txt ]; then pip install -r backend/frontend/requirements.txt; fi
+          pip install "flet[all]==0.25.0"
 
-      - name: Flet Pre-Build (generate Flutter project)
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SERIOUS_PYTHON_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Copy backend app models into frontend (required for packaging)
+        run: cp -r backend/app backend/frontend/app
+
+      - name: Build APK
         run: |
-          # Copiar la carpeta 'app' del backend dentro del frontend para empaquetar los modelos en el APK
-          cp -r backend/app backend/frontend/app
-          
           cd backend/frontend
-          # Run flet build but allow it to fail at Gradle (it still generates the Flutter project)
-          flet build apk --project SaludNow --org com.saludnow.app -v 2>&1 | tee /tmp/flet_build.log || true
-
-      - name: Fix Duplicate Android Resources
-        run: |
-          # flutter_launcher_icons y flutter_native_splash generan colores duplicados
-          # Eliminar ic_launcher_background.xml deja solo la definición en colors.xml
-          DUPE="backend/frontend/build/flutter/android/app/src/main/res/values/ic_launcher_background.xml"
-          if [ -f "$DUPE" ]; then
-            rm -f "$DUPE"
-            echo "Removed duplicate ic_launcher_background.xml"
-          else
-            echo "File not found, build may have failed before generating Flutter project"
-            cat /tmp/flet_build.log | tail -50
-            exit 1
-          fi
-
-      - name: Final Gradle Build
-        env:
-          SERIOUS_PYTHON_SITE_PACKAGES: ${{ github.workspace }}/backend/frontend/build/site-packages
-        run: |
-          cd backend/frontend/build/flutter
-          flutter build apk --build-name 1.0.0
+          flet build apk --project SaludNow --org com.saludnow.app -v
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-release
-          path: backend/frontend/build/flutter/build/app/outputs/flutter-apk/*.apk
-
+          name: SaludNow-APK
+          path: backend/frontend/build/apk/app-release.apk
+          if-no-files-found: warn
