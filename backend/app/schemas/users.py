@@ -45,6 +45,7 @@ class UserResponse(BaseModel):
     address: Optional[str] = None
     gender: Optional[str] = None
     avatar_url: Optional[str] = None
+    linked_doctor_id: Optional[int] = None
     
     class Config:
         from_attributes = True
