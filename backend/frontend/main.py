@@ -98,8 +98,8 @@ def main(page: ft.Page):
         session_token = None
         user_id = None
         try:
-            session_token = page.client_storage.get("session_token")
-            user_id = page.client_storage.get("user_id")
+            session_token = await page.client_storage.get_async("session_token")
+            user_id = await page.client_storage.get_async("user_id")
         except Exception as ex:
             print("[SESSION] Error leyendo client_storage:", ex)
 
@@ -141,8 +141,8 @@ def main(page: ft.Page):
             except Exception as ex:
                 print("[AUTO-LOGIN ERROR]", ex)
                 try:
-                    page.client_storage.remove("session_token")
-                    page.client_storage.remove("user_id")
+                    await page.client_storage.remove_async("session_token")
+                    await page.client_storage.remove_async("user_id")
                 except: pass
 
         # Sin sesión válida: ya se muestra login (fue cargado antes)

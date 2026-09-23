@@ -63,12 +63,12 @@ def LoginView(page: ft.Page):
             # 2. Guardar sesión
             try:
                 # El token viene en auth_data["access_token"]
-                page.client_storage.set("session_token", auth_data["access_token"])
+                await page.client_storage.set_async("session_token", auth_data["access_token"])
                 
                 import jwt
                 decoded = jwt.decode(auth_data["access_token"], options={"verify_signature": False})
                 user_id = decoded.get("id")
-                page.client_storage.set("user_id", str(user_id))
+                await page.client_storage.set_async("user_id", str(user_id))
             except Exception as e:
                 print("Error setting client_storage:", e)
                 
@@ -84,8 +84,15 @@ def LoginView(page: ft.Page):
                 page.pubsub.send_all_on_topic(f"user_{user_id}", f"force_logout:{getattr(page, 'session_id', '')}")
 
             # Como HomeView necesita un objeto User por ahora, lo llenamos con los datos del endpoint
-            import asyncio
-            me_data = await asyncio.to_thread(client.get, "/users/me")
+            import requests
+            from core.config import API_BASE_URL
+            
+            def fetch_me():
+                resp = requests.get(f"{API_BASE_URL}/users/me", headers={"Authorization": f"Bearer {auth_data['access_token']}"})
+                resp.raise_for_status()
+                return resp.json()
+                
+            me_data = await asyncio.to_thread(fetch_me)
             class UserMock:
                 pass
             user = UserMock()
