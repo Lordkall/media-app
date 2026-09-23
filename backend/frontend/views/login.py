@@ -106,6 +106,7 @@ def LoginView(page: ft.Page):
             user.address = me_data.get("address")
             user.gender = me_data.get("gender")
             user.avatar_url = me_data.get("avatar_url")
+            user.linked_doctor_id = me_data.get("linked_doctor_id")
 
             fcm_token = os.environ.get("FCM_TOKEN")
             if fcm_token:
