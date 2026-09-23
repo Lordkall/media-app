@@ -246,7 +246,7 @@ class SubscribeView(ft.Container):
         self.content.horizontal_alignment = ft.CrossAxisAlignment.START
         
         if self.current_sub:
-            plan_str = "Plan VIP" if "sponsored" in str(self.current_sub.plan).lower() else "Plan Básico"
+            plan_str = "Plan VIP" if "sponsored" in str(self.current_sub.plan.value).lower() else "Plan Básico"
             days_left = (self.current_sub.end_date.replace(tzinfo=None) - __import__('datetime').datetime.utcnow()).days
             self.status_container.content = ft.Container(
                 content=ft.Column([

@@ -12,17 +12,17 @@ from datetime import datetime, timedelta
 async def bcv_updater_loop():
     while True:
         try:
+            # First, update the rate immediately
+            from app.tasks.bcv_scraper import update_db_with_rate
+            await update_db_with_rate()
+            
             now = datetime.now()
             # Calculate next midnight
             next_midnight = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
             sleep_seconds = (next_midnight - now).total_seconds()
             
-            # Wait until midnight
+            # Wait until midnight for the next update
             await asyncio.sleep(sleep_seconds)
-            
-            # Run the scraper
-            from app.tasks.bcv_scraper import update_db_with_rate
-            await update_db_with_rate()
         except asyncio.CancelledError:
             break
         except Exception as e:
