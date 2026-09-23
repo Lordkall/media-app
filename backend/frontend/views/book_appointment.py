@@ -323,7 +323,8 @@ class BookAppointmentView(ft.Container):
     def render_calendar(self):
         self.calendar_container.controls.clear()
         
-        month_name = date(self.calendar_year, self.calendar_month, 1).strftime("%B %Y").upper()
+        meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+        month_name = f"{meses[self.calendar_month - 1]} {self.calendar_year}".upper()
         
         def change_month(delta):
             def handler(e):

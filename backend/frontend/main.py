@@ -105,11 +105,17 @@ def main(page: ft.Page):
 
         if session_token and user_id:
             try:
-                from core.api_client import client
-                client.set_token(session_token)
-
-                # Llamada HTTP en un thread separado para no bloquear el event loop
-                me_data = await asyncio.to_thread(client.get, "/users/me")
+                import requests
+                from core.config import API_BASE_URL
+                headers = {"Authorization": f"Bearer {session_token}"}
+                
+                def fetch_me():
+                    resp = requests.get(f"{API_BASE_URL}/users/me", headers=headers)
+                    resp.raise_for_status()
+                    return resp.json()
+                
+                # Llamada HTTP en un thread separado con peticion directa para evitar fugas de threads
+                me_data = await asyncio.to_thread(fetch_me)
 
                 class UserMock:
                     pass
