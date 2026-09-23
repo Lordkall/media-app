@@ -1,7 +1,10 @@
 import flet as ft
 import sys
 import os
-frontend_dir = os.path.dirname(__file__)
+frontend_dir = os.path.dirname(os.path.abspath(__file__))
+backend_dir = os.path.abspath(os.path.join(frontend_dir, ".."))
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
 
 # Fallback para mostrar errores fatales en pantalla (Android black screen fix)
 error_traceback = None
