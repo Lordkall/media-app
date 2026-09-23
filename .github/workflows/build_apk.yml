@@ -44,14 +44,45 @@ jobs:
       - name: Copy backend app models into frontend (required for packaging)
         run: cp -r backend/app backend/frontend/app
 
-      - name: Build APK
+      - name: Flet Pre-Build (generate Flutter project + package Python)
         run: |
           cd backend/frontend
-          flet build apk --project SaludNow --org com.saludnow.app -v
+          # Run flet build but allow Gradle to fail (we'll fix resources and re-run)
+          flet build apk --project SaludNow --org com.saludnow.app -v 2>&1 | tee /tmp/flet_build.log || true
+
+      - name: Fix duplicate ic_launcher_background resource
+        run: |
+          DUPE="backend/frontend/build/flutter/android/app/src/main/res/values/ic_launcher_background.xml"
+          if [ -f "$DUPE" ]; then
+            rm -f "$DUPE"
+            echo "✅ Removed duplicate ic_launcher_background.xml"
+          else
+            echo "❌ Flutter project was not generated. Flet build log:"
+            cat /tmp/flet_build.log | tail -80
+            exit 1
+          fi
+
+      - name: Fix compileSdk to 35 (required by flutter_plugin_android_lifecycle)
+        run: |
+          BUILD_GRADLE="backend/frontend/build/flutter/android/app/build.gradle"
+          if [ -f "$BUILD_GRADLE" ]; then
+            # Replace compileSdkVersion or compileSdk with 35
+            sed -i 's/compileSdk = [0-9]*/compileSdk = 35/g' "$BUILD_GRADLE"
+            sed -i 's/compileSdkVersion [0-9]*/compileSdkVersion 35/g' "$BUILD_GRADLE"
+            echo "✅ Fixed compileSdk to 35"
+            grep -n "compileSdk" "$BUILD_GRADLE"
+          else
+            echo "⚠️ build.gradle not found, skipping"
+          fi
+
+      - name: Final Gradle Build
+        run: |
+          cd backend/frontend/build/flutter
+          flutter build apk --build-name 1.0.0 --release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: SaludNow-APK
-          path: backend/frontend/build/apk/app-release.apk
-          if-no-files-found: warn
+          path: backend/frontend/build/flutter/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
