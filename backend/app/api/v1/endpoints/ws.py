@@ -37,5 +37,9 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int):
     try:
         while True:
             data = await websocket.receive_text()
+            if ":" in data:
+                target_str, msg = data.split(":", 1)
+                if target_str.isdigit():
+                    await manager.send_personal_message(msg, int(target_str))
     except WebSocketDisconnect:
         manager.disconnect(websocket, user_id)

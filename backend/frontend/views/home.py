@@ -457,14 +457,13 @@ def HomeView(page: ft.Page, user):
                                             sess.add(notif)
                                             sess.commit()
                                             
-                                            import asyncio
-                                            from app.api.v1.endpoints.ws import manager
-                                            try:
-                                                loop = asyncio.get_running_loop()
-                                                loop.create_task(manager.send_personal_message(f"new_notification:Cita Cancelada por {patient_name}", app_to_cancel.doctor.user_id))
-                                            except RuntimeError:
-                                                asyncio.run(manager.send_personal_message(f"new_notification:Cita Cancelada por {patient_name}", app_to_cancel.doctor.user_id))
-                                                
+                                            msg = f"new_notification:Cita Cancelada por {patient_name}"
+                                            page.pubsub.send_all_on_topic(f"user_{app_to_cancel.doctor.user_id}", msg)
+                                            if getattr(page, 'ws_app', None) and getattr(page, 'ws_connected', False):
+                                                try:
+                                                    page.ws_app.send(f"{app_to_cancel.doctor.user_id}:{msg}")
+                                                except Exception as e:
+                                                    print("WS Error:", e)
                                         load_appointments()
                                         page.update()
                                 except Exception as ex:

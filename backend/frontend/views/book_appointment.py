@@ -521,10 +521,13 @@ class BookAppointmentView(ft.Container):
                 session.commit()
                 
                 if doc:
-                    self.ft_page.pubsub.send_all_on_topic(
-                        f"user_{doc.user_id}", 
-                        f"new_notification:¡Tienes una nueva cita de {patient_name}!"
-                    )
+                    msg = f"new_notification:¡Tienes una nueva cita de {patient_name}!"
+                    self.ft_page.pubsub.send_all_on_topic(f"user_{doc.user_id}", msg)
+                    if getattr(self.ft_page, 'ws_app', None) and getattr(self.ft_page, 'ws_connected', False):
+                        try:
+                            self.ft_page.ws_app.send(f"{doc.user_id}:{msg}")
+                        except Exception as e:
+                            print("WS Error:", e)
                 
             def close_success_dialog(e):
                 dialog.open = False
