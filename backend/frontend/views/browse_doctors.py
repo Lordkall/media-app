@@ -52,12 +52,15 @@ def _doctor_card(doctor: Doctor, page: ft.Page = None) -> ft.Container:
         border_width = 2
         star_icon = ft.Icon(ft.Icons.STAR_BORDER, color=colors.PRIMARY, size=20)
 
+    is_base64 = avatar_src and str(avatar_src).startswith("data:image/")
+    b64_data = str(avatar_src).split("base64,")[-1] if is_base64 else None
+
     card_content = ft.Column(
         [
             ft.Container(height=5),
             ft.CircleAvatar(
-                content=ft.Text(initials, size=24, weight=ft.FontWeight.BOLD, color="white") if not avatar_src else None,
-                foreground_image_src=avatar_src if avatar_src else None,
+                content=ft.Image(src_base64=b64_data, fit=ft.ImageFit.COVER, border_radius=100) if is_base64 else (ft.Text(initials, size=24, weight=ft.FontWeight.BOLD, color="white") if not avatar_src else None),
+                foreground_image_src=None if is_base64 else (avatar_src if avatar_src else None),
                 radius=35,
                 bgcolor=colors.PRIMARY,
             ),

@@ -190,9 +190,12 @@ class ProfileView(ft.Container):
 
         initials = (self.user.first_name[0] + self.user.last_name[0]).upper() if self.user else "U"
         
+        is_base64 = self.avatar_src and self.avatar_src.startswith("data:image/")
+        b64_data = self.avatar_src.split("base64,")[-1] if is_base64 else None
+        
         self.avatar_circle = ft.CircleAvatar(
-            content=ft.Text(initials, size=24, weight=ft.FontWeight.BOLD, color="white") if not self.avatar_src else None,
-            foreground_image_src=self.avatar_src if self.avatar_src else None,
+            content=ft.Image(src_base64=b64_data, fit=ft.ImageFit.COVER, border_radius=100) if is_base64 else (ft.Text(initials, size=24, weight=ft.FontWeight.BOLD, color="white") if not self.avatar_src else None),
+            foreground_image_src=None if is_base64 else (self.avatar_src if self.avatar_src else None),
             radius=45,
             bgcolor=PRIMARY_COLOR,
         )
@@ -427,8 +430,14 @@ class ProfileView(ft.Container):
 
     def update_avatar_preview(self, url: str):
         if url and url.strip():
-            self.avatar_circle.foreground_image_src = url.strip()
-            self.avatar_circle.content = None
+            url_str = url.strip()
+            if url_str.startswith("data:image/"):
+                b64_data = url_str.split("base64,")[-1]
+                self.avatar_circle.foreground_image_src = None
+                self.avatar_circle.content = ft.Image(src_base64=b64_data, fit=ft.ImageFit.COVER, border_radius=100)
+            else:
+                self.avatar_circle.foreground_image_src = url_str
+                self.avatar_circle.content = None
         else:
             self.avatar_circle.foreground_image_src = None
             initials = (self.user.first_name[0] + self.user.last_name[0]).upper() if self.user else "U"

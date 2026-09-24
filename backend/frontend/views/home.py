@@ -806,10 +806,13 @@ def HomeView(page: ft.Page, user):
         except:
             pass
 
+    is_base64 = avatar_url and str(avatar_url).startswith("data:image/")
+    b64_data = str(avatar_url).split("base64,")[-1] if is_base64 else None
+
     user_avatar = ft.Container(
         content=ft.CircleAvatar(
-            content=ft.Text(initials, size=20, weight=ft.FontWeight.BOLD, color="white") if not avatar_url else None,
-            foreground_image_src=avatar_url if avatar_url else None,
+            content=ft.Image(src_base64=b64_data, fit=ft.ImageFit.COVER, border_radius=100) if is_base64 else (ft.Text(initials, size=20, weight=ft.FontWeight.BOLD, color="white") if not avatar_url else None),
+            foreground_image_src=None if is_base64 else (avatar_url if avatar_url else None),
             radius=35,
             bgcolor=colors.PRIMARY,
         ),

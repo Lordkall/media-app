@@ -3,8 +3,7 @@ from core import colors
 import sys
 import os
 
-from app.models.users import User
-from sqlalchemy import select
+
 from views.register import RegisterView
 from views.password_recovery import PasswordRecoveryView
 

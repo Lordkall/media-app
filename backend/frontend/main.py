@@ -13,9 +13,9 @@ error_traceback = None
 try:
     # MONKEY PATCH PARA EVITAR FUGAS DE CONEXIONES EN TODAS LAS VISTAS
     import sqlalchemy
-    from core.config import global_sync_engine
 
     def fake_create_engine(*args, **kwargs):
+        from core.config import global_sync_engine
         return global_sync_engine
 
     sqlalchemy.create_engine = fake_create_engine
@@ -79,7 +79,7 @@ def main(page: ft.Page):
             # Prevención de spam
             if not getattr(page, "_exit_snack_shown", False):
                 page._exit_snack_shown = True
-                snack = ft.SnackBar(ft.Text("Presiona 'Cerrar sesión' si deseas salir."), duration=3000)
+                snack = ft.SnackBar(ft.Text("Presiona ATRÁS nuevamente para salir de la app."), duration=3000)
                 page.overlay.append(snack)
                 snack.open = True
                 page.update()
@@ -89,6 +89,10 @@ def main(page: ft.Page):
                 def reset_flag():
                     page._exit_snack_shown = False
                 threading.Timer(3.0, reset_flag).start()
+            else:
+                # They pressed back again within 3 seconds, exit the app
+                page.views.pop()
+                page.update()
             
     page.on_view_pop = view_pop
 
@@ -113,9 +117,19 @@ def main(page: ft.Page):
                 headers = {"Authorization": f"Bearer {session_token}"}
                 
                 def fetch_me():
-                    resp = requests.get(f"{API_BASE_URL}/users/me", headers=headers)
-                    resp.raise_for_status()
-                    return resp.json()
+                    import time
+                    last_ex = None
+                    for _ in range(5): # 5 intentos para dar tiempo a la red
+                        try:
+                            resp = requests.get(f"{API_BASE_URL}/users/me", headers=headers, timeout=5)
+                            resp.raise_for_status()
+                            return resp.json()
+                        except Exception as e:
+                            last_ex = e
+                            if hasattr(e, 'response') and e.response is not None and e.response.status_code == 401:
+                                raise e # Token expirado o inválido, no reintentar
+                            time.sleep(1.5)
+                    raise last_ex
                 
                 # Llamada HTTP en un thread separado con peticion directa para evitar fugas de threads
                 me_data = await asyncio.to_thread(fetch_me)
@@ -148,6 +162,37 @@ def main(page: ft.Page):
                         await page.client_storage.remove_async("session_token")
                         await page.client_storage.remove_async("user_id")
                     except: pass
+                else:
+                    # Es un error de red o de servidor, no desloguear al usuario
+                    page.views.clear()
+                    
+                    def retry_login(e):
+                        page.views.clear()
+                        page.views.append(ft.View(
+                            "/loading",
+                            controls=[ft.Container(content=ft.ProgressRing(), expand=True, alignment=ft.alignment.center)]
+                        ))
+                        page.update()
+                        page.run_task(try_auto_login)
+                        
+                    page.views.append(ft.View(
+                        "/error",
+                        controls=[
+                            ft.Container(
+                                content=ft.Column([
+                                    ft.Icon(ft.Icons.WIFI_OFF, size=60, color="red"),
+                                    ft.Text("Error de conexión al iniciar sesión", size=18, weight=ft.FontWeight.BOLD),
+                                    ft.Text("Revisa tu conexión a internet.", text_align=ft.TextAlign.CENTER),
+                                    ft.Button("Reintentar", on_click=retry_login, style=ft.ButtonStyle(bgcolor=ft.colors.BLUE, color="white")),
+                                    ft.TextButton("Ir al Login Manualmente", on_click=lambda _: [page.views.clear(), page.views.append(LoginView(page)), page.update()])
+                                ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=20),
+                                expand=True,
+                                alignment=ft.alignment.center
+                            )
+                        ]
+                    ))
+                    page.update()
+                    return
 
         # Sin sesión válida: ya se muestra login (fue cargado antes)
         page.views.clear()
