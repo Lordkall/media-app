@@ -140,6 +140,11 @@ def HomeView(page: ft.Page, user):
             msg_text = msg.split(":", 1)[1]
             snack = ft.SnackBar(ft.Text(msg_text), bgcolor="#10B981")
             page.overlay.append(snack)
+            
+            # Add notification sound
+            audio = ft.Audio(src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3", autoplay=True)
+            page.overlay.append(audio)
+            
             snack.open = True
             try:
                 page.pubsub.unsubscribe_topic(f"user_{user.id}", on_pubsub_message)
@@ -378,7 +383,9 @@ def HomeView(page: ft.Page, user):
                         appointments_list.controls.append(ft.Text("No tienes citas médicas.", color=colors.TEXT_LIGHT, text_align=ft.TextAlign.CENTER))
                     
                     for a in apps:
-                        doc_name = f"Dr{'a' if getattr(a.doctor.user, 'gender', '') == 'F' else ''}. {a.doctor.user.first_name} {a.doctor.user.last_name}"
+                        doc_gender = str(getattr(a.doctor.user, 'gender', '')).upper()
+                        doc_prefix = "Dra." if doc_gender in ["F", "FEMENINO"] else "Dr."
+                        doc_name = f"{doc_prefix} {a.doctor.user.first_name} {a.doctor.user.last_name}"
                         spec = a.doctor.specialties[0] if getattr(a.doctor, 'specialties', None) else "Especialista Médico"
                         date_str = a.appointment_date.strftime("%d/%m/%Y")
                         turn = a.turn_number
@@ -421,9 +428,8 @@ def HomeView(page: ft.Page, user):
                         text_secondary = "#e2f1f5" # Un color muy claro para contraste con PRIMARY
                         
                         avatar_initials = a.doctor.user.first_name[0].upper() + a.doctor.user.last_name[0].upper()
-                        location_text = f"{a.doctor.user.state or ''} {a.doctor.user.address or ''}".strip()
-                        if not location_text:
-                            location_text = "Centro Médico"
+                        loc = f"{a.doctor.user.state or ''} {a.doctor.user.address or ''}".strip()
+                        location_text = f"📍 {loc}" if loc else "📍 Centro Médico"
 
                         # Icono o estado superior derecho
                         status_chip = ft.Container(
@@ -438,8 +444,7 @@ def HomeView(page: ft.Page, user):
                         is_base64 = avatar_src and str(avatar_src).startswith("data:image/")
                         b64_data = str(avatar_src).split("base64,")[-1] if is_base64 else None
 
-                        # Fila superior: Avatar + Info + Estado
-                        top_row = ft.Row([
+                        info_row = ft.Row([
                             ft.CircleAvatar(
                                 content=ft.Image(src_base64=b64_data, fit=ft.ImageFit.COVER, border_radius=100) if is_base64 else (ft.Text(avatar_initials, color=card_bg, size=14, weight=ft.FontWeight.BOLD) if not avatar_src else None),
                                 foreground_image_src=None if is_base64 else (avatar_src if avatar_src else None),
@@ -449,7 +454,12 @@ def HomeView(page: ft.Page, user):
                             ft.Column([
                                 ft.Text(doc_name, weight=ft.FontWeight.BOLD, size=14, color=text_primary),
                                 ft.Text(location_text, size=11, color=text_secondary),
-                            ], expand=True, spacing=2),
+                            ], spacing=2)
+                        ], spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER)
+
+                        # Fila superior: Avatar + Info + Estado
+                        top_row = ft.Row([
+                            info_row,
                             status_chip
                         ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, vertical_alignment=ft.CrossAxisAlignment.START)
 
