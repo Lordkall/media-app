@@ -64,4 +64,22 @@ async def create_appointment(
     await db.commit()
     await db.refresh(new_appointment)
     
+    # Try to send a Firebase Push Notification to the doctor
+    try:
+        from app.models.users import User
+        from app.core.firebase import send_push_notification
+        
+        doctor_user_query = select(User).where(User.id == doctor_record.user_id)
+        doctor_user_result = await db.execute(doctor_user_query)
+        doctor_user = doctor_user_result.scalar_one_or_none()
+        
+        if doctor_user and doctor_user.fcm_token:
+            send_push_notification(
+                token=doctor_user.fcm_token,
+                title="Nueva Cita Agendada",
+                body="¡Un paciente ha agendado una nueva cita contigo!"
+            )
+    except Exception as e:
+        print(f"Error sending push notification: {e}")
+    
     return new_appointment

@@ -9,8 +9,21 @@ def init_firebase():
         if os.path.exists(cred_path):
             cred = credentials.Certificate(cred_path)
             firebase_admin.initialize_app(cred)
+            print("[FIREBASE] Initialized from service_account.json")
         else:
-            print("WARNING: service_account.json not found. Firebase push notifications will not work.")
+            # Fallback to environment variable
+            firebase_creds = os.environ.get("FIREBASE_CREDENTIALS")
+            if firebase_creds:
+                import json
+                try:
+                    cred_dict = json.loads(firebase_creds)
+                    cred = credentials.Certificate(cred_dict)
+                    firebase_admin.initialize_app(cred)
+                    print("[FIREBASE] Initialized from FIREBASE_CREDENTIALS env var")
+                except Exception as e:
+                    print(f"[FIREBASE ERROR] Could not initialize Firebase: {e}")
+            else:
+                print("WARNING: service_account.json or FIREBASE_CREDENTIALS not found. Firebase push notifications will not work.")
 
 def send_push_notification(token: str, title: str, body: str, data: dict = None):
     if not firebase_admin._apps:
