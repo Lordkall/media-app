@@ -282,7 +282,8 @@ def HomeView(page: ft.Page, user):
         except Exception as ex:
             print("Error al obtener notificaciones en bg:", ex)
             
-    page.run_task(fetch_counts_in_bg)
+    import threading
+    threading.Thread(target=fetch_counts_in_bg, daemon=True).start()
 
     # Tarjeta de opción del menú
     def menu_card(icon_or_src, title, subtitle, on_click=None, icon_color=colors.PRIMARY, dynamic_badge=None):
