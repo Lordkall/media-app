@@ -213,7 +213,15 @@ def HomeView(page: ft.Page, user):
         from views.notifications_view import NotificationsView
         nav_push(ft.View(route="/notifications", controls=[NotificationsView(page, user=user)], bgcolor=colors.BACKGROUND))
 
-    # Obtener count de notificaciones (diferido a segundo plano)
+    unread_notif_badge = ft.Container(
+        content=ft.Text("0", size=9, color="white", weight=ft.FontWeight.BOLD),
+        bgcolor="red",
+        border_radius=10,
+        padding=2,
+        right=0, top=0,
+        visible=False
+    )
+    
     unread_support_badge = ft.Container(
         content=ft.Text("0", size=9, color="white", weight=ft.FontWeight.BOLD),
         bgcolor="red",
@@ -238,6 +246,17 @@ def HomeView(page: ft.Page, user):
             sync_engine = create_engine(SYNC_DB_URL)
             Session = sessionmaker(bind=sync_engine)
             with Session() as session:
+                unread_count = session.execute(
+                    select(func.count(Notification.id)).where(
+                        Notification.user_id == user.id,
+                        Notification.is_read == False
+                    )
+                ).scalar() or 0
+                
+                if unread_count > 0:
+                    unread_notif_badge.content.value = str(unread_count) if unread_count < 100 else "99+"
+                    unread_notif_badge.visible = True
+                
                 if getattr(user.role, 'value', str(user.role)) == "admin":
                     unread_support_count = session.execute(
                         select(func.count(TicketMessage.id)).join(SupportTicket).where(
@@ -917,14 +936,7 @@ def HomeView(page: ft.Page, user):
                                 icon_color=colors.PRIMARY,
                                 on_click=go_to_notifications,
                             ),
-                            ft.Container(
-                                content=ft.Text(str(unread_count) if unread_count < 100 else "99+", size=9, color="white", weight=ft.FontWeight.BOLD),
-                                bgcolor="red",
-                                border_radius=10,
-                                padding=2,
-                                right=0, top=0,
-                                visible=unread_count > 0
-                            )
+                            unread_notif_badge
                         ], width=40, height=40),
                         ft.PopupMenuButton(
                             icon=ft.Icons.MORE_VERT,
