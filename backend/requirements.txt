@@ -15,4 +15,5 @@ requests
 pg8000
 flet[all]==0.25.0
 firebase-admin
- 
+websocket-client
+websockets

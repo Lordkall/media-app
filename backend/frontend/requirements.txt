@@ -2,4 +2,6 @@ requests
 SQLAlchemy
 pg8000
 python-jose
-urllib3
+urllib3
+websocket-client
+websockets
