@@ -2,8 +2,8 @@
 cmake_minimum_required(VERSION 3.14)
 project(saludnow LANGUAGES CXX)
 
-# The name of the application target. The on-disk name is set in
-# runner/CMakeLists.txt to keep Flutter tooling behavior intact.
+# The name of the executable created for the application. Change this to change
+# the on-disk name of your application.
 set(BINARY_NAME "saludnow")
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
@@ -40,16 +40,8 @@ add_definitions(-DUNICODE -D_UNICODE)
 function(APPLY_STANDARD_SETTINGS TARGET)
   target_compile_features(${TARGET} PUBLIC cxx_std_17)
   target_compile_options(${TARGET} PRIVATE /W4 /WX /wd"4100")
-  # Read source files as UTF-8 regardless of the build machine's system code
-  # page. Without this, a non-ASCII byte in any plugin's source (e.g. an em
-  # dash in a comment) triggers warning C4819 on non-UTF-8 locales — notably
-  # code page 936/GBK on Simplified-Chinese Windows — which the /WX above
-  # escalates to a fatal C2220. This applies to every plugin and the runner,
-  # including third-party plugins we don't control (flet-dev/flet#6686).
-  target_compile_options(${TARGET} PRIVATE /utf-8)
   target_compile_options(${TARGET} PRIVATE /EHsc)
   target_compile_definitions(${TARGET} PRIVATE "_HAS_EXCEPTIONS=0")
-  target_compile_definitions(${TARGET} PRIVATE "_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS")
   target_compile_definitions(${TARGET} PRIVATE "$<$<CONFIG:Debug>:_DEBUG>")
 endfunction()
 
@@ -94,12 +86,6 @@ if(PLUGIN_BUNDLED_LIBRARIES)
     DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
     COMPONENT Runtime)
 endif()
-
-# Copy the native assets provided by the build.dart from all packages.
-set(NATIVE_ASSETS_DIR "${PROJECT_BUILD_DIR}native_assets/windows/")
-install(DIRECTORY "${NATIVE_ASSETS_DIR}"
-   DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
-   COMPONENT Runtime)
 
 # Fully re-copy the assets directory on each build to avoid having stale files
 # from a previous install.

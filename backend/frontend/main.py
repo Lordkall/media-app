@@ -57,6 +57,20 @@ def main(page: ft.Page):
     page.window.min_width = 360
     page.window.min_height = 600
     
+    # Global navigation lock to prevent double clicks
+    import time
+    page._last_nav_time = 0
+    def global_nav_push(view):
+        if time.time() - page._last_nav_time < 0.5:
+            return
+        # Prevent pushing the same route twice sequentially
+        if page.views and getattr(page.views[-1], "route", None) == getattr(view, "route", "N/A"):
+            return
+        page._last_nav_time = time.time()
+        page.views.append(view)
+        
+    page.nav_push = global_nav_push
+    
     def view_pop(e):
         # Ignore view_pop events triggered by dialogs/overlays closing
         has_open_dialog = any(
@@ -152,7 +166,7 @@ def main(page: ft.Page):
 
                 from views.home import HomeView
                 page.views.clear()
-                page.views.append(HomeView(page, u))
+                page.nav_push(HomeView(page, u))
                 page.update()
                 return
             except Exception as ex:
@@ -168,14 +182,14 @@ def main(page: ft.Page):
                     
                     def retry_login(e):
                         page.views.clear()
-                        page.views.append(ft.View(
+                        page.nav_push(ft.View(
                             "/loading",
                             controls=[ft.Container(content=ft.ProgressRing(), expand=True, alignment=ft.alignment.center)]
                         ))
                         page.update()
                         page.run_task(try_auto_login)
                         
-                    page.views.append(ft.View(
+                    page.nav_push(ft.View(
                         "/error",
                         controls=[
                             ft.Container(
@@ -184,7 +198,7 @@ def main(page: ft.Page):
                                     ft.Text("Error de conexión al iniciar sesión", size=18, weight=ft.FontWeight.BOLD),
                                     ft.Text("Revisa tu conexión a internet.", text_align=ft.TextAlign.CENTER),
                                     ft.Button("Reintentar", on_click=retry_login, style=ft.ButtonStyle(bgcolor=ft.colors.BLUE, color="white")),
-                                    ft.TextButton("Ir al Login Manualmente", on_click=lambda _: [page.views.clear(), page.views.append(LoginView(page)), page.update()])
+                                    ft.TextButton("Ir al Login Manualmente", on_click=lambda _: [page.views.clear(), page.nav_push(LoginView(page)), page.update()])
                                 ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=20),
                                 expand=True,
                                 alignment=ft.alignment.center
@@ -196,7 +210,7 @@ def main(page: ft.Page):
 
         # Sin sesión válida: ya se muestra login (fue cargado antes)
         page.views.clear()
-        page.views.append(LoginView(page))
+        page.nav_push(LoginView(page))
         page.update()
 
     # Lanzar auto-login inmediatamente
@@ -206,7 +220,7 @@ def main(page: ft.Page):
     # on_load lo reemplazará si hay sesión válida
     try:
         page.views.clear()
-        page.views.append(LoginView(page))
+        page.nav_push(LoginView(page))
         page.update()
     except Exception as e:
         import traceback

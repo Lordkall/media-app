@@ -2,8 +2,8 @@
 cmake_minimum_required(VERSION 3.10)
 project(runner LANGUAGES CXX)
 
-# The name of the application target. The on-disk name is set as OUTPUT_NAME to keep
-# Flutter tooling behavior intact.
+# The name of the executable created for the application. Change this to change
+# the on-disk name of your application.
 set(BINARY_NAME "saludnow")
 # The unique GTK application identifier for this application. See:
 # https://wiki.gnome.org/HowDoI/ChooseApplicationID
@@ -73,9 +73,6 @@ apply_standard_settings(${BINARY_NAME})
 # Add dependency libraries. Add any application-specific dependencies here.
 target_link_libraries(${BINARY_NAME} PRIVATE flutter)
 target_link_libraries(${BINARY_NAME} PRIVATE PkgConfig::GTK)
-# dlopen/dlsym for main.cc's multiprocessing child interception
-# (a no-op with glibc >= 2.34, where libdl is merged into libc).
-target_link_libraries(${BINARY_NAME} PRIVATE ${CMAKE_DL_LIBS})
 
 # Run the Flutter tool portions of the build. This must not be removed.
 add_dependencies(${BINARY_NAME} flutter_assemble)
@@ -86,7 +83,6 @@ add_dependencies(${BINARY_NAME} flutter_assemble)
 # the default top-level location.
 set_target_properties(${BINARY_NAME}
   PROPERTIES
-  OUTPUT_NAME "SaludNow"
   RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/intermediates_do_not_run"
 )
 
@@ -94,15 +90,6 @@ set_target_properties(${BINARY_NAME}
 # Generated plugin build rules, which manage building the plugins and adding
 # them to the application.
 include(flutter/generated_plugins.cmake)
-
-# Link mimalloc when media_kit_libs_linux exposes it. This must happen after
-# generated plugins are included so MIMALLOC_LIB is initialized.
-# mimalloc.o references pthread_*, so pair it with Threads::Threads — modern
-# ld --as-needed won't pull libpthread in transitively through other DSOs.
-if(MIMALLOC_LIB)
-  find_package(Threads REQUIRED)
-  target_link_libraries(${BINARY_NAME} PRIVATE ${MIMALLOC_LIB} Threads::Threads)
-endif()
 
 
 # === Installation ===
@@ -165,33 +152,6 @@ install(CODE "
   " COMPONENT Runtime)
 install(DIRECTORY "${PROJECT_BUILD_DIR}/${FLUTTER_ASSET_DIR_NAME}"
   DESTINATION "${INSTALL_BUNDLE_DATA_DIR}" COMPONENT Runtime)
-
-# Install the app icon staged by `flet build` next to this file, so the runner
-# can set the X11/XWayland window icon at startup (see my_application.cc). The
-# guard keeps plain `flutter build` (no flet staging step) working.
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/app_icon.png")
-  install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/app_icon.png"
-    DESTINATION "${INSTALL_BUNDLE_DATA_DIR}" COMPONENT Runtime)
-
-  # Ready-to-install freedesktop integration: the .desktop entry plus the icon
-  # in the hicolor theme layout. Wayland desktops (e.g. GNOME) resolve the
-  # taskbar icon only from an installed desktop entry matching the app id, so
-  # users can register the app with:  cp -r share/. ~/.local/share/
-  # Both files install together — a desktop entry whose Icon= has no matching
-  # themed icon is worse than none.
-  #
-  # `flet build` renders one icon per hicolor size, each already matching the
-  # directory it sits in, so the whole tree installs in one step. A single
-  # file dropped into 256x256/ regardless of its real size — which is what
-  # this did before — is rescaled wrongly by the icon cache, and every small
-  # panel size was downscaled from it on the fly.
-  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/icons")
-    install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/icons"
-      DESTINATION "${CMAKE_INSTALL_PREFIX}/share" COMPONENT Runtime)
-  endif()
-  install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/${APPLICATION_ID}.desktop"
-    DESTINATION "${CMAKE_INSTALL_PREFIX}/share/applications" COMPONENT Runtime)
-endif()
 
 # Install the AOT library on non-Debug builds only.
 if(NOT CMAKE_BUILD_TYPE MATCHES "Debug")

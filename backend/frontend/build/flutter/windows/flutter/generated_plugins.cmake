@@ -3,14 +3,11 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
-  battery_plus
-  connectivity_plus
-  screen_brightness_windows
-  screen_retriever_windows
+  screen_retriever
   serious_python_windows
-  share_plus
   url_launcher_windows
   window_manager
+  window_to_front
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST

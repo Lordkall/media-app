@@ -3,9 +3,9 @@
     "short_name": "saludnow",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#ffffff",
-    "theme_color": "#FF005F",
-    "description": "Aplicaci\u00f3n Salud Now",
+    "background_color": "#FFFFFF",
+    "theme_color": "#0175C2",
+    "description": "",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -5,12 +5,12 @@ def WelcomeView(page: ft.Page):
     
     def go_to_login(e):
         from views.login import LoginView
-        page.views.append(LoginView(page))
+        page.nav_push(LoginView(page))
         page.update()
 
     def go_to_register(e):
         from views.register import RegisterView
-        page.views.append(RegisterView(page))
+        page.nav_push(RegisterView(page))
         page.update()
 
 

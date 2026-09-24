@@ -43,7 +43,7 @@ def HomeView(page: ft.Page, user):
                 page.session.clear()
                 page.views.clear()
                 from views.welcome import WelcomeView
-                page.views.append(WelcomeView(page))
+                page.nav_push(WelcomeView(page))
                 page.update()
                 
             return ft.View(
@@ -112,7 +112,7 @@ def HomeView(page: ft.Page, user):
         # Volver al login
         page.views.clear()
         from views.login import LoginView
-        page.views.append(LoginView(page))
+        page.nav_push(LoginView(page))
         
         if forced:
             snack = ft.SnackBar(ft.Text("Sesión cerrada porque iniciaste en otro dispositivo."), bgcolor="red")
@@ -166,7 +166,7 @@ def HomeView(page: ft.Page, user):
         if _nav_lock["locked"]:
             return
         _nav_lock["locked"] = True
-        page.views.append(view)
+        page.nav_push(view)
         page.update()
         _nav_lock["locked"] = False
 
@@ -591,7 +591,7 @@ def HomeView(page: ft.Page, user):
 
         def go_to_availability(e):
             from views.doctor_availability import DoctorAvailabilityView
-            page.views.append(DoctorAvailabilityView(page, user))
+            page.nav_push(DoctorAvailabilityView(page, user))
             page.update()
 
         def go_to_doctor_appointments(e):
@@ -732,7 +732,7 @@ def HomeView(page: ft.Page, user):
     elif role_val == "assistant":
         def go_to_availability(e):
             from views.doctor_availability import DoctorAvailabilityView
-            page.views.append(DoctorAvailabilityView(page, user))
+            page.nav_push(DoctorAvailabilityView(page, user))
             page.update()
 
         def go_to_doctor_appointments(e):

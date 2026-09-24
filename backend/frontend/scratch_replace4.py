@@ -18,14 +18,14 @@ content = content.replace(target_loop, replacement_loop)
 target_main = '''    # Mostrar login inmediatamente para no dejar la pantalla en blanco
     # on_load lo reemplazará si hay sesión válida
     page.views.clear()
-    page.views.append(LoginView(page))
+    page.nav_push(LoginView(page))
     page.update()'''
 
 replacement_main = '''    # Mostrar login inmediatamente para no dejar la pantalla en blanco
     # on_load lo reemplazará si hay sesión válida
     try:
         page.views.clear()
-        page.views.append(LoginView(page))
+        page.nav_push(LoginView(page))
         page.update()
     except Exception as e:
         import traceback

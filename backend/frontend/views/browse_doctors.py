@@ -37,7 +37,7 @@ def _doctor_card(doctor: Doctor, page: ft.Page = None) -> ft.Container:
             return
             
         from views.doctor_profile import DoctorProfileView
-        page.views.append(DoctorProfileView(page, doctor=doctor))
+        page.nav_push(DoctorProfileView(page, doctor=doctor))
         page.update()
 
     border_width = 1

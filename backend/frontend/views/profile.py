@@ -36,7 +36,7 @@ class ProfileView(ft.Container):
 
     def open_assistant_manager(self, e):
         from views.assistant_manager import AssistantManagerView
-        self.ft_page.views.append(ft.View(
+        self.ft_page.nav_push(ft.View(
             route="/assistant-manager",
             controls=[AssistantManagerView(self.ft_page, user=self.user, on_navigate=lambda: self.ft_page.views.pop() or self.ft_page.update())],
             bgcolor=colors.BACKGROUND

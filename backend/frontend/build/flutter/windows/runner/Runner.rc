@@ -92,9 +92,9 @@ BEGIN
             VALUE "CompanyName", "Your Company" "\0"
             VALUE "FileDescription", "SaludNow" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "SaludNow" "\0"
-            VALUE "LegalCopyright", "Copyright (c) 2026 Your Company" "\0"
-            VALUE "OriginalFilename", "SaludNow.exe" "\0"
+            VALUE "InternalName", "saludnow" "\0"
+            VALUE "LegalCopyright", "Copyright (c) 2023 Your Company" "\0"
+            VALUE "OriginalFilename", "saludnow.exe" "\0"
             VALUE "ProductName", "SaludNow" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END

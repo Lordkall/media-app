@@ -112,7 +112,7 @@ def LoginView(page: ft.Page):
             from views.home import HomeView
             home_view = HomeView(page, user)
             page.views.clear()
-            page.views.append(home_view)
+            page.nav_push(home_view)
             page.update()
             
         except Exception as ex:
@@ -139,7 +139,7 @@ def LoginView(page: ft.Page):
         try:
             from views.register import RegisterView as _RegisterView
             view = _RegisterView(page)
-            page.views.append(view)
+            page.nav_push(view)
             page.update()
         except Exception as ex:
             snack = ft.SnackBar(ft.Text(f"Error abriendo registro: {ex}"), bgcolor="red")
@@ -153,7 +153,7 @@ def LoginView(page: ft.Page):
         try:
             from views.password_recovery import PasswordRecoveryView as _RecoveryView
             view = _RecoveryView(page)
-            page.views.append(view)
+            page.nav_push(view)
             page.update()
         except Exception as ex:
             snack = ft.SnackBar(ft.Text(f"Error abriendo recuperación: {ex}"), bgcolor="red")

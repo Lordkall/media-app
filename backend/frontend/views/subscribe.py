@@ -69,7 +69,7 @@ class SubscribeView(ft.Container):
             else:
                 self.ft_page.views.clear()
                 from views.login import LoginView
-                self.ft_page.views.append(LoginView(self.ft_page))
+                self.ft_page.nav_push(LoginView(self.ft_page))
             self.ft_page.update()
 
         self.header = ft.Row([
@@ -215,7 +215,7 @@ class SubscribeView(ft.Container):
             else:
                 self.ft_page.views.clear()
                 from views.login import LoginView
-                self.ft_page.views.append(LoginView(self.ft_page))
+                self.ft_page.nav_push(LoginView(self.ft_page))
             self.ft_page.update()
 
         self.content.controls = [

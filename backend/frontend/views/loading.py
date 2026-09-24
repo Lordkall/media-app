@@ -10,7 +10,7 @@ def LoadingView(page: ft.Page, user):
         from views.home import HomeView
         
         page.views.clear()
-        page.views.append(HomeView(page, user))
+        page.nav_push(HomeView(page, user))
         page.update()
         
     page.run_task(view_loaded)
