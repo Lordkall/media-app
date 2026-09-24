@@ -434,10 +434,15 @@ def HomeView(page: ft.Page, user):
                             border=ft.border.all(1, "white") if status_val == "scheduled" else None
                         )
 
+                        avatar_src = a.doctor.user.avatar_url
+                        is_base64 = avatar_src and str(avatar_src).startswith("data:image/")
+                        b64_data = str(avatar_src).split("base64,")[-1] if is_base64 else None
+
                         # Fila superior: Avatar + Info + Estado
                         top_row = ft.Row([
                             ft.CircleAvatar(
-                                content=ft.Text(avatar_initials, color=card_bg, size=14, weight=ft.FontWeight.BOLD),
+                                content=ft.Image(src_base64=b64_data, fit=ft.ImageFit.COVER, border_radius=100) if is_base64 else (ft.Text(avatar_initials, color=card_bg, size=14, weight=ft.FontWeight.BOLD) if not avatar_src else None),
+                                foreground_image_src=None if is_base64 else (avatar_src if avatar_src else None),
                                 bgcolor="white",
                                 radius=20
                             ),

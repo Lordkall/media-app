@@ -161,15 +161,18 @@ class AssistantManagerView(ft.Container):
         self.ft_page.update()
 
     def build_ui(self):
+        def handle_back(e):
+            if self.on_navigate:
+                self.on_navigate()
+            elif len(self.ft_page.views) > 1:
+                self.ft_page.views.pop()
+                self.ft_page.update()
+
         header = ft.Row([
             ft.IconButton(
                 icon=ft.Icons.ARROW_BACK,
                 icon_color=colors.PRIMARY,
-                on_click=lambda e: (
-                    self.on_navigate() if self.on_navigate
-                    else (self.ft_page.views.pop() or self.ft_page.update()) if len(self.ft_page.views) > 1
-                    else None
-                )
+                on_click=handle_back
             ),
             ft.Text("Gestión de Asistentes", size=24, weight=ft.FontWeight.BOLD, color=colors.TEXT_DARK)
         ], alignment=ft.MainAxisAlignment.START)

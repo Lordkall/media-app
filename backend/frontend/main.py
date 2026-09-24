@@ -127,6 +127,9 @@ def main(page: ft.Page):
         su localStorage con page.client_storage.
         """
         import asyncio
+        # Esperar un poco para asegurar que Android haya sincronizado client_storage
+        await asyncio.sleep(0.5)
+        
         session_token = None
         user_id = None
         try:
