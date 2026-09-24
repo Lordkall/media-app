@@ -13,3 +13,6 @@ api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(doctors.router, prefix="/doctors", tags=["doctors"])
 api_router.include_router(password_reset.router, prefix="/password-reset", tags=["Password Reset"])
 api_router.include_router(subscriptions.router, prefix="/subscriptions", tags=["subscriptions"])
+
+from app.api.v1.endpoints import ws
+api_router.include_router(ws.router, prefix="/ws", tags=["websocket"])

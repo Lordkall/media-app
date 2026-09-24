@@ -14,6 +14,9 @@ def DoctorProfileView(page: ft.Page, doctor, on_navigate=None):
     avatar_src = doc_u.avatar_url if doc_u.avatar_url else None
     initials = (doc_u.first_name[0] + doc_u.last_name[0]).upper()
     
+    is_base64 = avatar_src and str(avatar_src).startswith("data:image/")
+    b64_data = str(avatar_src).split("base64,")[-1] if is_base64 else None
+    
     specialties_list = doctor.specialties if hasattr(doctor, 'specialties') and doctor.specialties else []
     spec_val = ", ".join(specialties_list) if specialties_list else "Sin especialidad"
     
@@ -82,8 +85,8 @@ def DoctorProfileView(page: ft.Page, doctor, on_navigate=None):
         
         ft.Row([
             ft.CircleAvatar(
-                content=ft.Text(initials, size=30, weight=ft.FontWeight.BOLD, color="white") if not avatar_src else None,
-                foreground_image_src=avatar_src if avatar_src else None,
+                content=ft.Image(src_base64=b64_data, fit=ft.ImageFit.COVER, border_radius=100) if is_base64 else (ft.Text(initials, size=30, weight=ft.FontWeight.BOLD, color="white") if not avatar_src else None),
+                foreground_image_src=None if is_base64 else (avatar_src if avatar_src else None),
                 radius=60,
                 bgcolor=colors.PRIMARY,
             )

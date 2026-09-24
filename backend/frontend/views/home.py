@@ -141,27 +141,50 @@ def HomeView(page: ft.Page, user):
             snack = ft.SnackBar(ft.Text(msg_text), bgcolor="#10B981")
             page.overlay.append(snack)
             
-            # Add notification sound
-            audio = ft.Audio(src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3", autoplay=True)
-            page.overlay.append(audio)
+            # The audio control is causing issues in some platforms, removing it.
+            # audio = ft.Audio(src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3", autoplay=True)
+            # page.overlay.append(audio)
             
             snack.open = True
-            try:
-                page.pubsub.unsubscribe_topic(f"user_{user.id}", on_pubsub_message)
-            except: pass
             if page.views:
                 page.views[0] = HomeView(page, user)
                 page.update()
             
-    if hasattr(page, "my_pubsub_topic") and hasattr(page, "my_pubsub_handler"):
-        try:
-            page.pubsub.unsubscribe_topic(page.my_pubsub_topic, page.my_pubsub_handler)
-        except Exception:
-            pass
+    import threading
+    import websocket
+    from urllib.parse import urlparse
+    
+    if not hasattr(page, "ws_app") or not getattr(page, "ws_connected", False):
+        def on_ws_message(ws, message):
+            on_pubsub_message(None, message)
             
-    page.my_pubsub_topic = f"user_{user.id}"
-    page.my_pubsub_handler = on_pubsub_message
-    page.pubsub.subscribe_topic(page.my_pubsub_topic, on_pubsub_message)
+        def on_ws_open(ws):
+            page.ws_connected = True
+            
+        def on_ws_close(ws, close_status_code, close_msg):
+            page.ws_connected = False
+            
+        def run_ws():
+            host = "127.0.0.1:8000"
+            scheme = "ws"
+            if hasattr(page, 'page_url') and page.page_url:
+                parsed = urlparse(page.page_url)
+                if parsed.netloc:
+                    host = parsed.netloc
+                if parsed.scheme == "https":
+                    scheme = "wss"
+            
+            ws_url = f"{scheme}://{host}/api/v1/ws/{user.id}"
+            page.ws_app = websocket.WebSocketApp(
+                ws_url, 
+                on_message=on_ws_message,
+                on_open=on_ws_open,
+                on_close=on_ws_close
+            )
+            page.ws_app.run_forever()
+            
+        page.ws_thread = threading.Thread(target=run_ws, daemon=True)
+        page.ws_thread.start()
 
 
     # Flag para evitar doble navegación por clic rápido
@@ -190,65 +213,69 @@ def HomeView(page: ft.Page, user):
         from views.notifications_view import NotificationsView
         nav_push(ft.View(route="/notifications", controls=[NotificationsView(page, user=user)], bgcolor=colors.BACKGROUND))
 
-    # Obtener count de notificaciones
-    unread_count = 0
-    unread_support_count = 0
-    try:
-        from sqlalchemy import create_engine, select, func
-        from sqlalchemy.orm import sessionmaker
-        import sys, os
-        from app.models.notifications import Notification
-        from app.models.support import SupportTicket, TicketMessage
-        from core.config import SYNC_DB_URL
-        sync_engine = create_engine(SYNC_DB_URL)
-        Session = sessionmaker(bind=sync_engine)
-        with Session() as session:
-            unread_count = session.execute(
-                select(func.count(Notification.id)).where(
-                    Notification.user_id == user.id,
-                    Notification.is_read == False
-                )
-            ).scalar() or 0
+    # Obtener count de notificaciones (diferido a segundo plano)
+    unread_support_badge = ft.Container(
+        content=ft.Text("0", size=9, color="white", weight=ft.FontWeight.BOLD),
+        bgcolor="red",
+        border_radius=10,
+        padding=2,
+        right=0, top=0,
+        visible=False
+    )
+    
+    def fetch_counts_in_bg():
+        try:
+            from sqlalchemy import create_engine, select, func
+            from sqlalchemy.orm import sessionmaker
+            from app.models.notifications import Notification
+            from app.models.support import SupportTicket, TicketMessage
+            from core.config import SYNC_DB_URL
+            import time
             
-            # Count unread support messages
-            if getattr(user.role, 'value', str(user.role)) == "admin":
-                unread_support_count = session.execute(
-                    select(func.count(TicketMessage.id)).join(SupportTicket).where(
-                        SupportTicket.status == "ABIERTO",
-                        TicketMessage.is_read == False,
-                        TicketMessage.sender_id != user.id
-                    )
-                ).scalar() or 0
-            else:
-                unread_support_count = session.execute(
-                    select(func.count(TicketMessage.id)).join(SupportTicket).where(
-                        SupportTicket.user_id == user.id,
-                        SupportTicket.status == "ABIERTO",
-                        TicketMessage.is_read == False,
-                        TicketMessage.sender_id != user.id
-                    )
-                ).scalar() or 0
-                
-    except Exception as ex:
-        print("Error al obtener notificaciones:", ex)
+            # Dar un pequeño respiro a la UI antes de cargar pesadamente
+            time.sleep(0.5)
+            
+            sync_engine = create_engine(SYNC_DB_URL)
+            Session = sessionmaker(bind=sync_engine)
+            with Session() as session:
+                if getattr(user.role, 'value', str(user.role)) == "admin":
+                    unread_support_count = session.execute(
+                        select(func.count(TicketMessage.id)).join(SupportTicket).where(
+                            SupportTicket.status == "ABIERTO",
+                            TicketMessage.is_read == False,
+                            TicketMessage.sender_id != user.id
+                        )
+                    ).scalar() or 0
+                else:
+                    unread_support_count = session.execute(
+                        select(func.count(TicketMessage.id)).join(SupportTicket).where(
+                            SupportTicket.user_id == user.id,
+                            SupportTicket.status == "ABIERTO",
+                            TicketMessage.is_read == False,
+                            TicketMessage.sender_id != user.id
+                        )
+                    ).scalar() or 0
+                    
+                if unread_support_count > 0:
+                    unread_support_badge.content.value = str(unread_support_count) if unread_support_count < 100 else "99+"
+                    unread_support_badge.visible = True
+                    page.update()
+        except Exception as ex:
+            print("Error al obtener notificaciones en bg:", ex)
+            
+    page.run_task(fetch_counts_in_bg)
 
     # Tarjeta de opción del menú
-    def menu_card(icon_or_src, title, subtitle, on_click=None, icon_color=colors.PRIMARY, badge_count=0):
+    def menu_card(icon_or_src, title, subtitle, on_click=None, icon_color=colors.PRIMARY, dynamic_badge=None):
         if isinstance(icon_or_src, str) and (icon_or_src.endswith(".png") or icon_or_src.endswith(".jpg")):
             icon_ctrl = ft.Image(src=icon_or_src, width=60, height=60, fit=ft.ImageFit.CONTAIN)
         else:
             icon_ctrl = ft.Icon(icon_or_src, color=icon_color, size=30)
             
-        if badge_count > 0:
+        if dynamic_badge:
             icon_ctrl = ft.Stack([
                 ft.Container(icon_ctrl, padding=5),
-                ft.Container(
-                    content=ft.Text(str(badge_count) if badge_count < 100 else "99+", size=9, color="white", weight=ft.FontWeight.BOLD),
-                    bgcolor="red",
-                    border_radius=10,
-                    padding=2,
-                    right=0, top=0,
-                )
+                dynamic_badge
             ], width=55, height=55)
             
         def handle_click(e):
@@ -413,6 +440,15 @@ def HomeView(page: ft.Page, user):
                                             )
                                             sess.add(notif)
                                             sess.commit()
+                                            
+                                            import asyncio
+                                            from app.api.v1.endpoints.ws import manager
+                                            try:
+                                                loop = asyncio.get_running_loop()
+                                                loop.create_task(manager.send_personal_message(f"new_notification:Cita Cancelada por {patient_name}", app_to_cancel.doctor.user_id))
+                                            except RuntimeError:
+                                                asyncio.run(manager.send_personal_message(f"new_notification:Cita Cancelada por {patient_name}", app_to_cancel.doctor.user_id))
+                                                
                                         load_appointments()
                                         page.update()
                                 except Exception as ex:
@@ -428,7 +464,12 @@ def HomeView(page: ft.Page, user):
                         text_secondary = "#e2f1f5" # Un color muy claro para contraste con PRIMARY
                         
                         avatar_initials = a.doctor.user.first_name[0].upper() + a.doctor.user.last_name[0].upper()
-                        loc = f"{a.doctor.user.state or ''} {a.doctor.user.address or ''}".strip()
+                        state = a.doctor.user.state or ""
+                        addr = a.doctor.user.address or ""
+                        if state and addr:
+                            loc = f"{state} - {addr}"
+                        else:
+                            loc = f"{state}{addr}".strip()
                         location_text = f"📍 {loc}" if loc else "📍 Centro Médico"
 
                         # Icono o estado superior derecho
@@ -452,10 +493,10 @@ def HomeView(page: ft.Page, user):
                                 radius=20
                             ),
                             ft.Column([
-                                ft.Text(doc_name, weight=ft.FontWeight.BOLD, size=14, color=text_primary),
-                                ft.Text(location_text, size=11, color=text_secondary),
-                            ], spacing=2)
-                        ], spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER)
+                                ft.Text(doc_name, weight=ft.FontWeight.BOLD, size=14, color=text_primary, no_wrap=False),
+                                ft.Text(location_text, size=11, color=text_secondary, no_wrap=False),
+                            ], spacing=2, expand=True)
+                        ], spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER, expand=True)
 
                         # Fila superior: Avatar + Info + Estado
                         top_row = ft.Row([
@@ -594,7 +635,7 @@ def HomeView(page: ft.Page, user):
                 "Mis Mensajes",
                 "Historial de soporte técnico",
                 on_click=go_to_support_user,
-                badge_count=unread_support_count,
+                dynamic_badge=unread_support_badge,
             )
         )
     elif role_val == "doctor":
@@ -691,7 +732,7 @@ def HomeView(page: ft.Page, user):
                 "Mis Mensajes",
                 "Historial de soporte técnico",
                 on_click=go_to_support_user_doc,
-                badge_count=unread_support_count,
+                dynamic_badge=unread_support_badge,
             )
         )
     elif role_val == "admin":
@@ -741,7 +782,7 @@ def HomeView(page: ft.Page, user):
                 "Mensajes de Soporte",
                 "Gestiona los tickets de los usuarios",
                 on_click=go_to_support_admin,
-                badge_count=unread_support_count,
+                dynamic_badge=unread_support_badge,
             )
         )
     elif role_val == "assistant":
