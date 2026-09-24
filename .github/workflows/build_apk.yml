@@ -44,34 +44,14 @@ jobs:
       - name: Copy backend app models into frontend (required for packaging)
         run: cp -r backend/app backend/frontend/app
 
-      - name: Flet Pre-Build (generate Flutter project + package Python)
+      - name: Build APK with Flet
         run: |
           cd backend/frontend
-          flet build apk --project SaludNow --org com.saludnow.app -v 2>&1 | tee /tmp/flet_build.log || true
-
-      - name: Fix duplicate ic_launcher_background resource
-        run: |
-          DUPE="backend/frontend/build/flutter/android/app/src/main/res/values/ic_launcher_background.xml"
-          if [ -f "$DUPE" ]; then
-            rm -f "$DUPE"
-            echo "✅ Removed duplicate ic_launcher_background.xml"
-          else
-            echo "❌ Flutter project was not generated. Flet build log (last 80 lines):"
-            cat /tmp/flet_build.log | tail -80
-            exit 1
-          fi
-
-      - name: Final Gradle Build
-        env:
-          # Required by serious_python Gradle plugin to locate packaged Python dependencies
-          SERIOUS_PYTHON_SITE_PACKAGES: ${{ github.workspace }}/backend/frontend/build/site-packages
-        run: |
-          cd backend/frontend/build/flutter
-          flutter build apk --build-name 1.0.0
+          flet build apk --project SaludNow --org com.saludnow.app -v
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: SaludNow-APK
-          path: backend/frontend/build/flutter/build/app/outputs/flutter-apk/app-release.apk
+          path: backend/frontend/build/apk/app-release.apk
           if-no-files-found: error
