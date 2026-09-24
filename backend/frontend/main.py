@@ -13,8 +13,14 @@ error_traceback = None
 try:
     # MONKEY PATCH PARA EVITAR FUGAS DE CONEXIONES EN TODAS LAS VISTAS
     import sqlalchemy
+    real_create_engine = sqlalchemy.create_engine
 
     def fake_create_engine(*args, **kwargs):
+        import sys
+        # Si core.config no ha terminado de cargar, permitimos crear el engine real
+        if 'core.config' not in sys.modules or getattr(sys.modules['core.config'], 'global_sync_engine', None) is None:
+            return real_create_engine(*args, **kwargs)
+        
         from core.config import global_sync_engine
         return global_sync_engine
 
