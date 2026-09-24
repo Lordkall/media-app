@@ -165,16 +165,12 @@ def HomeView(page: ft.Page, user):
             page.ws_connected = False
             
         def run_ws():
-            host = "127.0.0.1:8000"
-            scheme = "ws"
-            if hasattr(page, 'page_url') and page.page_url:
-                parsed = urlparse(page.page_url)
-                if parsed.netloc:
-                    host = parsed.netloc
-                if parsed.scheme == "https":
-                    scheme = "wss"
-            
-            ws_url = f"{scheme}://{host}/api/v1/ws/{user.id}"
+            from core.config import API_BASE_URL
+            if API_BASE_URL.startswith("https://"):
+                ws_url = API_BASE_URL.replace("https://", "wss://") + f"/ws/{user.id}"
+            else:
+                ws_url = API_BASE_URL.replace("http://", "ws://") + f"/ws/{user.id}"
+                
             page.ws_app = websocket.WebSocketApp(
                 ws_url, 
                 on_message=on_ws_message,
