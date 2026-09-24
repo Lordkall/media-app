@@ -61,6 +61,11 @@ def main(page: ft.Page):
     import time
     page._last_nav_time = 0
     def global_nav_push(view):
+        if not page.views:
+            page._last_nav_time = time.time()
+            page.views.append(view)
+            return
+            
         if time.time() - page._last_nav_time < 0.5:
             return
         # Prevent pushing the same route twice sequentially
