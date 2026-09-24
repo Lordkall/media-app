@@ -208,8 +208,7 @@ def main(page: ft.Page):
                             ft.Container(
                                 content=ft.Column([
                                     ft.Icon(ft.Icons.WIFI_OFF, size=60, color="red"),
-                                    ft.Text("Error de conexión al iniciar sesión", size=18, weight=ft.FontWeight.BOLD),
-                                    ft.Text("Revisa tu conexión a internet.", text_align=ft.TextAlign.CENTER),
+                                    ft.Text(f"Error: {str(ex)}\n\nTraceback:\n{__import__('traceback').format_exc()}", size=14, selectable=True),
                                     ft.Button("Reintentar", on_click=retry_login, style=ft.ButtonStyle(bgcolor=ft.colors.BLUE, color="white")),
                                     ft.TextButton("Ir al Login Manualmente", on_click=lambda _: [page.views.clear(), page.nav_push(LoginView(page)), page.update()])
                                 ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=20),
