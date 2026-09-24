@@ -4,7 +4,7 @@ import os
 
 # URL base para la API REST del backend.
 # Se lee de la variable de entorno API_URL, o usa la de Railway por defecto
-API_BASE_URL = os.getenv("API_URL", "https://media-app-production-7a1f.up.railway.app/api/v1")
+API_BASE_URL = os.getenv("API_URL", "https://media-app-production-dd3f.up.railway.app/api/v1")
 
 # URL de conexión directa a la base de datos para vistas que lo requieran.
 # Nota: Se usa pg8000 para compatibilidad con Android.
