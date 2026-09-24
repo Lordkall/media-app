@@ -25,7 +25,6 @@ try:
         return global_sync_engine
 
     sqlalchemy.create_engine = fake_create_engine
-    from views.login import LoginView
 except Exception as e:
     import traceback
     error_traceback = traceback.format_exc()
@@ -222,19 +221,24 @@ def main(page: ft.Page):
                     page.update()
                     return
 
-        # Sin sesión válida: ya se muestra login (fue cargado antes)
+        # Sin sesión válida: mostramos login
         page.views.clear()
+        from views.login import LoginView
         page.nav_push(LoginView(page))
         page.update()
 
     # Lanzar auto-login inmediatamente
     page.run_task(try_auto_login)
 
-    # Mostrar login inmediatamente para no dejar la pantalla en blanco
-    # on_load lo reemplazará si hay sesión válida
+    # Mostrar spinner inmediatamente para no dejar la pantalla en blanco
+    # try_auto_login lo reemplazará por Home o Login
     try:
         page.views.clear()
-        page.nav_push(LoginView(page))
+        page.nav_push(ft.View(
+            "/loading",
+            controls=[ft.Container(content=ft.ProgressRing(), expand=True, alignment=ft.alignment.center)],
+            bgcolor=ft.colors.WHITE
+        ))
         page.update()
     except Exception as e:
         import traceback

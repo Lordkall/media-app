@@ -490,7 +490,8 @@ class BookAppointmentView(ft.Container):
                 # Reload count to be safe
                 count = session.query(Appointment).filter(
                     Appointment.doctor_id == doc_id,
-                    Appointment.appointment_date == self.selected_date
+                    Appointment.appointment_date == self.selected_date,
+                    Appointment.status != AppointmentStatus.CANCELLED
                 ).count()
                 
                 new_turn = count + 1
