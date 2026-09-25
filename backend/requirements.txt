@@ -1,6 +1,6 @@
 fastapi
 uvicorn
-sqlalchemy
+sqlalchemy[asyncio]
 psycopg2-binary
 asyncpg
 bcrypt
