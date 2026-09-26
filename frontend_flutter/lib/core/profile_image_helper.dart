@@ -40,7 +40,7 @@ class ProfileImageHelper {
     if (finalUrl != null && finalUrl.isNotEmpty) {
       if (finalUrl.startsWith('http')) return NetworkImage(finalUrl);
       final path = finalUrl.startsWith('/') ? finalUrl : '/uploads/avatars/$finalUrl';
-      return NetworkImage('https://media-app-production-dd3f.up.railway.app$path');
+      return NetworkImage('https://saludnow.site$path');
     }
     return const NetworkImage('https://cdn-icons-png.flaticon.com/512/3069/3069172.png');
   }
