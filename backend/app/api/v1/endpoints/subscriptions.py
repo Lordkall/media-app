@@ -128,8 +128,44 @@ async def get_my_subscriptions(
             start_date=pending_sub.start_date,
             end_date=pending_sub.end_date,
             grace_end_date=pending_sub.grace_end_date
-        ) if pending_sub else None
-    )
+@router.get("/test-renew-error")
+async def test_renew_error(db: AsyncSession = Depends(get_db)):
+    try:
+        from app.models.users import User, RoleEnum
+        admins_res = await db.execute(select(User))
+        admins = [u for u in admins_res.scalars().all() if u.role == RoleEnum.ADMIN or u.role == "admin"]
+        
+        new_sub = Subscription(
+            doctor_id=1,
+            clinic_id=None,
+            plan=SubscriptionPlan.BASIC,
+            status=SubscriptionStatus.PENDING_APPROVAL,
+            start_date=datetime.utcnow(),
+            end_date=datetime.utcnow() + timedelta(days=30),
+            grace_end_date=datetime.utcnow() + timedelta(days=35),
+            reference_number="test1234",
+            amount_bs=200.0,
+            screenshot_base64="test"
+        )
+        db.add(new_sub)
+        await db.flush()
+
+        for admin in admins:
+            notif = Notification(
+                user_id=admin.id,
+                type=NotificationType.NEW_SUBSCRIPTION,
+                title="Test",
+                message="Test",
+                action_url=f"approve_subscription:{new_sub.id}" 
+            )
+            db.add(notif)
+            
+        await db.rollback() # Don't actually commit!
+        return {"status": "SUCCESS - NO ERROR THROWN"}
+    except Exception as e:
+        await db.rollback()
+        import traceback
+        return {"status": "ERROR", "error": str(e), "traceback": traceback.format_exc()}
 
 @router.get("/fix-subscriptions-db")
 async def fix_subscriptions_db(db: AsyncSession = Depends(get_db)):
