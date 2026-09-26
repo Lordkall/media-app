@@ -13,6 +13,7 @@ import 'mis_citas_tab.dart';
 import '../core/auth_helper.dart';
 import '../core/api_client.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 
 class MainDoctorScreen extends StatefulWidget {
   const MainDoctorScreen({super.key});
@@ -32,7 +33,7 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
     _setupFCM();
   }
 
-  Future<void> _setupFCM() async {
+  Future<void> _setupFCM() async { if (kIsWeb) return;
     FirebaseMessaging messaging = FirebaseMessaging.instance;
     NotificationSettings settings = await messaging.requestPermission(
       alert: true,
