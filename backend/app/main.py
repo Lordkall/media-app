@@ -43,6 +43,28 @@ async def lifespan(app: FastAPI):
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS fcm_token VARCHAR;"))
     except Exception as e:
         print(f"Migration error (might already be TEXT): {e}")
+
+    # Auto-migrate subscriptions table
+    try:
+        async with engine.begin() as conn:
+            sub_columns = [
+                "clinic_id INTEGER REFERENCES clinics(id)",
+                "auto_renew BOOLEAN DEFAULT TRUE",
+                "created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()",
+                "updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()",
+                "reference_number VARCHAR",
+                "screenshot_base64 TEXT",
+                "amount_bs FLOAT",
+            ]
+            for col_def in sub_columns:
+                try:
+                    await conn.execute(text(f"ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS {col_def}"))
+                except Exception:
+                    pass
+            print("Subscriptions migration done.")
+    except Exception as e:
+        print(f"Subscriptions migration error: {e}")
+
         
     # Start BCV background updater
     bcv_task = asyncio.create_task(bcv_updater_loop())
