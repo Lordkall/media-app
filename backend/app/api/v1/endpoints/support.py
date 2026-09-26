@@ -43,8 +43,8 @@ async def create_ticket(
     
     # Notify admin
     try:
-        admins_result = await db.execute(select(User).where(User.role == RoleEnum.ADMIN))
-        admins = admins_result.scalars().all()
+        admins_result = await db.execute(select(User))
+        admins = [u for u in admins_result.scalars().all() if u.role == RoleEnum.ADMIN or u.role == "admin"]
         for admin in admins:
             notification = Notification(
                 user_id=admin.id,
@@ -73,7 +73,7 @@ async def get_tickets(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    if current_user.role == RoleEnum.ADMIN:
+    if current_user.role == RoleEnum.ADMIN or current_user.role == "admin":
         result = await db.execute(
             select(SupportTicket)
             .options(selectinload(SupportTicket.user), selectinload(SupportTicket.messages))
