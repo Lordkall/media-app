@@ -131,6 +131,19 @@ async def get_my_subscriptions(
         ) if pending_sub else None
     )
 
+@router.get("/fix-subscriptions-db")
+async def fix_subscriptions_db(db: AsyncSession = Depends(get_db)):
+    from sqlalchemy import text
+    results = []
+    for col in ["reference_number VARCHAR", "screenshot_base64 TEXT", "amount_bs FLOAT"]:
+        try:
+            await db.execute(text(f"ALTER TABLE subscriptions ADD COLUMN {col}"))
+            results.append(f"{col}: added")
+        except Exception as e:
+            results.append(f"{col}: skipped ({e})")
+    await db.commit()
+    return {"status": "ok", "results": results}
+
 @router.post("/renew", response_model=SubscriptionResponse)
 async def renew_subscription(
     req: RenewRequest,
