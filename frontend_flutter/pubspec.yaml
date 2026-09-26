@@ -19,7 +19,7 @@ dependencies:
   image_picker: ^1.2.3
   url_launcher: ^6.3.2
   table_calendar: ^3.2.1
-  intl: ^0.20.3
+  intl: any
   flutter_localizations:
     sdk: flutter
 
