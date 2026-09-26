@@ -84,8 +84,9 @@ async def get_my_notifications(
 ):
     from app.models.notifications import Notification
     from app.models.subscriptions import Subscription
+    role_str = str(current_user.role.value) if hasattr(current_user.role, 'value') else str(current_user.role)
     query = select(Notification).where(Notification.user_id == current_user.id).order_by(Notification.created_at.desc())
-    if current_user.role.value != "admin":
+    if role_str != "admin":
         query = query.limit(3)
     result = await db.execute(query)
     notifications = result.scalars().all()

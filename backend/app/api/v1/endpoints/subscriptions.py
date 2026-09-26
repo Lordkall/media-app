@@ -200,10 +200,11 @@ async def renew_subscription(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    if current_user.role not in [RoleEnum.DOCTOR, RoleEnum.CLINIC]:
+    role = str(current_user.role.value) if hasattr(current_user.role, 'value') else str(current_user.role)
+    if role not in ["doctor", "clinic"]:
         raise HTTPException(status_code=403, detail="Solo los doctores y clínicas pueden renovar suscripciones")
 
-    if current_user.role == RoleEnum.DOCTOR:
+    if role == "doctor":
         result = await db.execute(select(Doctor).where(Doctor.user_id == current_user.id))
         doc = result.scalars().first()
         if not doc:
@@ -294,10 +295,11 @@ async def change_subscription_plan(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    if current_user.role not in [RoleEnum.DOCTOR, RoleEnum.CLINIC]:
+    role = str(current_user.role.value) if hasattr(current_user.role, 'value') else str(current_user.role)
+    if role not in ["doctor", "clinic"]:
         raise HTTPException(status_code=403, detail="Solo los doctores y clínicas pueden cambiar de plan")
 
-    if current_user.role == RoleEnum.DOCTOR:
+    if role == "doctor":
         result = await db.execute(select(Doctor).where(Doctor.user_id == current_user.id))
         doc = result.scalars().first()
         if not doc:
