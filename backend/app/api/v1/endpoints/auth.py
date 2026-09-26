@@ -27,6 +27,24 @@ async def login_for_access_token(
             headers={"WWW-Authenticate": "Bearer"},
         )
         
+    from app.models.users import RoleEnum
+    
+    if user.role == RoleEnum.ASSISTANT:
+        if not user.linked_doctor_id:
+            raise HTTPException(status_code=403, detail="Asistente no vinculado a ningún doctor")
+        
+        from app.models.subscriptions import Subscription, SubscriptionStatus, SubscriptionPlan
+        import datetime
+        now = datetime.datetime.utcnow()
+        sub = await db.scalar(select(Subscription).where(
+            Subscription.doctor_id == user.linked_doctor_id,
+            Subscription.status == SubscriptionStatus.ACTIVE,
+            Subscription.plan == SubscriptionPlan.SPONSORED,
+            Subscription.grace_end_date > now
+        ))
+        if not sub:
+            raise HTTPException(status_code=403, detail="Acceso denegado. El doctor ya no cuenta con un plan VIP activo.")
+            
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user.email, "id": str(user.id), "role": user.role.value},
@@ -89,6 +107,28 @@ async def register(
             from app.models.patients import Patient
             new_pat = Patient(user_id=new_user.id, contact_phone=new_user.phone)
             db.add(new_pat)
+
+        elif user_in.role.value == "clinic":
+            from app.models.clinics import Clinic
+            new_clinic = Clinic(
+                user_id=new_user.id,
+                description=user_in.clinic_description or "Nueva clínica en la plataforma.",
+                is_approved=False
+            )
+            db.add(new_clinic)
+            
+            from app.models.notifications import Notification, NotificationType
+            admin_query = await db.execute(select(User).where(User.role == "admin"))
+            admins = admin_query.scalars().all()
+            for admin in admins:
+                notif = Notification(
+                    user_id=admin.id,
+                    type=NotificationType.DOCTOR_REGISTERED,  # Reusing this or creating CLINIC_REGISTERED
+                    title="Nueva Clínica Registrada",
+                    message=f"La clínica {new_user.first_name} se ha registrado. A la espera de que realice el pago de suscripción para su validación.",
+                    action_url=None
+                )
+                db.add(notif)
 
         await db.commit()
         await db.refresh(new_user)

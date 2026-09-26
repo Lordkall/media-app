@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from app.api.v1.router import api_router
+import os
 
 from contextlib import asynccontextmanager
 from app.core.database import engine
@@ -35,6 +37,7 @@ async def lifespan(app: FastAPI):
     try:
         async with engine.begin() as conn:
             await conn.execute(text("ALTER TABLE users ALTER COLUMN avatar_url TYPE TEXT;"))
+            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS fcm_token VARCHAR;"))
     except Exception as e:
         print(f"Migration error (might already be TEXT): {e}")
         
@@ -61,7 +64,10 @@ app.add_middleware(
 
 app.include_router(api_router, prefix="/api/v1")
 
-import flet.fastapi as flet_fastapi
+os.makedirs("uploads/avatars", exist_ok=True)
+app.mount("/api/v1/uploads", StaticFiles(directory="uploads"), name="uploads")
+
+# Moved flet import below
 import sys
 import os
 
@@ -74,6 +80,7 @@ upload_dir_path = os.path.join(tempfile.gettempdir(), "saludnow_uploads")
 os.makedirs(upload_dir_path, exist_ok=True)
 
 if os.getenv("DISABLE_FLET", "False").lower() not in ("true", "1", "yes"):
+    import flet.fastapi as flet_fastapi
     app.mount("/", flet_fastapi.app(
         flet_main, 
         assets_dir=os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "assets")),

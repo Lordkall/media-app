@@ -12,11 +12,17 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
 def extract_bcv_rate() -> float:
-    url = "https://ve.dolarapi.com/v1/dolares/oficial"
-    response = requests.get(url, verify=False, timeout=10)
+    url = "https://www.bcv.org.ve/"
+    response = requests.get(url, verify=False, timeout=15)
     response.raise_for_status()
-    data = response.json()
-    return float(data["promedio"])
+    soup = BeautifulSoup(response.text, 'html.parser')
+    dolar_div = soup.find('div', id='dolar')
+    if dolar_div:
+        rate_text = dolar_div.find('strong').text.strip().replace(',', '.')
+        return float(rate_text)
+    
+    # Fallback si no encuentra el ID
+    raise ValueError("No se pudo extraer la tasa del BCV.")
 
 async def update_db_with_rate():
     try:

@@ -22,6 +22,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _addressCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _passwordRepeatCtrl = TextEditingController();
+  final _clinicDescriptionCtrl = TextEditingController();
 
   bool _isLoading = false;
 
@@ -58,8 +59,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    if (_passwordCtrl.text != _passwordRepeatCtrl.text) {
+    final password = _passwordCtrl.text;
+    if (password != _passwordRepeatCtrl.text) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Las contraseñas no coinciden.')));
+      return;
+    }
+
+    final hasUppercase = password.contains(RegExp(r'[A-Z]'));
+    final hasLetters = password.contains(RegExp(r'[a-zA-Z]'));
+    final hasNumbers = password.contains(RegExp(r'[0-9]'));
+
+    if (!hasUppercase || !hasLetters || !hasNumbers || password.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('La contraseña debe tener letras, números y al menos una mayúscula.')));
       return;
     }
 
@@ -76,8 +87,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         "gender": _gender,
         "password": _passwordCtrl.text,
         "role": _role,
-        "specialties": _selectedSpecialties.toList()
+        "specialties": _selectedSpecialties.toList(),
+        "clinic_description": _clinicDescriptionCtrl.text.trim()
       };
+      
+      if (_role == 'clinic') {
+        payload["last_name"] = "Centro Médico";
+      }
 
       final response = await ApiClient.post('/auth/register', payload);
 
@@ -224,16 +240,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 const SizedBox(height: 20),
                                 const Text('¿Cómo deseas registrarte?', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0B2545))),
                                 const SizedBox(height: 10),
-                                Row(
+                                Column(
                                   children: [
-                                    _buildRoleButton('Soy Paciente', Icons.person, 'patient'),
-                                    const SizedBox(width: 10),
-                                    _buildRoleButton('Soy Doctor', Icons.medical_services, 'doctor'),
+                                    Row(
+                                      children: [
+                                        _buildRoleButton('Soy Paciente', Icons.person, 'patient'),
+                                        const SizedBox(width: 5),
+                                        _buildRoleButton('Soy Doctor', Icons.medical_services, 'doctor'),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Row(
+                                      children: [
+                                        _buildRoleButton('Soy una Clínica', Icons.local_hospital, 'clinic'),
+                                      ],
+                                    ),
                                   ],
                                 ),
                                 const SizedBox(height: 20),
-                                const Text('Género', textAlign: TextAlign.center, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0B2545))),
-                                const SizedBox(height: 10),
+                                if (_role != 'clinic') ...[
+                                  const Text('Género', textAlign: TextAlign.center, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0B2545))),
+                                  const SizedBox(height: 10),
                                 Theme(
                                   data: Theme.of(context).copyWith(unselectedWidgetColor: const Color(0xFF0B2545)),
                                   child: Column(
@@ -256,11 +283,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     ],
                                   ),
                                 ),
+                                ],
                                 const SizedBox(height: 10),
                                 _buildTextField('Correo Electrónico', _emailCtrl, keyboardType: TextInputType.emailAddress),
-                                _buildTextField('Nombres', _firstNameCtrl),
-                                _buildTextField('Apellidos', _lastNameCtrl),
-                                _buildTextField('Teléfono (ej: 04141234567)', _phoneCtrl, keyboardType: TextInputType.phone),
+                                if (_role == 'clinic') ...[
+                                  _buildTextField('Nombre del Centro Médico', _firstNameCtrl),
+                                ] else ...[
+                                  _buildTextField('Nombres', _firstNameCtrl),
+                                  _buildTextField('Apellidos', _lastNameCtrl),
+                                ],
+                                _buildTextField('Teléfono de Contacto (ej: 04141234567)', _phoneCtrl, keyboardType: TextInputType.phone),
                                 
                                 if (_role == 'doctor') ...[
                                   const SizedBox(height: 10),
@@ -347,7 +379,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     },
                                   ),
                                 ),
-                                _buildTextField('Dirección', _addressCtrl),
+                                if (_role == 'clinic') ...[
+                                  const SizedBox(height: 10),
+                                  _buildTextField('Descripción de los servicios ofrecidos', _clinicDescriptionCtrl),
+                                ],
+                                _buildTextField('Dirección Completa', _addressCtrl),
                                 _buildTextField('Contraseña', _passwordCtrl, isPassword: true),
                                 _buildTextField('Repetir contraseña', _passwordRepeatCtrl, isPassword: true),
                                 const SizedBox(height: 20),

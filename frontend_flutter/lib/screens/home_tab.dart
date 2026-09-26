@@ -21,7 +21,7 @@ class HomeTab extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const DoctorHeader(name: 'Doctor', email: 'prueba@gmail.com'),
+              const DoctorHeader(),
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 16.0),
                 child: Divider(color: Colors.white),

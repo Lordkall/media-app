@@ -9,6 +9,7 @@ class RoleEnum(str, enum.Enum):
     DOCTOR = "doctor"
     PATIENT = "patient"
     ASSISTANT = "assistant"
+    CLINIC = "clinic"
 
 class User(Base):
     __tablename__ = "users"
@@ -31,5 +32,6 @@ class User(Base):
     # Relaciones
     doctor_profile: Mapped[Optional["Doctor"]] = relationship(back_populates="user", foreign_keys="[Doctor.user_id]")
     patient_profile: Mapped[Optional["Patient"]] = relationship(back_populates="user")
+    clinic_profile: Mapped[Optional["Clinic"]] = relationship(back_populates="user", foreign_keys="[Clinic.user_id]")
     notifications: Mapped[List["Notification"]] = relationship(back_populates="user")
 

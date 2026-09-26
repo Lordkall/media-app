@@ -16,6 +16,12 @@ dependencies:
   firebase_messaging: ^14.7.19
   provider: ^6.1.2
   cupertino_icons: ^1.0.6
+  image_picker: ^1.2.3
+  url_launcher: ^6.3.2
+  table_calendar: ^3.2.1
+  intl: ^0.20.3
+  flutter_localizations:
+    sdk: flutter
 
 dev_dependencies:
   flutter_test:

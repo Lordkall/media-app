@@ -1,10 +1,9 @@
 from pydantic import BaseModel, ConfigDict
-from datetime import datetime
+from datetime import date
 
 class AppointmentBase(BaseModel):
     doctor_id: int
-    start_time_utc: datetime
-    end_time_utc: datetime
+    appointment_date: date
 
 class AppointmentCreate(AppointmentBase):
     pass
@@ -12,6 +11,7 @@ class AppointmentCreate(AppointmentBase):
 class AppointmentResponse(AppointmentBase):
     id: int
     patient_id: int
+    turn_number: int
     status: str
 
     model_config = ConfigDict(from_attributes=True)

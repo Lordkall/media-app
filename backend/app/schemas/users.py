@@ -7,6 +7,7 @@ class RoleEnum(str, Enum):
     DOCTOR = "doctor"
     PATIENT = "patient"
     ASSISTANT = "assistant"
+    CLINIC = "clinic"
 
 class UserCreate(BaseModel):
     email: EmailStr
@@ -19,6 +20,7 @@ class UserCreate(BaseModel):
     address: Optional[str] = None
     gender: Optional[str] = "No Especificado"
     specialties: Optional[list[str]] = []
+    clinic_description: Optional[str] = None
 
 class UserUpdate(BaseModel):
     first_name: Optional[str] = None

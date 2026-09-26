@@ -1,6 +1,6 @@
 import requests
 
-URL = "https://media-app-production-dd3f.up.railway.app/api/v1/auth/register"
+URL = "http://localhost:8000/api/v1/auth/register"
 
 usuarios = [
     {
@@ -47,11 +47,11 @@ def crear_usuarios():
         try:
             resp = requests.post(URL, json=u)
             if resp.status_code == 200 or resp.status_code == 201:
-                print(f"✅ Creado con éxito: {u['email']} (Rol: {u['role']})")
+                print(f"Creado con exito: {u['email']} (Rol: {u['role']})")
             elif resp.status_code == 400 and "ya está registrado" in resp.text:
-                print(f"⚠️ El usuario {u['email']} ya existe en la base de datos.")
+                print(f"El usuario {u['email']} ya existe en la base de datos.")
             else:
-                print(f"❌ Error al crear {u['email']}: Código {resp.status_code} -> {resp.text}")
+                print(f"Error al crear {u['email']}: Codigo {resp.status_code} -> {resp.text}")
         except Exception as e:
             print(f"Error de conexión: {e}")
 

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, update
 from app.core.database import get_db
 from app.models.users import User
 from app.schemas.users import UserResponse, UserUpdate, PasswordChange
@@ -69,3 +69,66 @@ async def update_password_me(
     db.add(current_user)
     await db.commit()
     return {"message": "Contraseña actualizada exitosamente"}
+
+@router.get("/bcv-rate")
+async def get_bcv_rate(db: AsyncSession = Depends(get_db)):
+    from app.models.exchange_rate import ExchangeRate
+    result = await db.execute(select(ExchangeRate).where(ExchangeRate.moneda_origen == 'USD', ExchangeRate.moneda_destino == 'VES'))
+    rate = result.scalar_one_or_none()
+    return {"rate": rate.tasa if rate else 36.5}
+
+@router.get("/me/notifications")
+async def get_my_notifications(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    from app.models.notifications import Notification
+    from app.models.subscriptions import Subscription
+    query = select(Notification).where(Notification.user_id == current_user.id).order_by(Notification.created_at.desc())
+    if current_user.role.value != "admin":
+        query = query.limit(3)
+    result = await db.execute(query)
+    notifications = result.scalars().all()
+    
+    out = []
+    for n in notifications:
+        data = {
+            "id": n.id,
+            "type": n.type.value,
+            "title": n.title,
+            "message": n.message,
+            "is_read": n.is_read,
+            "action_url": n.action_url,
+            "created_at": n.created_at.isoformat(),
+            "payment_details": None
+        }
+        
+        if n.action_url and n.action_url.startswith("approve_subscription:"):
+            sub_id = int(n.action_url.split(":")[1])
+            sub = await db.scalar(select(Subscription).where(Subscription.id == sub_id))
+            from app.models.subscriptions import SubscriptionStatus
+            if sub and sub.status == SubscriptionStatus.PENDING_APPROVAL:
+                data["payment_details"] = {
+                    "sub_id": sub.id,
+                    "reference_number": sub.reference_number,
+                    "amount_bs": sub.amount_bs,
+                    "screenshot_base64": sub.screenshot_base64
+                }
+        out.append(data)
+        
+    return out
+
+@router.post("/me/notifications/read")
+async def mark_notifications_as_read(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    from app.models.notifications import Notification
+    await db.execute(
+        update(Notification)
+        .where(Notification.user_id == current_user.id)
+        .where(Notification.is_read == False)
+        .values(is_read=True)
+    )
+    await db.commit()
+    return {"status": "ok"}

@@ -7,6 +7,7 @@ class DoctorUpdate(BaseModel):
     clinic_info: Optional[str] = None
     consultation_fee: Optional[float] = None
     specialties: Optional[List[str]] = None
+    max_patients_per_day: Optional[int] = None
 
 class DoctorResponse(BaseModel):
     id: int

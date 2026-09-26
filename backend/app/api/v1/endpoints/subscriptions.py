@@ -18,11 +18,15 @@ class RenewRequest(BaseModel):
     billing_cycle: str  # "Mensual" or "Anual"
     reference_number: str
     plan_name: str
+    amount_bs: Optional[float] = None
+    screenshot_base64: Optional[str] = None
 
 class ChangePlanRequest(BaseModel):
     new_plan_name: str
     billing_cycle: str  # "Mensual" or "Anual"
     reference_number: str
+    amount_bs: Optional[float] = None
+    screenshot_base64: Optional[str] = None
 
 class SubscriptionResponse(BaseModel):
     status: str
@@ -32,7 +36,11 @@ class SubscriptionResponse(BaseModel):
 
 def get_plan_enum(plan_name: str) -> SubscriptionPlan:
     plan_lower = plan_name.lower()
-    if "vip" in plan_lower or "patrocinado" in plan_lower:
+    if "clinic_vip" in plan_lower or "clínica vip" in plan_lower:
+        return SubscriptionPlan.CLINIC_VIP
+    elif "clinic_basic" in plan_lower or "clínica básico" in plan_lower:
+        return SubscriptionPlan.CLINIC_BASIC
+    elif "vip" in plan_lower or "patrocinado" in plan_lower:
         return SubscriptionPlan.SPONSORED
     elif "destacado" in plan_lower:
         return SubscriptionPlan.FEATURED
@@ -44,6 +52,10 @@ def get_plan_price(plan: SubscriptionPlan, cycle: str) -> float:
         return 40.0 * (12 if cycle == "Anual" else 1)
     elif plan == SubscriptionPlan.FEATURED:
         return 20.0 * (12 if cycle == "Anual" else 1)
+    elif plan == SubscriptionPlan.CLINIC_VIP:
+        return 250.0 * (12 if cycle == "Anual" else 1)
+    elif plan == SubscriptionPlan.CLINIC_BASIC:
+        return 150.0 * (12 if cycle == "Anual" else 1)
     return 0.0
 
 class SubscriptionDetail(BaseModel):
@@ -63,17 +75,30 @@ async def get_my_subscriptions(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    if current_user.role != RoleEnum.DOCTOR:
-        raise HTTPException(status_code=403, detail="Solo los doctores pueden ver suscripciones")
+    if current_user.role not in [RoleEnum.DOCTOR, RoleEnum.CLINIC]:
+        raise HTTPException(status_code=403, detail="Solo los doctores y clínicas pueden ver suscripciones")
 
-    result = await db.execute(select(Doctor).where(Doctor.user_id == current_user.id))
-    doc = result.scalars().first()
-    if not doc:
-        raise HTTPException(status_code=404, detail="Perfil de doctor no encontrado")
+    if current_user.role == RoleEnum.DOCTOR:
+        result = await db.execute(select(Doctor).where(Doctor.user_id == current_user.id))
+        doc = result.scalars().first()
+        if not doc:
+            raise HTTPException(status_code=404, detail="Perfil de doctor no encontrado")
+        entity_id = doc.id
+        is_doctor = True
+    else:
+        from app.models.clinics import Clinic
+        result = await db.execute(select(Clinic).where(Clinic.user_id == current_user.id))
+        clinic = result.scalars().first()
+        if not clinic:
+            raise HTTPException(status_code=404, detail="Perfil de clínica no encontrado")
+        entity_id = clinic.id
+        is_doctor = False
 
+    cond_active = Subscription.doctor_id == entity_id if is_doctor else Subscription.clinic_id == entity_id
+    
     sub_res = await db.execute(
         select(Subscription).where(
-            Subscription.doctor_id == doc.id,
+            cond_active,
             Subscription.status == SubscriptionStatus.ACTIVE
         ).order_by(Subscription.created_at.desc())
     )
@@ -81,7 +106,7 @@ async def get_my_subscriptions(
     
     pend_res = await db.execute(
         select(Subscription).where(
-            Subscription.doctor_id == doc.id,
+            cond_active,
             Subscription.status == SubscriptionStatus.PENDING_APPROVAL
         ).order_by(Subscription.created_at.desc())
     )
@@ -112,18 +137,31 @@ async def renew_subscription(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    if current_user.role != RoleEnum.DOCTOR:
-        raise HTTPException(status_code=403, detail="Solo los doctores pueden renovar suscripciones")
+    if current_user.role not in [RoleEnum.DOCTOR, RoleEnum.CLINIC]:
+        raise HTTPException(status_code=403, detail="Solo los doctores y clínicas pueden renovar suscripciones")
 
-    result = await db.execute(select(Doctor).where(Doctor.user_id == current_user.id))
-    doc = result.scalars().first()
-    if not doc:
-        raise HTTPException(status_code=404, detail="Perfil de doctor no encontrado")
+    if current_user.role == RoleEnum.DOCTOR:
+        result = await db.execute(select(Doctor).where(Doctor.user_id == current_user.id))
+        doc = result.scalars().first()
+        if not doc:
+            raise HTTPException(status_code=404, detail="Perfil de doctor no encontrado")
+        entity_id = doc.id
+        is_doctor = True
+    else:
+        from app.models.clinics import Clinic
+        result = await db.execute(select(Clinic).where(Clinic.user_id == current_user.id))
+        clinic = result.scalars().first()
+        if not clinic:
+            raise HTTPException(status_code=404, detail="Perfil de clínica no encontrado")
+        entity_id = clinic.id
+        is_doctor = False
+
+    cond_active = Subscription.doctor_id == entity_id if is_doctor else Subscription.clinic_id == entity_id
 
     # Find active plan
     sub_res = await db.execute(
         select(Subscription).where(
-            Subscription.doctor_id == doc.id,
+            cond_active,
             Subscription.status == SubscriptionStatus.ACTIVE
         ).order_by(Subscription.end_date.desc())
     )
@@ -143,12 +181,16 @@ async def renew_subscription(
         end_date = start_date + timedelta(days=days_added)
 
     new_sub = Subscription(
-        doctor_id=doc.id,
+        doctor_id=entity_id if is_doctor else None,
+        clinic_id=entity_id if not is_doctor else None,
         plan=plan_enum,
         status=SubscriptionStatus.PENDING_APPROVAL,
         start_date=start_date,
         end_date=end_date,
-        grace_end_date=end_date + timedelta(days=5)
+        grace_end_date=end_date + timedelta(days=5),
+        reference_number=req.reference_number,
+        amount_bs=req.amount_bs,
+        screenshot_base64=req.screenshot_base64
     )
     db.add(new_sub)
     await db.flush()
@@ -157,11 +199,15 @@ async def renew_subscription(
     admins_res = await db.execute(select(User).where(User.role == RoleEnum.ADMIN))
     admins = admins_res.scalars().all()
     for admin in admins:
+        is_renewal = current_sub is not None
+        title = "Renovación de Suscripción" if is_renewal else "Nueva Suscripción"
+        msg = f"El Dr(a). {current_user.first_name} {current_user.last_name} reportó un pago para renovar {req.plan_name} ({req.billing_cycle}). Ref: {req.reference_number}" if is_renewal else f"El Dr(a). {current_user.first_name} {current_user.last_name} reportó el pago inicial de su suscripción {req.plan_name} ({req.billing_cycle}). Ref: {req.reference_number}"
+        
         notif = Notification(
             user_id=admin.id,
             type=NotificationType.NEW_SUBSCRIPTION,
-            title="Renovación de Suscripción",
-            message=f"El Dr(a). {current_user.first_name} {current_user.last_name} reportó un pago para renovar {req.plan_name} ({req.billing_cycle}). Ref: {req.reference_number}",
+            title=title,
+            message=msg,
             action_url=f"approve_subscription:{new_sub.id}" 
         )
         db.add(notif)
@@ -181,17 +227,30 @@ async def change_subscription_plan(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    if current_user.role != RoleEnum.DOCTOR:
-        raise HTTPException(status_code=403, detail="Solo los doctores pueden cambiar de plan")
+    if current_user.role not in [RoleEnum.DOCTOR, RoleEnum.CLINIC]:
+        raise HTTPException(status_code=403, detail="Solo los doctores y clínicas pueden cambiar de plan")
 
-    result = await db.execute(select(Doctor).where(Doctor.user_id == current_user.id))
-    doc = result.scalars().first()
-    if not doc:
-        raise HTTPException(status_code=404, detail="Perfil de doctor no encontrado")
+    if current_user.role == RoleEnum.DOCTOR:
+        result = await db.execute(select(Doctor).where(Doctor.user_id == current_user.id))
+        doc = result.scalars().first()
+        if not doc:
+            raise HTTPException(status_code=404, detail="Perfil de doctor no encontrado")
+        entity_id = doc.id
+        is_doctor = True
+    else:
+        from app.models.clinics import Clinic
+        result = await db.execute(select(Clinic).where(Clinic.user_id == current_user.id))
+        clinic = result.scalars().first()
+        if not clinic:
+            raise HTTPException(status_code=404, detail="Perfil de clínica no encontrado")
+        entity_id = clinic.id
+        is_doctor = False
+
+    cond_active = Subscription.doctor_id == entity_id if is_doctor else Subscription.clinic_id == entity_id
 
     sub_res = await db.execute(
         select(Subscription).where(
-            Subscription.doctor_id == doc.id,
+            cond_active,
             Subscription.status == SubscriptionStatus.ACTIVE
         ).order_by(Subscription.end_date.desc())
     )
@@ -219,12 +278,16 @@ async def change_subscription_plan(
     end_date = start_date + timedelta(days=total_days)
 
     new_sub = Subscription(
-        doctor_id=doc.id,
+        doctor_id=entity_id if is_doctor else None,
+        clinic_id=entity_id if not is_doctor else None,
         plan=new_plan_enum,
         status=SubscriptionStatus.PENDING_APPROVAL,
         start_date=start_date,
         end_date=end_date,
-        grace_end_date=end_date + timedelta(days=5)
+        grace_end_date=end_date + timedelta(days=5),
+        reference_number=req.reference_number,
+        amount_bs=req.amount_bs,
+        screenshot_base64=req.screenshot_base64
     )
     db.add(new_sub)
     await db.flush()

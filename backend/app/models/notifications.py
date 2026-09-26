@@ -16,6 +16,7 @@ class NotificationType(str, enum.Enum):
     APPOINTMENT_CANCELLED = "appointment_cancelled"
     DOCTOR_REGISTERED = "doctor_registered"
     DOCTOR_APPROVED = "doctor_approved"
+    SUPPORT_MESSAGE = "support_message"
 
 
 class Notification(Base):

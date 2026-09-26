@@ -87,8 +87,11 @@ class Doctor(Base):
     total_reviews: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     max_patients_per_day: Mapped[int] = mapped_column(Integer, default=5, nullable=False)
 
+    clinic_id: Mapped[Optional[int]] = mapped_column(ForeignKey("clinics.id", ondelete="SET NULL"), nullable=True)
+
     # Relaciones
     user: Mapped["User"] = relationship(back_populates="doctor_profile", foreign_keys="[Doctor.user_id]")
+    clinic: Mapped[Optional["Clinic"]] = relationship(back_populates="doctors")
     availabilities: Mapped[List["Availability"]] = relationship(back_populates="doctor")
     appointments: Mapped[List["Appointment"]] = relationship(back_populates="doctor")
     subscriptions: Mapped[List["Subscription"]] = relationship(back_populates="doctor")
