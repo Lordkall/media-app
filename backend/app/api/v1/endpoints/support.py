@@ -148,6 +148,38 @@ async def reply_ticket(
     )
     db.add(msg)
     await db.commit()
+
+    # Send notification
+    try:
+        is_admin = (current_user.role == RoleEnum.ADMIN or current_user.role == "admin")
+        if is_admin:
+            # Admin replied -> notify the ticket owner
+            notif_user_id = ticket.user_id
+            notif_title = "Respuesta de soporte"
+            notif_msg = f"El equipo de soporte ha respondido tu ticket: {ticket.subject}"
+            notification = Notification(
+                user_id=notif_user_id,
+                type=NotificationType.SUPPORT_MESSAGE,
+                title=notif_title,
+                message=notif_msg
+            )
+            db.add(notification)
+        else:
+            # User replied -> notify all admins
+            admins_result = await db.execute(select(User))
+            admins = [u for u in admins_result.scalars().all() if u.role == RoleEnum.ADMIN or u.role == "admin"]
+            for admin in admins:
+                notification = Notification(
+                    user_id=admin.id,
+                    type=NotificationType.SUPPORT_MESSAGE,
+                    title="Nuevo mensaje de soporte",
+                    message=f"{current_user.first_name} {current_user.last_name} respondió en el ticket: {ticket.subject}"
+                )
+                db.add(notification)
+        await db.commit()
+    except Exception as e:
+        print(f"Error sending reply notification: {e}")
+
     return {"message": "Reply sent"}
 
 @router.delete("/{ticket_id}")
