@@ -62,11 +62,11 @@ async def create_ticket(
         pass
 
     return {"message": "Ticket created"}
-@router.get("/debug-users")
-async def debug_users(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User))
-    users = result.scalars().all()
-    return [{"id": u.id, "email": u.email, "role": u.role} for u in users]
+@router.get("/debug-tickets")
+async def debug_tickets(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(SupportTicket))
+    tickets = result.scalars().all()
+    return [{"id": t.id, "subject": t.subject, "user_id": t.user_id} for t in tickets]
 
 @router.get("/")
 async def get_tickets(
