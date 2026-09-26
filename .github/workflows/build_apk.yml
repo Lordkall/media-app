@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Android APK (Flutter Native)
 
 on:
   push:
@@ -14,11 +14,6 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-
-      - name: Setup Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
@@ -36,22 +31,19 @@ jobs:
       - name: Accept Android Licenses
         run: yes | flutter doctor --android-licenses || true
 
-      - name: Install Flet CLI
+      - name: Get Dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install "flet[all]==0.25.0"
+          cd frontend_flutter
+          flutter pub get
 
-      - name: Copy backend app models into frontend (required for packaging)
-        run: cp -r backend/app backend/frontend/app
-
-      - name: Build APK with Flet
+      - name: Build APK
         run: |
-          cd backend/frontend
-          flet build apk --project SaludNow --org com.saludnow.app -v
+          cd frontend_flutter
+          flutter build apk --release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: SaludNow-APK
-          path: backend/frontend/build/apk/app-release.apk
+          path: frontend_flutter/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
