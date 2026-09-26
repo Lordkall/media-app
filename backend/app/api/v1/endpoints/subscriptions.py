@@ -180,39 +180,43 @@ async def renew_subscription(
         start_date = datetime.utcnow()
         end_date = start_date + timedelta(days=days_added)
 
-    new_sub = Subscription(
-        doctor_id=entity_id if is_doctor else None,
-        clinic_id=entity_id if not is_doctor else None,
-        plan=plan_enum,
-        status=SubscriptionStatus.PENDING_APPROVAL,
-        start_date=start_date,
-        end_date=end_date,
-        grace_end_date=end_date + timedelta(days=5),
-        reference_number=req.reference_number,
-        amount_bs=req.amount_bs,
-        screenshot_base64=req.screenshot_base64
-    )
-    db.add(new_sub)
-    await db.flush()
-
-    # Notify admins
-    admins_res = await db.execute(select(User).where(User.role == RoleEnum.ADMIN))
-    admins = admins_res.scalars().all()
-    for admin in admins:
-        is_renewal = current_sub is not None
-        title = "Renovación de Suscripción" if is_renewal else "Nueva Suscripción"
-        msg = f"El Dr(a). {current_user.first_name} {current_user.last_name} reportó un pago para renovar {req.plan_name} ({req.billing_cycle}). Ref: {req.reference_number}" if is_renewal else f"El Dr(a). {current_user.first_name} {current_user.last_name} reportó el pago inicial de su suscripción {req.plan_name} ({req.billing_cycle}). Ref: {req.reference_number}"
-        
-        notif = Notification(
-            user_id=admin.id,
-            type=NotificationType.NEW_SUBSCRIPTION,
-            title=title,
-            message=msg,
-            action_url=f"approve_subscription:{new_sub.id}" 
+    try:
+        new_sub = Subscription(
+            doctor_id=entity_id if is_doctor else None,
+            clinic_id=entity_id if not is_doctor else None,
+            plan=plan_enum,
+            status=SubscriptionStatus.PENDING_APPROVAL,
+            start_date=start_date,
+            end_date=end_date,
+            grace_end_date=end_date + timedelta(days=5),
+            reference_number=req.reference_number,
+            amount_bs=req.amount_bs,
+            screenshot_base64=req.screenshot_base64
         )
-        db.add(notif)
-        
-    await db.commit()
+        db.add(new_sub)
+        await db.flush()
+
+        # Notify admins
+        admins_res = await db.execute(select(User))
+        admins = [u for u in admins_res.scalars().all() if u.role == RoleEnum.ADMIN or u.role == "admin"]
+        for admin in admins:
+            is_renewal = current_sub is not None
+            title = "Renovación de Suscripción" if is_renewal else "Nueva Suscripción"
+            msg = f"El Dr(a). {current_user.first_name} {current_user.last_name} reportó un pago para renovar {req.plan_name} ({req.billing_cycle}). Ref: {req.reference_number}" if is_renewal else f"El Dr(a). {current_user.first_name} {current_user.last_name} reportó el pago inicial de su suscripción {req.plan_name} ({req.billing_cycle}). Ref: {req.reference_number}"
+            
+            notif = Notification(
+                user_id=admin.id,
+                type=NotificationType.NEW_SUBSCRIPTION,
+                title=title,
+                message=msg,
+                action_url=f"approve_subscription:{new_sub.id}" 
+            )
+            db.add(notif)
+            
+        await db.commit()
+    except Exception as e:
+        print(f"Error in /renew: {e}")
+        raise HTTPException(status_code=500, detail=f"Error en la base de datos: {e}")
 
     return SubscriptionResponse(
         status="PENDING_APPROVAL",
@@ -292,20 +296,29 @@ async def change_subscription_plan(
     db.add(new_sub)
     await db.flush()
 
-    # Notify admins
-    admins_res = await db.execute(select(User).where(User.role == RoleEnum.ADMIN))
-    admins = admins_res.scalars().all()
-    for admin in admins:
-        notif = Notification(
-            user_id=admin.id,
-            type=NotificationType.NEW_SUBSCRIPTION,
-            title="Cambio de Plan",
-            message=f"El Dr(a). {current_user.first_name} {current_user.last_name} reportó un pago para cambiar a {req.new_plan_name} ({req.billing_cycle}). Ref: {req.reference_number}",
-            action_url=f"approve_subscription:{new_sub.id}"
+    try:
+        # Notify admins
+        admins_res = await db.execute(select(User))
+        admins = [u for u in admins_res.scalars().all() if u.role == RoleEnum.ADMIN or u.role == "admin"]
+        for admin in admins:
+            notif = Notification(
+                user_id=admin.id,
+                type=NotificationType.NEW_SUBSCRIPTION,
+                title="Cambio de Plan",
+                message=f"El Dr(a). {current_user.first_name} {current_user.last_name} reportó un pago para cambiar a {req.new_plan_name} ({req.billing_cycle}). Ref: {req.reference_number}",
+                action_url=f"approve_subscription:{new_sub.id}"
+            )
+            db.add(notif)
+            
+        await db.commit()
+    except Exception as e:
+        print(f"Error in /change_plan: {e}")
+        return SubscriptionResponse(
+            status="ERROR",
+            days_remaining=0,
+            plan="ERROR",
+            message=f"Error al procesar la notificación: {e}"
         )
-        db.add(notif)
-        
-    await db.commit()
     
     return SubscriptionResponse(
         status="PENDING_APPROVAL",
