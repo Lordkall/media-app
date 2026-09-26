@@ -175,12 +175,22 @@ async def test_renew_error(db: AsyncSession = Depends(get_db)):
 async def fix_subscriptions_db(db: AsyncSession = Depends(get_db)):
     from sqlalchemy import text
     results = []
-    for col in ["reference_number VARCHAR", "screenshot_base64 TEXT", "amount_bs FLOAT"]:
+    columns = [
+        "clinic_id INTEGER REFERENCES clinics(id)",
+        "auto_renew BOOLEAN DEFAULT TRUE",
+        "created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()",
+        "updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()",
+        "reference_number VARCHAR",
+        "screenshot_base64 TEXT",
+        "amount_bs FLOAT",
+    ]
+    for col_def in columns:
+        col_name = col_def.split()[0]
         try:
-            await db.execute(text(f"ALTER TABLE subscriptions ADD COLUMN {col}"))
-            results.append(f"{col}: added")
+            await db.execute(text(f"ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS {col_def}"))
+            results.append(f"{col_name}: ok")
         except Exception as e:
-            results.append(f"{col}: skipped ({e})")
+            results.append(f"{col_name}: error ({e})")
     await db.commit()
     return {"status": "ok", "results": results}
 
