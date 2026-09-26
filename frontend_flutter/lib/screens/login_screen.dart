@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/api_client.dart';
@@ -35,6 +36,10 @@ class _LoginScreenState extends State<LoginScreen> {
     final token = prefs.getString('access_token');
     
     if (token != null) {
+      if (kIsWeb) {
+        _navigateToHome();
+        return;
+      }
       // Instead of navigating right away, we force them to use biometrics
       // Wait for the UI to settle completely to avoid BiometricPromptCompat crash
       WidgetsBinding.instance.addPostFrameCallback((_) {
