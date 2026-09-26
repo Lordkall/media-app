@@ -62,6 +62,15 @@ async def create_ticket(
         pass
 
     return {"message": "Ticket created"}
+@router.get("/fix-enum")
+async def fix_enum(db: AsyncSession = Depends(get_db)):
+    from sqlalchemy import text
+    try:
+        await db.execute(text("ALTER TYPE roleenum ADD VALUE IF NOT EXISTS 'admin';"))
+        await db.commit()
+    except Exception as e:
+        return {"error": str(e)}
+    return {"status": "enum fixed"}
 
 @router.get("/")
 async def get_tickets(
