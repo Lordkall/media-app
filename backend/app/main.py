@@ -36,6 +36,9 @@ async def lifespan(app: FastAPI):
     # Migration on startup
     try:
         async with engine.begin() as conn:
+            from app.models.support import SupportTicket, TicketMessage
+            from app.models.base import Base
+            await conn.run_sync(Base.metadata.create_all)
             await conn.execute(text("ALTER TABLE users ALTER COLUMN avatar_url TYPE TEXT;"))
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS fcm_token VARCHAR;"))
     except Exception as e:

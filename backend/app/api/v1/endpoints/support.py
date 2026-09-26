@@ -39,20 +39,28 @@ async def create_ticket(
         message=ticket_in.message
     )
     db.add(first_message)
+    await db.commit()
     
     # Notify admin
-    admins_result = await db.execute(select(User).where(User.role == RoleEnum.ADMIN))
-    admins = admins_result.scalars().all()
-    for admin in admins:
-        notification = Notification(
-            user_id=admin.id,
-            type=NotificationType.SUPPORT_MESSAGE,
-            title="Nuevo ticket de soporte",
-            message=f"{current_user.first_name} ha enviado un mensaje: {ticket_in.subject}"
-        )
-        db.add(notification)
-        
-    await db.commit()
+    try:
+        admins_result = await db.execute(select(User).where(User.role == RoleEnum.ADMIN))
+        admins = admins_result.scalars().all()
+        for admin in admins:
+            notification = Notification(
+                user_id=admin.id,
+                type=NotificationType.SUPPORT_MESSAGE,
+                title="Nuevo ticket de soporte",
+                message=f"{current_user.first_name} ha enviado un mensaje: {ticket_in.subject}"
+            )
+            db.add(notification)
+            
+        await db.commit()
+    except Exception as e:
+        print(f"Failed to notify admins: {e}")
+        # Ticket is already created, so we don't rollback the whole thing unless necessary.
+        # But we must commit the ticket itself!
+        pass
+
     return {"message": "Ticket created"}
 
 @router.get("/")
