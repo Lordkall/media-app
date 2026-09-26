@@ -128,6 +128,9 @@ async def get_my_subscriptions(
             start_date=pending_sub.start_date,
             end_date=pending_sub.end_date,
             grace_end_date=pending_sub.grace_end_date
+        ) if pending_sub else None
+    )
+
 @router.get("/test-renew-error")
 async def test_renew_error(db: AsyncSession = Depends(get_db)):
     try:
@@ -160,12 +163,13 @@ async def test_renew_error(db: AsyncSession = Depends(get_db)):
             )
             db.add(notif)
             
-        await db.rollback() # Don't actually commit!
+        await db.rollback()
         return {"status": "SUCCESS - NO ERROR THROWN"}
     except Exception as e:
         await db.rollback()
         import traceback
         return {"status": "ERROR", "error": str(e), "traceback": traceback.format_exc()}
+
 
 @router.get("/fix-subscriptions-db")
 async def fix_subscriptions_db(db: AsyncSession = Depends(get_db)):
