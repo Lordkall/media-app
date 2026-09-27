@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
+import 'dart:async';
 import 'dart:convert';
 import '../widgets/doctor_header.dart';
 import '../core/api_client.dart';
@@ -20,11 +21,22 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
   int _citasHoy = 0;
   Map<String, dynamic>? _userData;
   Map<String, dynamic>? _subData;
+  Timer? _pollingTimer;
   
   @override
   void initState() {
     super.initState();
     _fetchData();
+    // Poll every 30 seconds for real-time notification updates
+    _pollingTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) _fetchData();
+    });
+  }
+
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _fetchData() async {

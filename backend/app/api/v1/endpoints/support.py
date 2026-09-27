@@ -45,6 +45,7 @@ async def create_ticket(
     try:
         admins_result = await db.execute(select(User))
         admins = [u for u in admins_result.scalars().all() if u.role == RoleEnum.ADMIN or u.role == "admin"]
+        from app.core.firebase import send_push_notification
         for admin in admins:
             notification = Notification(
                 user_id=admin.id,
@@ -55,10 +56,17 @@ async def create_ticket(
             db.add(notification)
             
         await db.commit()
+        
+        # Send push to all admins (after commit so FCM tokens are fresh)
+        for admin in admins:
+            if admin.fcm_token:
+                send_push_notification(
+                    admin.fcm_token,
+                    "Nuevo ticket de soporte",
+                    f"{current_user.first_name}: {ticket_in.subject}"
+                )
     except Exception as e:
         print(f"Failed to notify admins: {e}")
-        # Ticket is already created, so we don't rollback the whole thing unless necessary.
-        # But we must commit the ticket itself!
         pass
 
     return {"message": "Ticket created"}

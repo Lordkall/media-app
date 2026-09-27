@@ -45,7 +45,12 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
   Future<void> _updateSub(int id, String action, [String? plan]) async {
     try {
       String url;
-      if (_searchType == 'Doctores') {
+      if (action == 'approve') {
+        // Approve uses sub_id (the pending subscription id), not doctor_id
+        url = '/admin/subscriptions/$id/approve';
+      } else if (action == 'reject') {
+        url = '/admin/subscriptions/$id/reject';
+      } else if (_searchType == 'Doctores') {
         url = '/admin/subscriptions/$id/$action' + (plan != null ? '?plan=$plan' : '');
       } else {
         url = '/admin/clinic_subscriptions/$id/$action' + (plan != null ? '?plan=$plan' : '');
@@ -53,11 +58,19 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
       
       final response = await ApiClient.post(url, {});
       if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Suscripción actualizada')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('✓ Suscripción actualizada'), backgroundColor: Colors.green)
+        );
         _fetchData();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${response.body}'), backgroundColor: Colors.red)
+        );
       }
     } catch (e) {
-      print('Error updating subscription: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red)
+      );
     }
   }
 
@@ -164,7 +177,11 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
                           _searchType == 'Doctores' ? '$specialties | ${item['email']}' : '${item['email']}', 
                           plan == 'Ninguno' ? 'Sin plan' : plan, 
                           planColor,
-                          daysRemaining
+                          daysRemaining,
+                          pendingSubId: item['pending_sub_id'],
+                          pendingPlan: item['pending_plan'],
+                          pendingReference: item['pending_reference'],
+                          pendingAmountBs: item['pending_amount_bs'] != null ? (item['pending_amount_bs'] as num).toDouble() : null,
                         );
                       },
                     ),
@@ -175,7 +192,12 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
     );
   }
 
-  Widget _buildSubCard(int targetId, String name, String details, String plan, Color planColor, int daysRemaining) {
+  Widget _buildSubCard(int targetId, String name, String details, String plan, Color planColor, int daysRemaining, {
+    int? pendingSubId,
+    String? pendingPlan,
+    String? pendingReference,
+    double? pendingAmountBs,
+  }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -200,6 +222,32 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
                       const SizedBox(height: 4),
                       Text('Días restantes: $daysRemaining', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0056B3))),
                     ],
+                    if (pendingSubId != null) ...[
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.orange)
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(children: [
+                              const Icon(Icons.schedule, color: Colors.orange, size: 12),
+                              const SizedBox(width: 4),
+                              Text('PAGO PENDIENTE: ${(pendingPlan ?? "").toUpperCase()}',
+                                style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 10))
+                            ]),
+                            if (pendingReference != null)
+                              Text('Ref: $pendingReference', style: const TextStyle(fontSize: 10, color: Colors.brown)),
+                            if (pendingAmountBs != null)
+                              Text('Bs. ${pendingAmountBs.toStringAsFixed(2)}', style: const TextStyle(fontSize: 10, color: Colors.brown)),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -210,9 +258,34 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
               )
             ],
           ),
-          const SizedBox(height: 16),
-          const Text('Acciones de Administrador:', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0B2545))),
+          // Approve pending payment button (most important action)
+          if (pendingSubId != null) ...[
+            const SizedBox(height: 8),
+            ElevatedButton.icon(
+              onPressed: () => _updateSub(pendingSubId, 'approve'),
+              icon: const Icon(Icons.check_circle, color: Colors.white),
+              label: Text('✔ Aprobar Pago ${pendingPlan?.toUpperCase() ?? ""}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                minimumSize: const Size(double.infinity, 44),
+              ),
+            ),
+            ElevatedButton.icon(
+              onPressed: () => _updateSub(pendingSubId, 'reject'),
+              icon: const Icon(Icons.cancel, color: Colors.white, size: 16),
+              label: const Text('Rechazar Pago', style: TextStyle(color: Colors.white, fontSize: 12)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade400,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                minimumSize: const Size(double.infinity, 36),
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
+          const Divider(),
+          const Text('Asignar manualmente:', style: TextStyle(fontSize: 12, color: Colors.grey)),
+          const SizedBox(height: 4),
           Row(
             children: [
               Expanded(

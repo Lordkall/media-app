@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
-import 'dart:io';
+import 'dart:async';
 import 'dart:convert';
-import '../widgets/doctor_header.dart'; // We can reuse the header for now
+import '../widgets/doctor_header.dart';
 import '../core/profile_image_helper.dart';
 import '../core/api_client.dart';
 import 'support_messages_screen.dart';
@@ -18,12 +18,23 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
   String? _imagePath;
   List<dynamic> _notifications = [];
   bool _isLoadingNotifications = true;
+  Timer? _pollingTimer;
 
   @override
   void initState() {
     super.initState();
     _loadImage();
     _fetchNotifications();
+    // Poll notifications every 30 seconds
+    _pollingTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) _fetchNotifications();
+    });
+  }
+
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _fetchNotifications() async {
@@ -179,15 +190,10 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
               shape: BoxShape.circle,
               border: Border.all(color: const Color(0xFF0056B3), width: 3),
               color: Colors.grey[200],
-              image: _imagePath != null
-                  ? DecorationImage(
-                      image: FileImage(File(_imagePath!)),
-                      fit: BoxFit.cover,
-                    )
-                  : DecorationImage(
-                      image: ProfileImageHelper.getProfileImageProvider(null),
-                      fit: BoxFit.cover,
-                    ),
+              image: DecorationImage(
+                image: ProfileImageHelper.getProfileImageProvider(null),
+                fit: BoxFit.cover,
+              ),
             ),
           ),
           const SizedBox(width: 16),

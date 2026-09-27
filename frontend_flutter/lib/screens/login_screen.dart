@@ -256,6 +256,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 32),
                         TextField(
                           controller: _emailController,
+                          textInputAction: TextInputAction.next,
                           decoration: InputDecoration(
                             labelText: 'Correo Electrónico',
                             filled: true,
@@ -277,6 +278,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 16),
                         TextField(
                           controller: _passwordController,
+                          textInputAction: TextInputAction.done,
+                          onSubmitted: (_) => _isLoading ? null : _login(),
                           decoration: InputDecoration(
                             labelText: 'Contraseña',
                             filled: true,
@@ -331,12 +334,13 @@ class _LoginScreenState extends State<LoginScreen> {
                             : const Text('Ingresar', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                         ),
                         const SizedBox(height: 16),
-                        IconButton(
-                          onPressed: _loginWithBiometrics,
-                          icon: const Icon(Icons.fingerprint, size: 50, color: Color(0xFF0056B3)),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                        ),
+                        if (!kIsWeb)
+                          IconButton(
+                            onPressed: _loginWithBiometrics,
+                            icon: const Icon(Icons.fingerprint, size: 50, color: Color(0xFF0056B3)),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
                         const SizedBox(height: 24),
                         Container(
                           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),

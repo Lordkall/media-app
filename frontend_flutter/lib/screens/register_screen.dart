@@ -151,37 +151,65 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget _buildTextField(String label, TextEditingController controller, {bool isPassword = false, bool? obscureText, VoidCallback? onToggleObscure, TextInputType? keyboardType}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: TextFormField(
-        controller: controller,
-        decoration: InputDecoration(
-          labelText: label,
-          filled: true,
-          fillColor: const Color(0x20FFFFFF),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0x60FFFFFF)),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0x60FFFFFF)),
-          ),
-          labelStyle: const TextStyle(color: Color(0xFF0B2545)),
-          suffixIcon: isPassword 
-              ? IconButton(
-                  icon: Icon(
-                    obscureText == true ? Icons.visibility_off : Icons.visibility,
-                    color: const Color(0xFF0B2545),
+      child: isPassword
+          ? StatefulBuilder(
+              builder: (context, setLocalState) {
+                bool localObscure = obscureText ?? true;
+                return TextFormField(
+                  controller: controller,
+                  obscureText: localObscure,
+                  keyboardType: keyboardType,
+                  decoration: InputDecoration(
+                    labelText: label,
+                    filled: true,
+                    fillColor: const Color(0x20FFFFFF),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0x60FFFFFF)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0x60FFFFFF)),
+                    ),
+                    labelStyle: const TextStyle(color: Color(0xFF0B2545)),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        localObscure ? Icons.visibility_off : Icons.visibility,
+                        color: const Color(0xFF0B3C85),
+                      ),
+                      onPressed: () {
+                        if (onToggleObscure != null) onToggleObscure();
+                        setLocalState(() {});
+                      },
+                    ),
                   ),
-                  onPressed: onToggleObscure,
-                )
-              : null,
-        ),
-        obscureText: obscureText ?? false,
-        keyboardType: keyboardType,
-        validator: (value) => value!.isEmpty ? 'Campo requerido' : null,
-      ),
+                  validator: (value) => value!.isEmpty ? 'Campo requerido' : null,
+                );
+              },
+            )
+          : TextFormField(
+              controller: controller,
+              decoration: InputDecoration(
+                labelText: label,
+                filled: true,
+                fillColor: const Color(0x20FFFFFF),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0x60FFFFFF)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0x60FFFFFF)),
+                ),
+                labelStyle: const TextStyle(color: Color(0xFF0B2545)),
+              ),
+              obscureText: false,
+              keyboardType: keyboardType,
+              validator: (value) => value!.isEmpty ? 'Campo requerido' : null,
+            ),
     );
   }
+
 
   Widget _buildRadio(String val) {
     return Row(

@@ -82,9 +82,6 @@ async def get_all_doctors(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    # Public route or admin route? Browsing doctors is public (patients can see them)
-    # So we don't strictly require admin here, but since it's in admin router maybe we just return all
-    # For now we'll allow any logged in user
     query = select(Doctor, User, Subscription).join(User, Doctor.user_id == User.id).outerjoin(
         Subscription, 
         (Subscription.doctor_id == Doctor.id) & (Subscription.status == SubscriptionStatus.ACTIVE)
@@ -99,6 +96,12 @@ async def get_all_doctors(
             now = datetime.datetime.utcnow()
             end = sub.end_date.replace(tzinfo=None)
             days_remaining = (end - now).days if end > now else 0
+
+        # Also check for pending approval subscriptions
+        pending_sub = await db.scalar(select(Subscription).where(
+            Subscription.doctor_id == doc.id,
+            Subscription.status == SubscriptionStatus.PENDING_APPROVAL
+        ))
 
         doctors_list.append({
             "id": doc.id,
@@ -115,10 +118,16 @@ async def get_all_doctors(
             "plan": sub.plan.value if sub else "Ninguno",
             "subscription_id": sub.id if sub else None,
             "days_remaining": days_remaining,
-            "clinic_id": doc.clinic_id
+            "clinic_id": doc.clinic_id,
+            # Pending payment info
+            "pending_sub_id": pending_sub.id if pending_sub else None,
+            "pending_plan": pending_sub.plan.value if pending_sub else None,
+            "pending_reference": pending_sub.reference_number if pending_sub else None,
+            "pending_amount_bs": pending_sub.amount_bs if pending_sub else None,
         })
         
     return doctors_list
+
 
 @router.get("/clinics")
 async def get_all_clinics(
@@ -330,28 +339,71 @@ async def approve_subscription(
         
     import datetime
     
-    # Cancel previous active subscriptions for this doctor
-    existing = await db.execute(select(Subscription).where(
-        Subscription.doctor_id == sub.doctor_id, 
-        Subscription.status == SubscriptionStatus.ACTIVE,
-        Subscription.id != sub.id
-    ))
-    for e in existing.scalars():
-        e.status = SubscriptionStatus.CANCELLED
+    # Cancel previous active subscriptions for this doctor (not the one being approved)
+    if sub.doctor_id:
+        existing = await db.execute(select(Subscription).where(
+            Subscription.doctor_id == sub.doctor_id, 
+            Subscription.status == SubscriptionStatus.ACTIVE,
+            Subscription.id != sub.id
+        ))
+        for e in existing.scalars():
+            e.status = SubscriptionStatus.CANCELLED
+    
+    if sub.clinic_id:
+        existing = await db.execute(select(Subscription).where(
+            Subscription.clinic_id == sub.clinic_id, 
+            Subscription.status == SubscriptionStatus.ACTIVE,
+            Subscription.id != sub.id
+        ))
+        for e in existing.scalars():
+            e.status = SubscriptionStatus.CANCELLED
         
     sub.status = SubscriptionStatus.ACTIVE
-    # Update start date to now, so it's immediately active (end_date is already extended)
     sub.start_date = datetime.datetime.utcnow()
+    # Set grace end date (5 days after end_date)
+    if sub.end_date:
+        sub.grace_end_date = sub.end_date + datetime.timedelta(days=5)
     
-    # Update notification
+    # Update notification to approved
     notifs = await db.execute(select(Notification).where(Notification.action_url == f"approve_subscription:{sub.id}"))
     for n in notifs.scalars():
         n.is_read = True
         n.title = "Pago Aprobado"
-        n.message = "La suscripción fue activada exitosamente."
+        n.message = f"La suscripción plan {sub.plan.value} fue activada exitosamente."
+        
+    # Notify the doctor/clinic their plan was approved
+    try:
+        target_user_id = None
+        if sub.doctor_id:
+            doc = await db.scalar(select(Doctor).where(Doctor.id == sub.doctor_id))
+            if doc:
+                target_user_id = doc.user_id
+        
+        if target_user_id:
+            approval_notif = Notification(
+                user_id=target_user_id,
+                type=NotificationType.DOCTOR_APPROVED,
+                title="¡Suscripción Aprobada!",
+                message=f"Tu plan {sub.plan.value} ha sido activado. ¡Bienvenido a Salud Now!",
+                action_url=None
+            )
+            db.add(approval_notif)
+            
+            # Send Firebase push notification
+            from app.core.firebase import send_push_notification
+            target_user = await db.scalar(select(User).where(User.id == target_user_id))
+            if target_user and target_user.fcm_token:
+                send_push_notification(
+                    target_user.fcm_token,
+                    "¡Suscripción Aprobada!",
+                    f"Tu plan {sub.plan.value} ha sido activado. ¡Bienvenido a Salud Now!"
+                )
+    except Exception as e:
+        print(f"Error sending approval notification: {e}")
         
     await db.commit()
     return {"message": "Subscription approved"}
+
 
 @router.post("/subscriptions/{sub_id}/reject")
 async def reject_subscription(

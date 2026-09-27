@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import '../core/profile_image_helper.dart';
 import '../core/api_client.dart';
@@ -50,24 +49,44 @@ class _ProfileTabState extends State<ProfileTab> {
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery, maxWidth: 800, maxHeight: 800, imageQuality: 85);
     if (pickedFile != null) {
       setState(() => _isLoading = true);
-      final bytes = await pickedFile.readAsBytes();
-      final url = await ApiClient.uploadFile('/upload/avatar', bytes: bytes, filename: pickedFile.name);
-      if (url != null) {
-        setState(() {
-          if (_userData != null) {
-            _userData!['avatar_url'] = url;
+      try {
+        final bytes = await pickedFile.readAsBytes();
+        final url = await ApiClient.uploadFile('/upload/avatar', bytes: bytes, filename: pickedFile.name);
+        if (url != null) {
+          // Also update the avatar_url in the user's profile
+          await ApiClient.put('/users/me', {'avatar_url': url});
+          if (mounted) {
+            setState(() {
+              if (_userData != null) {
+                _userData!['avatar_url'] = url;
+              }
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('✓ Foto actualizada correctamente.'), backgroundColor: Colors.green)
+            );
           }
-        });
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Foto actualizada correctamente.')));
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error al subir la imagen.')));
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Error al subir la imagen. Inténtalo de nuevo.'), backgroundColor: Colors.red)
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red)
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
       }
-      setState(() => _isLoading = false);
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
