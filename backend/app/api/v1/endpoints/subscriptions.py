@@ -175,8 +175,32 @@ async def test_renew_error(db: AsyncSession = Depends(get_db)):
 async def fix_subscriptions_db(db: AsyncSession = Depends(get_db)):
     from sqlalchemy import text
     results = []
-    columns = [
-        "clinic_id INTEGER REFERENCES clinics(id)",
+    
+    # Fix doctors table first (this is the main blocking issue)
+    doctors_columns = [
+        "clinic_id INTEGER REFERENCES clinics(id) ON DELETE SET NULL",
+        "max_patients_per_day INTEGER DEFAULT 5",
+        "sponsored_priority INTEGER DEFAULT 99",
+        "is_sponsored BOOLEAN DEFAULT FALSE",
+        "is_featured BOOLEAN DEFAULT FALSE",
+        "is_approved BOOLEAN DEFAULT FALSE",
+        "rating FLOAT DEFAULT 0.0",
+        "total_reviews INTEGER DEFAULT 0",
+        "consultation_fee FLOAT",
+        "bio TEXT",
+        "clinic_info TEXT",
+    ]
+    for col_def in doctors_columns:
+        col_name = col_def.split()[0]
+        try:
+            await db.execute(text(f"ALTER TABLE doctors ADD COLUMN IF NOT EXISTS {col_def}"))
+            results.append(f"doctors.{col_name}: ok")
+        except Exception as e:
+            results.append(f"doctors.{col_name}: error ({str(e)[:80]})")
+    
+    # Fix subscriptions table
+    sub_columns = [
+        "clinic_id INTEGER REFERENCES clinics(id) ON DELETE SET NULL",
         "auto_renew BOOLEAN DEFAULT TRUE",
         "created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()",
         "updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()",
@@ -184,14 +208,20 @@ async def fix_subscriptions_db(db: AsyncSession = Depends(get_db)):
         "screenshot_base64 TEXT",
         "amount_bs FLOAT",
     ]
-    for col_def in columns:
+    for col_def in sub_columns:
         col_name = col_def.split()[0]
         try:
             await db.execute(text(f"ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS {col_def}"))
-            results.append(f"{col_name}: ok")
+            results.append(f"subscriptions.{col_name}: ok")
         except Exception as e:
-            results.append(f"{col_name}: error ({e})")
-    await db.commit()
+            results.append(f"subscriptions.{col_name}: error ({str(e)[:80]})")
+    
+    try:
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        results.append(f"COMMIT ERROR: {e}")
+    
     return {"status": "ok", "results": results}
 
 @router.get("/fix-all-db")
