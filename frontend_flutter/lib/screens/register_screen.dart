@@ -25,6 +25,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _clinicDescriptionCtrl = TextEditingController();
 
   bool _isLoading = false;
+  bool _obscurePassword = true;
+  bool _obscureRepeatPassword = true;
 
   final List<String> _estadosVE = [
     "Amazonas", "Anzoátegui", "Apure", "Aragua", "Barinas", "Bolívar", "Carabobo", "Cojedes",
@@ -146,7 +148,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller, {bool isPassword = false, TextInputType? keyboardType}) {
+  Widget _buildTextField(String label, TextEditingController controller, {bool isPassword = false, bool? obscureText, VoidCallback? onToggleObscure, TextInputType? keyboardType}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: TextFormField(
@@ -164,8 +166,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
             borderSide: const BorderSide(color: Color(0x60FFFFFF)),
           ),
           labelStyle: const TextStyle(color: Color(0xFF0B2545)),
+          suffixIcon: isPassword 
+              ? IconButton(
+                  icon: Icon(
+                    obscureText == true ? Icons.visibility_off : Icons.visibility,
+                    color: const Color(0xFF0B2545),
+                  ),
+                  onPressed: onToggleObscure,
+                )
+              : null,
         ),
-        obscureText: isPassword,
+        obscureText: obscureText ?? false,
         keyboardType: keyboardType,
         validator: (value) => value!.isEmpty ? 'Campo requerido' : null,
       ),
@@ -384,8 +395,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   _buildTextField('Descripción de los servicios ofrecidos', _clinicDescriptionCtrl),
                                 ],
                                 _buildTextField('Dirección Completa', _addressCtrl),
-                                _buildTextField('Contraseña', _passwordCtrl, isPassword: true),
-                                _buildTextField('Repetir contraseña', _passwordRepeatCtrl, isPassword: true),
+                                _buildTextField('Contraseña', _passwordCtrl, isPassword: true, obscureText: _obscurePassword, onToggleObscure: () => setState(() => _obscurePassword = !_obscurePassword)),
+                                _buildTextField('Repetir contraseña', _passwordRepeatCtrl, isPassword: true, obscureText: _obscureRepeatPassword, onToggleObscure: () => setState(() => _obscureRepeatPassword = !_obscureRepeatPassword)),
                                 const SizedBox(height: 20),
                                 ElevatedButton(
                                   onPressed: _isLoading ? null : _register,

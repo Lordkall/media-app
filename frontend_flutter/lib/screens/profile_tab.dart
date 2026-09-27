@@ -53,7 +53,8 @@ class _ProfileTabState extends State<ProfileTab> {
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       setState(() => _isLoading = true);
-      final url = await ApiClient.uploadFile('/upload/avatar', pickedFile.path);
+      final bytes = await pickedFile.readAsBytes();
+      final url = await ApiClient.uploadFile('/upload/avatar', bytes: bytes, filename: pickedFile.name);
       if (url != null) {
         setState(() {
           if (_userData != null) {

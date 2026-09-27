@@ -24,9 +24,9 @@ async def get_admin_stats(
 ):
     check_admin(current_user)
     
-    # Counts
     patients_count = await db.scalar(select(func.count()).select_from(Patient))
     doctors_count = await db.scalar(select(func.count()).select_from(Doctor))
+    clinics_count = await db.scalar(select(func.count()).select_from(Clinic))
     subs_count = await db.scalar(
         select(func.count())
         .select_from(Subscription)
@@ -46,20 +46,33 @@ async def get_admin_stats(
         .group_by(User.state)
     )
     
+    state_clinics = await db.execute(
+        select(User.state, func.count(Clinic.id))
+        .join(Clinic, User.id == Clinic.user_id)
+        .group_by(User.state)
+    )
+    
     states_dict = {}
     for state, count in state_patients:
         if state:
-            states_dict[state] = {"name": state, "patients": count, "doctors": 0}
+            states_dict[state] = {"name": state, "patients": count, "doctors": 0, "clinics": 0}
             
     for state, count in state_doctors:
         if state:
             if state not in states_dict:
-                states_dict[state] = {"name": state, "patients": 0, "doctors": 0}
+                states_dict[state] = {"name": state, "patients": 0, "doctors": 0, "clinics": 0}
             states_dict[state]["doctors"] = count
+            
+    for state, count in state_clinics:
+        if state:
+            if state not in states_dict:
+                states_dict[state] = {"name": state, "patients": 0, "doctors": 0, "clinics": 0}
+            states_dict[state]["clinics"] = count
             
     return {
         "patients_count": patients_count or 0,
         "doctors_count": doctors_count or 0,
+        "clinics_count": clinics_count or 0,
         "subscribed_doctors": subs_count or 0,
         "states": list(states_dict.values())
     }

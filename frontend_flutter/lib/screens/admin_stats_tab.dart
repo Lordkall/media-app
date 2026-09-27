@@ -44,6 +44,7 @@ class _AdminStatsTabState extends State<AdminStatsTab> {
 
     final patients = _statsData?['patients_count']?.toString() ?? '0';
     final doctors = _statsData?['doctors_count']?.toString() ?? '0';
+    final clinics = _statsData?['clinics_count']?.toString() ?? '0';
     final subs = _statsData?['subscribed_doctors']?.toString() ?? '0';
     
     return Container(
@@ -80,10 +81,12 @@ class _AdminStatsTabState extends State<AdminStatsTab> {
               Row(
                 children: [
                   Expanded(
-                    child: _buildStatCard('Doctores\nSuscritos', subs, Icons.workspace_premium, Colors.amber),
+                    child: _buildStatCard('Clínicas\nRegistradas', clinics, Icons.local_hospital, Colors.redAccent),
                   ),
                   const SizedBox(width: 16),
-                  const Spacer(),
+                  Expanded(
+                    child: _buildStatCard('Cuentas\nSuscritas', subs, Icons.workspace_premium, Colors.amber),
+                  ),
                 ],
               ),
               const SizedBox(height: 32),
@@ -150,7 +153,7 @@ class _AdminStatsTabState extends State<AdminStatsTab> {
           final state = states[index];
           return ListTile(
             title: Text(state['name'] as String, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0B2545))),
-            subtitle: Text('Pacientes: ${state['patients']} | Doctores: ${state['doctors']}', style: const TextStyle(color: Color(0xFF475569))),
+            subtitle: Text('Pacientes: ${state['patients']} | Doctores: ${state['doctors']} | Clínicas: ${state['clinics']}', style: const TextStyle(color: Color(0xFF475569))),
             trailing: const Icon(Icons.map, color: Color(0xFF38B6FF)),
           );
         },

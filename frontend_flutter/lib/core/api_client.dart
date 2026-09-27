@@ -68,7 +68,7 @@ class ApiClient {
     return await http.delete(url, headers: headers);
   }
 
-  static Future<String?> uploadFile(String endpoint, String filePath) async {
+  static Future<String?> uploadFile(String endpoint, {required List<int> bytes, required String filename}) async {
     final url = Uri.parse('$baseUrl$endpoint');
     final request = http.MultipartRequest('POST', url);
     final prefs = await SharedPreferences.getInstance();
@@ -78,7 +78,7 @@ class ApiClient {
       request.headers['Authorization'] = 'Bearer $token';
     }
     
-    request.files.add(await http.MultipartFile.fromPath('file', filePath));
+    request.files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename));
     
     final response = await request.send();
     if (response.statusCode == 200) {
