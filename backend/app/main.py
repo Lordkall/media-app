@@ -65,6 +65,31 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"Subscriptions migration error: {e}")
 
+    # Auto-migrate doctors table
+    try:
+        async with engine.begin() as conn:
+            doctors_columns = [
+                "clinic_id INTEGER REFERENCES clinics(id) ON DELETE SET NULL",
+                "max_patients_per_day INTEGER DEFAULT 5",
+                "sponsored_priority INTEGER DEFAULT 99",
+                "is_sponsored BOOLEAN DEFAULT FALSE",
+                "is_featured BOOLEAN DEFAULT FALSE",
+                "is_approved BOOLEAN DEFAULT FALSE",
+                "rating FLOAT DEFAULT 0.0",
+                "total_reviews INTEGER DEFAULT 0",
+                "consultation_fee FLOAT",
+                "bio TEXT",
+                "clinic_info TEXT",
+            ]
+            for col_def in doctors_columns:
+                try:
+                    await conn.execute(text(f"ALTER TABLE doctors ADD COLUMN IF NOT EXISTS {col_def}"))
+                except Exception:
+                    pass
+            print("Doctors migration done.")
+    except Exception as e:
+        print(f"Doctors migration error: {e}")
+
         
     # Start BCV background updater
     bcv_task = asyncio.create_task(bcv_updater_loop())
