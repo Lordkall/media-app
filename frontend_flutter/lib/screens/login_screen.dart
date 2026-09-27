@@ -163,12 +163,27 @@ class _LoginScreenState extends State<LoginScreen> {
                  Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => SelectPlanScreen(doctorData: docData, isRenewal: false)));
                  return;
                }
-             }
-          }
+             } else {
+                 if (!mounted) return;
+                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al cargar suscripción: ${subResp.statusCode}')));
+                 return; // Prevent bypass
+               }
+            } else {
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error al cargar perfil de doctor.')));
+              return; // Prevent bypass
+            }
         }
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error al cargar datos del usuario.')));
+        return; // Prevent bypass
       }
     } catch (e) {
       print('Navigation error: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error de conexión: $e')));
+      return; // Prevent bypass
     }
 
     if (!mounted) return;

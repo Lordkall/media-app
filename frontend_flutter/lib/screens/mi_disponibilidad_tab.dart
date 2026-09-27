@@ -12,6 +12,7 @@ class MiDisponibilidadTab extends StatefulWidget {
 class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
   final TextEditingController _maxPatientsController = TextEditingController(text: '999');
   bool _sinLimites = true;
+  bool _isSuccess = false;
   String _selectedStartTime = '09:00';
   int _weekOffset = 0;
   
@@ -94,9 +95,17 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
         'availabilities': avails
       });
       
-      if (res.statusCode == 200) {
+      if (res.statusCode == 200 || res.statusCode == 201) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Disponibilidad Guardada')));
+          setState(() => _isSuccess = true);
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Disponibilidad Guardada exitosamente.'), backgroundColor: Colors.green));
+          Future.delayed(const Duration(seconds: 2), () {
+            if (mounted) setState(() => _isSuccess = false);
+          });
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al guardar: ${res.statusCode}'), backgroundColor: Colors.red));
         }
       }
     } catch (e) {
@@ -276,10 +285,10 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
                     onPressed: _isLoading ? null : _saveAvailability,
                     icon: _isLoading 
                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : const Icon(Icons.save, color: Colors.white),
-                    label: const Text('Guardar Disponibilidad', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                      : Icon(_isSuccess ? Icons.check : Icons.save, color: Colors.white),
+                    label: Text(_isSuccess ? '¡Guardado!' : 'Guardar Disponibilidad', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0056B3),
+                      backgroundColor: _isSuccess ? Colors.green : const Color(0xFF0056B3),
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
