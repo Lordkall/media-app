@@ -12,37 +12,49 @@ class AdminSubscriptionsTab extends StatefulWidget {
 class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
   bool _isLoading = true;
   List<dynamic> _doctors = [];
+  List<dynamic> _clinics = [];
+  String _searchType = 'Doctores'; // 'Doctores' or 'Clínicas'
 
   @override
   void initState() {
     super.initState();
-    _fetchDoctors();
+    _fetchData();
   }
 
-  Future<void> _fetchDoctors() async {
+  Future<void> _fetchData() async {
+    setState(() => _isLoading = true);
     try {
-      final response = await ApiClient.get('/admin/doctors');
-      if (response.statusCode == 200) {
-        setState(() {
-          _doctors = jsonDecode(response.body);
-          _isLoading = false;
-        });
-      } else {
-        setState(() => _isLoading = false);
-      }
+      final docRes = await ApiClient.get('/admin/doctors');
+      final cliRes = await ApiClient.get('/admin/clinics');
+      
+      setState(() {
+        if (docRes.statusCode == 200) {
+          _doctors = jsonDecode(docRes.body);
+        }
+        if (cliRes.statusCode == 200) {
+          _clinics = jsonDecode(cliRes.body);
+        }
+        _isLoading = false;
+      });
     } catch (e) {
-      print('Error fetching doctors: $e');
+      print('Error fetching data: $e');
       setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _updateSub(int doctorId, String action, [String? plan]) async {
+  Future<void> _updateSub(int id, String action, [String? plan]) async {
     try {
-      final url = '/admin/subscriptions/$doctorId/$action' + (plan != null ? '?plan=$plan' : '');
+      String url;
+      if (_searchType == 'Doctores') {
+        url = '/admin/subscriptions/$id/$action' + (plan != null ? '?plan=$plan' : '');
+      } else {
+        url = '/admin/clinic_subscriptions/$id/$action' + (plan != null ? '?plan=$plan' : '');
+      }
+      
       final response = await ApiClient.post(url, {});
       if (response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Suscripción actualizada')));
-        _fetchDoctors();
+        _fetchData();
       }
     } catch (e) {
       print('Error updating subscription: $e');
@@ -51,6 +63,8 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
 
   @override
   Widget build(BuildContext context) {
+    final items = _searchType == 'Doctores' ? _doctors : _clinics;
+
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -70,39 +84,84 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
                 children: [
                   Text('Gestión de Suscripciones', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF0B2545))),
                   SizedBox(height: 4),
-                  Text('Aprueba pagos y asigna rangos VIP o Destacado', style: TextStyle(color: Color(0xFF475569))),
+                  Text('Aprueba pagos y asigna rangos', style: TextStyle(color: Color(0xFF475569))),
                 ],
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: Text('Doctores Registrados y Estado de Suscripción', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0B2545))),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() => _searchType = 'Doctores'),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: _searchType == 'Doctores' ? const Color(0xFF0056B3) : Colors.transparent,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFF0056B3)),
+                        ),
+                        child: Center(
+                          child: Text('Doctores', style: TextStyle(
+                            color: _searchType == 'Doctores' ? Colors.white : const Color(0xFF0056B3),
+                            fontWeight: FontWeight.bold
+                          )),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() => _searchType = 'Clínicas'),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: _searchType == 'Clínicas' ? const Color(0xFF0056B3) : Colors.transparent,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFF0056B3)),
+                        ),
+                        child: Center(
+                          child: Text('Clínicas', style: TextStyle(
+                            color: _searchType == 'Clínicas' ? Colors.white : const Color(0xFF0056B3),
+                            fontWeight: FontWeight.bold
+                          )),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
+            const SizedBox(height: 16),
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
-                  : _doctors.isEmpty 
-                    ? const Center(child: Text('No hay doctores registrados.'))
+                  : items.isEmpty 
+                    ? Center(child: Text('No hay ${_searchType.toLowerCase()} registrados.'))
                     : ListView.separated(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      itemCount: _doctors.length,
+                      itemCount: items.length,
                       separatorBuilder: (context, index) => const SizedBox(height: 16),
                       itemBuilder: (context, index) {
-                        final doc = _doctors[index];
-                        final name = 'Dr. ${doc['first_name']} ${doc['last_name']}';
-                        final specialties = (doc['specialties'] as List<dynamic>?)?.join(', ') ?? 'Médico General';
-                        final plan = doc['plan'];
+                        final item = items[index];
+                        final name = _searchType == 'Doctores' 
+                            ? 'Dr. ${item['first_name']} ${item['last_name']}'
+                            : '${item['first_name']}';
+                        final specialties = (item['specialties'] as List<dynamic>?)?.join(', ') ?? 'Médico General';
+                        final plan = item['plan'];
                         
                         Color planColor = Colors.grey;
-                        if (plan == 'sponsored') planColor = const Color(0xFF0056B3);
+                        if (plan == 'sponsored' || plan == 'clinic_vip') planColor = const Color(0xFF0056B3);
                         else if (plan == 'basic' || plan == 'featured') planColor = const Color(0xFF00BCD4);
                         
-                        final daysRemaining = doc['days_remaining'] ?? 0;
+                        final daysRemaining = item['days_remaining'] ?? 0;
 
                         return _buildSubCard(
-                          doc['id'],
+                          item['id'],
                           name, 
-                          '$specialties | ${doc['email']}', 
+                          _searchType == 'Doctores' ? '$specialties | ${item['email']}' : '${item['email']}', 
                           plan == 'Ninguno' ? 'Sin plan' : plan, 
                           planColor,
                           daysRemaining
@@ -116,7 +175,7 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
     );
   }
 
-  Widget _buildSubCard(int doctorId, String name, String details, String plan, Color planColor, int daysRemaining) {
+  Widget _buildSubCard(int targetId, String name, String details, String plan, Color planColor, int daysRemaining) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -136,7 +195,7 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
                   children: [
                     Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0B2545))),
                     const SizedBox(height: 8),
-                    Text('Especialidad:\n$details', style: const TextStyle(color: Color(0xFF475569))),
+                    Text(details, style: const TextStyle(color: Color(0xFF475569))),
                     if (plan != 'Sin plan') ...[
                       const SizedBox(height: 4),
                       Text('Días restantes: $daysRemaining', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0056B3))),
@@ -158,26 +217,28 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
             children: [
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: () => _updateSub(doctorId, 'activate', 'sponsored'),
+                  onPressed: () => _updateSub(targetId, 'activate', _searchType == 'Doctores' ? 'sponsored' : 'clinic_vip'),
                   icon: const Icon(Icons.star, color: Colors.white, size: 16),
                   label: const Text('VIP', style: TextStyle(color: Colors.white, fontSize: 12)),
                   style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0056B3)),
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => _updateSub(doctorId, 'activate', 'featured'),
-                  icon: const Icon(Icons.check, color: Colors.white, size: 16),
-                  label: const Text('Básico', style: TextStyle(color: Colors.white, fontSize: 12)),
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00BCD4)),
+              if (_searchType == 'Doctores') ...[
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _updateSub(targetId, 'activate', 'featured'),
+                    icon: const Icon(Icons.check, color: Colors.white, size: 16),
+                    label: const Text('Básico', style: TextStyle(color: Colors.white, fontSize: 12)),
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00BCD4)),
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
           const SizedBox(height: 8),
           ElevatedButton.icon(
-            onPressed: () => _updateSub(doctorId, 'renew'),
+            onPressed: () => _updateSub(targetId, 'renew'),
             icon: const Icon(Icons.autorenew, color: Colors.white),
             label: const Text('Renovar Suscripción', style: TextStyle(color: Colors.white)),
             style: ElevatedButton.styleFrom(
@@ -188,7 +249,7 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
           ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
-            onPressed: () => _updateSub(doctorId, 'deactivate'),
+            onPressed: () => _updateSub(targetId, 'deactivate'),
             icon: const Icon(Icons.block, color: Colors.red),
             label: const Text('Desactivar Suscripción', style: TextStyle(color: Colors.red)),
             style: OutlinedButton.styleFrom(

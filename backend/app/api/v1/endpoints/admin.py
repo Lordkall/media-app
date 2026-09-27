@@ -7,6 +7,7 @@ from app.models.doctors import Doctor
 from app.models.patients import Patient
 from app.models.subscriptions import Subscription, SubscriptionStatus, SubscriptionPlan
 from app.models.notifications import Notification, NotificationType
+from app.models.clinics import Clinic
 from app.api.v1.endpoints.users import get_current_user
 from typing import List, Dict, Any
 
@@ -106,6 +107,45 @@ async def get_all_doctors(
         
     return doctors_list
 
+@router.get("/clinics")
+async def get_all_clinics(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    query = select(Clinic, User, Subscription).join(User, Clinic.user_id == User.id).outerjoin(
+        Subscription, 
+        (Subscription.clinic_id == Clinic.id) & (Subscription.status == SubscriptionStatus.ACTIVE)
+    )
+    result = await db.execute(query)
+    
+    clinics_list = []
+    for clinic, user, sub in result:
+        days_remaining = 0
+        if sub and sub.end_date:
+            import datetime
+            now = datetime.datetime.utcnow()
+            end = sub.end_date.replace(tzinfo=None)
+            days_remaining = (end - now).days if end > now else 0
+
+        clinics_list.append({
+            "id": clinic.id,
+            "user_id": user.id,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "email": user.email,
+            "specialties": ["Clínica"],
+            "state": user.state,
+            "address": user.address or 'Sin dirección registrada',
+            "consultation_fee": 0.0,
+            "avatar_url": user.avatar_url,
+            "is_vip": sub is not None and sub.plan == SubscriptionPlan.CLINIC_VIP,
+            "plan": sub.plan.value if sub else "Ninguno",
+            "subscription_id": sub.id if sub else None,
+            "days_remaining": days_remaining,
+        })
+        
+    return clinics_list
+
 @router.post("/subscriptions/{doctor_id}/activate")
 async def activate_subscription(
     doctor_id: int,
@@ -185,6 +225,79 @@ async def deactivate_subscription(
     check_admin(current_user)
     
     sub = await db.scalar(select(Subscription).where(Subscription.doctor_id == doctor_id, Subscription.status == SubscriptionStatus.ACTIVE))
+    if sub:
+        sub.status = SubscriptionStatus.CANCELLED
+        await db.commit()
+    return {"message": "Subscription deactivated"}
+
+@router.post("/clinic_subscriptions/{clinic_id}/activate")
+async def activate_clinic_subscription(
+    clinic_id: int,
+    plan: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    check_admin(current_user)
+    
+    cli = await db.scalar(select(Clinic).where(Clinic.id == clinic_id))
+    if not cli:
+        raise HTTPException(status_code=404, detail="Clinic not found")
+        
+    import datetime
+    now = datetime.datetime.utcnow()
+    
+    existing = await db.execute(select(Subscription).where(Subscription.clinic_id == clinic_id, Subscription.status == SubscriptionStatus.ACTIVE))
+    existing_subs = existing.scalars().all()
+    
+    new_days = 30
+    
+    if existing_subs:
+        old_sub = existing_subs[0]
+        for e in existing_subs:
+            e.status = SubscriptionStatus.CANCELLED
+            
+        if old_sub.end_date and old_sub.end_date.replace(tzinfo=None) > now:
+            new_days = (old_sub.end_date.replace(tzinfo=None) - now).days
+
+    end_date = now + datetime.timedelta(days=new_days)
+    new_sub = Subscription(
+        clinic_id=clinic_id,
+        plan=SubscriptionPlan(plan),
+        status=SubscriptionStatus.ACTIVE,
+        start_date=now,
+        end_date=end_date,
+        grace_end_date=end_date + datetime.timedelta(days=5)
+    )
+    db.add(new_sub)
+    await db.commit()
+    return {"message": "Subscription activated"}
+
+@router.post("/clinic_subscriptions/{clinic_id}/renew")
+async def renew_clinic_subscription(
+    clinic_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    check_admin(current_user)
+    
+    sub = await db.scalar(select(Subscription).where(Subscription.clinic_id == clinic_id, Subscription.status == SubscriptionStatus.ACTIVE))
+    if not sub:
+        raise HTTPException(status_code=400, detail="No active subscription to renew")
+        
+    import datetime
+    sub.end_date = sub.end_date + datetime.timedelta(days=30)
+    await db.commit()
+    return {"message": "Subscription renewed"}
+
+@router.post("/clinic_subscriptions/{clinic_id}/deactivate")
+async def deactivate_clinic_subscription(
+    clinic_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    check_admin(current_user)
+    
+    sub = await db.scalar(select(Subscription).where(Subscription.clinic_id == clinic_id, Subscription.status == SubscriptionStatus.ACTIVE))
     if sub:
         sub.status = SubscriptionStatus.CANCELLED
         await db.commit()
