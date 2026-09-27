@@ -84,8 +84,14 @@ class _SelectPlanScreenState extends State<SelectPlanScreen> {
         }
       } else {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error al procesar la solicitud.')));
+        String detail = 'Error al procesar la solicitud.';
+        try {
+          final body = jsonDecode(response.body);
+          detail = body['detail'] ?? body['message'] ?? response.body;
+        } catch (_) {}
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(detail), duration: const Duration(seconds: 8)));
       }
+
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
