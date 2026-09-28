@@ -32,12 +32,10 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
     }).toList();
 
     filtered.sort((a, b) {
-      final aHasSubscription = a['plan'] != null &&
-          a['plan'] != 'Ninguno' &&
-          a['plan'] != 'none';
-      final bHasSubscription = b['plan'] != null &&
-          b['plan'] != 'Ninguno' &&
-          b['plan'] != 'none';
+      final aHasSubscription =
+          a['plan'] != null && a['plan'] != 'Ninguno' && a['plan'] != 'none';
+      final bHasSubscription =
+          b['plan'] != null && b['plan'] != 'Ninguno' && b['plan'] != 'none';
       if (aHasSubscription != bHasSubscription) {
         return aHasSubscription ? -1 : 1;
       }
@@ -60,7 +58,7 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
     try {
       final docRes = await ApiClient.get('/admin/doctors');
       final cliRes = await ApiClient.get('/admin/clinics');
-      
+
       setState(() {
         if (docRes.statusCode == 200) {
           _doctors = jsonDecode(docRes.body);
@@ -85,26 +83,83 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
       } else if (action == 'reject') {
         url = '/admin/subscriptions/$id/reject';
       } else if (_searchType == 'Doctores') {
-        url = '/admin/subscriptions/$id/$action' + (plan != null ? '?plan=$plan' : '');
+        url = '/admin/subscriptions/$id/$action' +
+            (plan != null ? '?plan=$plan' : '');
       } else {
-        url = '/admin/clinic_subscriptions/$id/$action' + (plan != null ? '?plan=$plan' : '');
+        url = '/admin/clinic_subscriptions/$id/$action' +
+            (plan != null ? '?plan=$plan' : '');
       }
-      
+
       final response = await ApiClient.post(url, {});
       if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('✓ Suscripción actualizada'), backgroundColor: Colors.green)
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('✓ Suscripción actualizada'),
+            backgroundColor: Colors.green));
         _fetchData();
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${response.body}'), backgroundColor: Colors.red)
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Error: ${response.body}'),
+            backgroundColor: Colors.red));
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red)
-      );
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+    }
+  }
+
+  Future<void> _deleteAccount(int profileId, String name) async {
+    final isDoctor = _searchType == 'Doctores';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Eliminar ${isDoctor ? 'doctor' : 'clínica'}'),
+        content: Text(
+          '¿Eliminar permanentemente a $name y sus datos de la base de datos? '
+          '${isDoctor ? 'También se eliminarán sus citas, horario, suscripciones y cuenta de asistente.' : 'Los doctores asociados a la clínica conservarán sus cuentas.'} '
+          'Esta acción no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Eliminar permanentemente'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    try {
+      final endpoint =
+          isDoctor ? '/admin/doctors/$profileId' : '/admin/clinics/$profileId';
+      final response = await ApiClient.delete(endpoint);
+      if (response.statusCode == 200) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('$name fue eliminado'),
+              backgroundColor: Colors.green),
+        );
+        await _fetchData();
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('No se pudo eliminar: ${response.body}'),
+              backgroundColor: Colors.red),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Error al eliminar: $e'),
+              backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
@@ -129,9 +184,14 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Gestión de Suscripciones', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF0B2545))),
+                  Text('Gestión de Suscripciones',
+                      style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0B2545))),
                   SizedBox(height: 4),
-                  Text('Aprueba pagos y asigna rangos', style: TextStyle(color: Color(0xFF475569))),
+                  Text('Aprueba pagos y asigna rangos',
+                      style: TextStyle(color: Color(0xFF475569))),
                 ],
               ),
             ),
@@ -145,15 +205,19 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         decoration: BoxDecoration(
-                          color: _searchType == 'Doctores' ? const Color(0xFF0056B3) : Colors.transparent,
+                          color: _searchType == 'Doctores'
+                              ? const Color(0xFF0056B3)
+                              : Colors.transparent,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(color: const Color(0xFF0056B3)),
                         ),
                         child: Center(
-                          child: Text('Doctores', style: TextStyle(
-                            color: _searchType == 'Doctores' ? Colors.white : const Color(0xFF0056B3),
-                            fontWeight: FontWeight.bold
-                          )),
+                          child: Text('Doctores',
+                              style: TextStyle(
+                                  color: _searchType == 'Doctores'
+                                      ? Colors.white
+                                      : const Color(0xFF0056B3),
+                                  fontWeight: FontWeight.bold)),
                         ),
                       ),
                     ),
@@ -165,15 +229,19 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         decoration: BoxDecoration(
-                          color: _searchType == 'Clínicas' ? const Color(0xFF0056B3) : Colors.transparent,
+                          color: _searchType == 'Clínicas'
+                              ? const Color(0xFF0056B3)
+                              : Colors.transparent,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(color: const Color(0xFF0056B3)),
                         ),
                         child: Center(
-                          child: Text('Clínicas', style: TextStyle(
-                            color: _searchType == 'Clínicas' ? Colors.white : const Color(0xFF0056B3),
-                            fontWeight: FontWeight.bold
-                          )),
+                          child: Text('Clínicas',
+                              style: TextStyle(
+                                  color: _searchType == 'Clínicas'
+                                      ? Colors.white
+                                      : const Color(0xFF0056B3),
+                                  fontWeight: FontWeight.bold)),
                         ),
                       ),
                     ),
@@ -213,40 +281,53 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
-                  : items.isEmpty 
-                    ? Center(child: Text('No hay ${_searchType.toLowerCase()} registrados.'))
-                    : ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      itemCount: items.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 16),
-                      itemBuilder: (context, index) {
-                        final item = items[index];
-                        final name = _searchType == 'Doctores' 
-                            ? 'Dr. ${item['first_name']} ${item['last_name']}'
-                            : '${item['first_name']}';
-                        final specialties = (item['specialties'] as List<dynamic>?)?.join(', ') ?? 'Médico General';
-                        final plan = item['plan'];
-                        
-                        Color planColor = Colors.grey;
-                        if (plan == 'sponsored' || plan == 'clinic_vip') planColor = const Color(0xFF0056B3);
-                        else if (plan == 'basic' || plan == 'featured') planColor = const Color(0xFF00BCD4);
-                        
-                        final daysRemaining = item['days_remaining'] ?? 0;
+                  : items.isEmpty
+                      ? Center(
+                          child: Text(
+                              'No hay ${_searchType.toLowerCase()} registrados.'))
+                      : ListView.separated(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          itemCount: items.length,
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: 16),
+                          itemBuilder: (context, index) {
+                            final item = items[index];
+                            final name = _searchType == 'Doctores'
+                                ? 'Dr. ${item['first_name']} ${item['last_name']}'
+                                : '${item['first_name']}';
+                            final specialties =
+                                (item['specialties'] as List<dynamic>?)
+                                        ?.join(', ') ??
+                                    'Médico General';
+                            final plan = item['plan'];
 
-                        return _buildSubCard(
-                          item['id'],
-                          name, 
-                          _searchType == 'Doctores' ? '$specialties | ${item['email']}' : '${item['email']}', 
-                          plan == 'Ninguno' ? 'Sin plan' : plan, 
-                          planColor,
-                          daysRemaining,
-                          pendingSubId: item['pending_sub_id'],
-                          pendingPlan: item['pending_plan'],
-                          pendingReference: item['pending_reference'],
-                          pendingAmountBs: item['pending_amount_bs'] != null ? (item['pending_amount_bs'] as num).toDouble() : null,
-                        );
-                      },
-                    ),
+                            Color planColor = Colors.grey;
+                            if (plan == 'sponsored' || plan == 'clinic_vip')
+                              planColor = const Color(0xFF0056B3);
+                            else if (plan == 'basic' || plan == 'featured')
+                              planColor = const Color(0xFF00BCD4);
+
+                            final daysRemaining = item['days_remaining'] ?? 0;
+
+                            return _buildSubCard(
+                              item['id'],
+                              name,
+                              _searchType == 'Doctores'
+                                  ? '$specialties | ${item['email']}'
+                                  : '${item['email']}',
+                              plan == 'Ninguno' ? 'Sin plan' : plan,
+                              planColor,
+                              daysRemaining,
+                              pendingSubId: item['pending_sub_id'],
+                              pendingPlan: item['pending_plan'],
+                              pendingReference: item['pending_reference'],
+                              pendingAmountBs: item['pending_amount_bs'] != null
+                                  ? (item['pending_amount_bs'] as num)
+                                      .toDouble()
+                                  : null,
+                            );
+                          },
+                        ),
             ),
           ],
         ),
@@ -254,7 +335,13 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
     );
   }
 
-  Widget _buildSubCard(int targetId, String name, String details, String plan, Color planColor, int daysRemaining, {
+  Widget _buildSubCard(
+    int targetId,
+    String name,
+    String details,
+    String plan,
+    Color planColor,
+    int daysRemaining, {
     int? pendingSubId,
     String? pendingPlan,
     String? pendingReference,
@@ -277,35 +364,52 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0B2545))),
+                    Text(name,
+                        style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0B2545))),
                     const SizedBox(height: 8),
-                    Text(details, style: const TextStyle(color: Color(0xFF475569))),
+                    Text(details,
+                        style: const TextStyle(color: Color(0xFF475569))),
                     if (plan != 'Sin plan') ...[
                       const SizedBox(height: 4),
-                      Text('Días restantes: $daysRemaining', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0056B3))),
+                      Text('Días restantes: $daysRemaining',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0056B3))),
                     ],
                     if (pendingSubId != null) ...[
                       const SizedBox(height: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.orange.shade50,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: Colors.orange)
-                        ),
+                            color: Colors.orange.shade50,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: Colors.orange)),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(children: [
-                              const Icon(Icons.schedule, color: Colors.orange, size: 12),
+                              const Icon(Icons.schedule,
+                                  color: Colors.orange, size: 12),
                               const SizedBox(width: 4),
-                              Text('PAGO PENDIENTE: ${(pendingPlan ?? "").toUpperCase()}',
-                                style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 10))
+                              Text(
+                                  'PAGO PENDIENTE: ${(pendingPlan ?? "").toUpperCase()}',
+                                  style: const TextStyle(
+                                      color: Colors.orange,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 10))
                             ]),
                             if (pendingReference != null)
-                              Text('Ref: $pendingReference', style: const TextStyle(fontSize: 10, color: Colors.brown)),
+                              Text('Ref: $pendingReference',
+                                  style: const TextStyle(
+                                      fontSize: 10, color: Colors.brown)),
                             if (pendingAmountBs != null)
-                              Text('Bs. ${pendingAmountBs.toStringAsFixed(2)}', style: const TextStyle(fontSize: 10, color: Colors.brown)),
+                              Text('Bs. ${pendingAmountBs.toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                      fontSize: 10, color: Colors.brown)),
                           ],
                         ),
                       ),
@@ -313,11 +417,32 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
                   ],
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: planColor, borderRadius: BorderRadius.circular(20)),
-                child: Text('✓ $plan', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
-              )
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  IconButton(
+                    tooltip: 'Eliminar registro',
+                    onPressed: () => _deleteAccount(targetId, name),
+                    icon: const Icon(Icons.delete, color: Colors.red, size: 24),
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints:
+                        const BoxConstraints(minWidth: 36, minHeight: 36),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                        color: planColor,
+                        borderRadius: BorderRadius.circular(20)),
+                    child: Text('✓ $plan',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12)),
+                  ),
+                ],
+              ),
             ],
           ),
           // Approve pending payment button (most important action)
@@ -326,46 +451,59 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
             ElevatedButton.icon(
               onPressed: () => _updateSub(pendingSubId, 'approve'),
               icon: const Icon(Icons.check_circle, color: Colors.white),
-              label: Text('✔ Aprobar Pago ${pendingPlan?.toUpperCase() ?? ""}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              label: Text('✔ Aprobar Pago ${pendingPlan?.toUpperCase() ?? ""}',
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20)),
                 minimumSize: const Size(double.infinity, 44),
               ),
             ),
             ElevatedButton.icon(
               onPressed: () => _updateSub(pendingSubId, 'reject'),
               icon: const Icon(Icons.cancel, color: Colors.white, size: 16),
-              label: const Text('Rechazar Pago', style: TextStyle(color: Colors.white, fontSize: 12)),
+              label: const Text('Rechazar Pago',
+                  style: TextStyle(color: Colors.white, fontSize: 12)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red.shade400,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20)),
                 minimumSize: const Size(double.infinity, 36),
               ),
             ),
           ],
           const SizedBox(height: 8),
           const Divider(),
-          const Text('Asignar manualmente:', style: TextStyle(fontSize: 12, color: Colors.grey)),
+          const Text('Asignar manualmente:',
+              style: TextStyle(fontSize: 12, color: Colors.grey)),
           const SizedBox(height: 4),
           Row(
             children: [
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: () => _updateSub(targetId, 'activate', _searchType == 'Doctores' ? 'sponsored' : 'clinic_vip'),
+                  onPressed: () => _updateSub(targetId, 'activate',
+                      _searchType == 'Doctores' ? 'sponsored' : 'clinic_vip'),
                   icon: const Icon(Icons.star, color: Colors.white, size: 16),
-                  label: const Text('VIP', style: TextStyle(color: Colors.white, fontSize: 12)),
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0056B3)),
+                  label: const Text('VIP',
+                      style: TextStyle(color: Colors.white, fontSize: 12)),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0056B3)),
                 ),
               ),
               if (_searchType == 'Doctores') ...[
                 const SizedBox(width: 8),
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () => _updateSub(targetId, 'activate', 'featured'),
-                    icon: const Icon(Icons.check, color: Colors.white, size: 16),
-                    label: const Text('Básico', style: TextStyle(color: Colors.white, fontSize: 12)),
-                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00BCD4)),
+                    onPressed: () =>
+                        _updateSub(targetId, 'activate', 'featured'),
+                    icon:
+                        const Icon(Icons.check, color: Colors.white, size: 16),
+                    label: const Text('Básico',
+                        style: TextStyle(color: Colors.white, fontSize: 12)),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF00BCD4)),
                   ),
                 ),
               ],
@@ -375,10 +513,12 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
           ElevatedButton.icon(
             onPressed: () => _updateSub(targetId, 'renew'),
             icon: const Icon(Icons.autorenew, color: Colors.white),
-            label: const Text('Renovar Suscripción', style: TextStyle(color: Colors.white)),
+            label: const Text('Renovar Suscripción',
+                style: TextStyle(color: Colors.white)),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0056B3),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20)),
               minimumSize: const Size(double.infinity, 40),
             ),
           ),
@@ -386,10 +526,12 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
           OutlinedButton.icon(
             onPressed: () => _updateSub(targetId, 'deactivate'),
             icon: const Icon(Icons.block, color: Colors.red),
-            label: const Text('Desactivar Suscripción', style: TextStyle(color: Colors.red)),
+            label: const Text('Desactivar Suscripción',
+                style: TextStyle(color: Colors.red)),
             style: OutlinedButton.styleFrom(
               side: const BorderSide(color: Colors.red),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20)),
               minimumSize: const Size(double.infinity, 40),
             ),
           ),

@@ -3,7 +3,7 @@ from datetime import timezone
 from zoneinfo import ZoneInfo
 import base64
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from app.core.database import get_db
 from app.models.users import User
 from app.schemas.users import UserResponse, UserUpdate, PasswordChange
@@ -195,3 +195,17 @@ async def mark_notifications_as_read(
     )
     await db.commit()
     return {"status": "ok"}
+
+
+@router.delete("/me/notifications")
+async def delete_my_notifications(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.models.notifications import Notification
+
+    result = await db.execute(
+        delete(Notification).where(Notification.user_id == current_user.id)
+    )
+    await db.commit()
+    return {"status": "ok", "deleted": result.rowcount or 0}

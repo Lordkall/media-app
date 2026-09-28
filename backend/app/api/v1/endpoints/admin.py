@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import delete, func, select, update
 from app.core.database import get_db
 from app.models.users import User, RoleEnum
 from app.models.doctors import Doctor
@@ -16,6 +16,93 @@ router = APIRouter()
 def check_admin(user: User):
     if user.role != RoleEnum.ADMIN:
         raise HTTPException(status_code=403, detail="Not authorized. Admin role required.")
+
+
+async def delete_user_owned_data(db: AsyncSession, user_ids: list[int]):
+    """Remove rows that reference these user accounts before deleting the accounts."""
+    if not user_ids:
+        return
+
+    from app.models.notifications import Notification
+    from app.models.password_reset import PasswordResetToken
+    from app.models.support import SupportTicket, TicketMessage
+
+    owned_ticket_ids = select(SupportTicket.id).where(
+        SupportTicket.user_id.in_(user_ids)
+    )
+    await db.execute(
+        delete(TicketMessage).where(
+            (TicketMessage.sender_id.in_(user_ids))
+            | (TicketMessage.ticket_id.in_(owned_ticket_ids))
+        )
+    )
+    await db.execute(delete(SupportTicket).where(SupportTicket.user_id.in_(user_ids)))
+    await db.execute(delete(Notification).where(Notification.user_id.in_(user_ids)))
+    await db.execute(
+        delete(PasswordResetToken).where(PasswordResetToken.user_id.in_(user_ids))
+    )
+
+
+@router.delete("/doctors/{doctor_id}")
+async def delete_doctor_record(
+    doctor_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    check_admin(current_user)
+    doctor = await db.scalar(select(Doctor).where(Doctor.id == doctor_id))
+    if not doctor:
+        raise HTTPException(status_code=404, detail="Doctor no encontrado")
+
+    from app.models.appointments import Appointment
+    from app.models.doctors import Availability
+
+    assistant_ids = list(
+        (await db.scalars(select(User.id).where(User.linked_doctor_id == doctor.id))).all()
+    )
+    user_ids = [doctor.user_id, *assistant_ids]
+
+    await db.execute(delete(Appointment).where(Appointment.doctor_id == doctor.id))
+    await db.execute(delete(Availability).where(Availability.doctor_id == doctor.id))
+    await db.execute(delete(Subscription).where(Subscription.doctor_id == doctor.id))
+    await delete_user_owned_data(db, user_ids)
+    await db.execute(
+        update(User).where(User.linked_doctor_id == doctor.id).values(linked_doctor_id=None)
+    )
+    await db.delete(doctor)
+    for assistant_id in assistant_ids:
+        assistant = await db.get(User, assistant_id)
+        if assistant:
+            await db.delete(assistant)
+    doctor_user = await db.get(User, doctor.user_id)
+    if doctor_user:
+        await db.delete(doctor_user)
+
+    await db.commit()
+    return {"message": "Doctor y sus registros asociados eliminados"}
+
+
+@router.delete("/clinics/{clinic_id}")
+async def delete_clinic_record(
+    clinic_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    check_admin(current_user)
+    clinic = await db.scalar(select(Clinic).where(Clinic.id == clinic_id))
+    if not clinic:
+        raise HTTPException(status_code=404, detail="Clínica no encontrada")
+
+    await db.execute(update(Doctor).where(Doctor.clinic_id == clinic.id).values(clinic_id=None))
+    await db.execute(delete(Subscription).where(Subscription.clinic_id == clinic.id))
+    await delete_user_owned_data(db, [clinic.user_id])
+    await db.delete(clinic)
+    clinic_user = await db.get(User, clinic.user_id)
+    if clinic_user:
+        await db.delete(clinic_user)
+
+    await db.commit()
+    return {"message": "Clínica y sus registros asociados eliminados"}
 
 
 async def sync_doctor_plan_flags(db: AsyncSession, doctor_id: int, plan: SubscriptionPlan):

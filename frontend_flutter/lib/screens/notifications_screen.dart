@@ -15,6 +15,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   List<dynamic> _notifications = [];
   bool _isLoading = true;
   bool _isFetching = false;
+  bool _isDeleting = false;
   Timer? _pollingTimer;
 
   @override
@@ -54,6 +55,54 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
+  Future<void> _deleteAllNotifications() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Eliminar notificaciones'),
+        content: const Text(
+            '¿Deseas eliminar todas tus notificaciones? Esta acción no se puede deshacer.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Eliminar todas'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isDeleting = true);
+    try {
+      final response = await ApiClient.delete('/users/me/notifications');
+      if (response.statusCode == 200) {
+        if (mounted) {
+          setState(() => _notifications.clear());
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Notificaciones eliminadas')),
+          );
+        }
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se pudieron eliminar: ${response.body}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al eliminar: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isDeleting = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -62,6 +111,21 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             const Text('Notificaciones', style: TextStyle(color: Colors.white)),
         backgroundColor: const Color(0xFF0056B3),
         iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          if (_notifications.isNotEmpty)
+            IconButton(
+              tooltip: 'Eliminar todas las notificaciones',
+              onPressed: _isDeleting ? null : _deleteAllNotifications,
+              icon: _isDeleting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.delete, color: Colors.redAccent),
+            ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
