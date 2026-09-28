@@ -374,91 +374,98 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
                       ? Center(
                           child: Text(
                               'No hay ${_searchType.toLowerCase()} registrados con estos filtros.'))
-                      : GridView.builder(
-                          padding: const EdgeInsets.only(
-                              left: 16.0, right: 16.0, bottom: 100.0),
-                          gridDelegate:
-                              const SliverGridDelegateWithMaxCrossAxisExtent(
-                            maxCrossAxisExtent: 280,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
-                            childAspectRatio: 0.68,
-                          ),
-                          itemCount: _filteredDoctors.length,
-                          itemBuilder: (context, index) {
-                            final item = _filteredDoctors[index];
-
-                            if (_searchType == 'Doctores') {
-                              final name =
-                                  'Dr. ${item['first_name']} ${item['last_name']}';
-                              final specialty = (item['specialties'] != null &&
-                                      item['specialties'].isNotEmpty)
-                                  ? item['specialties'][0]
-                                  : 'Médico General';
-                              final address = item['address']
-                                          ?.toString()
-                                          .trim()
-                                          .isNotEmpty ==
-                                      true
-                                  ? item['address'].toString()
-                                  : (item['state'] ?? 'Sin ubicación');
-                              final fee = (item['consultation_fee'] as num?)
-                                      ?.toDouble() ??
-                                  0.0;
-                              final cost = '\$${fee.toStringAsFixed(2)}';
-                              final isVip = item['is_vip'] == true;
-                              return GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (context) =>
-                                              DoctorProfileScreen(
-                                                  doctor: item)));
-                                },
-                                child: _buildDoctorCard(
-                                  name: name,
-                                  specialty: specialty,
-                                  address: address,
-                                  cost: cost,
-                                  isVip: isVip,
-                                  isClinic: false,
-                                  imageUrl: item['avatar_url'],
-                                ),
-                              );
-                            } else {
-                              final name = item['first_name'] ?? 'Clínica';
-                              final specialty = 'Clínica';
-                              final address = item['address']
-                                          ?.toString()
-                                          .trim()
-                                          .isNotEmpty ==
-                                      true
-                                  ? item['address'].toString()
-                                  : (item['state'] ?? 'Sin ubicación');
-                              final isVip = item['is_vip'] == true;
-                              return GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (context) =>
-                                              ClinicProfileScreen(
-                                                  clinic: item)));
-                                },
-                                child: _buildDoctorCard(
-                                  name: name,
-                                  specialty: specialty,
-                                  address: address,
-                                  cost: '',
-                                  isVip: isVip,
-                                  isClinic: true,
-                                  imageUrl: item['avatar_url'],
-                                ),
-                              );
-                            }
-                          },
-                        ),
+                      : LayoutBuilder(builder: (context, constraints) {
+                          final columns = constraints.maxWidth >= 600 ? 3 : 2;
+                          final gap = 12.0;
+                          final cardWidth = (constraints.maxWidth -
+                                  32 -
+                                  gap * (columns - 1)) /
+                              columns;
+                          return SingleChildScrollView(
+                            padding: const EdgeInsets.only(
+                                left: 16.0, right: 16.0, bottom: 100.0),
+                            child: Wrap(
+                              spacing: gap,
+                              runSpacing: gap,
+                              children: _filteredDoctors.map((item) {
+                                if (_searchType == 'Doctores') {
+                                  final name =
+                                      'Dr. ${item['first_name']} ${item['last_name']}';
+                                  final specialty =
+                                      (item['specialties'] != null &&
+                                              item['specialties'].isNotEmpty)
+                                          ? item['specialties'][0]
+                                          : 'Médico General';
+                                  final address = item['address']
+                                              ?.toString()
+                                              .trim()
+                                              .isNotEmpty ==
+                                          true
+                                      ? item['address'].toString()
+                                      : (item['state'] ?? 'Sin ubicación');
+                                  final fee = (item['consultation_fee'] as num?)
+                                          ?.toDouble() ??
+                                      0.0;
+                                  final cost = '\$${fee.toStringAsFixed(2)}';
+                                  final isVip = item['is_vip'] == true;
+                                  return SizedBox(
+                                      width: cardWidth,
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      DoctorProfileScreen(
+                                                          doctor: item)));
+                                        },
+                                        child: _buildDoctorCard(
+                                          name: name,
+                                          specialty: specialty,
+                                          address: address,
+                                          cost: cost,
+                                          isVip: isVip,
+                                          isClinic: false,
+                                          imageUrl: item['avatar_url'],
+                                        ),
+                                      ));
+                                } else {
+                                  final name = item['first_name'] ?? 'Clínica';
+                                  final specialty = 'Clínica';
+                                  final address = item['address']
+                                              ?.toString()
+                                              .trim()
+                                              .isNotEmpty ==
+                                          true
+                                      ? item['address'].toString()
+                                      : (item['state'] ?? 'Sin ubicación');
+                                  final isVip = item['is_vip'] == true;
+                                  return SizedBox(
+                                      width: cardWidth,
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      ClinicProfileScreen(
+                                                          clinic: item)));
+                                        },
+                                        child: _buildDoctorCard(
+                                          name: name,
+                                          specialty: specialty,
+                                          address: address,
+                                          cost: '',
+                                          isVip: isVip,
+                                          isClinic: true,
+                                          imageUrl: item['avatar_url'],
+                                        ),
+                                      ));
+                                }
+                              }).toList(),
+                            ),
+                          );
+                        }),
             ),
           ],
         ),
@@ -495,8 +502,8 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
           color: Colors.white,
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final avatarSize = constraints.maxWidth < 200 ? 78.0 : 94.0;
-              final headerHeight = constraints.maxWidth < 200 ? 64.0 : 82.0;
+              final avatarSize = constraints.maxWidth < 200 ? 72.0 : 82.0;
+              final headerHeight = constraints.maxWidth < 200 ? 58.0 : 66.0;
               final overlap = avatarSize / 2;
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -572,88 +579,92 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
                       ),
                     ],
                   ),
-                  SizedBox(height: overlap + 5),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(10, 0, 10, 9),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF174F88),
-                              borderRadius: BorderRadius.circular(3),
-                            ),
-                            child: Text(
-                              name.toUpperCase(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                letterSpacing: 0.7,
-                                fontWeight: FontWeight.w800,
-                              ),
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                  SizedBox(height: overlap + 3),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF174F88),
+                            borderRadius: BorderRadius.circular(3),
                           ),
-                          Text(
-                            specialty,
+                          child: Text(
+                            name.toUpperCase(),
                             style: const TextStyle(
-                              color: Color(0xFF17212B),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                              fontSize: 12,
+                              letterSpacing: 0.7,
+                              fontWeight: FontWeight.w800,
                             ),
                             textAlign: TextAlign.center,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Icon(Icons.location_on,
-                                  size: 15, color: Color(0xFF174F88)),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  address,
-                                  style: const TextStyle(
-                                      color: Color(0xFF475569), fontSize: 11),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          specialty,
+                          style: const TextStyle(
+                            color: Color(0xFF17212B),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
                           ),
-                          Container(
-                            height: 1,
-                            color: const Color(0xFFCBD5E1),
-                          ),
-                          if (cost.isNotEmpty)
-                            Text(
-                              cost,
-                              style: const TextStyle(
-                                color: Color(0xFF101820),
-                                fontSize: 20,
-                                fontWeight: FontWeight.w800,
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 5),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.location_on,
+                                size: 15, color: Color(0xFF174F88)),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                address,
+                                style: const TextStyle(
+                                    color: Color(0xFF475569), fontSize: 11),
+                                maxLines: 2,
+                                textAlign: TextAlign.center,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            )
-                          else if (isClinic)
-                            const Text(
-                              'Clínica',
-                              style: TextStyle(
-                                color: Color(0xFF101820),
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            )
-                          else
-                            const SizedBox(height: 24),
-                        ],
-                      ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 5),
+                        Container(
+                          height: 1,
+                          color: const Color(0xFFCBD5E1),
+                        ),
+                        if (cost.isNotEmpty)
+                          Text(
+                            cost,
+                            style: const TextStyle(
+                              color: Color(0xFF101820),
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          )
+                        else if (isClinic)
+                          const Text(
+                            'Clínica',
+                            style: TextStyle(
+                              color: Color(0xFF101820),
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          )
+                        else
+                          const SizedBox(height: 24),
+                      ],
                     ),
                   ),
                 ],
