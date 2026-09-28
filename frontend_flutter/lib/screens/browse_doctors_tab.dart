@@ -274,13 +274,21 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
                 ? const Center(child: CircularProgressIndicator()) 
                 : _filteredDoctors.isEmpty 
                   ? Center(child: Text('No hay ${_searchType.toLowerCase()} registrados con estos filtros.'))
-                  : GridView.builder(
+                  : LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isCompact = constraints.maxWidth < 600;
+                      final columns = constraints.maxWidth >= 1100
+                          ? 4
+                          : constraints.maxWidth >= 800
+                              ? 3
+                              : 2;
+                      return GridView.builder(
                       padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 100.0),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: columns,
                         crossAxisSpacing: 12,
                         mainAxisSpacing: 12,
-                        childAspectRatio: 0.65, // Adjust this ratio to make them fit nicely
+                        childAspectRatio: isCompact ? 0.78 : 1.05,
                       ),
                       itemCount: _filteredDoctors.length,
                       itemBuilder: (context, index) {
@@ -327,7 +335,9 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
                           );
                         }
                       },
-                    ),
+                    );
+                    },
+                  ),
             ),
           ],
         ),
@@ -371,11 +381,25 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
               : const SizedBox(height: 18),
           ),
           Container(
-            width: 70, height: 70,
+            width: 70,
+            height: 70,
+            padding: EdgeInsets.all(isVip ? 3 : 0),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: isVip ? Border.all(color: const Color(0xFFFFC107), width: 3) : null,
-              image: DecorationImage(image: ProfileImageHelper.getProfileImageProvider(imageUrl), fit: BoxFit.cover),
+              border: isVip
+                  ? Border.all(color: const Color(0xFFFFC107), width: 3)
+                  : null,
+            ),
+            child: ClipOval(
+              child: Image(
+                image: ProfileImageHelper.getProfileImageProvider(imageUrl),
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  color: const Color(0xFFE0EAFC),
+                  alignment: Alignment.center,
+                  child: const Icon(Icons.person, color: Color(0xFF0056B3), size: 38),
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 8),

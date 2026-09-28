@@ -35,17 +35,25 @@ class SubscriptionResponse(BaseModel):
     message: str
 
 def get_plan_enum(plan_name: str) -> SubscriptionPlan:
-    plan_lower = plan_name.lower()
-    if "clinic_vip" in plan_lower or "clínica vip" in plan_lower:
-        return SubscriptionPlan.CLINIC_VIP
-    elif "clinic_basic" in plan_lower or "clínica básico" in plan_lower:
-        return SubscriptionPlan.CLINIC_BASIC
-    elif "vip" in plan_lower or "patrocinado" in plan_lower:
-        return SubscriptionPlan.SPONSORED
-    elif "destacado" in plan_lower:
-        return SubscriptionPlan.FEATURED
-    else:
-        return SubscriptionPlan.BASIC
+    normalized = " ".join(plan_name.strip().lower().replace("á", "a").split())
+    plan_aliases = {
+        "basic": SubscriptionPlan.BASIC,
+        "basico": SubscriptionPlan.BASIC,
+        "featured": SubscriptionPlan.FEATURED,
+        "destacado": SubscriptionPlan.FEATURED,
+        "sponsored": SubscriptionPlan.SPONSORED,
+        "vip": SubscriptionPlan.SPONSORED,
+        "patrocinado": SubscriptionPlan.SPONSORED,
+        "plan vip patrocinado": SubscriptionPlan.SPONSORED,
+        "clinic_basic": SubscriptionPlan.CLINIC_BASIC,
+        "clinica basico": SubscriptionPlan.CLINIC_BASIC,
+        "clinic_vip": SubscriptionPlan.CLINIC_VIP,
+        "clinica vip": SubscriptionPlan.CLINIC_VIP,
+    }
+    try:
+        return plan_aliases[normalized]
+    except KeyError:
+        raise HTTPException(status_code=422, detail="El plan seleccionado no es válido")
 
 def get_plan_price(plan: SubscriptionPlan, cycle: str) -> float:
     if plan == SubscriptionPlan.SPONSORED:
