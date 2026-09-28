@@ -115,7 +115,7 @@ async def cancel_appointment(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # A cancelled turn is released; booked appointments keep their original time.
+    # A cancelled turn is released; only the other participant receives a notice.
     async with db.begin_nested():
         appt_query = select(Appointment).where(Appointment.id == appointment_id).with_for_update()
         appt = (await db.execute(appt_query)).scalar_one_or_none()
@@ -124,26 +124,51 @@ async def cancel_appointment(
             raise HTTPException(status_code=404, detail="Appointment not found")
         if appt.status == AppointmentStatus.CANCELLED:
             raise HTTPException(status_code=400, detail="Already cancelled")
+
+        doctor = await db.scalar(select(Doctor).where(Doctor.id == appt.doctor_id))
+        patient = await db.scalar(select(Patient).where(Patient.id == appt.patient_id))
+        if not doctor or not patient:
+            raise HTTPException(status_code=404, detail="Appointment participant not found")
+
+        if current_user.role == RoleEnum.DOCTOR:
+            if doctor.user_id != current_user.id:
+                raise HTTPException(status_code=403, detail="You cannot cancel this appointment")
+            recipient_user_id = patient.user_id
+            cancelled_by = "doctor"
+            actor_name = "El doctor"
+        elif current_user.role == RoleEnum.PATIENT:
+            if patient.user_id != current_user.id:
+                raise HTTPException(status_code=403, detail="You cannot cancel this appointment")
+            recipient_user_id = doctor.user_id
+            cancelled_by = "patient"
+            actor_name = "El paciente"
+        else:
+            raise HTTPException(status_code=403, detail="Only an appointment participant can cancel")
             
         appt.status = AppointmentStatus.CANCELLED
         
     await db.commit()
 
-    # Create notification for doctor
+    # Notify the participant who did not cancel the appointment.
     try:
         from app.models.notifications import Notification, NotificationType
-        from app.models.doctors import Doctor
-        doctor_query = select(Doctor).where(Doctor.id == appt.doctor_id)
-        doctor = (await db.execute(doctor_query)).scalar_one_or_none()
-        if doctor:
-            notif = Notification(
-                user_id=doctor.user_id,
-                type=NotificationType.APPOINTMENT_CANCELLED,
-                title="Cita Cancelada",
-                message=f"Una cita para el {appt.appointment_date} ha sido cancelada por el paciente."
+        notif = Notification(
+            user_id=recipient_user_id,
+            type=NotificationType.APPOINTMENT_CANCELLED,
+            title="Cita cancelada por el doctor" if cancelled_by == "doctor" else "Cita cancelada por el paciente",
+            message=f"{actor_name} canceló la cita del {appt.appointment_date} (turno #{appt.turn_number}).",
+        )
+        db.add(notif)
+        await db.commit()
+        recipient = await db.get(User, recipient_user_id)
+        if recipient and recipient.fcm_token:
+            from app.core.firebase import send_push_notification
+            send_push_notification(
+                recipient.fcm_token,
+                notif.title,
+                notif.message,
+                {"type": "appointment_cancelled", "appointment_id": str(appt.id)},
             )
-            db.add(notif)
-            await db.commit()
     except Exception as e:
         print(f"Error saving cancellation notification: {e}")
 

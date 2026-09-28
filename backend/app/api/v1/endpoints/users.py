@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
+from datetime import timezone
+from zoneinfo import ZoneInfo
+import base64
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 from app.core.database import get_db
@@ -38,6 +41,23 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
 @router.get("/me", response_model=UserResponse)
 async def read_users_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+@router.get("/{user_id}/avatar")
+async def read_user_avatar(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    user = await db.get(User, user_id)
+    if not user or not user.avatar_data:
+        raise HTTPException(status_code=404, detail="Avatar not found")
+    return Response(
+        content=base64.b64decode(user.avatar_data),
+        media_type=user.avatar_content_type or "image/jpeg",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+        },
+    )
 
 @router.put("/me", response_model=UserResponse)
 async def update_users_me(
@@ -100,7 +120,11 @@ async def get_my_notifications(
             "message": n.message,
             "is_read": n.is_read,
             "action_url": n.action_url,
-            "created_at": n.created_at.isoformat(),
+            "created_at": (
+                n.created_at.replace(tzinfo=timezone.utc)
+                if n.created_at.tzinfo is None
+                else n.created_at
+            ).astimezone(ZoneInfo("America/Caracas")).isoformat(),
             "payment_details": None
         }
         
@@ -128,12 +152,27 @@ async def get_my_notifications(
                     entity_kind = "clinic"
                     if owner:
                         owner_name = f"{owner.first_name} {owner.last_name}"
+                if n.title == "Pago Aprobado":
+                    payment_decision = "approved"
+                elif n.title == "Pago Rechazado":
+                    payment_decision = "rejected"
+                elif sub.status == SubscriptionStatus.PENDING_APPROVAL:
+                    payment_decision = "pending"
+                else:
+                    # Preserve the payment decision even if a later plan replaces
+                    # this subscription and changes its current status to cancelled.
+                    payment_decision = "approved" if sub.status in (
+                        SubscriptionStatus.ACTIVE,
+                        SubscriptionStatus.EXPIRED,
+                        SubscriptionStatus.GRACE_PERIOD,
+                    ) else "rejected"
+
                 data["payment_details"] = {
                     "sub_id": sub.id,
                     "owner_name": owner_name,
                     "entity_kind": entity_kind,
                     "plan": sub.plan.value,
-                    "status": sub.status.value,
+                    "status": payment_decision,
                     "reference_number": sub.reference_number,
                     "amount_bs": sub.amount_bs,
                     "screenshot_base64": sub.screenshot_base64

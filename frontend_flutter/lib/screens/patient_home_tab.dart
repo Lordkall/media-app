@@ -4,6 +4,7 @@ import '../widgets/doctor_header.dart';
 import '../widgets/profile_avatar.dart';
 import '../core/api_client.dart';
 import '../core/profile_image_helper.dart';
+import '../models/ve_catalogs.dart';
 import 'support_messages_screen.dart';
 
 class PatientHomeTab extends StatefulWidget {
@@ -52,7 +53,7 @@ class _PatientHomeTabState extends State<PatientHomeTab> {
         if (mounted) {
           final allAppts = jsonDecode(apptResponse.body) as List<dynamic>;
 
-          final nowString = DateTime.now().toIso8601String().split('T')[0];
+          final nowString = caracasNow().toIso8601String().split('T')[0];
           // Filter out cancelled and past appointments
           var upcoming = allAppts.where((a) {
             final dateStr = a['date'].toString().split('T')[0];

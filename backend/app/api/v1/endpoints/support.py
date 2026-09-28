@@ -8,6 +8,8 @@ from app.models.support import SupportTicket, TicketMessage
 from app.api.v1.endpoints.users import get_current_user
 from pydantic import BaseModel
 from app.models.notifications import Notification, NotificationType
+from datetime import timezone
+from zoneinfo import ZoneInfo
 
 router = APIRouter()
 
@@ -119,7 +121,12 @@ async def get_tickets(
             "subject": t.subject,
             "message": last_msg,
             "all_messages": [{"sender_id": m.sender_id, "message": m.message} for m in t.messages],
-            "date": (t.created_at - __import__('datetime').timedelta(hours=4)).strftime("%d/%m/%Y %H:%M") if t.created_at else "",
+            "date": (
+                (t.created_at.replace(tzinfo=timezone.utc) if t.created_at.tzinfo is None else t.created_at)
+                .astimezone(ZoneInfo("America/Caracas"))
+                .strftime("%d/%m/%Y %H:%M")
+                if t.created_at else ""
+            ),
             "status": t.status
         })
     return output

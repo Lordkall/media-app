@@ -3,6 +3,7 @@ import 'dart:convert';
 import '../core/api_client.dart';
 import '../core/auth_helper.dart';
 import '../widgets/profile_avatar.dart';
+import '../models/ve_catalogs.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class MisCitasTab extends StatefulWidget {
@@ -13,20 +14,22 @@ class MisCitasTab extends StatefulWidget {
 }
 
 class _MisCitasTabState extends State<MisCitasTab> {
-  DateTime _selectedDate = DateTime.now();
+  DateTime _selectedDate = caracasNow();
   List<dynamic> _appointments = [];
   bool _isLoading = true;
   String? _role;
   String _filterMode = 'Fecha';
 
   List<dynamic> get _visibleAppointments {
+    final activeAppointments = _appointments
+        .where((appointment) => appointment['status'] != 'cancelled');
     if (_filterMode == 'Fecha') {
       final date = _selectedDate.toIso8601String().split('T')[0];
-      return _appointments
+      return activeAppointments
           .where((a) => a['date'].toString().startsWith(date))
           .toList();
     }
-    final recent = List<dynamic>.from(_appointments);
+    final recent = List<dynamic>.from(activeAppointments);
     recent.sort((a, b) => (int.tryParse(b['id'].toString()) ?? 0)
         .compareTo(int.tryParse(a['id'].toString()) ?? 0));
     return recent;
@@ -53,7 +56,9 @@ class _MisCitasTabState extends State<MisCitasTab> {
       final response = await ApiClient.get('/appointments/my');
       if (response.statusCode == 200) {
         setState(() {
-          _appointments = jsonDecode(response.body);
+          _appointments = (jsonDecode(response.body) as List<dynamic>)
+              .where((appointment) => appointment['status'] != 'cancelled')
+              .toList();
           _isLoading = false;
         });
       } else {
@@ -68,8 +73,8 @@ class _MisCitasTabState extends State<MisCitasTab> {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
-      firstDate: DateTime.now().subtract(const Duration(days: 365)),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      firstDate: caracasNow().subtract(const Duration(days: 365)),
+      lastDate: caracasNow().add(const Duration(days: 365)),
     );
     if (picked != null && picked != _selectedDate) {
       setState(() {

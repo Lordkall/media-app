@@ -22,7 +22,7 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
   List<dynamic> _allDoctors = [];
   bool _isLoading = true;
   List<dynamic> _doctorAvailabilityInfo = [];
-  DateTime _selectedDate = DateTime.now();
+  DateTime _selectedDate = caracasNow();
 
   @override
   void initState() {
@@ -202,7 +202,7 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                       if (response.statusCode == 200) {
                         final availabilities =
                             List<dynamic>.from(jsonDecode(response.body));
-                        final today = _dateKey(DateTime.now());
+                        final today = _dateKey(caracasNow());
                         final availableDays = availabilities
                             .where((day) =>
                                 day['is_full'] != true &&
@@ -282,9 +282,9 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                     ),
                     child: TableCalendar(
                       locale: 'es_ES',
-                      firstDay: DateTime(DateTime.now().year,
-                          DateTime.now().month, DateTime.now().day),
-                      lastDay: DateTime.now().add(const Duration(days: 365)),
+                      firstDay: DateTime(caracasNow().year,
+                          caracasNow().month, caracasNow().day),
+                      lastDay: caracasNow().add(const Duration(days: 365)),
                       focusedDay: _selectedDate,
                       selectedDayPredicate: (day) =>
                           isSameDay(_selectedDate, day),
@@ -295,7 +295,7 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                         bool isFull = _doctorAvailabilityInfo.any((info) =>
                             info['date'] == dateString &&
                             info['is_full'] == true);
-                        final today = DateTime.now();
+                        final today = caracasNow();
                         final selectedDateOnly = DateTime(selectedDay.year,
                             selectedDay.month, selectedDay.day);
                         final todayOnly =

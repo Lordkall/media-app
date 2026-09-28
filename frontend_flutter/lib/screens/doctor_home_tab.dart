@@ -5,6 +5,7 @@ import 'dart:convert';
 import '../widgets/doctor_header.dart';
 import '../core/api_client.dart';
 import '../core/profile_image_helper.dart';
+import '../models/ve_catalogs.dart';
 import '../widgets/profile_avatar.dart';
 import 'select_plan_screen.dart';
 import 'support_messages_screen.dart';
@@ -61,7 +62,7 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
       final subscription = responses[3].statusCode == 200
           ? Map<String, dynamic>.from(jsonDecode(responses[3].body))
           : null;
-      final today = DateTime.now().toIso8601String().split('T')[0];
+      final today = caracasNow().toIso8601String().split('T')[0];
       final appointmentsToday = appointments
           .where((appointment) =>
               appointment['date'].toString().startsWith(today) &&

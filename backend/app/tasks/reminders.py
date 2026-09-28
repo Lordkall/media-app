@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker, joinedload
 import sys, os
@@ -21,7 +22,8 @@ def send_appointment_reminders():
     Session = sessionmaker(bind=engine)
     
     with Session() as session:
-        now = datetime.utcnow()
+        # Appointment dates and availability hours are stored as Caracas local time.
+        now = datetime.now(ZoneInfo("America/Caracas")).replace(tzinfo=None)
         # Rango para 24 horas: entre 23 y 25 horas desde ahora
         time_24h_min = now + timedelta(hours=23)
         time_24h_max = now + timedelta(hours=25)

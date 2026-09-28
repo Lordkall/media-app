@@ -26,6 +26,19 @@ const veStates = <String>[
   'Zulia',
 ];
 
+DateTime caracasNow() {
+  final utc = DateTime.now().toUtc().subtract(const Duration(hours: 4));
+  return DateTime(
+    utc.year,
+    utc.month,
+    utc.day,
+    utc.hour,
+    utc.minute,
+    utc.second,
+    utc.millisecond,
+  );
+}
+
 const medicalSpecialties = <String>[
   'Alergología',
   'Anestesiología Dental',

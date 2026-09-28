@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/api_client.dart';
+import '../models/ve_catalogs.dart';
 import 'dart:convert';
 
 class MiDisponibilidadTab extends StatefulWidget {
@@ -16,7 +17,7 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
   int _weekOffset = 0;
 
   List<Map<String, dynamic>> get _currentWeekDays {
-    final today = DateTime.now();
+    final today = caracasNow();
     final monday = today
         .subtract(Duration(days: today.weekday - 1))
         .add(Duration(days: _weekOffset * 7));

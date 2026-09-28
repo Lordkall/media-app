@@ -379,13 +379,13 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
                       'Referencia: ${paymentDetails['reference_number'] ?? 'N/A'}',
                       style: const TextStyle(fontSize: 13)),
                   Text(
-                    'Estado del pago: ${paymentDetails['status'] == 'active' ? 'Aprobado' : paymentDetails['status'] == 'cancelled' ? 'Rechazado' : 'Pendiente'}',
+                    'Estado del pago: ${paymentDetails['status'] == 'approved' || paymentDetails['status'] == 'active' ? 'Aprobado' : paymentDetails['status'] == 'rejected' ? 'Rechazado' : 'Pendiente'}',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: paymentDetails['status'] == 'active'
+                      color: paymentDetails['status'] == 'approved' || paymentDetails['status'] == 'active'
                           ? Colors.green
-                          : paymentDetails['status'] == 'cancelled'
+                          : paymentDetails['status'] == 'rejected'
                               ? Colors.red
                               : Colors.orange,
                     ),
