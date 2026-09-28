@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../core/api_client.dart';
 import '../core/profile_image_helper.dart';
 import 'main_doctor_screen.dart';
@@ -20,6 +21,9 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  static final Uri _latestReleasesUri =
+      Uri.parse('https://github.com/Lordkall/media-app/releases/latest');
+
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
@@ -27,6 +31,19 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _emailShowsMask = false;
   bool _passwordShowsMask = false;
   final LocalAuthentication _localAuth = LocalAuthentication();
+
+  Future<void> _openLatestRelease() async {
+    final opened = await launchUrl(
+      _latestReleasesUri,
+      mode: LaunchMode.externalApplication,
+    );
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('No se pudo abrir la página de descarga.')),
+      );
+    }
+  }
 
   @override
   void initState() {
@@ -431,6 +448,23 @@ class _LoginScreenState extends State<LoginScreen> {
                                       fontWeight: FontWeight.bold,
                                       color: Colors.white)),
                         ),
+                        if (kIsWeb) ...[
+                          const SizedBox(height: 12),
+                          ElevatedButton.icon(
+                            onPressed: _openLatestRelease,
+                            icon: const Icon(Icons.android, size: 22),
+                            label: const Text('Descargar app'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF2E9D4D),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              elevation: 0,
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 16),
                         if (!kIsWeb)
                           IconButton(
