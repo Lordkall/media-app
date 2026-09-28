@@ -19,6 +19,7 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
   Map<String, dynamic>? _userData;
   List<dynamic> _notifications = [];
   bool _isLoadingNotifications = true;
+  bool _isFetchingNotifications = false;
   Timer? _pollingTimer;
 
   @override
@@ -26,8 +27,8 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
     super.initState();
     _loadProfile();
     _fetchNotifications();
-    // Poll notifications every 30 seconds
-    _pollingTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+    // Keep admin alerts fresh while the dashboard remains open.
+    _pollingTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (mounted) _fetchNotifications();
     });
   }
@@ -39,6 +40,8 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
   }
 
   Future<void> _fetchNotifications() async {
+    if (_isFetchingNotifications) return;
+    _isFetchingNotifications = true;
     try {
       final response = await ApiClient.get('/users/me/notifications');
       if (response.statusCode == 200) {
@@ -53,6 +56,8 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
       }
     } catch (e) {
       if (mounted) setState(() => _isLoadingNotifications = false);
+    } finally {
+      _isFetchingNotifications = false;
     }
   }
 
@@ -235,7 +240,8 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
                     Expanded(
                       child: Text(
                         _userData?['email'] ?? 'admin@saludnow.com',
-                        style: const TextStyle(color: Color(0xFF475569), fontSize: 13),
+                        style: const TextStyle(
+                            color: Color(0xFF475569), fontSize: 13),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -383,7 +389,8 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: paymentDetails['status'] == 'approved' || paymentDetails['status'] == 'active'
+                      color: paymentDetails['status'] == 'approved' ||
+                              paymentDetails['status'] == 'active'
                           ? Colors.green
                           : paymentDetails['status'] == 'rejected'
                               ? Colors.red

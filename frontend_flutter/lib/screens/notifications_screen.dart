@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'dart:convert';
 import '../core/api_client.dart';
 import 'support_messages_screen.dart';
@@ -13,14 +14,27 @@ class NotificationsScreen extends StatefulWidget {
 class _NotificationsScreenState extends State<NotificationsScreen> {
   List<dynamic> _notifications = [];
   bool _isLoading = true;
+  bool _isFetching = false;
+  Timer? _pollingTimer;
 
   @override
   void initState() {
     super.initState();
     _fetchNotifications();
+    _pollingTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted) _fetchNotifications();
+    });
+  }
+
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _fetchNotifications() async {
+    if (_isFetching) return;
+    _isFetching = true;
     try {
       final response = await ApiClient.get('/users/me/notifications');
       if (response.statusCode == 200) {
@@ -35,6 +49,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       }
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
+    } finally {
+      _isFetching = false;
     }
   }
 
@@ -67,6 +83,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     } else if (type == 'new_subscription') {
                       icon = Icons.payment;
                       color = Colors.orange;
+                    } else if (type == 'support_message') {
+                      icon = Icons.support_agent;
+                      color = Colors.deepPurple;
                     }
 
                     return Card(

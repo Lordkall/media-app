@@ -16,7 +16,7 @@ class LocalNotificationService {
 
   static Future<void> initialize() async {
     const settings = InitializationSettings(
-      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      android: AndroidInitializationSettings('ic_stat_salud_now'),
       iOS: DarwinInitializationSettings(
         requestAlertPermission: false,
         requestBadgePermission: false,
@@ -44,7 +44,7 @@ class LocalNotificationService {
           channelDescription: 'Notificaciones de Salud Now',
           importance: Importance.max,
           priority: Priority.high,
-          icon: '@mipmap/ic_launcher',
+          icon: 'ic_stat_salud_now',
           playSound: true,
         ),
         iOS: DarwinNotificationDetails(
