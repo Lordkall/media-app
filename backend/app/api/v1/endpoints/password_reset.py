@@ -19,7 +19,7 @@ async def request_password_reset(
     payload: PasswordResetRequest, 
     db: AsyncSession = Depends(get_db)
 ):
-    query = select(User).where(User.email == payload.email)
+    query = select(User).where(User.email.ilike(payload.email.strip()))
     result = await db.execute(query)
     user = result.scalars().first()
     
@@ -36,13 +36,9 @@ async def request_password_reset(
         db.add(db_token)
         await db.commit()
         
-        # En entorno local/desarrollo, frontend en localhost:3000
-        FRONTEND_URL = "http://localhost:3000/reset-password"
-        reset_link = f"{FRONTEND_URL}?token={raw_token}"
-        
         try:
             import asyncio
-            await asyncio.to_thread(send_reset_email, user.email, reset_link, raw_token)
+            await asyncio.to_thread(send_reset_email, user.email, raw_token)
         except Exception as e:
             raise HTTPException(status_code=400, detail=str(e))
 

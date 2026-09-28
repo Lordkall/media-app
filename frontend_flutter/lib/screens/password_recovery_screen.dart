@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
+import 'dart:convert';
 import '../core/api_client.dart';
 
 class PasswordRecoveryScreen extends StatefulWidget {
@@ -13,29 +14,43 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _tokenController = TextEditingController();
   final TextEditingController _newPasswordController = TextEditingController();
-  
+
   bool _isLoading = false;
 
   Future<void> _requestToken() async {
     final email = _emailController.text.trim();
     if (email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor ingresa tu correo electrónico.')),
+        const SnackBar(
+            content: Text('Por favor ingresa tu correo electrónico.')),
       );
       return;
     }
 
     setState(() => _isLoading = true);
     try {
-      final response = await ApiClient.post('/password-reset/request', {'email': email});
+      final response =
+          await ApiClient.post('/password-reset/request', {'email': email});
       if (response.statusCode == 200 || response.statusCode == 202) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Si el correo está registrado, recibirás un enlace.'), backgroundColor: Colors.green),
+          const SnackBar(
+              content: Text(
+                  'Si el correo está registrado, recibirás un token por correo.'),
+              backgroundColor: Colors.green),
         );
         _emailController.clear();
       } else {
+        var message =
+            'No se pudo enviar el correo. Revisa la configuración del servicio de correo en el servidor.';
+        try {
+          final responseData = jsonDecode(response.body);
+          if (responseData is Map && responseData['detail'] != null) {
+            message = responseData['detail'].toString();
+          }
+        } catch (_) {}
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error al procesar la solicitud.')),
+          SnackBar(
+              content: Text(message), duration: const Duration(seconds: 7)),
         );
       }
     } catch (e) {
@@ -53,7 +68,8 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
 
     if (token.isEmpty || newPassword.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ingresa el token y la nueva contraseña.')),
+        const SnackBar(
+            content: Text('Ingresa el token y la nueva contraseña.')),
       );
       return;
     }
@@ -67,7 +83,9 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
 
       if (response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Contraseña actualizada exitosamente.'), backgroundColor: Colors.green),
+          const SnackBar(
+              content: Text('Contraseña actualizada exitosamente.'),
+              backgroundColor: Colors.green),
         );
         Navigator.pop(context);
       } else {
@@ -122,13 +140,15 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
                           decoration: BoxDecoration(
                             color: const Color(0x50FFFFFF),
                             borderRadius: BorderRadius.circular(25),
-                            border: Border.all(color: const Color(0x80FFFFFF), width: 1),
+                            border: Border.all(
+                                color: const Color(0x80FFFFFF), width: 1),
                           ),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              const Icon(Icons.lock_reset, size: 80, color: Color(0xFF0056B3)),
+                              const Icon(Icons.lock_reset,
+                                  size: 80, color: Color(0xFF0056B3)),
                               const SizedBox(height: 16),
                               const Text(
                                 'Recuperar Contraseña',
@@ -141,7 +161,7 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
                               ),
                               const SizedBox(height: 8),
                               const Text(
-                                'Ingresa tu correo para recibir un enlace de recuperación.',
+                                'Ingresa tu correo para recibir un token de recuperación.',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 13,
@@ -157,13 +177,16 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
                                   fillColor: const Color(0x20FFFFFF),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
-                                    borderSide: const BorderSide(color: Color(0x60FFFFFF)),
+                                    borderSide: const BorderSide(
+                                        color: Color(0x60FFFFFF)),
                                   ),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
-                                    borderSide: const BorderSide(color: Color(0x60FFFFFF)),
+                                    borderSide: const BorderSide(
+                                        color: Color(0x60FFFFFF)),
                                   ),
-                                  labelStyle: const TextStyle(color: Color(0xFF0B2545)),
+                                  labelStyle:
+                                      const TextStyle(color: Color(0xFF0B2545)),
                                 ),
                                 keyboardType: TextInputType.emailAddress,
                               ),
@@ -172,13 +195,20 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
                                 onPressed: _isLoading ? null : _requestToken,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF0056B3),
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8)),
                                   elevation: 0,
                                 ),
-                                child: _isLoading 
-                                  ? const CircularProgressIndicator(color: Colors.white)
-                                  : const Text('Enviar Enlace', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                                child: _isLoading
+                                    ? const CircularProgressIndicator(
+                                        color: Colors.white)
+                                    : const Text('Enviar token',
+                                        style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white)),
                               ),
                               const Padding(
                                 padding: EdgeInsets.symmetric(vertical: 24.0),
@@ -201,13 +231,16 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
                                   fillColor: const Color(0x20FFFFFF),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
-                                    borderSide: const BorderSide(color: Color(0x60FFFFFF)),
+                                    borderSide: const BorderSide(
+                                        color: Color(0x60FFFFFF)),
                                   ),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
-                                    borderSide: const BorderSide(color: Color(0x60FFFFFF)),
+                                    borderSide: const BorderSide(
+                                        color: Color(0x60FFFFFF)),
                                   ),
-                                  labelStyle: const TextStyle(color: Color(0xFF0B2545)),
+                                  labelStyle:
+                                      const TextStyle(color: Color(0xFF0B2545)),
                                 ),
                               ),
                               const SizedBox(height: 16),
@@ -219,13 +252,16 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
                                   fillColor: const Color(0x20FFFFFF),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
-                                    borderSide: const BorderSide(color: Color(0x60FFFFFF)),
+                                    borderSide: const BorderSide(
+                                        color: Color(0x60FFFFFF)),
                                   ),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
-                                    borderSide: const BorderSide(color: Color(0x60FFFFFF)),
+                                    borderSide: const BorderSide(
+                                        color: Color(0x60FFFFFF)),
                                   ),
-                                  labelStyle: const TextStyle(color: Color(0xFF0B2545)),
+                                  labelStyle:
+                                      const TextStyle(color: Color(0xFF0B2545)),
                                 ),
                                 obscureText: true,
                               ),
@@ -234,13 +270,20 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
                                 onPressed: _isLoading ? null : _resetPassword,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF0056B3),
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8)),
                                   elevation: 0,
                                 ),
-                                child: _isLoading 
-                                  ? const CircularProgressIndicator(color: Colors.white)
-                                  : const Text('Restablecer', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                                child: _isLoading
+                                    ? const CircularProgressIndicator(
+                                        color: Colors.white)
+                                    : const Text('Restablecer',
+                                        style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white)),
                               ),
                             ],
                           ),

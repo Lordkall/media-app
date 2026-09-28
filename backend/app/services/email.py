@@ -53,15 +53,14 @@ html_template = """
         </div>
         <div class="footer">
             <p>&copy; 2026 Salud Now. Todos los derechos reservados.</p>
-            <p>Si prefieres, también puedes hacer clic en el siguiente enlace:<br>
-            <a href="{{ reset_url }}" style="color: #0056b3; word-break: break-all;">{{ reset_url }}</a></p>
+            <p>Vuelve a la pantalla de recuperación de Salud Now e ingresa este token junto con tu nueva contraseña.</p>
         </div>
     </div>
 </body>
 </html>
 """
 
-def send_reset_email(to_email: str, reset_url: str, raw_token: str):
+def send_reset_email(to_email: str, raw_token: str):
     """
     Envía el correo HTML con el enlace de recuperación usando el API de Resend.
     """
@@ -72,7 +71,7 @@ def send_reset_email(to_email: str, reset_url: str, raw_token: str):
         print(f"--------------------\n")
         raise Exception("Falta configurar la variable RESEND_API_KEY en Railway.")
 
-    html_content = html_template.replace("{{ reset_url }}", reset_url).replace("{{ token }}", raw_token)
+    html_content = html_template.replace("{{ token }}", raw_token)
     
     headers = {
         "Authorization": f"Bearer {RESEND_API_KEY}",

@@ -20,6 +20,23 @@ class _MisCitasTabState extends State<MisCitasTab> {
   String? _role;
   String _filterMode = 'Fecha';
 
+  DateTime _appointmentDateTime(dynamic appointment) {
+    final rawDate = appointment['date']?.toString() ?? '';
+    final date =
+        DateTime.tryParse(rawDate.split('T').first) ?? DateTime(9999, 12, 31);
+    final timeBlock = appointment['time_block']?.toString() ?? '';
+    final match = RegExp(r'(\d{1,2}):(\d{2})\s*(AM|PM)?', caseSensitive: false)
+        .firstMatch(timeBlock);
+    if (match == null) return date;
+
+    var hour = int.tryParse(match.group(1) ?? '') ?? 0;
+    final minute = int.tryParse(match.group(2) ?? '') ?? 0;
+    final meridiem = match.group(3)?.toUpperCase();
+    if (meridiem == 'PM' && hour < 12) hour += 12;
+    if (meridiem == 'AM' && hour == 12) hour = 0;
+    return DateTime(date.year, date.month, date.day, hour, minute);
+  }
+
   List<dynamic> get _visibleAppointments {
     final activeAppointments = _appointments
         .where((appointment) => appointment['status'] != 'cancelled');
@@ -30,8 +47,22 @@ class _MisCitasTabState extends State<MisCitasTab> {
           .toList();
     }
     final recent = List<dynamic>.from(activeAppointments);
-    recent.sort((a, b) => (int.tryParse(b['id'].toString()) ?? 0)
-        .compareTo(int.tryParse(a['id'].toString()) ?? 0));
+    final now = caracasNow();
+    recent.sort((a, b) {
+      final aDateTime = _appointmentDateTime(a);
+      final bDateTime = _appointmentDateTime(b);
+      final aUpcoming = !aDateTime.isBefore(now);
+      final bUpcoming = !bDateTime.isBefore(now);
+      if (aUpcoming != bUpcoming) return aUpcoming ? -1 : 1;
+      // Put the closest future appointment first. For past appointments,
+      // retain the most recently completed appointment at the top of history.
+      final byDate = aUpcoming
+          ? aDateTime.compareTo(bDateTime)
+          : bDateTime.compareTo(aDateTime);
+      if (byDate != 0) return byDate;
+      return (int.tryParse(a['id'].toString()) ?? 0)
+          .compareTo(int.tryParse(b['id'].toString()) ?? 0);
+    });
     return recent;
   }
 
@@ -139,8 +170,8 @@ class _MisCitasTabState extends State<MisCitasTab> {
                           DropdownMenuItem(
                               value: 'Fecha', child: Text('Filtrar por fecha')),
                           DropdownMenuItem(
-                              value: 'Más recientes',
-                              child: Text('Más recientes')),
+                              value: 'Más próximas',
+                              child: Text('Más próximas')),
                         ],
                         onChanged: (value) {
                           if (value != null)
