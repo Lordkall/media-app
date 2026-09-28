@@ -141,7 +141,7 @@ class _PatientHomeTabState extends State<PatientHomeTab> {
                         child: _buildUpcomingAppointment(
                             a['doctor_name'] ?? 'Dr. Desconocido',
                             a['doctor_specialty'] ?? 'General',
-                            '${a['date']} · ${a['time_block'] ?? 'Turno #${a['turn_number']}'}',
+                            '${a['date']} · ${a['time_block'] ?? 'Hora pendiente'} · Turno #${a['turn_number']}',
                             a['doctor_location']?.toString() ?? '',
                             a['status'].toString().toLowerCase(),
                             a['doctor_avatar']),

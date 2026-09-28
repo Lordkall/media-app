@@ -157,6 +157,11 @@ async def get_all_clinics(
             end = sub.end_date.replace(tzinfo=None)
             days_remaining = (end - now).days if end > now else 0
 
+        pending_sub = await db.scalar(select(Subscription).where(
+            Subscription.clinic_id == clinic.id,
+            Subscription.status == SubscriptionStatus.PENDING_APPROVAL
+        ))
+
         clinics_list.append({
             "id": clinic.id,
             "user_id": user.id,
@@ -172,6 +177,10 @@ async def get_all_clinics(
             "plan": sub.plan.value if sub else "Ninguno",
             "subscription_id": sub.id if sub else None,
             "days_remaining": days_remaining,
+            "pending_sub_id": pending_sub.id if pending_sub else None,
+            "pending_plan": pending_sub.plan.value if pending_sub else None,
+            "pending_reference": pending_sub.reference_number if pending_sub else None,
+            "pending_amount_bs": pending_sub.amount_bs if pending_sub else None,
         })
         
     return clinics_list

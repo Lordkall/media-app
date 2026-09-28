@@ -125,6 +125,62 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
     return sortedDocs;
   }
 
+  Future<void> _selectSpecialty() async {
+    final queryController = TextEditingController();
+    final selected = await showDialog<String?>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, refreshDialog) {
+          final query = queryController.text.trim().toLowerCase();
+          final results = _availableSpecialties
+              .where((item) => item.toLowerCase().contains(query))
+              .toList();
+          return AlertDialog(
+            title: const Text('Buscar especialidad'),
+            content: SizedBox(
+              width: 420,
+              height: 420,
+              child: Column(
+                children: [
+                  TextField(
+                    controller: queryController,
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.search),
+                      hintText: 'Escribe una especialidad',
+                    ),
+                    onChanged: (_) => refreshDialog(() {}),
+                  ),
+                  ListTile(
+                    title: const Text('Todas las especialidades'),
+                    onTap: () => Navigator.pop(dialogContext, ''),
+                  ),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: results.length,
+                      itemBuilder: (context, index) => ListTile(
+                        title: Text(results[index]),
+                        selected: results[index] == _selectedEspecialidad,
+                        onTap: () => Navigator.pop(dialogContext, results[index]),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+    queryController.dispose();
+    if (!mounted || selected == null) return;
+    setState(() {
+      _selectedEspecialidad = selected.isEmpty ? null : selected;
+      _selectedMedico = null;
+      _selectedTurnNumber = null;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -167,17 +223,22 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
               },
             ),
             const SizedBox(height: 16),
-            _buildDropdown(
-              hint: 'Especialidad',
-              value: _selectedEspecialidad,
-              items: _availableSpecialties,
-              onChanged: (val) {
-                setState(() {
-                  _selectedEspecialidad = val;
-                  _selectedMedico = null;
-                  _selectedTurnNumber = null;
-                });
-              },
+            OutlinedButton.icon(
+              onPressed: _selectSpecialty,
+              icon: const Icon(Icons.search),
+              label: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(_selectedEspecialidad ?? 'Buscar especialidad'),
+              ),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 52),
+                alignment: Alignment.centerLeft,
+                backgroundColor: Colors.white.withOpacity(0.5),
+                foregroundColor: const Color(0xFF0B2545),
+                side: BorderSide(color: Colors.grey.withOpacity(0.3)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
             ),
             const SizedBox(height: 16),
             _buildDropdown(
@@ -351,18 +412,27 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
             else if (_availableSlots.isEmpty)
               const Text('No hay turnos disponibles para esta fecha.')
             else
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _availableSlots.map((slot) {
+              DropdownButtonFormField<int>(
+                value: _availableSlots.any(
+                        (slot) => slot['turn_number'] == _selectedTurnNumber)
+                    ? _selectedTurnNumber
+                    : null,
+                decoration: InputDecoration(
+                  labelText: 'Selecciona hora y turno',
+                  filled: true,
+                  fillColor: Colors.white.withOpacity(0.8),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                items: _availableSlots.map((slot) {
                   final turn = slot['turn_number'] as int;
-                  return ChoiceChip(
-                    label: Text('${slot['time_block']} · Turno #$turn'),
-                    selected: _selectedTurnNumber == turn,
-                    onSelected: (_) =>
-                        setState(() => _selectedTurnNumber = turn),
+                  return DropdownMenuItem<int>(
+                    value: turn,
+                    child: Text('${slot['time_block']} · Turno #$turn'),
                   );
                 }).toList(),
+                onChanged: (turn) =>
+                    setState(() => _selectedTurnNumber = turn),
               ),
             const SizedBox(height: 24),
             Padding(

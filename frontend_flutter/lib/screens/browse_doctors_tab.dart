@@ -25,6 +25,59 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
 
   List<String> get _estadosVE => ['Todos', ...veStates];
 
+  Future<void> _selectSpecialty() async {
+    final queryController = TextEditingController();
+    final selected = await showDialog<String?>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, refreshDialog) {
+          final query = queryController.text.trim().toLowerCase();
+          final results = medicalSpecialties
+              .where((item) => item.toLowerCase().contains(query))
+              .toList();
+          return AlertDialog(
+            title: const Text('Especialidades'),
+            content: SizedBox(
+              width: 420,
+              height: 420,
+              child: Column(
+                children: [
+                  TextField(
+                    controller: queryController,
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.search),
+                      hintText: 'Buscar por nombre',
+                    ),
+                    onChanged: (_) => refreshDialog(() {}),
+                  ),
+                  ListTile(
+                    title: const Text('Todas'),
+                    onTap: () => Navigator.pop(dialogContext, 'Todos'),
+                  ),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: results.length,
+                      itemBuilder: (context, index) => ListTile(
+                        title: Text(results[index]),
+                        selected: results[index] == _selectedSpecialty,
+                        onTap: () => Navigator.pop(dialogContext, results[index]),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+    queryController.dispose();
+    if (selected != null && mounted) {
+      setState(() => _selectedSpecialty = selected);
+    }
+  }
+
   List<dynamic> get _filteredDoctors {
     final items = _searchType == 'Doctores' ? _doctors : _clinics;
     final filtered = items.where((item) {
@@ -253,30 +306,23 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
             const SizedBox(height: 16),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.8),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF0B2545)),
+              child: OutlinedButton.icon(
+                onPressed: _selectSpecialty,
+                icon: const Icon(Icons.search, color: Color(0xFF0056B3)),
+                label: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(_selectedSpecialty == 'Todos'
+                      ? 'Especialidades'
+                      : _selectedSpecialty),
                 ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _selectedSpecialty,
-                    isExpanded: true,
-                    items: ['Todos', ...medicalSpecialties]
-                        .map((value) => DropdownMenuItem(
-                              value: value,
-                              child:
-                                  Text(value, overflow: TextOverflow.ellipsis),
-                            ))
-                        .toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() => _selectedSpecialty = value);
-                      }
-                    },
-                  ),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 52),
+                  alignment: Alignment.centerLeft,
+                  backgroundColor: Colors.white.withOpacity(0.8),
+                  foregroundColor: const Color(0xFF0B2545),
+                  side: const BorderSide(color: Color(0xFF0B2545)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
               ),
             ),

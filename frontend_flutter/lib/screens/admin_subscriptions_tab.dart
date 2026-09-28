@@ -14,6 +14,40 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
   List<dynamic> _doctors = [];
   List<dynamic> _clinics = [];
   String _searchType = 'Doctores'; // 'Doctores' or 'Clínicas'
+  String _selectedStatus = 'Todos';
+
+  List<dynamic> get _visibleItems {
+    final source = _searchType == 'Doctores' ? _doctors : _clinics;
+    final filtered = source.where((item) {
+      final hasActiveSubscription = item['plan'] != null &&
+          item['plan'] != 'Ninguno' &&
+          item['plan'] != 'none';
+      final hasPendingPayment = item['pending_sub_id'] != null;
+      final status = hasPendingPayment
+          ? 'Pago pendiente'
+          : hasActiveSubscription
+              ? 'Activa'
+              : 'Sin suscripción';
+      return _selectedStatus == 'Todos' || _selectedStatus == status;
+    }).toList();
+
+    filtered.sort((a, b) {
+      final aHasSubscription = a['plan'] != null &&
+          a['plan'] != 'Ninguno' &&
+          a['plan'] != 'none';
+      final bHasSubscription = b['plan'] != null &&
+          b['plan'] != 'Ninguno' &&
+          b['plan'] != 'none';
+      if (aHasSubscription != bHasSubscription) {
+        return aHasSubscription ? -1 : 1;
+      }
+      if (!aHasSubscription) return 0;
+      final aDays = (a['days_remaining'] as num?)?.toInt() ?? 0;
+      final bDays = (b['days_remaining'] as num?)?.toInt() ?? 0;
+      return aDays.compareTo(bDays);
+    });
+    return filtered;
+  }
 
   @override
   void initState() {
@@ -76,7 +110,7 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
 
   @override
   Widget build(BuildContext context) {
-    final items = _searchType == 'Doctores' ? _doctors : _clinics;
+    final items = _visibleItems;
 
     return Container(
       decoration: const BoxDecoration(
@@ -148,6 +182,34 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
               ),
             ),
             const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: DropdownButtonFormField<String>(
+                value: _selectedStatus,
+                decoration: InputDecoration(
+                  labelText: 'Filtrar por estado',
+                  filled: true,
+                  fillColor: Colors.white.withOpacity(0.8),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                items: const [
+                  'Todos',
+                  'Activa',
+                  'Pago pendiente',
+                  'Sin suscripción',
+                ]
+                    .map((status) => DropdownMenuItem(
+                          value: status,
+                          child: Text(status),
+                        ))
+                    .toList(),
+                onChanged: (status) {
+                  if (status != null) setState(() => _selectedStatus = status);
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())

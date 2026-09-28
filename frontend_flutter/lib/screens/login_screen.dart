@@ -24,6 +24,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
+  bool _emailShowsMask = false;
+  bool _passwordShowsMask = false;
   final LocalAuthentication _localAuth = LocalAuthentication();
 
   @override
@@ -35,6 +37,16 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _checkSavedLogin() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access_token');
+    final savedEmail = prefs.getString('logged_username');
+    if (savedEmail != null && savedEmail.isNotEmpty && mounted) {
+      setState(() {
+        _emailController.text = _maskEmail(savedEmail);
+        _emailShowsMask = true;
+        _passwordController.text = '********';
+        _passwordShowsMask = true;
+        _obscurePassword = false;
+      });
+    }
 
     if (token != null) {
       if (kIsWeb) {
@@ -58,6 +70,26 @@ class _LoginScreenState extends State<LoginScreen> {
         });
       });
     }
+  }
+
+  String _maskEmail(String email) {
+    final atIndex = email.indexOf('@');
+    if (atIndex < 0) {
+      final visibleCount = email.length < 3 ? email.length : 3;
+      final maskedCount = (email.length - visibleCount).clamp(3, 32).toInt();
+      return '${email.substring(0, visibleCount)}${List.filled(maskedCount, '*').join()}';
+    }
+    final localPart = email.substring(0, atIndex);
+    final visibleCount = localPart.length < 3 ? localPart.length : 3;
+    final maskedCount = (localPart.length - visibleCount).clamp(3, 32).toInt();
+    return '${localPart.substring(0, visibleCount)}${List.filled(maskedCount, '*').join()}${email.substring(atIndex)}';
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 
   Future<void> _loginWithBiometrics() async {
@@ -102,6 +134,14 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
+    if (_emailShowsMask || _passwordShowsMask) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Escribe tu correo y contraseña o inicia con huella.'),
+        ),
+      );
+      return;
+    }
     setState(() => _isLoading = true);
 
     try {
@@ -279,6 +319,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 32),
                         TextField(
                           controller: _emailController,
+                          onTap: () {
+                            if (_emailShowsMask) {
+                              _emailController.clear();
+                              setState(() => _emailShowsMask = false);
+                            }
+                          },
                           textInputAction: TextInputAction.next,
                           decoration: InputDecoration(
                             labelText: 'Correo Electrónico',
@@ -305,6 +351,15 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 16),
                         TextField(
                           controller: _passwordController,
+                          onTap: () {
+                            if (_passwordShowsMask) {
+                              _passwordController.clear();
+                              setState(() {
+                                _passwordShowsMask = false;
+                                _obscurePassword = true;
+                              });
+                            }
+                          },
                           textInputAction: TextInputAction.done,
                           onSubmitted: (_) => _isLoading ? null : _login(),
                           decoration: InputDecoration(
