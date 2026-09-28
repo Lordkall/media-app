@@ -36,8 +36,21 @@ def send_push_notification(token: str, title: str, body: str, data: dict = None)
             title=title,
             body=body,
         ),
-        data=data if data else {},
+        data={str(key): str(value) for key, value in (data or {}).items()},
         token=token,
+        android=messaging.AndroidConfig(
+            priority="high",
+            notification=messaging.AndroidNotification(
+                channel_id="salud_now_channel",
+                sound="default",
+            ),
+        ),
+        apns=messaging.APNSConfig(
+            headers={"apns-priority": "10"},
+            payload=messaging.APNSPayload(
+                aps=messaging.Aps(sound="default", content_available=True)
+            ),
+        ),
     )
     
     try:

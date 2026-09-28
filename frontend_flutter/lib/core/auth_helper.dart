@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'profile_image_helper.dart';
 
 class AuthHelper {
   static Map<String, dynamic>? decodeToken(String token) {
@@ -9,12 +10,18 @@ class AuthHelper {
 
       String payload = parts[1].replaceAll('-', '+').replaceAll('_', '/');
       switch (payload.length % 4) {
-        case 0: break;
-        case 2: payload += '=='; break;
-        case 3: payload += '='; break;
-        default: return null;
+        case 0:
+          break;
+        case 2:
+          payload += '==';
+          break;
+        case 3:
+          payload += '=';
+          break;
+        default:
+          return null;
       }
-      
+
       final String decoded = utf8.decode(base64Url.decode(payload));
       return jsonDecode(decoded);
     } catch (e) {
@@ -27,12 +34,13 @@ class AuthHelper {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access_token');
     if (token == null) return null;
-    
+
     final decoded = decodeToken(token);
     return decoded?['role']?.toString();
   }
 
   static Future<void> logout() async {
+    ProfileImageHelper.updateCurrentUserAvatar(null);
     final prefs = await SharedPreferences.getInstance();
     final currentToken = prefs.getString('access_token');
     if (currentToken != null) {

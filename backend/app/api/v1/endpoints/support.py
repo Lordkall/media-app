@@ -41,7 +41,7 @@ async def create_ticket(
     db.add(first_message)
     await db.commit()
     
-    # Notify admin
+    # Persist an in-app notification and send a push after the commit.
     try:
         admins_result = await db.execute(select(User))
         admins = [u for u in admins_result.scalars().all() if u.role == RoleEnum.ADMIN or u.role == "admin"]
@@ -51,7 +51,8 @@ async def create_ticket(
                 user_id=admin.id,
                 type=NotificationType.SUPPORT_MESSAGE,
                 title="Nuevo ticket de soporte",
-                message=f"{current_user.first_name} ha enviado un mensaje: {ticket_in.subject}"
+                message=f"{current_user.first_name} {current_user.last_name} ha enviado un mensaje: {ticket_in.subject}",
+                action_url=f"support_ticket:{new_ticket.id}"
             )
             db.add(notification)
             
@@ -60,11 +61,15 @@ async def create_ticket(
         # Send push to all admins (after commit so FCM tokens are fresh)
         for admin in admins:
             if admin.fcm_token:
-                send_push_notification(
+                sent = send_push_notification(
                     admin.fcm_token,
                     "Nuevo ticket de soporte",
-                    f"{current_user.first_name}: {ticket_in.subject}"
+                    f"{current_user.first_name} {current_user.last_name}: {ticket_in.subject}",
+                    {"type": "support_message", "ticket_id": str(new_ticket.id)}
                 )
+                print(f"Support push to admin {admin.id}: {'sent' if sent else 'failed'}")
+            else:
+                print(f"Support push skipped for admin {admin.id}: no FCM token")
     except Exception as e:
         print(f"Failed to notify admins: {e}")
         pass
@@ -157,7 +162,7 @@ async def reply_ticket(
     db.add(msg)
     await db.commit()
 
-    # Send notification
+    # Send an in-app notification and a push to the other side of the conversation.
     try:
         is_admin = (current_user.role == RoleEnum.ADMIN or current_user.role == "admin")
         if is_admin:
@@ -169,9 +174,12 @@ async def reply_ticket(
                 user_id=notif_user_id,
                 type=NotificationType.SUPPORT_MESSAGE,
                 title=notif_title,
-                message=notif_msg
+                message=notif_msg,
+                action_url=f"support_ticket:{ticket.id}"
             )
             db.add(notification)
+            ticket_owner = await db.get(User, ticket.user_id)
+            recipients = [ticket_owner] if ticket_owner else []
         else:
             # User replied -> notify all admins
             admins_result = await db.execute(select(User))
@@ -181,10 +189,21 @@ async def reply_ticket(
                     user_id=admin.id,
                     type=NotificationType.SUPPORT_MESSAGE,
                     title="Nuevo mensaje de soporte",
-                    message=f"{current_user.first_name} {current_user.last_name} respondió en el ticket: {ticket.subject}"
+                    message=f"{current_user.first_name} {current_user.last_name} respondió en el ticket: {ticket.subject}",
+                    action_url=f"support_ticket:{ticket.id}"
                 )
                 db.add(notification)
+            recipients = admins
         await db.commit()
+        from app.core.firebase import send_push_notification
+        for recipient in recipients:
+            if recipient and recipient.fcm_token:
+                send_push_notification(
+                    recipient.fcm_token,
+                    "Respuesta de soporte" if is_admin else "Nuevo mensaje de soporte",
+                    notif_msg if is_admin else f"{current_user.first_name} {current_user.last_name}: {ticket.subject}",
+                    {"type": "support_message", "ticket_id": str(ticket.id)}
+                )
     except Exception as e:
         print(f"Error sending reply notification: {e}")
 

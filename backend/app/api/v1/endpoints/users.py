@@ -108,9 +108,32 @@ async def get_my_notifications(
             sub_id = int(n.action_url.split(":")[1])
             sub = await db.scalar(select(Subscription).where(Subscription.id == sub_id))
             from app.models.subscriptions import SubscriptionStatus
-            if sub and sub.status == SubscriptionStatus.PENDING_APPROVAL:
+            if sub:
+                owner_name = "Usuario"
+                entity_kind = "doctor"
+                if sub.doctor_id:
+                    from app.models.doctors import Doctor
+                    doctor_user_id = await db.scalar(
+                        select(Doctor.user_id).where(Doctor.id == sub.doctor_id)
+                    )
+                    owner = await db.get(User, doctor_user_id) if doctor_user_id else None
+                    if owner:
+                        owner_name = f"Dr. {owner.first_name} {owner.last_name}"
+                elif sub.clinic_id:
+                    from app.models.clinics import Clinic
+                    clinic_user_id = await db.scalar(
+                        select(Clinic.user_id).where(Clinic.id == sub.clinic_id)
+                    )
+                    owner = await db.get(User, clinic_user_id) if clinic_user_id else None
+                    entity_kind = "clinic"
+                    if owner:
+                        owner_name = f"{owner.first_name} {owner.last_name}"
                 data["payment_details"] = {
                     "sub_id": sub.id,
+                    "owner_name": owner_name,
+                    "entity_kind": entity_kind,
+                    "plan": sub.plan.value,
+                    "status": sub.status.value,
                     "reference_number": sub.reference_number,
                     "amount_bs": sub.amount_bs,
                     "screenshot_base64": sub.screenshot_base64

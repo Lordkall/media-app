@@ -1,47 +1,41 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileImageHelper {
-  static String? cachedImagePath;
+  static final ValueNotifier<String?> currentUserAvatarUrl =
+      ValueNotifier(null);
 
-  static Future<String> _getKey() async {
-    final prefs = await SharedPreferences.getInstance();
-    final username = prefs.getString('logged_username') ?? 'default';
-    return 'profile_image_path_$username';
-  }
-
-  static Future<void> saveImagePath(String path) async {
-    final prefs = await SharedPreferences.getInstance();
-    final key = await _getKey();
-    await prefs.setString(key, path);
-    cachedImagePath = path;
-  }
-
-  static Future<String?> getImagePath() async {
-    if (cachedImagePath != null) return cachedImagePath;
-    final prefs = await SharedPreferences.getInstance();
-    final key = await _getKey();
-    cachedImagePath = prefs.getString(key);
-    return cachedImagePath;
+  static void updateCurrentUserAvatar(String? url) {
+    currentUserAvatarUrl.value = url;
   }
 
   static ImageProvider getProfileImageProvider(String? avatarUrl) {
     if (avatarUrl != null && avatarUrl.trim().isNotEmpty) {
       final finalUrl = avatarUrl.trim();
-      if (finalUrl.startsWith('http://') || finalUrl.startsWith('https://')) {
+      if (finalUrl.startsWith('https://')) {
         return NetworkImage(finalUrl);
       }
-      // Ensure correct path prefix
+      if (finalUrl.startsWith('http://')) {
+        return NetworkImage(finalUrl.replaceFirst('http://', 'https://'));
+      }
       final String path;
       if (finalUrl.startsWith('/api/v1/')) {
         path = finalUrl;
+      } else if (finalUrl.startsWith('/uploads/')) {
+        path = '/api/v1$finalUrl';
+      } else if (finalUrl.startsWith('uploads/')) {
+        path = '/api/v1/$finalUrl';
+      } else if (finalUrl.startsWith('/avatars/')) {
+        path = '/api/v1/uploads$finalUrl';
+      } else if (finalUrl.startsWith('avatars/')) {
+        path = '/api/v1/uploads/$finalUrl';
       } else if (finalUrl.startsWith('/')) {
         path = finalUrl;
       } else {
-        path = '/api/v1/uploads/avatars/$finalUrl';
+        path = '/api/v1/uploads/avatars/${finalUrl.split('/').last}';
       }
       return NetworkImage('https://saludnow.site$path');
     }
-    return const NetworkImage('https://cdn-icons-png.flaticon.com/512/3069/3069172.png');
+    return const NetworkImage(
+        'https://cdn-icons-png.flaticon.com/512/3069/3069172.png');
   }
 }

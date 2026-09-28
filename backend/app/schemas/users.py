@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional
 from enum import Enum
 
@@ -19,8 +19,18 @@ class UserCreate(BaseModel):
     state: Optional[str] = None
     address: Optional[str] = None
     gender: Optional[str] = "No Especificado"
-    specialties: Optional[list[str]] = []
+    specialties: Optional[list[str]] = Field(default=None, max_length=5)
     clinic_description: Optional[str] = None
+
+    @field_validator("specialties")
+    @classmethod
+    def limit_specialties(cls, specialties: Optional[list[str]]) -> Optional[list[str]]:
+        if specialties is None:
+            return None
+        cleaned = list(dict.fromkeys(item.strip() for item in specialties if item.strip()))
+        if len(cleaned) > 5:
+            raise ValueError("Un doctor puede seleccionar hasta cinco especialidades")
+        return cleaned
 
 class UserUpdate(BaseModel):
     first_name: Optional[str] = None

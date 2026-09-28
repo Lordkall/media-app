@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'home_tab.dart';
 import 'patient_home_tab.dart';
@@ -13,6 +14,7 @@ import 'mis_citas_tab.dart';
 import '../core/auth_helper.dart';
 import '../core/api_client.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import '../core/local_notification_service.dart';
 import 'package:flutter/foundation.dart';
 
 class MainDoctorScreen extends StatefulWidget {
@@ -25,6 +27,8 @@ class MainDoctorScreen extends StatefulWidget {
 class _MainDoctorScreenState extends State<MainDoctorScreen> {
   int _currentIndex = 0;
   String? _role;
+  StreamSubscription<String>? _tokenSubscription;
+  StreamSubscription<RemoteMessage>? _messageSubscription;
 
   @override
   void initState() {
@@ -33,31 +37,69 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
     _setupFCM();
   }
 
-  Future<void> _setupFCM() async { if (kIsWeb) return;
-    FirebaseMessaging messaging = FirebaseMessaging.instance;
-    NotificationSettings settings = await messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      String? token = await messaging.getToken();
-      if (token != null) {
-        await ApiClient.put('/users/me', {'fcm_token': token});
+  Future<void> _setupFCM() async {
+    if (kIsWeb) return;
+    try {
+      final messaging = FirebaseMessaging.instance;
+      await messaging.setAutoInitEnabled(true);
+      final settings = await messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      final permissionGranted =
+          settings.authorizationStatus == AuthorizationStatus.authorized ||
+              settings.authorizationStatus == AuthorizationStatus.provisional;
+      if (!permissionGranted) {
+        debugPrint('Push notifications are not authorized on this device.');
+        return;
       }
 
-      messaging.onTokenRefresh.listen((newToken) {
-        ApiClient.put('/users/me', {'fcm_token': newToken});
+      final token = await messaging.getToken();
+      if (token != null) await _saveFcmToken(token);
+
+      _tokenSubscription = messaging.onTokenRefresh.listen(_saveFcmToken);
+      _messageSubscription = FirebaseMessaging.onMessage.listen((message) {
+        LocalNotificationService.showRemoteMessage(message);
+        final title = message.notification?.title ?? 'Salud Now';
+        final body =
+            message.notification?.body ?? 'Tienes una notificación nueva.';
+        if (mounted) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text('$title: $body')));
+        }
       });
+    } catch (error, stackTrace) {
+      debugPrint(
+          'Could not register this device for push notifications: $error\n$stackTrace');
+    }
+  }
+
+  Future<void> _saveFcmToken(String token) async {
+    try {
+      final response = await ApiClient.put('/users/me', {'fcm_token': token});
+      if (response.statusCode != 200) {
+        debugPrint(
+            'FCM token registration failed: ${response.statusCode} ${response.body}');
+      }
+    } catch (error) {
+      debugPrint('Could not save FCM token: $error');
     }
   }
 
   Future<void> _loadRole() async {
     final role = await AuthHelper.getRole();
+    if (!mounted) return;
     setState(() {
       _role = role;
     });
+  }
+
+  @override
+  void dispose() {
+    _tokenSubscription?.cancel();
+    _messageSubscription?.cancel();
+    super.dispose();
   }
 
   List<Widget> get _tabs {
@@ -96,7 +138,8 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBody: true, // Importante para que el body vaya por debajo del BottomAppBar transparente
+      extendBody:
+          true, // Importante para que el body vaya por debajo del BottomAppBar transparente
       body: Stack(
         children: [
           _tabs[_currentIndex],
@@ -108,7 +151,8 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
               child: FloatingActionButton(
                 heroTag: 'supportFAB',
                 backgroundColor: const Color(0xFF0056B3),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15)),
                 onPressed: () {
                   _showSupportDialog(context);
                 },
@@ -163,8 +207,9 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
 
   Widget _buildNavItem(IconData icon, String label, int index) {
     final isSelected = _currentIndex == index;
-    final color = isSelected ? const Color(0xFF0056B3) : const Color(0xFF475569);
-    
+    final color =
+        isSelected ? const Color(0xFF0056B3) : const Color(0xFF475569);
+
     return InkWell(
       onTap: () => setState(() => _currentIndex = index),
       child: Column(
@@ -199,7 +244,8 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
             children: [
               Icon(Icons.support_agent, color: Color(0xFF0056B3)),
               SizedBox(width: 8),
-              Text('Soporte Técnico', style: TextStyle(fontSize: 18, color: Color(0xFF0B2545))),
+              Text('Soporte Técnico',
+                  style: TextStyle(fontSize: 18, color: Color(0xFF0B2545))),
             ],
           ),
           content: Column(
@@ -207,47 +253,56 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
             children: [
               TextField(
                 controller: asuntoController,
-                decoration: const InputDecoration(labelText: 'Asunto', border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                    labelText: 'Asunto', border: OutlineInputBorder()),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: mensajeController,
                 maxLines: 4,
-                decoration: const InputDecoration(labelText: 'Mensaje', border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                    labelText: 'Mensaje', border: OutlineInputBorder()),
               ),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar', style: TextStyle(color: Colors.red)),
+              child:
+                  const Text('Cancelar', style: TextStyle(color: Colors.red)),
             ),
             ElevatedButton(
               onPressed: () async {
                 final subject = asuntoController.text.trim();
                 final msg = mensajeController.text.trim();
                 if (subject.isEmpty || msg.isEmpty) return;
-                
+
                 try {
-                  final response = await ApiClient.post('/support/', {'subject': subject, 'message': msg});
+                  final response = await ApiClient.post(
+                      '/support/', {'subject': subject, 'message': msg});
                   if (response.statusCode == 200) {
                     if (context.mounted) {
                       Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mensaje enviado al administrador.')));
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text('Mensaje enviado al administrador.')));
                     }
                   } else {
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error al enviar el mensaje.')));
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text('Error al enviar el mensaje.')));
                     }
                   }
                 } catch (e) {
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                    ScaffoldMessenger.of(context)
+                        .showSnackBar(SnackBar(content: Text('Error: $e')));
                   }
                 }
               },
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0056B3)),
-              child: const Text('Enviar', style: TextStyle(color: Colors.white)),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0056B3)),
+              child:
+                  const Text('Enviar', style: TextStyle(color: Colors.white)),
             ),
           ],
         );

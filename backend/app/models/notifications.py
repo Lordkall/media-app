@@ -45,6 +45,10 @@ def receive_after_insert(mapper, connection: Connection, target: Notification):
     Sends a Firebase push notification whenever a Notification is inserted into the DB.
     """
     try:
+        # Support endpoints send explicitly after commit so delivery errors can be logged
+        # and token freshness is guaranteed; avoid sending a duplicate from this hook.
+        if target.type == NotificationType.SUPPORT_MESSAGE:
+            return
         from app.models.users import User
         from sqlalchemy import select
         # Query the user's FCM token using the current connection

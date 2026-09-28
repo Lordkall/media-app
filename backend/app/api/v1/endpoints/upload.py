@@ -1,5 +1,6 @@
 import os
 import shutil
+import uuid
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import update
@@ -21,7 +22,7 @@ async def upload_avatar(
     file_extension = file.filename.split(".")[-1]
     if file_extension.lower() not in ["jpg", "jpeg", "png", "gif", "webp"]:
         raise HTTPException(status_code=400, detail="El archivo no es una imagen válida")
-    filename = f"user_{current_user.id}_{current_user.email.replace('@','_')}.{file_extension}"
+    filename = f"user_{current_user.id}_{uuid.uuid4().hex}.{file_extension.lower()}"
     file_path = os.path.join(UPLOAD_DIR, filename)
     
     with open(file_path, "wb") as buffer:

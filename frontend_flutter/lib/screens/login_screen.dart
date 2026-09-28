@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/api_client.dart';
+import '../core/profile_image_helper.dart';
 import 'main_doctor_screen.dart';
 import 'dart:convert';
 import 'dart:ui';
@@ -34,7 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _checkSavedLogin() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access_token');
-    
+
     if (token != null) {
       if (kIsWeb) {
         _navigateToHome();
@@ -44,12 +45,14 @@ class _LoginScreenState extends State<LoginScreen> {
       // Wait for the UI to settle completely to avoid BiometricPromptCompat crash
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Future.delayed(const Duration(milliseconds: 1500), () {
-          if (mounted && WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
+          if (mounted &&
+              WidgetsBinding.instance.lifecycleState ==
+                  AppLifecycleState.resumed) {
             _loginWithBiometrics();
           } else {
             // Retry if not resumed yet
             Future.delayed(const Duration(milliseconds: 1500), () {
-               if (mounted) _loginWithBiometrics();
+              if (mounted) _loginWithBiometrics();
             });
           }
         });
@@ -60,10 +63,12 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _loginWithBiometrics() async {
     final prefs = await SharedPreferences.getInstance();
     final savedToken = prefs.getString('saved_biometric_token');
-    
+
     if (savedToken == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Debes iniciar sesión con contraseña al menos una vez para usar huella.')),
+        const SnackBar(
+            content: Text(
+                'Debes iniciar sesión con contraseña al menos una vez para usar huella.')),
       );
       return;
     }
@@ -71,20 +76,24 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final canCheckBiometrics = await _localAuth.canCheckBiometrics;
       final isDeviceSupported = await _localAuth.isDeviceSupported();
-      
+
       if (canCheckBiometrics || isDeviceSupported) {
         final didAuthenticate = await _localAuth.authenticate(
-          localizedReason: 'Inicia sesión con tu huella para acceder a Salud Now',
+          localizedReason:
+              'Inicia sesión con tu huella para acceder a Salud Now',
           options: const AuthenticationOptions(biometricOnly: true),
         );
-        
+
         if (didAuthenticate) {
           await prefs.setString('access_token', savedToken);
+          ProfileImageHelper.updateCurrentUserAvatar(null);
           _navigateToHome();
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Tu dispositivo no soporta o no tiene configurada biometría.')),
+          const SnackBar(
+              content: Text(
+                  'Tu dispositivo no soporta o no tiene configurada biometría.')),
         );
       }
     } catch (e) {
@@ -94,7 +103,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _login() async {
     setState(() => _isLoading = true);
-    
+
     try {
       final response = await ApiClient.postForm('/auth/login', {
         'username': _emailController.text.trim(),
@@ -107,7 +116,8 @@ class _LoginScreenState extends State<LoginScreen> {
         await prefs.setString('access_token', data['access_token']);
         await prefs.setString('saved_biometric_token', data['access_token']);
         await prefs.setString('logged_username', _emailController.text.trim());
-        
+        ProfileImageHelper.updateCurrentUserAvatar(null);
+
         _navigateToHome();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -132,57 +142,68 @@ class _LoginScreenState extends State<LoginScreen> {
       final userResponse = await ApiClient.get('/users/me');
       if (userResponse.statusCode == 200) {
         final userData = jsonDecode(userResponse.body);
-        
+
         if (userData['role'] == 'doctor') {
           // It's a doctor, check if they have a profile/subscription
           final docResponse = await ApiClient.get('/doctors/me');
           if (docResponse.statusCode == 200) {
-             final docData = jsonDecode(docResponse.body);
-             // Check their subscription status
-             final subResp = await ApiClient.get('/subscriptions/me');
-             if (subResp.statusCode == 200) {
-               final subData = jsonDecode(subResp.body);
-               
-               if (subData['current'] != null) {
-                 final graceEnd = DateTime.parse(subData['current']['grace_end_date']);
-                 if (DateTime.now().isAfter(graceEnd)) {
-                   // Grace period over! 
-                   if (!mounted) return;
-                   Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => SelectPlanScreen(doctorData: docData, isRenewal: true)));
-                   return;
-                 }
-                 // Active subscription (within grace period), proceed to home
-               } else if (subData['pending'] != null) {
-                 // Pending subscription, go to waiting screen
-                 if (!mounted) return;
-                 Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const PaymentPendingScreen()));
-                 return;
-               } else {
-                 // No subscription at all
-                 if (!mounted) return;
-                 Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => SelectPlanScreen(doctorData: docData, isRenewal: false)));
-                 return;
-               }
-             } else {
-                 if (!mounted) return;
-                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al cargar suscripción: ${subResp.statusCode}')));
-                 return; // Prevent bypass
-               }
+            final docData = jsonDecode(docResponse.body);
+            // Check their subscription status
+            final subResp = await ApiClient.get('/subscriptions/me');
+            if (subResp.statusCode == 200) {
+              final subData = jsonDecode(subResp.body);
+
+              if (subData['current'] != null) {
+                final graceEnd =
+                    DateTime.parse(subData['current']['grace_end_date']);
+                if (DateTime.now().isAfter(graceEnd)) {
+                  // Grace period over!
+                  if (!mounted) return;
+                  Navigator.of(context).pushReplacement(MaterialPageRoute(
+                      builder: (_) => SelectPlanScreen(
+                          doctorData: docData, isRenewal: true)));
+                  return;
+                }
+                // Active subscription (within grace period), proceed to home
+              } else if (subData['pending'] != null) {
+                // Pending subscription, go to waiting screen
+                if (!mounted) return;
+                Navigator.of(context).pushReplacement(MaterialPageRoute(
+                    builder: (_) => const PaymentPendingScreen()));
+                return;
+              } else {
+                // No subscription at all
+                if (!mounted) return;
+                Navigator.of(context).pushReplacement(MaterialPageRoute(
+                    builder: (_) => SelectPlanScreen(
+                        doctorData: docData, isRenewal: false)));
+                return;
+              }
             } else {
               if (!mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error al cargar perfil de doctor.')));
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(
+                      'Error al cargar suscripción: ${subResp.statusCode}')));
               return; // Prevent bypass
             }
+          } else {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text('Error al cargar perfil de doctor.')));
+            return; // Prevent bypass
+          }
         }
       } else {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error al cargar datos del usuario.')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Error al cargar datos del usuario.')));
         return; // Prevent bypass
       }
     } catch (e) {
       print('Navigation error: $e');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error de conexión: $e')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error de conexión: $e')));
       return; // Prevent bypass
     }
 
@@ -221,7 +242,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     decoration: BoxDecoration(
                       color: const Color(0x50FFFFFF),
                       borderRadius: BorderRadius.circular(25),
-                      border: Border.all(color: const Color(0x80FFFFFF), width: 1),
+                      border:
+                          Border.all(color: const Color(0x80FFFFFF), width: 1),
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -231,7 +253,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           'assets/logo.png',
                           height: 100,
                           errorBuilder: (context, error, stackTrace) {
-                            return const Icon(Icons.medical_services, size: 80, color: Color(0xFF0056B3));
+                            return const Icon(Icons.medical_services,
+                                size: 80, color: Color(0xFF0056B3));
                           },
                         ),
                         const SizedBox(height: 16),
@@ -263,14 +286,18 @@ class _LoginScreenState extends State<LoginScreen> {
                             fillColor: const Color(0x20FFFFFF),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(color: Color(0x60FFFFFF)),
+                              borderSide:
+                                  const BorderSide(color: Color(0x60FFFFFF)),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(color: Color(0x60FFFFFF)),
+                              borderSide:
+                                  const BorderSide(color: Color(0x60FFFFFF)),
                             ),
-                            prefixIcon: const Icon(Icons.email, color: Color(0xFF0B3C85)),
-                            labelStyle: const TextStyle(color: Color(0xFF0B2545)),
+                            prefixIcon: const Icon(Icons.email,
+                                color: Color(0xFF0B3C85)),
+                            labelStyle:
+                                const TextStyle(color: Color(0xFF0B2545)),
                           ),
                           keyboardType: TextInputType.emailAddress,
                           style: const TextStyle(color: Color(0xFF0B2545)),
@@ -286,16 +313,21 @@ class _LoginScreenState extends State<LoginScreen> {
                             fillColor: const Color(0x20FFFFFF),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(color: Color(0x60FFFFFF)),
+                              borderSide:
+                                  const BorderSide(color: Color(0x60FFFFFF)),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(color: Color(0x60FFFFFF)),
+                              borderSide:
+                                  const BorderSide(color: Color(0x60FFFFFF)),
                             ),
-                            prefixIcon: const Icon(Icons.lock, color: Color(0xFF0B3C85)),
+                            prefixIcon: const Icon(Icons.lock,
+                                color: Color(0xFF0B3C85)),
                             suffixIcon: IconButton(
                               icon: Icon(
-                                _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                                _obscurePassword
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
                                 color: const Color(0xFF0B3C85),
                               ),
                               onPressed: () {
@@ -304,7 +336,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 });
                               },
                             ),
-                            labelStyle: const TextStyle(color: Color(0xFF0B2545)),
+                            labelStyle:
+                                const TextStyle(color: Color(0xFF0B2545)),
                           ),
                           obscureText: _obscurePassword,
                           style: const TextStyle(color: Color(0xFF0B2545)),
@@ -315,35 +348,47 @@ class _LoginScreenState extends State<LoginScreen> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF0056B3),
                             padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
                             elevation: 0,
                           ),
-                          child: _isLoading 
-                            ? Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: const [
-                                  SizedBox(
-                                    width: 20, 
-                                    height: 20, 
-                                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                                  ),
-                                  SizedBox(width: 12),
-                                  Text('Ingresando...', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-                                ],
-                              )
-                            : const Text('Ingresar', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                          child: _isLoading
+                              ? Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: const [
+                                    SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 2)),
+                                    SizedBox(width: 12),
+                                    Text('Ingresando...',
+                                        style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white)),
+                                  ],
+                                )
+                              : const Text('Ingresar',
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white)),
                         ),
                         const SizedBox(height: 16),
                         if (!kIsWeb)
                           IconButton(
                             onPressed: _loginWithBiometrics,
-                            icon: const Icon(Icons.fingerprint, size: 50, color: Color(0xFF0056B3)),
+                            icon: const Icon(Icons.fingerprint,
+                                size: 50, color: Color(0xFF0056B3)),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
                           ),
                         const SizedBox(height: 24),
                         Container(
-                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 12, horizontal: 16),
                           decoration: BoxDecoration(
                             color: const Color(0x20FFFFFF),
                             borderRadius: BorderRadius.circular(8),
@@ -353,12 +398,23 @@ class _LoginScreenState extends State<LoginScreen> {
                               Wrap(
                                 alignment: WrapAlignment.center,
                                 children: [
-                                  const Text('¿Aún no te has registrado? ', style: TextStyle(color: Color(0xFF475569), fontSize: 12)),
+                                  const Text('¿Aún no te has registrado? ',
+                                      style: TextStyle(
+                                          color: Color(0xFF475569),
+                                          fontSize: 12)),
                                   GestureDetector(
                                     onTap: () {
-                                      Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterScreen()));
+                                      Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (_) =>
+                                                  const RegisterScreen()));
                                     },
-                                    child: const Text('Crear cuenta', style: TextStyle(color: Color(0xFF0056B3), fontSize: 12, fontWeight: FontWeight.bold)),
+                                    child: const Text('Crear cuenta',
+                                        style: TextStyle(
+                                            color: Color(0xFF0056B3),
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold)),
                                   ),
                                 ],
                               ),
@@ -366,12 +422,23 @@ class _LoginScreenState extends State<LoginScreen> {
                               Wrap(
                                 alignment: WrapAlignment.center,
                                 children: [
-                                  const Text('¿Olvidaste tu contraseña? ', style: TextStyle(color: Color(0xFF475569), fontSize: 12)),
+                                  const Text('¿Olvidaste tu contraseña? ',
+                                      style: TextStyle(
+                                          color: Color(0xFF475569),
+                                          fontSize: 12)),
                                   GestureDetector(
                                     onTap: () {
-                                      Navigator.push(context, MaterialPageRoute(builder: (_) => const PasswordRecoveryScreen()));
+                                      Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (_) =>
+                                                  const PasswordRecoveryScreen()));
                                     },
-                                    child: const Text('Recupérala aquí', style: TextStyle(color: Color(0xFF0056B3), fontSize: 12, fontWeight: FontWeight.bold)),
+                                    child: const Text('Recupérala aquí',
+                                        style: TextStyle(
+                                            color: Color(0xFF0056B3),
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold)),
                                   ),
                                 ],
                               ),

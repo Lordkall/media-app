@@ -5,6 +5,7 @@ import 'dart:convert';
 import '../widgets/doctor_header.dart';
 import '../core/profile_image_helper.dart';
 import '../core/api_client.dart';
+import '../widgets/profile_avatar.dart';
 import 'support_messages_screen.dart';
 
 class AdminHomeTab extends StatefulWidget {
@@ -15,7 +16,7 @@ class AdminHomeTab extends StatefulWidget {
 }
 
 class _AdminHomeTabState extends State<AdminHomeTab> {
-  String? _imagePath;
+  Map<String, dynamic>? _userData;
   List<dynamic> _notifications = [];
   bool _isLoadingNotifications = true;
   Timer? _pollingTimer;
@@ -23,7 +24,7 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
   @override
   void initState() {
     super.initState();
-    _loadImage();
+    _loadProfile();
     _fetchNotifications();
     // Poll notifications every 30 seconds
     _pollingTimer = Timer.periodic(const Duration(seconds: 30), (_) {
@@ -55,13 +56,16 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
     }
   }
 
-  Future<void> _loadImage() async {
-    final path = await ProfileImageHelper.getImagePath();
-    if (path != null && mounted) {
-      setState(() {
-        _imagePath = path;
-      });
-    }
+  Future<void> _loadProfile() async {
+    try {
+      final response = await ApiClient.get('/users/me');
+      if (response.statusCode == 200 && mounted) {
+        final user = Map<String, dynamic>.from(jsonDecode(response.body));
+        ProfileImageHelper.updateCurrentUserAvatar(
+            user['avatar_url']?.toString());
+        setState(() => _userData = user);
+      }
+    } catch (_) {}
   }
 
   @override
@@ -115,29 +119,33 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
                   if (_isLoadingNotifications)
                     const Center(child: CircularProgressIndicator())
                   else if (_notifications.isEmpty)
-                    const Text('No hay notificaciones recientes.', style: TextStyle(color: Colors.grey))
+                    const Text('No hay notificaciones recientes.',
+                        style: TextStyle(color: Colors.grey))
                   else
                     ..._notifications.take(5).map((n) {
                       IconData icon;
                       Color color;
-                      if (n['type'] == 'NEW_DOCTOR') {
+                      final type = n['type']?.toString().toLowerCase();
+                      if (type == 'doctor_registered') {
                         icon = Icons.person_add;
                         color = Colors.green;
-                      } else if (n['type'] == 'NEW_SUBSCRIPTION') {
+                      } else if (type == 'new_subscription') {
                         icon = Icons.payment;
                         color = Colors.orange;
                       } else {
                         icon = Icons.notifications;
                         color = Colors.blue;
                       }
-                      
+
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 8.0),
                         child: _buildNotificationCard(
                           context,
                           title: n['title'] ?? 'Notificación',
                           message: n['message'] ?? '',
-                          time: n['created_at'] != null ? n['created_at'].substring(0, 10) : '',
+                          time: n['created_at'] != null
+                              ? n['created_at'].substring(0, 10)
+                              : '',
                           icon: icon,
                           color: color,
                           notification: n,
@@ -158,7 +166,9 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const SupportMessagesScreen()),
+                        MaterialPageRoute(
+                            builder: (context) =>
+                                const SupportMessagesScreen()),
                       );
                     },
                     child: _buildMenuCard(
@@ -183,26 +193,20 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
       padding: const EdgeInsets.symmetric(horizontal: 24.0),
       child: Row(
         children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFF0056B3), width: 3),
-              color: Colors.grey[200],
-              image: DecorationImage(
-                image: ProfileImageHelper.getProfileImageProvider(null),
-                fit: BoxFit.cover,
-              ),
-            ),
+          ProfileAvatar(
+            imageUrl: _userData?['avatar_url']?.toString(),
+            currentUser: true,
+            size: 80,
+            borderColor: const Color(0xFF0056B3),
+            borderWidth: 3,
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  '¡Hola, Administrador!',
+                Text(
+                  '¡Hola, ${_userData?['first_name'] ?? 'Administrador'}!',
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w900,
@@ -213,21 +217,25 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: const Color(0xFF38B6FF),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Text(
                         'Administrador',
-                        style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold),
                       ),
                     ),
                     const SizedBox(width: 8),
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'admin@saludnow.com',
-                        style: TextStyle(color: Color(0xFF475569), fontSize: 13),
+                        _userData?['email'] ?? 'admin@saludnow.com',
+                        style: const TextStyle(color: Color(0xFF475569), fontSize: 13),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -243,9 +251,12 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
 
   Future<void> _handlePaymentAction(int subId, String action) async {
     try {
-      final response = await ApiClient.post('/admin/subscriptions/$subId/$action', {});
+      final response =
+          await ApiClient.post('/admin/subscriptions/$subId/$action', {});
       if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Pago ${action == "approve" ? "validado" : "rechazado"} correctamente')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                'Pago ${action == "approve" ? "validado" : "rechazado"} correctamente')));
         _fetchNotifications();
       }
     } catch (e) {
@@ -264,7 +275,9 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
               title: const Text('Comprobante', style: TextStyle(fontSize: 16)),
               automaticallyImplyLeading: false,
               actions: [
-                IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context))
+                IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context))
               ],
             ),
             Flexible(
@@ -279,9 +292,15 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
     );
   }
 
-  Widget _buildNotificationCard(BuildContext context, {required String title, required String message, required String time, required IconData icon, required Color color, required Map<String, dynamic> notification}) {
+  Widget _buildNotificationCard(BuildContext context,
+      {required String title,
+      required String message,
+      required String time,
+      required IconData icon,
+      required Color color,
+      required Map<String, dynamic> notification}) {
     final paymentDetails = notification['payment_details'];
-    
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -316,12 +335,15 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0B2545)),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0B2545)),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       message,
-                      style: const TextStyle(fontSize: 12, color: Color(0xFF475569)),
+                      style: const TextStyle(
+                          fontSize: 12, color: Color(0xFF475569)),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -345,15 +367,39 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Monto: ${paymentDetails['amount_bs'] ?? 'N/A'} Bs', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                  Text('Referencia: ${paymentDetails['reference_number'] ?? 'N/A'}', style: const TextStyle(fontSize: 13)),
+                  Text('Monto: ${paymentDetails['amount_bs'] ?? 'N/A'} Bs',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 13)),
+                  Text(
+                      '${paymentDetails['entity_kind'] == 'clinic' ? 'Clínica' : 'Doctor'}: ${paymentDetails['owner_name'] ?? 'N/A'}',
+                      style: const TextStyle(fontSize: 13)),
+                  Text('Plan: ${paymentDetails['plan'] ?? 'N/A'}',
+                      style: const TextStyle(fontSize: 13)),
+                  Text(
+                      'Referencia: ${paymentDetails['reference_number'] ?? 'N/A'}',
+                      style: const TextStyle(fontSize: 13)),
+                  Text(
+                    'Estado del pago: ${paymentDetails['status'] == 'active' ? 'Aprobado' : paymentDetails['status'] == 'cancelled' ? 'Rechazado' : 'Pendiente'}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: paymentDetails['status'] == 'active'
+                          ? Colors.green
+                          : paymentDetails['status'] == 'cancelled'
+                              ? Colors.red
+                              : Colors.orange,
+                    ),
+                  ),
                   if (paymentDetails['screenshot_base64'] != null)
                     TextButton.icon(
-                      onPressed: () => _showScreenshotDialog(context, paymentDetails['screenshot_base64']),
+                      onPressed: () => _showScreenshotDialog(
+                          context, paymentDetails['screenshot_base64']),
                       icon: const Icon(Icons.image, size: 16),
-                      label: const Text('Ver captura', style: TextStyle(fontSize: 12)),
+                      label: const Text('Ver captura',
+                          style: TextStyle(fontSize: 12)),
                       style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 4, horizontal: 8),
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
@@ -362,32 +408,44 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
               ),
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => _handlePaymentAction(paymentDetails['sub_id'], 'approve'),
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
-                    child: const Text('Validar pago', style: TextStyle(fontSize: 12)),
+            if (paymentDetails['status'] == 'pending_approval')
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => _handlePaymentAction(
+                          paymentDetails['sub_id'], 'approve'),
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white),
+                      child: const Text('Validar pago',
+                          style: TextStyle(fontSize: 12)),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => _handlePaymentAction(paymentDetails['sub_id'], 'reject'),
-                    style: OutlinedButton.styleFrom(foregroundColor: Colors.red, side: const BorderSide(color: Colors.red)),
-                    child: const Text('Rechazar', style: TextStyle(fontSize: 12)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => _handlePaymentAction(
+                          paymentDetails['sub_id'], 'reject'),
+                      style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.red,
+                          side: const BorderSide(color: Colors.red)),
+                      child: const Text('Rechazar',
+                          style: TextStyle(fontSize: 12)),
+                    ),
                   ),
-                ),
-              ],
-            )
+                ],
+              )
           ]
         ],
       ),
     );
   }
 
-  Widget _buildMenuCard(BuildContext context, {required String title, required String subtitle, required IconData iconData}) {
+  Widget _buildMenuCard(BuildContext context,
+      {required String title,
+      required String subtitle,
+      required IconData iconData}) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: BackdropFilter(
@@ -397,7 +455,8 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.4),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.6), width: 1.5),
+            border:
+                Border.all(color: Colors.white.withOpacity(0.6), width: 1.5),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.05),

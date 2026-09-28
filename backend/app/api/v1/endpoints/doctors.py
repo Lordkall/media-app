@@ -69,7 +69,14 @@ async def update_doctor_me(
     await db.commit()
     await db.refresh(doc)
     
-    doc.is_vip = False # Temporarily assume false on update, since the UI usually only reads this on get
+    active_vip = await db.scalar(
+        select(Subscription.id).where(
+            Subscription.doctor_id == doc.id,
+            Subscription.status == SubscriptionStatus.ACTIVE,
+            Subscription.plan == SubscriptionPlan.SPONSORED,
+        )
+    )
+    doc.is_vip = active_vip is not None
     return doc
 
 @router.get("/{doctor_id}/availability")

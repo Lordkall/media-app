@@ -156,7 +156,7 @@ async def get_my_appointments(
         query = select(Appointment).options(
             selectinload(Appointment.doctor).selectinload(Doctor.user),
             selectinload(Appointment.patient).selectinload(Patient.user)
-        ).where(Appointment.doctor_id == doctor.id)
+        ).where(Appointment.doctor_id == doctor.id).order_by(Appointment.appointment_date.asc(), Appointment.id.asc())
     else:
         patient_query = select(Patient).where(Patient.user_id == current_user.id)
         patient = (await db.execute(patient_query)).scalar_one_or_none()
@@ -165,7 +165,7 @@ async def get_my_appointments(
         query = select(Appointment).options(
             selectinload(Appointment.doctor).selectinload(Doctor.user),
             selectinload(Appointment.patient).selectinload(Patient.user)
-        ).where(Appointment.patient_id == patient.id)
+        ).where(Appointment.patient_id == patient.id).order_by(Appointment.appointment_date.asc(), Appointment.id.asc())
         
     result = await db.execute(query)
     appointments = result.scalars().all()

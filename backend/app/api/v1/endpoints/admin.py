@@ -17,6 +17,14 @@ def check_admin(user: User):
     if user.role != RoleEnum.ADMIN:
         raise HTTPException(status_code=403, detail="Not authorized. Admin role required.")
 
+
+async def sync_doctor_plan_flags(db: AsyncSession, doctor_id: int, plan: SubscriptionPlan):
+    doctor = await db.scalar(select(Doctor).where(Doctor.id == doctor_id))
+    if doctor:
+        doctor.is_sponsored = plan == SubscriptionPlan.SPONSORED
+        doctor.is_featured = plan == SubscriptionPlan.FEATURED
+        doctor.sponsored_priority = 1 if doctor.is_sponsored else 99
+
 @router.get("/stats")
 async def get_admin_stats(
     current_user: User = Depends(get_current_user),
@@ -218,6 +226,7 @@ async def activate_subscription(
         grace_end_date=end_date + datetime.timedelta(days=5)
     )
     db.add(new_sub)
+    await sync_doctor_plan_flags(db, doctor_id, new_sub.plan)
     await db.commit()
     return {"message": "Subscription activated"}
 
@@ -360,6 +369,8 @@ async def approve_subscription(
         
     sub.status = SubscriptionStatus.ACTIVE
     sub.start_date = datetime.datetime.utcnow()
+    if sub.doctor_id:
+        await sync_doctor_plan_flags(db, sub.doctor_id, sub.plan)
     # Set grace end date (5 days after end_date)
     if sub.end_date:
         sub.grace_end_date = sub.end_date + datetime.timedelta(days=5)

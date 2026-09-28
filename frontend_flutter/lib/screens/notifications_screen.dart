@@ -42,48 +42,62 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notificaciones', style: TextStyle(color: Colors.white)),
+        title:
+            const Text('Notificaciones', style: TextStyle(color: Colors.white)),
         backgroundColor: const Color(0xFF0056B3),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _notifications.isEmpty
-              ? const Center(child: Text('No tienes notificaciones.', style: TextStyle(color: Colors.grey)))
+              ? const Center(
+                  child: Text('No tienes notificaciones.',
+                      style: TextStyle(color: Colors.grey)))
               : ListView.builder(
                   padding: const EdgeInsets.all(16),
                   itemCount: _notifications.length,
                   itemBuilder: (context, index) {
                     final n = _notifications[index];
+                    final type = n['type']?.toString().toLowerCase();
                     IconData icon = Icons.notifications;
                     Color color = Colors.blue;
-                    if (n['type'] == 'NEW_DOCTOR') {
+                    if (type == 'doctor_registered') {
                       icon = Icons.person_add;
                       color = Colors.green;
-                    } else if (n['type'] == 'NEW_SUBSCRIPTION') {
+                    } else if (type == 'new_subscription') {
                       icon = Icons.payment;
                       color = Colors.orange;
                     }
 
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                       elevation: 2,
                       child: ListTile(
                         onTap: () {
-                          if (n['type'] == 'SUPPORT_MESSAGE') {
-                            Navigator.push(context, MaterialPageRoute(builder: (_) => const SupportMessagesScreen()));
+                          if (type == 'support_message') {
+                            Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) =>
+                                        const SupportMessagesScreen()));
                           }
                         },
                         leading: CircleAvatar(
                           backgroundColor: color.withOpacity(0.1),
                           child: Icon(icon, color: color),
                         ),
-                        title: Text(n['title'] ?? 'Notificación', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        title: Text(n['title'] ?? 'Notificación',
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
                         subtitle: Text(n['message'] ?? ''),
                         trailing: Text(
-                          n['created_at'] != null ? n['created_at'].substring(0, 10) : '',
-                          style: const TextStyle(fontSize: 10, color: Colors.grey),
+                          n['created_at'] != null
+                              ? n['created_at'].substring(0, 10)
+                              : '',
+                          style:
+                              const TextStyle(fontSize: 10, color: Colors.grey),
                         ),
                       ),
                     );
