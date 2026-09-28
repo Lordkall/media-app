@@ -55,12 +55,11 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
         return;
       }
 
-      final token = await messaging.getToken();
-      if (token != null) await _saveFcmToken(token);
-
       _tokenSubscription = messaging.onTokenRefresh.listen(_saveFcmToken);
       _messageSubscription = FirebaseMessaging.onMessage.listen((message) {
-        LocalNotificationService.showRemoteMessage(message);
+        LocalNotificationService.showRemoteMessage(message).catchError((error) {
+          debugPrint('Could not display the foreground notification: $error');
+        });
         final title = message.notification?.title ?? 'Salud Now';
         final body =
             message.notification?.body ?? 'Tienes una notificación nueva.';
@@ -69,6 +68,14 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
               .showSnackBar(SnackBar(content: Text('$title: $body')));
         }
       });
+
+      final token = await messaging.getToken();
+      if (token != null) {
+        debugPrint('FCM device token acquired. Saving it for this user.');
+        await _saveFcmToken(token);
+      } else {
+        debugPrint('Firebase Messaging returned an empty device token.');
+      }
     } catch (error, stackTrace) {
       debugPrint(
           'Could not register this device for push notifications: $error\n$stackTrace');

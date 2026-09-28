@@ -8,7 +8,7 @@ class LocalNotificationService {
       FlutterLocalNotificationsPlugin();
 
   static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
-    'salud_now_channel',
+    'salud_now_notifications_v2',
     'Salud Now',
     description: 'Notificaciones de Salud Now',
     importance: Importance.max,
@@ -39,7 +39,7 @@ class LocalNotificationService {
       body,
       const NotificationDetails(
         android: AndroidNotificationDetails(
-          'salud_now_channel',
+          'salud_now_notifications_v2',
           'Salud Now',
           channelDescription: 'Notificaciones de Salud Now',
           importance: Importance.max,

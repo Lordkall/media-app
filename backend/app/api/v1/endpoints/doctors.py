@@ -4,13 +4,13 @@ from sqlalchemy import select
 from app.core.database import get_db
 from app.models.users import User
 from app.models.doctors import Doctor, Availability
-from app.models.appointments import Appointment
-from sqlalchemy import func
+from app.models.appointments import Appointment, AppointmentStatus
 from app.models.subscriptions import Subscription, SubscriptionStatus, SubscriptionPlan
 from app.schemas.doctors import DoctorResponse, DoctorUpdate
 from app.schemas.availability import AvailabilityUpdate
 from app.api.v1.endpoints.users import get_current_user
-from datetime import datetime
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 router = APIRouter()
 
@@ -88,29 +88,42 @@ async def get_doctor_availability(
     result = await db.execute(query)
     availabilities = result.scalars().all()
     
-    # Need doctor max_patients to calculate fullness
-    doc_query = select(Doctor).where(Doctor.id == doctor_id)
-    doc_result = await db.execute(doc_query)
-    doc = doc_result.scalars().first()
-    max_p = doc.max_patients_per_day if doc else 999
-    
     out = []
     for a in availabilities:
-        # Check how many appointments are on this date
-        app_count_query = select(func.count(Appointment.id)).where(
+        booked_query = select(Appointment.turn_number).where(
             Appointment.doctor_id == doctor_id,
             Appointment.appointment_date == a.date,
-            Appointment.status == "scheduled" # Only count active appointments
+            Appointment.status != AppointmentStatus.CANCELLED
         )
-        app_result = await db.execute(app_count_query)
-        count = app_result.scalar() or 0
-        
+        booked_result = await db.execute(booked_query)
+        booked_turns = set(booked_result.scalars().all())
+
+        start_hour, start_minute = map(int, a.start_time[:5].split(":"))
+        end_hour, end_minute = map(int, a.end_time[:5].split(":"))
+        start_minutes = start_hour * 60 + start_minute
+        end_minutes = end_hour * 60 + end_minute
+        now = datetime.now(ZoneInfo("America/Caracas"))
+        is_today = a.date == now.date()
+        current_minutes = now.hour * 60 + now.minute
+        slots = []
+        for offset in range(0, max(0, end_minutes - start_minutes), 30):
+            turn_number = offset // 30 + 1
+            slot_minutes = start_minutes + offset
+            slot_time = (datetime.min + timedelta(minutes=slot_minutes)).strftime("%I:%M %p")
+            slots.append({
+                "turn_number": turn_number,
+                "time_block": slot_time,
+                "available": turn_number not in booked_turns
+                and (not is_today or slot_minutes > current_minutes),
+            })
+
         out.append({
             "id": a.id,
             "date": a.date.isoformat(),
             "start_time": a.start_time,
             "end_time": a.end_time,
-            "is_full": count >= max_p
+            "slots": slots,
+            "is_full": not any(slot["available"] for slot in slots)
         })
     return out
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../core/api_client.dart';
 import 'dart:convert';
 import 'package:table_calendar/table_calendar.dart';
+import '../models/ve_catalogs.dart';
 
 class AgendarCitaTab extends StatefulWidget {
   final VoidCallback? onCitaAgendada;
@@ -15,8 +16,9 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
   String? _selectedEstado;
   String? _selectedEspecialidad;
   String? _selectedMedico;
+  int? _selectedTurnNumber;
   String? _selectedMotivo;
-  
+
   List<dynamic> _allDoctors = [];
   bool _isLoading = true;
   List<dynamic> _doctorAvailabilityInfo = [];
@@ -30,12 +32,25 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
 
   Future<void> _fetchDoctors() async {
     try {
-      final response = await ApiClient.get('/admin/doctors');
+      final responses = await Future.wait([
+        ApiClient.get('/admin/doctors'),
+        ApiClient.get('/users/me'),
+      ]);
+      final response = responses[0];
       if (response.statusCode == 200) {
         final List<dynamic> docs = jsonDecode(response.body);
+        final user = responses[1].statusCode == 200
+            ? jsonDecode(responses[1].body)
+            : null;
+        final profileState = user?['state']?.toString();
         if (mounted) {
           setState(() {
-            _allDoctors = docs.where((d) => d['plan'] != 'Ninguno' || d['clinic_id'] != null).toList();
+            _allDoctors = docs
+                .where((d) => d['plan'] != 'Ninguno' || d['clinic_id'] != null)
+                .toList();
+            if (profileState != null && veStates.contains(profileState)) {
+              _selectedEstado = profileState;
+            }
             _isLoading = false;
           });
         }
@@ -48,15 +63,33 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
   }
 
   List<String> get _availableStates {
-    return [
-      'Amazonas', 'Anzoátegui', 'Apure', 'Aragua', 'Barinas', 'Bolívar', 'Carabobo', 'Cojedes', 'Delta Amacuro', 'Distrito Capital', 'Falcón', 'Guárico', 'Lara', 'Mérida', 'Miranda', 'Monagas', 'Nueva Esparta', 'Portuguesa', 'Sucre', 'Táchira', 'Trujillo', 'La Guaira', 'Yaracuy', 'Zulia'
-    ];
+    return veStates;
+  }
+
+  String _dateKey(DateTime date) =>
+      '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+  Map<String, dynamic>? get _selectedDayAvailability {
+    final date = _dateKey(_selectedDate);
+    for (final item in _doctorAvailabilityInfo) {
+      if (item['date'] == date) return Map<String, dynamic>.from(item);
+    }
+    return null;
+  }
+
+  List<Map<String, dynamic>> get _availableSlots {
+    final slots = _selectedDayAvailability?['slots'] as List<dynamic>? ?? [];
+    return slots
+        .where((slot) => slot['available'] == true)
+        .map((slot) => Map<String, dynamic>.from(slot))
+        .toList();
   }
 
   List<String> get _availableSpecialties {
     List<String> specs = [];
     for (var doc in _allDoctors) {
-      if (_selectedEstado != null && doc['state']?.toString() != _selectedEstado) continue;
+      if (_selectedEstado != null &&
+          doc['state']?.toString() != _selectedEstado) continue;
       if (doc['specialties'] != null) {
         for (var s in doc['specialties']) {
           if (!specs.contains(s.toString())) specs.add(s.toString());
@@ -70,8 +103,9 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
   List<String> get _availableDoctors {
     Set<String> docs = {};
     for (var doc in _allDoctors) {
-      if (_selectedEstado != null && doc['state']?.toString() != _selectedEstado) continue;
-      
+      if (_selectedEstado != null &&
+          doc['state']?.toString() != _selectedEstado) continue;
+
       bool hasSpec = false;
       if (doc['specialties'] != null) {
         for (var s in doc['specialties']) {
@@ -81,9 +115,9 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
           }
         }
       }
-      
+
       if (_selectedEspecialidad != null && !hasSpec) continue;
-      
+
       final name = 'Dr. ${doc['first_name']} ${doc['last_name']}';
       docs.add(name);
     }
@@ -99,12 +133,15 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Agendar Cita', style: TextStyle(color: Color(0xFF0056B3), fontWeight: FontWeight.bold)),
+        title: const Text('Agendar Cita',
+            style: TextStyle(
+                color: Color(0xFF0056B3), fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
       ),
-      backgroundColor: const Color(0xFFE2F1F8), // Match the light blue background
+      backgroundColor:
+          const Color(0xFFE2F1F8), // Match the light blue background
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
@@ -125,6 +162,7 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                   _selectedEstado = val;
                   _selectedEspecialidad = null;
                   _selectedMedico = null;
+                  _selectedTurnNumber = null;
                 });
               },
             ),
@@ -137,6 +175,7 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                 setState(() {
                   _selectedEspecialidad = val;
                   _selectedMedico = null;
+                  _selectedTurnNumber = null;
                 });
               },
             ),
@@ -149,16 +188,44 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                 setState(() {
                   _selectedMedico = val;
                   _doctorAvailabilityInfo = [];
+                  _selectedTurnNumber = null;
                 });
                 if (val != null) {
                   // Find doctor ID
-                  final doc = _allDoctors.firstWhere((d) => 'Dr. ${d['first_name']} ${d['last_name']}' == val, orElse: () => null);
+                  final doc = _allDoctors.firstWhere(
+                      (d) => 'Dr. ${d['first_name']} ${d['last_name']}' == val,
+                      orElse: () => null);
                   if (doc != null && doc['id'] != null) {
                     try {
-                      final response = await ApiClient.get('/doctors/${doc['id']}/availability');
+                      final response = await ApiClient.get(
+                          '/doctors/${doc['id']}/availability');
                       if (response.statusCode == 200) {
+                        final availabilities =
+                            List<dynamic>.from(jsonDecode(response.body));
+                        final today = _dateKey(DateTime.now());
+                        final availableDays = availabilities
+                            .where((day) =>
+                                day['is_full'] != true &&
+                                day['date'].toString().compareTo(today) >= 0)
+                            .toList()
+                          ..sort((a, b) => a['date'].compareTo(b['date']));
+                        if (!mounted) return;
                         setState(() {
-                          _doctorAvailabilityInfo = jsonDecode(response.body);
+                          _doctorAvailabilityInfo = availabilities;
+                          if (availableDays.isNotEmpty) {
+                            _selectedDate =
+                                DateTime.parse(availableDays.first['date']);
+                            final slots = availableDays.first['slots']
+                                    as List<dynamic>? ??
+                                [];
+                            final firstSlot = slots.cast<Map>().firstWhere(
+                                  (slot) => slot['available'] == true,
+                                  orElse: () => <String, dynamic>{},
+                                );
+                            _selectedTurnNumber = firstSlot.isEmpty
+                                ? null
+                                : firstSlot['turn_number'] as int?;
+                          }
                         });
                       }
                     } catch (e) {
@@ -185,17 +252,25 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Seleccione la fecha de atención', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0B2545))),
+                  const Text('Seleccione la fecha de atención',
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0B2545))),
                   const SizedBox(height: 12),
                   const Row(
                     children: [
                       Icon(Icons.circle, color: Colors.red, size: 12),
                       SizedBox(width: 4),
-                      Text('Día No Laborable', style: TextStyle(fontSize: 12, color: Color(0xFF475569))),
+                      Text('Día No Laborable',
+                          style: TextStyle(
+                              fontSize: 12, color: Color(0xFF475569))),
                       SizedBox(width: 16),
                       Icon(Icons.circle, color: Colors.yellow, size: 12),
                       SizedBox(width: 4),
-                      Text('Agenda Completa', style: TextStyle(fontSize: 12, color: Color(0xFF475569))),
+                      Text('Agenda Completa',
+                          style: TextStyle(
+                              fontSize: 12, color: Color(0xFF475569))),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -207,32 +282,88 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                     ),
                     child: TableCalendar(
                       locale: 'es_ES',
-                      firstDay: DateTime.now().subtract(const Duration(days: 30)),
+                      firstDay: DateTime(DateTime.now().year,
+                          DateTime.now().month, DateTime.now().day),
                       lastDay: DateTime.now().add(const Duration(days: 365)),
                       focusedDay: _selectedDate,
-                      selectedDayPredicate: (day) => isSameDay(_selectedDate, day),
+                      selectedDayPredicate: (day) =>
+                          isSameDay(_selectedDate, day),
                       onDaySelected: (selectedDay, focusedDay) {
-                        final dateString = selectedDay.toIso8601String().split('T')[0];
-                        bool isAvailable = _doctorAvailabilityInfo.any((info) => info['date'] == dateString);
-                        bool isFull = _doctorAvailabilityInfo.any((info) => info['date'] == dateString && info['is_full'] == true);
-                        if (isAvailable && !isFull && _selectedMedico != null) {
+                        final dateString = _dateKey(selectedDay);
+                        bool isAvailable = _doctorAvailabilityInfo
+                            .any((info) => info['date'] == dateString);
+                        bool isFull = _doctorAvailabilityInfo.any((info) =>
+                            info['date'] == dateString &&
+                            info['is_full'] == true);
+                        final today = DateTime.now();
+                        final selectedDateOnly = DateTime(selectedDay.year,
+                            selectedDay.month, selectedDay.day);
+                        final todayOnly =
+                            DateTime(today.year, today.month, today.day);
+                        if (isAvailable &&
+                            !isFull &&
+                            _selectedMedico != null &&
+                            !selectedDateOnly.isBefore(todayOnly)) {
                           setState(() {
                             _selectedDate = selectedDay;
+                            final day = _doctorAvailabilityInfo.firstWhere(
+                                (info) => info['date'] == dateString);
+                            final slots = day['slots'] as List<dynamic>? ?? [];
+                            final firstSlot = slots.cast<Map>().firstWhere(
+                                  (slot) => slot['available'] == true,
+                                  orElse: () => <String, dynamic>{},
+                                );
+                            _selectedTurnNumber = firstSlot.isEmpty
+                                ? null
+                                : firstSlot['turn_number'] as int?;
                           });
                         }
                       },
                       calendarBuilders: CalendarBuilders(
-                        defaultBuilder: (context, date, events) => _buildDayCell(date, isSelected: false),
-                        disabledBuilder: (context, date, events) => _buildDayCell(date, isSelected: false, isDisabled: true),
-                        selectedBuilder: (context, date, events) => _buildDayCell(date, isSelected: true),
-                        todayBuilder: (context, date, events) => _buildDayCell(date, isSelected: false, isToday: true),
+                        defaultBuilder: (context, date, events) =>
+                            _buildDayCell(date, isSelected: false),
+                        disabledBuilder: (context, date, events) =>
+                            _buildDayCell(date,
+                                isSelected: false, isDisabled: true),
+                        selectedBuilder: (context, date, events) =>
+                            _buildDayCell(date, isSelected: true),
+                        todayBuilder: (context, date, events) => _buildDayCell(
+                            date,
+                            isSelected: false,
+                            isToday: true),
                       ),
-                      headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true),
+                      headerStyle: const HeaderStyle(
+                          formatButtonVisible: false, titleCentered: true),
                     ),
                   ),
                 ],
               ),
             ),
+            const SizedBox(height: 20),
+            const Text('Horarios disponibles (turnos de 30 minutos)',
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0B2545))),
+            const SizedBox(height: 10),
+            if (_selectedMedico == null)
+              const Text('Selecciona un médico para ver sus horarios.')
+            else if (_availableSlots.isEmpty)
+              const Text('No hay turnos disponibles para esta fecha.')
+            else
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _availableSlots.map((slot) {
+                  final turn = slot['turn_number'] as int;
+                  return ChoiceChip(
+                    label: Text('${slot['time_block']} · Turno #$turn'),
+                    selected: _selectedTurnNumber == turn,
+                    onSelected: (_) =>
+                        setState(() => _selectedTurnNumber = turn),
+                  );
+                }).toList(),
+              ),
             const SizedBox(height: 24),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -241,44 +372,67 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                 child: ElevatedButton.icon(
                   onPressed: () async {
                     if (_selectedMedico == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Por favor selecciona un médico.')));
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text('Por favor selecciona un médico.')));
+                      return;
+                    }
+                    if (_selectedTurnNumber == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Selecciona un turno disponible.')),
+                      );
                       return;
                     }
 
-                    final doc = _allDoctors.firstWhere((d) => 'Dr. ${d['first_name']} ${d['last_name']}' == _selectedMedico, orElse: () => null);
+                    final doc = _allDoctors.firstWhere(
+                        (d) =>
+                            'Dr. ${d['first_name']} ${d['last_name']}' ==
+                            _selectedMedico,
+                        orElse: () => null);
                     if (doc == null || doc['id'] == null) return;
 
                     final reqBody = {
                       "doctor_id": doc['id'],
-                      "appointment_date": _selectedDate.toIso8601String().split('T')[0]
+                      "appointment_date": _dateKey(_selectedDate),
+                      "turn_number": _selectedTurnNumber,
                     };
 
                     try {
-                      final response = await ApiClient.post('/appointments/', reqBody);
+                      final response =
+                          await ApiClient.post('/appointments/', reqBody);
                       if (response.statusCode == 201) {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cita agendada con éxito')));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text('Cita agendada con éxito')));
                         setState(() {
-                          _selectedEstado = null;
                           _selectedEspecialidad = null;
                           _selectedMedico = null;
                           _selectedMotivo = null;
+                          _selectedTurnNumber = null;
                         });
                         if (widget.onCitaAgendada != null) {
                           widget.onCitaAgendada!();
                         }
                       } else {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${response.body}')));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error: ${response.body}')));
                       }
                     } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                      ScaffoldMessenger.of(context)
+                          .showSnackBar(SnackBar(content: Text('Error: $e')));
                     }
                   },
                   icon: const Icon(Icons.check_circle, color: Colors.white),
-                  label: const Text('Confirmar Cita', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                  label: const Text('Confirmar Cita',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF0056B3),
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               ),
@@ -290,7 +444,11 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
     );
   }
 
-  Widget _buildDropdown({required String hint, required String? value, required List<String> items, required ValueChanged<String?> onChanged}) {
+  Widget _buildDropdown(
+      {required String hint,
+      required String? value,
+      required List<String> items,
+      required ValueChanged<String?> onChanged}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
@@ -300,14 +458,16 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
-          hint: Text(hint, style: const TextStyle(color: Color(0xFF475569), fontSize: 16)),
+          hint: Text(hint,
+              style: const TextStyle(color: Color(0xFF475569), fontSize: 16)),
           value: value,
           isExpanded: true,
           icon: const Icon(Icons.arrow_drop_down, color: Color(0xFF475569)),
           items: items.map((String item) {
             return DropdownMenuItem<String>(
               value: item,
-              child: Text(item, style: const TextStyle(color: Color(0xFF0B2545))),
+              child:
+                  Text(item, style: const TextStyle(color: Color(0xFF0B2545))),
             );
           }).toList(),
           onChanged: onChanged,
@@ -316,30 +476,36 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
     );
   }
 
-  Widget _buildDayCell(DateTime date, {bool isSelected = false, bool isDisabled = false, bool isToday = false}) {
+  Widget _buildDayCell(DateTime date,
+      {bool isSelected = false,
+      bool isDisabled = false,
+      bool isToday = false}) {
     if (_selectedMedico == null) {
-       Color c = isDisabled ? Colors.grey : (isToday ? const Color(0xFF0056B3) : Colors.black);
-       return Center(child: Text('${date.day}', style: TextStyle(color: c)));
+      Color c = isDisabled
+          ? Colors.grey
+          : (isToday ? const Color(0xFF0056B3) : Colors.black);
+      return Center(child: Text('${date.day}', style: TextStyle(color: c)));
     }
-    
+
     final dateString = date.toIso8601String().split('T')[0];
-    final info = _doctorAvailabilityInfo.where((i) => i['date'] == dateString).toList();
+    final info =
+        _doctorAvailabilityInfo.where((i) => i['date'] == dateString).toList();
     Color? bgColor;
     Color textColor = Colors.black;
-    
+
     if (isSelected) {
-       bgColor = const Color(0xFF0056B3);
-       textColor = Colors.white;
+      bgColor = const Color(0xFF0056B3);
+      textColor = Colors.white;
     } else if (info.isEmpty) {
-       bgColor = Colors.red;
-       textColor = Colors.white;
+      bgColor = Colors.red;
+      textColor = Colors.white;
     } else if (info.first['is_full'] == true) {
-       bgColor = Colors.yellow;
-       textColor = Colors.black;
+      bgColor = Colors.yellow;
+      textColor = Colors.black;
     } else if (isToday) {
-       bgColor = const Color(0xFFB3C6DF);
+      bgColor = const Color(0xFFB3C6DF);
     }
-    
+
     if (bgColor != null) {
       return Container(
         margin: const EdgeInsets.all(6.0),
@@ -348,6 +514,8 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
         child: Text('${date.day}', style: TextStyle(color: textColor)),
       );
     }
-    return Center(child: Text('${date.day}', style: TextStyle(color: isDisabled ? Colors.grey : Colors.black)));
+    return Center(
+        child: Text('${date.day}',
+            style: TextStyle(color: isDisabled ? Colors.grey : Colors.black)));
   }
 }

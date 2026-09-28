@@ -1,9 +1,10 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from datetime import date
 
 class AppointmentBase(BaseModel):
     doctor_id: int
     appointment_date: date
+    turn_number: int = Field(gt=0)
 
 class AppointmentCreate(AppointmentBase):
     pass

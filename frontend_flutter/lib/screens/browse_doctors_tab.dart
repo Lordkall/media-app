@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/api_client.dart';
 import '../widgets/profile_avatar.dart';
+import '../models/ve_catalogs.dart';
 import 'dart:convert';
 import 'doctor_profile_screen.dart';
 import 'clinic_profile_screen.dart';
@@ -22,34 +23,7 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
   String _selectedSpecialty = 'Todos';
   String _selectedSort = 'Recomendados';
 
-  final List<String> _estadosVE = [
-    'Todos',
-    "Amazonas",
-    "Anzoátegui",
-    "Apure",
-    "Aragua",
-    "Barinas",
-    "Bolívar",
-    "Carabobo",
-    "Cojedes",
-    "Delta Amacuro",
-    "Dependencias Federales",
-    "Distrito Capital",
-    "Falcón",
-    "Guárico",
-    "La Guaira",
-    "Lara",
-    "Mérida",
-    "Miranda",
-    "Monagas",
-    "Nueva Esparta",
-    "Portuguesa",
-    "Sucre",
-    "Táchira",
-    "Trujillo",
-    "Yaracuy",
-    "Zulia"
-  ];
+  List<String> get _estadosVE => ['Todos', ...veStates];
 
   List<dynamic> get _filteredDoctors {
     final items = _searchType == 'Doctores' ? _doctors : _clinics;
@@ -116,6 +90,7 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
     try {
       final response = await ApiClient.get('/admin/doctors');
       final clinicResponse = await ApiClient.get('/clinics');
+      final userResponse = await ApiClient.get('/users/me');
 
       List<dynamic> allDocs = [];
       List<dynamic> allClinics = [];
@@ -126,8 +101,15 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
       if (clinicResponse.statusCode == 200) {
         allClinics = jsonDecode(clinicResponse.body);
       }
+      final userState = userResponse.statusCode == 200
+          ? jsonDecode(userResponse.body)['state']?.toString()
+          : null;
 
+      if (!mounted) return;
       setState(() {
+        if (userState != null && veStates.contains(userState)) {
+          _selectedState = userState;
+        }
         _doctors = allDocs
             .where(
                 (doc) => doc['plan'] != 'Ninguno' || doc['clinic_id'] != null)
@@ -271,31 +253,31 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
             const SizedBox(height: 16),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  GestureDetector(
-                      onTap: () => setState(() => _selectedSpecialty = 'Todos'),
-                      child: _buildChip('Todos',
-                          isSelected: _selectedSpecialty == 'Todos')),
-                  GestureDetector(
-                      onTap: () => setState(() =>
-                          _selectedSpecialty = 'Alergología e Inmunología'),
-                      child: _buildChip('Alergología e Inmunología',
-                          isSelected: _selectedSpecialty ==
-                              'Alergología e Inmunología')),
-                  GestureDetector(
-                      onTap: () =>
-                          setState(() => _selectedSpecialty = 'Cardiología'),
-                      child: _buildChip('Cardiología',
-                          isSelected: _selectedSpecialty == 'Cardiología')),
-                  GestureDetector(
-                      onTap: () => setState(
-                          () => _selectedSpecialty = 'Cirugía General'),
-                      child: _buildChip('Cirugía General',
-                          isSelected: _selectedSpecialty == 'Cirugía General')),
-                ],
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.8),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF0B2545)),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _selectedSpecialty,
+                    isExpanded: true,
+                    items: ['Todos', ...medicalSpecialties]
+                        .map((value) => DropdownMenuItem(
+                              value: value,
+                              child:
+                                  Text(value, overflow: TextOverflow.ellipsis),
+                            ))
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() => _selectedSpecialty = value);
+                      }
+                    },
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -375,8 +357,13 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
                                               item['specialties'].isNotEmpty)
                                           ? item['specialties'][0]
                                           : 'Médico General';
-                                  final address =
-                                      item['address'] ?? 'Sin dirección';
+                                  final address = item['address']
+                                              ?.toString()
+                                              .trim()
+                                              .isNotEmpty ==
+                                          true
+                                      ? item['address'].toString()
+                                      : (item['state'] ?? 'Sin ubicación');
                                   final cost = item['consultation_fee'] != null
                                       ? '\$${item['consultation_fee']}'
                                       : '\$0.0';
@@ -403,8 +390,13 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
                                 } else {
                                   final name = item['first_name'] ?? 'Clínica';
                                   final specialty = 'Clínica';
-                                  final address =
-                                      item['address'] ?? 'Sin dirección';
+                                  final address = item['address']
+                                              ?.toString()
+                                              .trim()
+                                              .isNotEmpty ==
+                                          true
+                                      ? item['address'].toString()
+                                      : (item['state'] ?? 'Sin ubicación');
                                   final isVip = item['is_vip'] == true;
                                   return GestureDetector(
                                     onTap: () {
@@ -432,26 +424,6 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
                         ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildChip(String label, {required bool isSelected}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: isSelected
-            ? const Color(0xFF0056B3)
-            : Colors.white.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: isSelected ? Colors.white : const Color(0xFF0B2545),
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          fontSize: 12, // Reduced font size
         ),
       ),
     );
@@ -517,7 +489,7 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
                 ),
                 const SizedBox(height: 4),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.start,
                   children: [
                     const Icon(Icons.location_on,
                         size: 10, color: Color(0xFF475569)),
@@ -527,7 +499,7 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
                         address,
                         style: const TextStyle(
                             color: Color(0xFF475569), fontSize: 10),
-                        textAlign: TextAlign.center,
+                        textAlign: TextAlign.left,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),

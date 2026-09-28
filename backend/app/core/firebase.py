@@ -27,6 +27,7 @@ def init_firebase():
 
 def send_push_notification(token: str, title: str, body: str, data: dict = None):
     if not firebase_admin._apps:
+        print("[FCM] Push skipped: Firebase Admin is not initialized")
         return False
         
     from firebase_admin import messaging
@@ -41,7 +42,7 @@ def send_push_notification(token: str, title: str, body: str, data: dict = None)
         android=messaging.AndroidConfig(
             priority="high",
             notification=messaging.AndroidNotification(
-                channel_id="salud_now_channel",
+                channel_id="salud_now_notifications_v2",
                 sound="default",
             ),
         ),
@@ -55,8 +56,8 @@ def send_push_notification(token: str, title: str, body: str, data: dict = None)
     
     try:
         response = messaging.send(message)
-        print(f"Successfully sent message: {response}")
+        print(f"[FCM] Successfully sent message: {response}")
         return True
     except Exception as e:
-        print(f"Error sending message: {e}")
+        print(f"[FCM] Error sending message: {e}")
         return False

@@ -34,6 +34,7 @@ def send_appointment_reminders():
         appointments = session.execute(
             select(Appointment).options(
                 joinedload(Appointment.doctor).joinedload(Doctor.user),
+                joinedload(Appointment.doctor).joinedload(Doctor.availabilities),
                 joinedload(Appointment.patient)
             ).where(
                 Appointment.status == AppointmentStatus.SCHEDULED,
@@ -54,14 +55,28 @@ def send_appointment_reminders():
             if not sub:
                 continue # Doctor no es VIP
                 
-            # Calculamos la fecha y hora de la cita. 
-            appt_datetime = datetime.combine(appt.appointment_date, datetime.min.time()) + timedelta(hours=8 + appt.turn_number * 0.5)
+            availability = next(
+                (item for item in appt.doctor.availabilities
+                 if item.date == appt.appointment_date),
+                None,
+            )
+            start_hour, start_minute = (8, 0)
+            if availability:
+                start_hour, start_minute = map(
+                    int, availability.start_time[:5].split(":")
+                )
+            appt_datetime = datetime.combine(
+                appt.appointment_date, datetime.min.time()
+            ) + timedelta(
+                hours=start_hour,
+                minutes=start_minute + (appt.turn_number - 1) * 30,
+            )
             
             # Revisar recordatorio 48h
             if time_48h_min <= appt_datetime <= time_48h_max and not appt.reminder_48h_sent:
                 notif = Notification(
                     user_id=appt.patient.user_id,
-                    type=NotificationType.SYSTEM,
+                    type=NotificationType.RENEWAL_REMINDER,
                     title="Recordatorio de Cita (48h)",
                     message=f"Recuerda que tienes una cita con el Dr(a). {appt.doctor.user.first_name} {appt.doctor.user.last_name} en 48 horas."
                 )
@@ -73,7 +88,7 @@ def send_appointment_reminders():
             if time_24h_min <= appt_datetime <= time_24h_max and not appt.reminder_24h_sent:
                 notif = Notification(
                     user_id=appt.patient.user_id,
-                    type=NotificationType.SYSTEM,
+                    type=NotificationType.RENEWAL_REMINDER,
                     title="Recordatorio de Cita (24h)",
                     message=f"Recuerda que tienes una cita con el Dr(a). {appt.doctor.user.first_name} {appt.doctor.user.last_name} en 24 horas."
                 )

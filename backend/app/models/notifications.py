@@ -63,5 +63,7 @@ def receive_after_insert(mapper, connection: Connection, target: Notification):
                 args=(fcm_token, target.title, target.message),
                 daemon=True
             ).start()
+        else:
+            print(f"[FCM] Push skipped: user {target.user_id} has no registered device token")
     except Exception as e:
         print(f"Error triggering push notification: {e}")

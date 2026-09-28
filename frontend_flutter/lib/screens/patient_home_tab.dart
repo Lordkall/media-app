@@ -140,7 +140,8 @@ class _PatientHomeTabState extends State<PatientHomeTab> {
                         child: _buildUpcomingAppointment(
                             a['doctor_name'] ?? 'Dr. Desconocido',
                             a['doctor_specialty'] ?? 'General',
-                            '${a['date']} - Turno #${a['turn_number']}',
+                            '${a['date']} · ${a['time_block'] ?? 'Turno #${a['turn_number']}'}',
+                            a['doctor_location']?.toString() ?? '',
                             a['status'].toString().toLowerCase(),
                             a['doctor_avatar']),
                       );
@@ -259,7 +260,7 @@ class _PatientHomeTabState extends State<PatientHomeTab> {
   }
 
   Widget _buildUpcomingAppointment(String doctor, String specialty, String date,
-      String status, String? avatarUrl) {
+      String location, String status, String? avatarUrl) {
     String displayStatus =
         status == 'scheduled' ? 'PROGRAMADA' : status.toUpperCase();
     return Container(
@@ -309,11 +310,38 @@ class _PatientHomeTabState extends State<PatientHomeTab> {
                   ],
                 ),
                 const SizedBox(height: 6),
-                Text(date,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14)),
+                Row(
+                  children: [
+                    const Icon(Icons.event, size: 14, color: Colors.white70),
+                    const SizedBox(width: 5),
+                    Expanded(
+                      child: Text(date,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                    ),
+                  ],
+                ),
+                if (location.trim().isNotEmpty) ...[
+                  const SizedBox(height: 5),
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on,
+                          size: 14, color: Colors.white70),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: Text(location,
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 12),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),

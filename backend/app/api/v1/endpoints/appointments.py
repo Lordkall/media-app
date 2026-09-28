@@ -1,13 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_
+from sqlalchemy import select
 from app.api.dependencies import get_db, get_current_patient
 from app.api.v1.endpoints.users import get_current_user
 from app.models.users import User, RoleEnum
 from app.models.appointments import Appointment, AppointmentStatus
 from app.schemas.appointments import AppointmentCreate, AppointmentResponse
-from datetime import datetime, timezone
-from app.models.doctors import Doctor
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+from app.models.doctors import Doctor, Availability
 from app.models.patients import Patient
 
 router = APIRouter()
@@ -38,25 +39,44 @@ async def create_appointment(
         if not doctor_record:
             raise HTTPException(status_code=404, detail="Doctor not found")
 
-        # Find the max turn_number for this doctor on this date
-        max_turn_query = select(Appointment).where(
+        availability_query = select(Availability).where(
+            Availability.doctor_id == appointment_in.doctor_id,
+            Availability.date == req_date,
+        )
+        availability = (await db.execute(availability_query)).scalar_one_or_none()
+        if not availability:
+            raise HTTPException(status_code=400, detail="El doctor no trabaja ese día")
+
+        start_hour, start_minute = map(int, availability.start_time[:5].split(":"))
+        end_hour, end_minute = map(int, availability.end_time[:5].split(":"))
+        start_minutes = start_hour * 60 + start_minute
+        end_minutes = end_hour * 60 + end_minute
+        slot_count = max(0, (end_minutes - start_minutes) // 30)
+        requested_turn = appointment_in.turn_number
+        if requested_turn > slot_count:
+            raise HTTPException(status_code=400, detail="El turno seleccionado está fuera del horario laboral")
+        start_of_turn = start_minutes + (requested_turn - 1) * 30
+        local_now = datetime.now(ZoneInfo("America/Caracas"))
+        if req_date < local_now.date() or (
+            req_date == local_now.date()
+            and start_of_turn <= local_now.hour * 60 + local_now.minute
+        ):
+            raise HTTPException(status_code=400, detail="Ese horario ya pasó")
+
+        booked_query = select(Appointment).where(
             Appointment.doctor_id == appointment_in.doctor_id,
             Appointment.appointment_date == req_date,
             Appointment.status != AppointmentStatus.CANCELLED
-        ).order_by(Appointment.turn_number.desc())
-        
-        result = await db.execute(max_turn_query)
-        last_appt = result.scalars().first()
-        
-        next_turn = 1
-        if last_appt:
-            next_turn = last_appt.turn_number + 1
+        )
+        booked = (await db.execute(booked_query)).scalars().all()
+        if any(appt.turn_number == requested_turn for appt in booked):
+            raise HTTPException(status_code=409, detail="Ese horario ya fue reservado")
 
         new_appointment = Appointment(
             patient_id=current_patient_id,
             doctor_id=appointment_in.doctor_id,
             appointment_date=req_date,
-            turn_number=next_turn,
+            turn_number=requested_turn,
             status=AppointmentStatus.SCHEDULED
         )
         
@@ -81,7 +101,7 @@ async def create_appointment(
                 user_id=doctor_user.id,
                 type=NotificationType.APPOINTMENT_CREATED,
                 title="Nueva Cita Agendada",
-                message=f"¡Un paciente ha agendado una nueva cita contigo para el {req_date} (Turno #{next_turn})!"
+                message=f"¡Un paciente ha agendado una nueva cita contigo para el {req_date} (Turno #{requested_turn})!"
             )
             db.add(notif)
             await db.commit()
@@ -95,7 +115,7 @@ async def cancel_appointment(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # This route cancels an appointment and shifts down the turn_number of subsequent appointments
+    # A cancelled turn is released; booked appointments keep their original time.
     async with db.begin_nested():
         appt_query = select(Appointment).where(Appointment.id == appointment_id).with_for_update()
         appt = (await db.execute(appt_query)).scalar_one_or_none()
@@ -107,18 +127,6 @@ async def cancel_appointment(
             
         appt.status = AppointmentStatus.CANCELLED
         
-        # Shift down subsequent appointments for the same doctor and date
-        subsequent_query = select(Appointment).where(
-            Appointment.doctor_id == appt.doctor_id,
-            Appointment.appointment_date == appt.appointment_date,
-            Appointment.turn_number > appt.turn_number,
-            Appointment.status != AppointmentStatus.CANCELLED
-        ).with_for_update()
-        
-        subs = (await db.execute(subsequent_query)).scalars().all()
-        for s in subs:
-            s.turn_number -= 1
-
     await db.commit()
 
     # Create notification for doctor
@@ -155,6 +163,7 @@ async def get_my_appointments(
             return []
         query = select(Appointment).options(
             selectinload(Appointment.doctor).selectinload(Doctor.user),
+            selectinload(Appointment.doctor).selectinload(Doctor.availabilities),
             selectinload(Appointment.patient).selectinload(Patient.user)
         ).where(Appointment.doctor_id == doctor.id).order_by(Appointment.appointment_date.asc(), Appointment.id.asc())
     else:
@@ -164,6 +173,7 @@ async def get_my_appointments(
             return []
         query = select(Appointment).options(
             selectinload(Appointment.doctor).selectinload(Doctor.user),
+            selectinload(Appointment.doctor).selectinload(Doctor.availabilities),
             selectinload(Appointment.patient).selectinload(Patient.user)
         ).where(Appointment.patient_id == patient.id).order_by(Appointment.appointment_date.asc(), Appointment.id.asc())
         
@@ -201,15 +211,17 @@ async def get_my_appointments(
             display_loc = doc.user.address if doc and doc.user and doc.user.address else (doc.user.state if doc and doc.user else "")
             phone = doc.user.phone if doc and doc.user else ""
             
-        # Basic time block calculation (Assuming starting at 8:00 AM with 30 min intervals)
-        start_hour = 8
-        start_min = (appt.turn_number - 1) * 30
-        hr = start_hour + (start_min // 60)
-        mn = start_min % 60
-        ampm = "AM" if hr < 12 else "PM"
-        display_hr = hr if hr <= 12 else hr - 12
-        if display_hr == 0: display_hr = 12
-        time_block = f"{display_hr:02d}:{mn:02d} {ampm}"
+        availability = next(
+            (item for item in (doc.availabilities if doc else [])
+             if item.date == appt.appointment_date),
+            None,
+        )
+        if availability:
+            start_hour, start_minute = map(int, availability.start_time[:5].split(":"))
+            slot_minutes = start_hour * 60 + start_minute + (appt.turn_number - 1) * 30
+        else:
+            slot_minutes = 8 * 60 + (appt.turn_number - 1) * 30
+        time_block = (datetime.min + timedelta(minutes=slot_minutes)).strftime("%I:%M %p")
             
         out.append({
             "id": appt.id,

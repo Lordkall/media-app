@@ -34,7 +34,7 @@
         <!-- Set up the default Firebase messaging channel -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="salud_now_channel" />
+            android:value="salud_now_notifications_v2" />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
             android:resource="@mipmap/ic_launcher" />

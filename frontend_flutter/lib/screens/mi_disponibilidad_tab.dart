@@ -10,9 +10,6 @@ class MiDisponibilidadTab extends StatefulWidget {
 }
 
 class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
-  final TextEditingController _maxPatientsController =
-      TextEditingController(text: '999');
-  bool _sinLimites = true;
   bool _isSuccess = false;
   String _selectedStartTime = '09:00';
   String _selectedEndTime = '18:00';
@@ -60,7 +57,6 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
 
   @override
   void dispose() {
-    _maxPatientsController.dispose();
     super.dispose();
   }
 
@@ -70,15 +66,6 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
       if (docRes.statusCode == 200) {
         final doc = jsonDecode(docRes.body);
         _doctorId = doc['id'];
-        if (doc['max_patients_per_day'] != null &&
-            doc['max_patients_per_day'] < 999) {
-          _maxPatientsController.text = doc['max_patients_per_day'].toString();
-          _sinLimites = false;
-        } else {
-          _maxPatientsController.text = '999';
-          _sinLimites = true;
-        }
-
         final availRes =
             await ApiClient.get('/doctors/$_doctorId/availability');
         if (availRes.statusCode == 200) {
@@ -114,10 +101,6 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
     }
     setState(() => _isLoading = true);
     try {
-      int maxP =
-          _sinLimites ? 999 : int.tryParse(_maxPatientsController.text) ?? 999;
-      await ApiClient.put('/doctors/me', {'max_patients_per_day': maxP});
-
       final avails = _selectedDates
           .map((date) => {
                 'date': date,
@@ -211,53 +194,6 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _buildSectionTitle('Configuración de Pacientes'),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Establece cuántos pacientes deseas atender como máximo por día.',
-                        style:
-                            TextStyle(color: Color(0xFF475569), fontSize: 14),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _maxPatientsController,
-                              enabled: !_sinLimites,
-                              keyboardType: TextInputType.number,
-                              decoration: InputDecoration(
-                                labelText: 'Máximo',
-                                filled: true,
-                                fillColor: _sinLimites
-                                    ? Colors.grey.withOpacity(0.2)
-                                    : Colors.white.withOpacity(0.5),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Row(
-                            children: [
-                              Checkbox(
-                                value: _sinLimites,
-                                onChanged: (val) {
-                                  setState(() {
-                                    _sinLimites = val ?? false;
-                                  });
-                                },
-                                activeColor: const Color(0xFF0056B3),
-                              ),
-                              const Text('Sin Limites',
-                                  style: TextStyle(
-                                      fontSize: 16, color: Color(0xFF0B2545))),
-                            ],
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 32),
                       _buildSectionTitle('Hora de Inicio Laboral'),
                       const SizedBox(height: 8),
                       const Text(
