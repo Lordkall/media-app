@@ -61,7 +61,8 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
                       itemBuilder: (context, index) => ListTile(
                         title: Text(results[index]),
                         selected: results[index] == _selectedSpecialty,
-                        onTap: () => Navigator.pop(dialogContext, results[index]),
+                        onTap: () =>
+                            Navigator.pop(dialogContext, results[index]),
                       ),
                     ),
                   ),
@@ -373,99 +374,89 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
                       ? Center(
                           child: Text(
                               'No hay ${_searchType.toLowerCase()} registrados con estos filtros.'))
-                      : LayoutBuilder(
-                          builder: (context, constraints) {
-                            final isCompact = constraints.maxWidth < 600;
-                            final columns = constraints.maxWidth >= 1100
-                                ? 4
-                                : constraints.maxWidth >= 800
-                                    ? 3
-                                    : 2;
-                            return GridView.builder(
-                              padding: const EdgeInsets.only(
-                                  left: 16.0, right: 16.0, bottom: 100.0),
-                              gridDelegate:
-                                  SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: columns,
-                                crossAxisSpacing: 12,
-                                mainAxisSpacing: 12,
-                                childAspectRatio: isCompact ? 0.78 : 1.05,
-                              ),
-                              itemCount: _filteredDoctors.length,
-                              itemBuilder: (context, index) {
-                                final item = _filteredDoctors[index];
+                      : GridView.builder(
+                          padding: const EdgeInsets.only(
+                              left: 16.0, right: 16.0, bottom: 100.0),
+                          gridDelegate:
+                              const SliverGridDelegateWithMaxCrossAxisExtent(
+                            maxCrossAxisExtent: 280,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                            childAspectRatio: 0.68,
+                          ),
+                          itemCount: _filteredDoctors.length,
+                          itemBuilder: (context, index) {
+                            final item = _filteredDoctors[index];
 
-                                if (_searchType == 'Doctores') {
-                                  final name =
-                                      'Dr. ${item['first_name']} ${item['last_name']}';
-                                  final specialty =
-                                      (item['specialties'] != null &&
-                                              item['specialties'].isNotEmpty)
-                                          ? item['specialties'][0]
-                                          : 'Médico General';
-                                  final address = item['address']
-                                              ?.toString()
-                                              .trim()
-                                              .isNotEmpty ==
-                                          true
-                                      ? item['address'].toString()
-                                      : (item['state'] ?? 'Sin ubicación');
-                                  final cost = item['consultation_fee'] != null
-                                      ? '\$${item['consultation_fee']}'
-                                      : '\$0.0';
-                                  final isVip = item['is_vip'] == true;
-                                  return GestureDetector(
-                                    onTap: () {
-                                      Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                              builder: (context) =>
-                                                  DoctorProfileScreen(
-                                                      doctor: item)));
-                                    },
-                                    child: _buildDoctorCard(
-                                      name: name,
-                                      specialty: specialty,
-                                      address: address,
-                                      cost: cost,
-                                      isVip: isVip,
-                                      isClinic: false,
-                                      imageUrl: item['avatar_url'],
-                                    ),
-                                  );
-                                } else {
-                                  final name = item['first_name'] ?? 'Clínica';
-                                  final specialty = 'Clínica';
-                                  final address = item['address']
-                                              ?.toString()
-                                              .trim()
-                                              .isNotEmpty ==
-                                          true
-                                      ? item['address'].toString()
-                                      : (item['state'] ?? 'Sin ubicación');
-                                  final isVip = item['is_vip'] == true;
-                                  return GestureDetector(
-                                    onTap: () {
-                                      Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                              builder: (context) =>
-                                                  ClinicProfileScreen(
-                                                      clinic: item)));
-                                    },
-                                    child: _buildDoctorCard(
-                                      name: name,
-                                      specialty: specialty,
-                                      address: address,
-                                      cost: item['phone'] ?? '',
-                                      isVip: isVip,
-                                      isClinic: true,
-                                      imageUrl: item['avatar_url'],
-                                    ),
-                                  );
-                                }
-                              },
-                            );
+                            if (_searchType == 'Doctores') {
+                              final name =
+                                  'Dr. ${item['first_name']} ${item['last_name']}';
+                              final specialty = (item['specialties'] != null &&
+                                      item['specialties'].isNotEmpty)
+                                  ? item['specialties'][0]
+                                  : 'Médico General';
+                              final address = item['address']
+                                          ?.toString()
+                                          .trim()
+                                          .isNotEmpty ==
+                                      true
+                                  ? item['address'].toString()
+                                  : (item['state'] ?? 'Sin ubicación');
+                              final fee = (item['consultation_fee'] as num?)
+                                      ?.toDouble() ??
+                                  0.0;
+                              final cost = '\$${fee.toStringAsFixed(2)}';
+                              final isVip = item['is_vip'] == true;
+                              return GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) =>
+                                              DoctorProfileScreen(
+                                                  doctor: item)));
+                                },
+                                child: _buildDoctorCard(
+                                  name: name,
+                                  specialty: specialty,
+                                  address: address,
+                                  cost: cost,
+                                  isVip: isVip,
+                                  isClinic: false,
+                                  imageUrl: item['avatar_url'],
+                                ),
+                              );
+                            } else {
+                              final name = item['first_name'] ?? 'Clínica';
+                              final specialty = 'Clínica';
+                              final address = item['address']
+                                          ?.toString()
+                                          .trim()
+                                          .isNotEmpty ==
+                                      true
+                                  ? item['address'].toString()
+                                  : (item['state'] ?? 'Sin ubicación');
+                              final isVip = item['is_vip'] == true;
+                              return GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) =>
+                                              ClinicProfileScreen(
+                                                  clinic: item)));
+                                },
+                                child: _buildDoctorCard(
+                                  name: name,
+                                  specialty: specialty,
+                                  address: address,
+                                  cost: '',
+                                  isVip: isVip,
+                                  isClinic: true,
+                                  imageUrl: item['avatar_url'],
+                                ),
+                              );
+                            }
                           },
                         ),
             ),
@@ -483,97 +474,214 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
       required bool isVip,
       required bool isClinic,
       required String? imageUrl}) {
+    const vipGold = Color(0xFFD7AF48);
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(isVip ? 3 : 1),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.6),
-        borderRadius: BorderRadius.circular(16),
-        border:
-            isVip ? Border.all(color: const Color(0xFFFFC107), width: 2) : null,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Align(
-            alignment: Alignment.topRight,
-            child: isVip
-                ? Icon(isClinic ? Icons.local_hospital : Icons.star,
-                    color: const Color(0xFFFFC107), size: 18)
-                : const SizedBox(height: 18),
-          ),
-          ProfileAvatar(
-            imageUrl: imageUrl,
-            size: 70,
-            borderColor: const Color(0xFFFFC107),
-            borderWidth: isVip ? 3 : 0,
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  name,
-                  style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0B2545)),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  specialty,
-                  style: const TextStyle(
-                      color: Color(0xFF0056B3),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    const Icon(Icons.location_on,
-                        size: 10, color: Color(0xFF475569)),
-                    const SizedBox(width: 2),
-                    Expanded(
-                      child: Text(
-                        address,
-                        style: const TextStyle(
-                            color: Color(0xFF475569), fontSize: 10),
-                        textAlign: TextAlign.left,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                if (cost.isNotEmpty)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0056B3).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      cost,
-                      style: const TextStyle(
-                          color: Color(0xFF0056B3),
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold),
-                    ),
-                  ),
-              ],
-            ),
+        color: isVip ? vipGold : const Color(0xFFDCE7F2),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: (isVip ? vipGold : const Color(0xFF0B2545))
+                .withOpacity(isVip ? 0.24 : 0.10),
+            blurRadius: isVip ? 12 : 8,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(17),
+        child: Container(
+          color: Colors.white,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final avatarSize = constraints.maxWidth < 200 ? 78.0 : 94.0;
+              final headerHeight = constraints.maxWidth < 200 ? 64.0 : 82.0;
+              final overlap = avatarSize / 2;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Stack(
+                    clipBehavior: Clip.none,
+                    alignment: Alignment.center,
+                    children: [
+                      Container(
+                        height: headerHeight,
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Color(0xFF174F88), Color(0xFF073B70)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                      ),
+                      Positioned.fill(
+                        child: CustomPaint(painter: _MedicalCardDotsPainter()),
+                      ),
+                      Positioned(
+                        left: 12,
+                        top: 4,
+                        child: Icon(Icons.add,
+                            size: constraints.maxWidth < 200 ? 42 : 54,
+                            color: Colors.white),
+                      ),
+                      if (isVip)
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: vipGold,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.star, size: 12, color: Colors.white),
+                                SizedBox(width: 3),
+                                Text('VIP',
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      Positioned(
+                        bottom: -overlap,
+                        child: Container(
+                          padding: EdgeInsets.all(isVip ? 4 : 3),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isVip ? vipGold : Colors.white,
+                            border: Border.all(
+                              color: isVip ? vipGold : Colors.white,
+                              width: 2,
+                            ),
+                          ),
+                          child: ProfileAvatar(
+                            imageUrl: imageUrl,
+                            size: avatarSize,
+                            borderColor: Colors.white,
+                            borderWidth: 2,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: overlap + 5),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(10, 0, 10, 9),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF174F88),
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                            child: Text(
+                              name.toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                letterSpacing: 0.7,
+                                fontWeight: FontWeight.w800,
+                              ),
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Text(
+                            specialty,
+                            style: const TextStyle(
+                              color: Color(0xFF17212B),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(Icons.location_on,
+                                  size: 15, color: Color(0xFF174F88)),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  address,
+                                  style: const TextStyle(
+                                      color: Color(0xFF475569), fontSize: 11),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Container(
+                            height: 1,
+                            color: const Color(0xFFCBD5E1),
+                          ),
+                          if (cost.isNotEmpty)
+                            Text(
+                              cost,
+                              style: const TextStyle(
+                                color: Color(0xFF101820),
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            )
+                          else if (isClinic)
+                            const Text(
+                              'Clínica',
+                              style: TextStyle(
+                                color: Color(0xFF101820),
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            )
+                          else
+                            const SizedBox(height: 24),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
     );
   }
+}
+
+class _MedicalCardDotsPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = Colors.white.withOpacity(0.42);
+    for (var y = 12.0; y < size.height; y += 18) {
+      for (var x = size.width * 0.32; x < size.width; x += 19) {
+        canvas.drawCircle(Offset(x, y), 2.2, paint);
+      }
+    }
+    final outline = Paint()
+      ..color = Colors.white.withOpacity(0.65)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
+    canvas.drawCircle(Offset(size.width * 0.67, -4), 28, outline);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

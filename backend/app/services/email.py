@@ -17,8 +17,8 @@ html_template = """
     <style>
         body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 0; color: #333333; }
         .container { max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .header { background-color: #0056b3; padding: 30px 20px; text-align: center; }
-        .header img { max-width: 150px; height: auto; }
+        .header { background-color: #ffffff; padding: 12px 20px; text-align: center; border-bottom: 1px solid #e6edf5; }
+        .header img { display: block; width: 150px; max-width: 100%; height: auto; margin: 0 auto; }
         .content { padding: 40px 30px; }
         h1 { color: #0056b3; font-size: 24px; margin-top: 0; }
         p { font-size: 16px; line-height: 1.6; color: #555555; margin-bottom: 20px; }
@@ -33,7 +33,7 @@ html_template = """
 <body>
     <div class="container">
         <div class="header">
-            <img src="https://saludnow.site/assets/logo.png" alt="Salud Now Logo" onerror="this.onerror=null; this.src='https://via.placeholder.com/150x50/ffffff/0056b3?text=Salud+Now';">
+            <img src="https://saludnow.site/assets/assets/logo.png" alt="Salud Now" width="150">
         </div>
         <div class="content">
             <h1>Restablece tu contraseña</h1>
@@ -62,7 +62,7 @@ html_template = """
 
 def send_reset_email(to_email: str, raw_token: str):
     """
-    Envía el correo HTML con el enlace de recuperación usando el API de Resend.
+    Envía el correo HTML con el token de recuperación usando el API de Resend.
     """
     if not RESEND_API_KEY:
         print(f"\n--- [MOCK EMAIL] ---")
@@ -79,9 +79,9 @@ def send_reset_email(to_email: str, raw_token: str):
     }
     
     data = {
-        "from": f"MedIA Soporte <{SENDER_EMAIL}>",
+        "from": f"Salud Now <{SENDER_EMAIL}>",
         "to": [to_email],
-        "subject": "Recuperación de Contraseña - MedIA",
+        "subject": "Recuperación de contraseña - Salud Now",
         "html": html_content
     }
     
