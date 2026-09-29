@@ -6,7 +6,8 @@ import '../models/ve_catalogs.dart';
 
 class AgendarCitaTab extends StatefulWidget {
   final VoidCallback? onCitaAgendada;
-  const AgendarCitaTab({super.key, this.onCitaAgendada});
+  final int? initialDoctorId;
+  const AgendarCitaTab({super.key, this.onCitaAgendada, this.initialDoctorId});
 
   @override
   State<AgendarCitaTab> createState() => _AgendarCitaTabState();
@@ -51,8 +52,25 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
             if (profileState != null && veStates.contains(profileState)) {
               _selectedEstado = profileState;
             }
+            if (widget.initialDoctorId != null) {
+              final doctor = _findDoctor(widget.initialDoctorId);
+              if (doctor != null) {
+                _selectedEstado = doctor['state']?.toString();
+                final specialties = (doctor['specialties'] as List? ?? const [])
+                    .map((item) => item.toString())
+                    .toList();
+                _selectedEspecialidad =
+                    specialties.isEmpty ? null : specialties.first;
+                _selectedMedico =
+                    'Dr. ${doctor['first_name']} ${doctor['last_name']}';
+              }
+            }
             _isLoading = false;
           });
+          if (widget.initialDoctorId != null) {
+            final doctor = _findDoctor(widget.initialDoctorId);
+            if (doctor != null) await _loadDoctorAvailability(doctor);
+          }
         }
       } else {
         if (mounted) setState(() => _isLoading = false);
@@ -125,6 +143,48 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
     return sortedDocs;
   }
 
+  Map<String, dynamic>? _findDoctor(int? id) {
+    if (id == null) return null;
+    for (final doctor in _allDoctors) {
+      if (doctor is Map && doctor['id'] == id) {
+        return Map<String, dynamic>.from(doctor);
+      }
+    }
+    return null;
+  }
+
+  Future<void> _loadDoctorAvailability(Map<String, dynamic> doctor) async {
+    final id = doctor['id'];
+    if (id == null) return;
+    try {
+      final response = await ApiClient.get('/doctors/$id/availability');
+      if (response.statusCode != 200 || !mounted) return;
+      final availabilities = List<dynamic>.from(jsonDecode(response.body));
+      final today = _dateKey(caracasNow());
+      final availableDays = availabilities
+          .where((day) =>
+              day['is_full'] != true &&
+              day['date'].toString().compareTo(today) >= 0)
+          .toList()
+        ..sort((a, b) => a['date'].compareTo(b['date']));
+      setState(() {
+        _doctorAvailabilityInfo = availabilities;
+        if (availableDays.isNotEmpty) {
+          _selectedDate = DateTime.parse(availableDays.first['date']);
+          final slots = availableDays.first['slots'] as List<dynamic>? ?? [];
+          final firstSlot = slots.cast<Map>().firstWhere(
+                (slot) => slot['available'] == true,
+                orElse: () => <String, dynamic>{},
+              );
+          _selectedTurnNumber =
+              firstSlot.isEmpty ? null : firstSlot['turn_number'] as int?;
+        }
+      });
+    } catch (error) {
+      debugPrint('Error fetching doctor availability: $error');
+    }
+  }
+
   Future<void> _selectSpecialty() async {
     final queryController = TextEditingController();
     final selected = await showDialog<String?>(
@@ -161,7 +221,8 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                       itemBuilder: (context, index) => ListTile(
                         title: Text(results[index]),
                         selected: results[index] == _selectedEspecialidad,
-                        onTap: () => Navigator.pop(dialogContext, results[index]),
+                        onTap: () =>
+                            Navigator.pop(dialogContext, results[index]),
                       ),
                     ),
                   ),
@@ -251,49 +312,17 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                   _doctorAvailabilityInfo = [];
                   _selectedTurnNumber = null;
                 });
+                Map<String, dynamic>? doctor;
                 if (val != null) {
-                  // Find doctor ID
-                  final doc = _allDoctors.firstWhere(
-                      (d) => 'Dr. ${d['first_name']} ${d['last_name']}' == val,
-                      orElse: () => null);
-                  if (doc != null && doc['id'] != null) {
-                    try {
-                      final response = await ApiClient.get(
-                          '/doctors/${doc['id']}/availability');
-                      if (response.statusCode == 200) {
-                        final availabilities =
-                            List<dynamic>.from(jsonDecode(response.body));
-                        final today = _dateKey(caracasNow());
-                        final availableDays = availabilities
-                            .where((day) =>
-                                day['is_full'] != true &&
-                                day['date'].toString().compareTo(today) >= 0)
-                            .toList()
-                          ..sort((a, b) => a['date'].compareTo(b['date']));
-                        if (!mounted) return;
-                        setState(() {
-                          _doctorAvailabilityInfo = availabilities;
-                          if (availableDays.isNotEmpty) {
-                            _selectedDate =
-                                DateTime.parse(availableDays.first['date']);
-                            final slots = availableDays.first['slots']
-                                    as List<dynamic>? ??
-                                [];
-                            final firstSlot = slots.cast<Map>().firstWhere(
-                                  (slot) => slot['available'] == true,
-                                  orElse: () => <String, dynamic>{},
-                                );
-                            _selectedTurnNumber = firstSlot.isEmpty
-                                ? null
-                                : firstSlot['turn_number'] as int?;
-                          }
-                        });
-                      }
-                    } catch (e) {
-                      print('Error fetching availability: $e');
+                  for (final item in _allDoctors) {
+                    if ('Dr. ${item['first_name']} ${item['last_name']}' ==
+                        val) {
+                      doctor = Map<String, dynamic>.from(item);
+                      break;
                     }
                   }
                 }
+                if (doctor != null) await _loadDoctorAvailability(doctor);
               },
             ),
             const SizedBox(height: 16),
@@ -343,8 +372,8 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                     ),
                     child: TableCalendar(
                       locale: 'es_ES',
-                      firstDay: DateTime(caracasNow().year,
-                          caracasNow().month, caracasNow().day),
+                      firstDay: DateTime(caracasNow().year, caracasNow().month,
+                          caracasNow().day),
                       lastDay: caracasNow().add(const Duration(days: 365)),
                       focusedDay: _selectedDate,
                       selectedDayPredicate: (day) =>
@@ -431,8 +460,7 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                     child: Text('${slot['time_block']} · Turno #$turn'),
                   );
                 }).toList(),
-                onChanged: (turn) =>
-                    setState(() => _selectedTurnNumber = turn),
+                onChanged: (turn) => setState(() => _selectedTurnNumber = turn),
               ),
             const SizedBox(height: 24),
             Padding(

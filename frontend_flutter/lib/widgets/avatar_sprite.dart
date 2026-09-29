@@ -111,11 +111,18 @@ class _AvatarSpritePainter extends CustomPainter {
     final column = index % columns;
     final row = index ~/ columns;
     final cellWidth = sourceImage.width / columns;
-    final cellHeight = sourceImage.height / rows;
-    final sourceSide = math.min(cellWidth, cellHeight).toDouble();
+    // Avatar sheets use square tiles spaced by their width. The five-column
+    // sheets leave extra canvas below the last row; equal-height row slicing
+    // therefore cuts off the bottom of each portrait.
+    final sourceSide = cellWidth.toDouble();
+    final rowPitch = sourceSide;
+    final topInset = math.max(
+      0.0,
+      (sourceImage.height - rows * rowPitch) / 2 - sourceSide * 0.07,
+    );
     final sourceRect = Rect.fromLTWH(
-      column * cellWidth + (cellWidth - sourceSide) / 2,
-      row * cellHeight + (cellHeight - sourceSide) / 2,
+      column * cellWidth,
+      topInset + row * rowPitch,
       sourceSide,
       sourceSide,
     );

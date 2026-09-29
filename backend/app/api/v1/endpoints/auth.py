@@ -55,6 +55,7 @@ async def login_for_access_token(
 from app.schemas.users import UserCreate, UserResponse
 from app.core.security import get_password_hash
 from sqlalchemy.exc import IntegrityError
+from app.models.users import RoleEnum as DatabaseRoleEnum
 
 @router.post("/register", response_model=UserResponse)
 async def register(
@@ -68,7 +69,7 @@ async def register(
             last_name=user_in.last_name,
             phone=user_in.phone,
             hashed_password=get_password_hash(user_in.password),
-            role=user_in.role.value,
+            role=DatabaseRoleEnum(user_in.role.value),
             state=user_in.state,
             address=user_in.address,
             gender=user_in.gender,

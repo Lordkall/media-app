@@ -488,6 +488,7 @@ class _DoctorDataPage extends StatefulWidget {
 }
 
 class _DoctorDataPageState extends State<_DoctorDataPage> {
+  final TextEditingController _specialtySearch = TextEditingController();
   late final bio =
       TextEditingController(text: widget.doctor['bio']?.toString());
   late final fee = TextEditingController(
@@ -500,15 +501,24 @@ class _DoctorDataPageState extends State<_DoctorDataPage> {
           .toSet()
           .take(5)
           .toList();
+
+  @override
+  void dispose() {
+    _specialtySearch.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) =>
       _SettingsPage(title: 'Datos Laborales', children: [
         _field('Biografía', bio, lines: 4),
         Autocomplete<String>(
+          textEditingController: _specialtySearch,
           optionsBuilder: (value) => medicalSpecialties.where((item) =>
               item.toLowerCase().contains(value.text.trim().toLowerCase()) &&
               !specialties.contains(item)),
           onSelected: (value) {
+            _specialtySearch.clear();
             if (specialties.length >= 5) {
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                   content: Text('Máximo 5 especialidades permitidas')));
@@ -527,6 +537,7 @@ class _DoctorDataPageState extends State<_DoctorDataPage> {
             ),
           ),
         ),
+        const SizedBox(height: 16),
         if (specialties.isNotEmpty)
           Wrap(
             spacing: 8,
@@ -538,6 +549,7 @@ class _DoctorDataPageState extends State<_DoctorDataPage> {
                     ))
                 .toList(),
           ),
+        const SizedBox(height: 16),
         _field('Precio de la consulta', fee,
             type: const TextInputType.numberWithOptions(decimal: true)),
         _field('Ubicación de consultorio', location, lines: 2),

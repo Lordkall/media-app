@@ -215,8 +215,9 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const AgendarCitaTab())),
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => AgendarCitaTab(
+                      initialDoctorId: int.tryParse(doctor['id'].toString())))),
               icon: const Icon(Icons.calendar_month),
               label: const Text('Agendar Cita', style: TextStyle(fontSize: 16)),
               style: ElevatedButton.styleFrom(
