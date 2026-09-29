@@ -103,5 +103,6 @@ class Availability(Base):
     date: Mapped[date] = mapped_column(Date, nullable=False) # Fecha especifica
     start_time: Mapped[str] = mapped_column(String(5), nullable=False) # ej: "09:00"
     end_time: Mapped[str] = mapped_column(String(5), nullable=False)   # ej: "17:00"
+    slot_duration_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=30, server_default="30")
 
     doctor: Mapped["Doctor"] = relationship(back_populates="availabilities")

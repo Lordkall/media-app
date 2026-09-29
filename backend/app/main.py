@@ -55,7 +55,12 @@ async def lifespan(app: FastAPI):
             await conn.execute(text("ALTER TABLE appointments ADD COLUMN IF NOT EXISTS patient_phone VARCHAR(30);"))
             await conn.execute(text("ALTER TABLE appointments ADD COLUMN IF NOT EXISTS appointment_reason VARCHAR(500);"))
             await conn.execute(text("ALTER TABLE appointments ADD COLUMN IF NOT EXISTS booking_source VARCHAR(20) NOT NULL DEFAULT 'online';"))
-            await conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_appointments_active_slot ON appointments (doctor_id, appointment_date, turn_number) WHERE status <> 'CANCELLED';"))
+            await conn.execute(text("ALTER TABLE availabilities ADD COLUMN IF NOT EXISTS slot_duration_minutes INTEGER NOT NULL DEFAULT 30;"))
+            await conn.execute(text("ALTER TABLE appointments ADD COLUMN IF NOT EXISTS appointment_start_minutes INTEGER;"))
+            await conn.execute(text("ALTER TABLE appointments ADD COLUMN IF NOT EXISTS appointment_duration_minutes INTEGER NOT NULL DEFAULT 30;"))
+            await conn.execute(text("UPDATE appointments a SET appointment_start_minutes = (split_part(v.start_time, ':', 1)::INTEGER * 60 + split_part(v.start_time, ':', 2)::INTEGER + (a.turn_number - 1) * 30) FROM availabilities v WHERE v.doctor_id = a.doctor_id AND v.date = a.appointment_date AND a.appointment_start_minutes IS NULL;"))
+            await conn.execute(text("DROP INDEX IF EXISTS uq_appointments_active_slot;"))
+            await conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_appointments_active_start ON appointments (doctor_id, appointment_date, appointment_start_minutes) WHERE status <> 'CANCELLED' AND appointment_start_minutes IS NOT NULL;"))
     except Exception as e:
         print(f"Migration error (might already be TEXT): {e}")
 

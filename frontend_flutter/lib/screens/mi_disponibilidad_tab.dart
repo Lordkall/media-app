@@ -14,6 +14,7 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
   bool _isSuccess = false;
   String _selectedStartTime = '09:00';
   String _selectedEndTime = '18:00';
+  int _slotDurationMinutes = 30;
   int _weekOffset = 0;
 
   List<Map<String, dynamic>> get _currentWeekDays {
@@ -78,6 +79,8 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
                   avails.first['start_time'].toString().substring(0, 5);
               _selectedEndTime =
                   avails.first['end_time'].toString().substring(0, 5);
+              _slotDurationMinutes =
+                  (avails.first['slot_duration_minutes'] as num?)?.toInt() ?? 30;
             }
           });
         }
@@ -107,6 +110,7 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
                 'date': date,
                 'start_time': _selectedStartTime,
                 'end_time': _selectedEndTime,
+                'slot_duration_minutes': _slotDurationMinutes,
               })
           .toList();
 
@@ -215,6 +219,41 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
                       const SizedBox(height: 16),
                       _timePickerTile('Hora de fin', _selectedEndTime,
                           () => _selectTime(isStart: false)),
+                      const SizedBox(height: 32),
+                      _buildSectionTitle('Duración de cada cita'),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Este bloque se aplicará a los turnos de los días seleccionados.',
+                        style: TextStyle(color: Color(0xFF475569), fontSize: 14),
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<int>(
+                        value: _slotDurationMinutes,
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          prefixIcon: const Icon(Icons.timelapse,
+                              color: Color(0xFF0056B3)),
+                        ),
+                        items: const [30, 60, 120]
+                            .map((minutes) => DropdownMenuItem<int>(
+                                  value: minutes,
+                                  child: Text(minutes == 30
+                                      ? '30 minutos'
+                                      : minutes == 60
+                                          ? '1 hora'
+                                          : '2 horas'),
+                                ))
+                            .toList(),
+                        onChanged: (value) {
+                          if (value != null) {
+                            setState(() => _slotDurationMinutes = value);
+                          }
+                        },
+                      ),
                       const SizedBox(height: 32),
                       _buildSectionTitle('Días Laborables'),
                       const SizedBox(height: 16),

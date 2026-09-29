@@ -56,7 +56,16 @@ class _LoginScreenState extends State<LoginScreen> {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access_token');
     final savedEmail = prefs.getString('logged_username');
-    if (savedEmail != null && savedEmail.isNotEmpty && mounted) {
+    if (kIsWeb) {
+      // Web has no biometric sign-in: never render the mobile masked
+      // credential placeholders on the browser login form.
+      await prefs.remove('saved_biometric_token');
+      await prefs.remove('logged_username');
+      if (mounted) {
+        _emailController.clear();
+        _passwordController.clear();
+      }
+    } else if (token != null && savedEmail != null && savedEmail.isNotEmpty && mounted) {
       setState(() {
         _emailController.text = _maskEmail(savedEmail);
         _emailShowsMask = true;
@@ -115,6 +124,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final savedToken = prefs.getString('saved_biometric_token');
 
     if (savedToken == null) {
+      _clearBiometricPrefill();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
             content: Text(
@@ -138,8 +148,11 @@ class _LoginScreenState extends State<LoginScreen> {
           await prefs.setString('access_token', savedToken);
           ProfileImageHelper.updateCurrentUserAvatar(null);
           _navigateToHome();
+        } else {
+          _clearBiometricPrefill();
         }
       } else {
+        _clearBiometricPrefill();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content: Text(
@@ -147,8 +160,20 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } catch (e) {
+      _clearBiometricPrefill();
       print('Error de biometría: $e');
     }
+  }
+
+  void _clearBiometricPrefill() {
+    if (!mounted) return;
+    setState(() {
+      _emailController.clear();
+      _passwordController.clear();
+      _emailShowsMask = false;
+      _passwordShowsMask = false;
+      _obscurePassword = true;
+    });
   }
 
   Future<void> _login() async {
@@ -172,8 +197,13 @@ class _LoginScreenState extends State<LoginScreen> {
         final data = jsonDecode(response.body);
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('access_token', data['access_token']);
-        await prefs.setString('saved_biometric_token', data['access_token']);
-        await prefs.setString('logged_username', _emailController.text.trim());
+        if (!kIsWeb) {
+          await prefs.setString('saved_biometric_token', data['access_token']);
+          await prefs.setString('logged_username', _emailController.text.trim());
+        } else {
+          await prefs.remove('saved_biometric_token');
+          await prefs.remove('logged_username');
+        }
         ProfileImageHelper.updateCurrentUserAvatar(null);
 
         _navigateToHome();

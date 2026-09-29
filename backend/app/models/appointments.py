@@ -1,5 +1,5 @@
 from datetime import datetime, date
-from sqlalchemy import ForeignKey, DateTime, Date, Enum, Integer
+from sqlalchemy import ForeignKey, DateTime, Date, Enum, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base
 import enum
@@ -19,6 +19,8 @@ class Appointment(Base):
     # Citas por turno
     appointment_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
     turn_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    appointment_start_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    appointment_duration_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=30, server_default="30")
     patient_first_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     patient_last_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     patient_phone: Mapped[str | None] = mapped_column(String(30), nullable=True)

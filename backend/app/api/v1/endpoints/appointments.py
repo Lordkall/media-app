@@ -44,9 +44,31 @@ async def _staff_doctor(current_user: User, db: AsyncSession) -> Doctor:
         raise HTTPException(status_code=404, detail="No se encontró el perfil del doctor")
     return doctor
 
-def _slot_label(start_minutes: int, turn_number: int) -> str:
-    minutes = start_minutes + (turn_number - 1) * 30
+def _slot_label(start_minutes: int, turn_number: int, duration_minutes: int = 30) -> str:
+    minutes = start_minutes + (turn_number - 1) * duration_minutes
     return (datetime.min + timedelta(minutes=minutes)).strftime("%I:%M %p")
+
+
+async def _booked_intervals(db: AsyncSession, doctor_id: int, appointment_date: date_type, legacy_start: int):
+    appointments = (await db.scalars(select(Appointment).where(
+        Appointment.doctor_id == doctor_id,
+        Appointment.appointment_date == appointment_date,
+        Appointment.status != AppointmentStatus.CANCELLED,
+    ))).all()
+    return [
+        (
+            appointment.appointment_start_minutes
+            if appointment.appointment_start_minutes is not None
+            else legacy_start + (appointment.turn_number - 1) * 30,
+            appointment.appointment_duration_minutes or 30,
+        )
+        for appointment in appointments
+    ]
+
+
+def _overlaps(start: int, duration: int, booked: list[tuple[int, int]]) -> bool:
+    return any(start < booked_start + booked_duration and booked_start < start + duration
+               for booked_start, booked_duration in booked)
 
 @router.get("/manual/slots")
 async def get_manual_slots(
@@ -63,24 +85,23 @@ async def get_manual_slots(
     start_hour, start_minute = map(int, availability.start_time[:5].split(":"))
     end_hour, end_minute = map(int, availability.end_time[:5].split(":"))
     start_minutes = start_hour * 60 + start_minute
-    slot_count = max(0, (end_hour * 60 + end_minute - start_minutes) // 30)
-    booked = set((await db.scalars(select(Appointment.turn_number).where(
-        Appointment.doctor_id == doctor.id,
-        Appointment.appointment_date == appointment_date,
-        Appointment.status != AppointmentStatus.CANCELLED,
-    ))).all())
+    duration = availability.slot_duration_minutes or 30
+    if duration not in (30, 60, 120):
+        duration = 30
+    slot_count = max(0, (end_hour * 60 + end_minute - start_minutes) // duration)
+    booked = await _booked_intervals(db, doctor.id, appointment_date, start_minutes)
     local_now = datetime.now(ZoneInfo("America/Caracas"))
     slots = []
     for turn in range(1, slot_count + 1):
-        slot_start = start_minutes + (turn - 1) * 30
+        slot_start = start_minutes + (turn - 1) * duration
         if appointment_date < local_now.date() or (
             appointment_date == local_now.date()
             and slot_start <= local_now.hour * 60 + local_now.minute
         ):
             continue
-        if turn not in booked:
-            slots.append({"turn_number": turn, "time_block": _slot_label(start_minutes, turn)})
-    return {"date": appointment_date.isoformat(), "slots": slots}
+        if not _overlaps(slot_start, duration, booked):
+            slots.append({"turn_number": turn, "time_block": _slot_label(start_minutes, turn, duration)})
+    return {"date": appointment_date.isoformat(), "slot_duration_minutes": duration, "slots": slots}
 
 @router.post("/manual", status_code=status.HTTP_201_CREATED)
 async def create_manual_appointment(
@@ -112,29 +133,23 @@ async def create_manual_appointment(
             end_hour, end_minute = map(int, availability.end_time[:5].split(":"))
             start_minutes = start_hour * 60 + start_minute
             end_minutes = end_hour * 60 + end_minute
-            slot_count = max(0, (end_minutes - start_minutes) // 30)
+            duration = availability.slot_duration_minutes or 30
+            if duration not in (30, 60, 120):
+                raise HTTPException(status_code=400, detail="La duración de los turnos configurada no es válida")
+            slot_count = max(0, (end_minutes - start_minutes) // duration)
             if payload.turn_number > slot_count:
                 raise HTTPException(
                     status_code=400,
                     detail="El turno está fuera del horario disponible",
                 )
-            slot_start = start_minutes + (payload.turn_number - 1) * 30
+            slot_start = start_minutes + (payload.turn_number - 1) * duration
             if payload.appointment_date < local_now.date() or (
                 payload.appointment_date == local_now.date()
                 and slot_start <= local_now.hour * 60 + local_now.minute
             ):
                 raise HTTPException(status_code=400, detail="Ese horario ya pasó")
-            occupied = await db.scalar(
-                select(Appointment.id)
-                .where(
-                    Appointment.doctor_id == doctor.id,
-                    Appointment.appointment_date == payload.appointment_date,
-                    Appointment.turn_number == payload.turn_number,
-                    Appointment.status != AppointmentStatus.CANCELLED,
-                )
-                .limit(1)
-            )
-            if occupied:
+            booked = await _booked_intervals(db, doctor.id, payload.appointment_date, start_minutes)
+            if _overlaps(slot_start, duration, booked):
                 raise HTTPException(
                     status_code=409,
                     detail="Ese horario acaba de ser reservado; actualiza los turnos",
@@ -144,6 +159,8 @@ async def create_manual_appointment(
                 patient_id=None,
                 appointment_date=payload.appointment_date,
                 turn_number=payload.turn_number,
+                appointment_start_minutes=slot_start,
+                appointment_duration_minutes=duration,
                 patient_first_name=payload.patient_first_name,
                 patient_last_name=payload.patient_last_name,
                 patient_phone=payload.patient_phone,
@@ -161,7 +178,7 @@ async def create_manual_appointment(
         "doctor_id": doctor.id,
         "date": appointment.appointment_date.isoformat(),
         "turn_number": appointment.turn_number,
-        "time_block": _slot_label(start_minutes, appointment.turn_number),
+        "time_block": _slot_label(start_minutes, appointment.turn_number, duration),
         "status": appointment.status.value,
     }
 
@@ -203,11 +220,14 @@ async def create_appointment(
         end_hour, end_minute = map(int, availability.end_time[:5].split(":"))
         start_minutes = start_hour * 60 + start_minute
         end_minutes = end_hour * 60 + end_minute
-        slot_count = max(0, (end_minutes - start_minutes) // 30)
+        duration = availability.slot_duration_minutes or 30
+        if duration not in (30, 60, 120):
+            raise HTTPException(status_code=400, detail="La duración de los turnos configurada no es válida")
+        slot_count = max(0, (end_minutes - start_minutes) // duration)
         requested_turn = appointment_in.turn_number
         if requested_turn > slot_count:
             raise HTTPException(status_code=400, detail="El turno seleccionado está fuera del horario laboral")
-        start_of_turn = start_minutes + (requested_turn - 1) * 30
+        start_of_turn = start_minutes + (requested_turn - 1) * duration
         local_now = datetime.now(ZoneInfo("America/Caracas"))
         if req_date < local_now.date() or (
             req_date == local_now.date()
@@ -215,13 +235,8 @@ async def create_appointment(
         ):
             raise HTTPException(status_code=400, detail="Ese horario ya pasó")
 
-        booked_query = select(Appointment).where(
-            Appointment.doctor_id == appointment_in.doctor_id,
-            Appointment.appointment_date == req_date,
-            Appointment.status != AppointmentStatus.CANCELLED
-        )
-        booked = (await db.execute(booked_query)).scalars().all()
-        if any(appt.turn_number == requested_turn for appt in booked):
+        booked = await _booked_intervals(db, doctor_record.id, req_date, start_minutes)
+        if _overlaps(start_of_turn, duration, booked):
             raise HTTPException(status_code=409, detail="Ese horario ya fue reservado")
 
         new_appointment = Appointment(
@@ -229,6 +244,8 @@ async def create_appointment(
             doctor_id=appointment_in.doctor_id,
             appointment_date=req_date,
             turn_number=requested_turn,
+            appointment_start_minutes=start_of_turn,
+            appointment_duration_minutes=duration,
             status=AppointmentStatus.SCHEDULED
         )
         
@@ -399,7 +416,9 @@ async def get_my_appointments(
              if item.date == appt.appointment_date),
             None,
         )
-        if availability:
+        if appt.appointment_start_minutes is not None:
+            slot_minutes = appt.appointment_start_minutes
+        elif availability:
             start_hour, start_minute = map(int, availability.start_time[:5].split(":"))
             slot_minutes = start_hour * 60 + start_minute + (appt.turn_number - 1) * 30
         else:

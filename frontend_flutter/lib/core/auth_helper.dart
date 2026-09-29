@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
 import 'profile_image_helper.dart';
 
 class AuthHelper {
@@ -43,8 +44,11 @@ class AuthHelper {
     ProfileImageHelper.updateCurrentUserAvatar(null);
     final prefs = await SharedPreferences.getInstance();
     final currentToken = prefs.getString('access_token');
-    if (currentToken != null) {
+    if (!kIsWeb && currentToken != null) {
       await prefs.setString('saved_biometric_token', currentToken);
+    } else if (kIsWeb) {
+      await prefs.remove('saved_biometric_token');
+      await prefs.remove('logged_username');
     }
     await prefs.remove('access_token');
   }

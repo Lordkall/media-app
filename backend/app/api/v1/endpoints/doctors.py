@@ -90,30 +90,48 @@ async def get_doctor_availability(
     
     out = []
     for a in availabilities:
-        booked_query = select(Appointment.turn_number).where(
+        booked_query = select(Appointment).where(
             Appointment.doctor_id == doctor_id,
             Appointment.appointment_date == a.date,
             Appointment.status != AppointmentStatus.CANCELLED
         )
         booked_result = await db.execute(booked_query)
-        booked_turns = set(booked_result.scalars().all())
+        booked_appointments = booked_result.scalars().all()
 
         start_hour, start_minute = map(int, a.start_time[:5].split(":"))
         end_hour, end_minute = map(int, a.end_time[:5].split(":"))
         start_minutes = start_hour * 60 + start_minute
         end_minutes = end_hour * 60 + end_minute
+        duration = a.slot_duration_minutes or 30
+        if duration not in (30, 60, 120):
+            duration = 30
         now = datetime.now(ZoneInfo("America/Caracas"))
         is_today = a.date == now.date()
         current_minutes = now.hour * 60 + now.minute
         slots = []
-        for offset in range(0, max(0, end_minutes - start_minutes), 30):
-            turn_number = offset // 30 + 1
+        for offset in range(0, max(0, end_minutes - start_minutes), duration):
+            if offset + duration > end_minutes - start_minutes:
+                continue
+            turn_number = offset // duration + 1
             slot_minutes = start_minutes + offset
             slot_time = (datetime.min + timedelta(minutes=slot_minutes)).strftime("%I:%M %p")
+            occupied = any(
+                slot_minutes < (
+                    booked.appointment_start_minutes
+                    if booked.appointment_start_minutes is not None
+                    else start_minutes + (booked.turn_number - 1) * 30
+                ) + (booked.appointment_duration_minutes or 30)
+                and (
+                    booked.appointment_start_minutes
+                    if booked.appointment_start_minutes is not None
+                    else start_minutes + (booked.turn_number - 1) * 30
+                ) < slot_minutes + duration
+                for booked in booked_appointments
+            )
             slots.append({
                 "turn_number": turn_number,
                 "time_block": slot_time,
-                "available": turn_number not in booked_turns
+                "available": not occupied
                 and (not is_today or slot_minutes > current_minutes),
             })
 
@@ -122,6 +140,7 @@ async def get_doctor_availability(
             "date": a.date.isoformat(),
             "start_time": a.start_time,
             "end_time": a.end_time,
+            "slot_duration_minutes": duration,
             "slots": slots,
             "is_full": not any(slot["available"] for slot in slots)
         })
@@ -136,7 +155,7 @@ async def update_doctor_availability(
     if current_user.role.value != "doctor":
         raise HTTPException(status_code=403, detail="User is not a doctor")
         
-    query = select(Doctor).where(Doctor.user_id == current_user.id)
+    query = select(Doctor).where(Doctor.user_id == current_user.id).with_for_update()
     result = await db.execute(query)
     doc = result.scalars().first()
     
@@ -153,7 +172,8 @@ async def update_doctor_availability(
             doctor_id=doc.id,
             date=datetime.strptime(a.date, "%Y-%m-%d").date(),
             start_time=a.start_time,
-            end_time=a.end_time
+            end_time=a.end_time,
+            slot_duration_minutes=a.slot_duration_minutes,
         )
         db.add(new_avail)
         

@@ -70,12 +70,17 @@ def send_appointment_reminders():
                 start_hour, start_minute = map(
                     int, availability.start_time[:5].split(":")
                 )
-            appt_datetime = datetime.combine(
-                appt.appointment_date, datetime.min.time()
-            ) + timedelta(
-                hours=start_hour,
-                minutes=start_minute + (appt.turn_number - 1) * 30,
-            )
+            if appt.appointment_start_minutes is not None:
+                appt_datetime = datetime.combine(
+                    appt.appointment_date, datetime.min.time()
+                ) + timedelta(minutes=appt.appointment_start_minutes)
+            else:
+                appt_datetime = datetime.combine(
+                    appt.appointment_date, datetime.min.time()
+                ) + timedelta(
+                    hours=start_hour,
+                    minutes=start_minute + (appt.turn_number - 1) * 30,
+                )
             
             # Revisar recordatorio 48h
             if time_48h_min <= appt_datetime <= time_48h_max and not appt.reminder_48h_sent:
