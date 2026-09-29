@@ -105,12 +105,16 @@ class _SupportMessagesScreenState extends State<SupportMessagesScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          msg['sender'] ?? 'Usuario',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0B2545)),
+                        Expanded(
+                          child: Text(
+                            msg['sender'] ?? 'Usuario',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0B2545)),
+                          ),
                         ),
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
@@ -119,6 +123,8 @@ class _SupportMessagesScreenState extends State<SupportMessagesScreen> {
                           ),
                           child: Text(
                             msg['status'] ?? 'Desconocido',
+                            maxLines: 1,
+                            softWrap: false,
                             style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
                           ),
                         ),

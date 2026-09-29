@@ -13,12 +13,17 @@ class Appointment(Base):
     __tablename__ = "appointments"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    patient_id: Mapped[int] = mapped_column(ForeignKey("patients.id"), index=True)
+    patient_id: Mapped[int | None] = mapped_column(ForeignKey("patients.id"), index=True, nullable=True)
     doctor_id: Mapped[int] = mapped_column(ForeignKey("doctors.id"), index=True)
     
     # Citas por turno
     appointment_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
     turn_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    patient_first_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    patient_last_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    patient_phone: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    appointment_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    booking_source: Mapped[str] = mapped_column(String(20), default="online", nullable=False)
     
     status: Mapped[AppointmentStatus] = mapped_column(Enum(AppointmentStatus), default=AppointmentStatus.SCHEDULED, nullable=False)
     reminder_24h_sent: Mapped[bool] = mapped_column(default=False, nullable=False)

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../core/auth_helper.dart';
 import '../screens/login_screen.dart';
@@ -17,11 +18,21 @@ class DoctorHeader extends StatefulWidget {
 class _DoctorHeaderState extends State<DoctorHeader> {
   int _unreadCount = 0;
   bool _isVip = false;
+  Timer? _notificationTimer;
 
   @override
   void initState() {
     super.initState();
     _fetchUnreadCount();
+    _notificationTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      _fetchUnreadCount();
+    });
+  }
+
+  @override
+  void dispose() {
+    _notificationTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _fetchUnreadCount() async {

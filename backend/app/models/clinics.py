@@ -1,4 +1,4 @@
-from sqlalchemy import String, ForeignKey, Text, Boolean, Integer
+from sqlalchemy import String, ForeignKey, Text, Boolean, Integer, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base
 from typing import List, Optional
@@ -12,6 +12,8 @@ class Clinic(Base):
     
     # Clinic info
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    specialties: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    contact_phone_2: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     
     # Approval
     is_approved: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

@@ -43,8 +43,46 @@ async def lifespan(app: FastAPI):
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS fcm_token VARCHAR;"))
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_data TEXT;"))
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_content_type VARCHAR(100);"))
+            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMP WITH TIME ZONE;"))
+            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS privacy_accepted_at TIMESTAMP WITH TIME ZONE;"))
+            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_version VARCHAR(30);"))
+            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS privacy_version VARCHAR(30);"))
+            await conn.execute(text("ALTER TABLE clinics ADD COLUMN IF NOT EXISTS specialties JSON;"))
+            await conn.execute(text("ALTER TABLE clinics ADD COLUMN IF NOT EXISTS contact_phone_2 VARCHAR(20);"))
+            await conn.execute(text("ALTER TABLE appointments ALTER COLUMN patient_id DROP NOT NULL;"))
+            await conn.execute(text("ALTER TABLE appointments ADD COLUMN IF NOT EXISTS patient_first_name VARCHAR(100);"))
+            await conn.execute(text("ALTER TABLE appointments ADD COLUMN IF NOT EXISTS patient_last_name VARCHAR(100);"))
+            await conn.execute(text("ALTER TABLE appointments ADD COLUMN IF NOT EXISTS patient_phone VARCHAR(30);"))
+            await conn.execute(text("ALTER TABLE appointments ADD COLUMN IF NOT EXISTS appointment_reason VARCHAR(500);"))
+            await conn.execute(text("ALTER TABLE appointments ADD COLUMN IF NOT EXISTS booking_source VARCHAR(20) NOT NULL DEFAULT 'online';"))
+            await conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_appointments_active_slot ON appointments (doctor_id, appointment_date, turn_number) WHERE status <> 'CANCELLED';"))
     except Exception as e:
         print(f"Migration error (might already be TEXT): {e}")
+
+    # Keep the PostgreSQL notification enum in sync with NotificationType.
+    try:
+        notification_values = [
+            "NEW_SUBSCRIPTION",
+            "RENEWAL_REMINDER",
+            "GRACE_PERIOD_WARNING",
+            "SUBSCRIPTION_REVOKED",
+            "SUBSCRIPTION_RENEWED",
+            "APPOINTMENT_CREATED",
+            "APPOINTMENT_CANCELLED",
+            "DOCTOR_REGISTERED",
+            "DOCTOR_APPROVED",
+            "SUPPORT_MESSAGE",
+        ]
+        async with engine.begin() as conn:
+            for value in notification_values:
+                await conn.execute(
+                    text(
+                        "ALTER TYPE notificationtype "
+                        f"ADD VALUE IF NOT EXISTS '{value}'"
+                    )
+                )
+    except Exception as e:
+        print(f"Notification enum migration error: {e}")
 
     # Auto-migrate subscriptions table
     try:

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import List, Any
@@ -7,8 +7,36 @@ from app.models.clinics import Clinic
 from app.models.users import User
 from app.models.doctors import Doctor
 from pydantic import BaseModel
+from app.api.v1.endpoints.users import get_current_user
+from app.models.users import RoleEnum
 
 router = APIRouter()
+
+class ClinicUpdate(BaseModel):
+    description: str | None = None
+    specialties: list[str] | None = None
+    contact_phone_2: str | None = None
+
+@router.get("/me")
+async def get_my_clinic(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    if current_user.role != RoleEnum.CLINIC:
+        raise HTTPException(status_code=403, detail="Solo disponible para clínicas")
+    clinic = await db.scalar(select(Clinic).where(Clinic.user_id == current_user.id))
+    if not clinic:
+        raise HTTPException(status_code=404, detail="Clínica no encontrada")
+    return {"description": clinic.description, "specialties": clinic.specialties or [], "contact_phone_2": clinic.contact_phone_2}
+
+@router.put("/me")
+async def update_my_clinic(payload: ClinicUpdate, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    if current_user.role != RoleEnum.CLINIC:
+        raise HTTPException(status_code=403, detail="Solo disponible para clínicas")
+    clinic = await db.scalar(select(Clinic).where(Clinic.user_id == current_user.id))
+    if not clinic:
+        raise HTTPException(status_code=404, detail="Clínica no encontrada")
+    for key, value in payload.model_dump(exclude_unset=True).items():
+        setattr(clinic, key, value)
+    await db.commit()
+    return {"message": "Datos de clínica actualizados"}
 
 from app.models.subscriptions import Subscription, SubscriptionPlan, SubscriptionStatus
 

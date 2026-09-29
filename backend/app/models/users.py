@@ -1,5 +1,6 @@
 from typing import Optional, List
-from sqlalchemy import String, Enum, ForeignKey, Text
+from sqlalchemy import String, Enum, ForeignKey, Text, DateTime
+from datetime import datetime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base
 import enum
@@ -30,6 +31,10 @@ class User(Base):
     session_token: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     fcm_token: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     linked_doctor_id: Mapped[Optional[int]] = mapped_column(ForeignKey("doctors.id", ondelete="CASCADE"), nullable=True)
+    terms_accepted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    privacy_accepted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    terms_version: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
+    privacy_version: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
     
     # Relaciones
     doctor_profile: Mapped[Optional["Doctor"]] = relationship(back_populates="user", foreign_keys="[Doctor.user_id]")

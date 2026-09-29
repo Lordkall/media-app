@@ -2,9 +2,15 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../core/api_client.dart';
+import '../core/auth_helper.dart';
 import '../core/profile_image_helper.dart';
-import '../models/ve_catalogs.dart';
 import '../widgets/profile_avatar.dart';
+import 'login_screen.dart';
+
+const _privacyText =
+    'Recolectamos datos de contacto y el motivo de la cita registrado por el usuario, como consulta o entrega de exámenes, para gestionar la agenda y mejorar la plataforma. No manejamos información médica detallada o diagnósticos. Sus datos están protegidos y no se comparten sin su consentimiento, y el usuario tiene el derecho de acceder, modificar o eliminar su información en cualquier momento.';
+const _termsText =
+    'El uso de esta aplicación implica la aceptación de todas las normas y condiciones descritas. El usuario es responsable de garantizar la veracidad de su información y mantener la seguridad de su cuenta. No nos hacemos responsables por la calidad del servicio médico ni por interrupciones en el sistema.';
 
 class ProfileTab extends StatefulWidget {
   const ProfileTab({super.key});
@@ -14,16 +20,12 @@ class ProfileTab extends StatefulWidget {
 }
 
 class _ProfileTabState extends State<ProfileTab> {
-  final _firstName = TextEditingController();
-  final _lastName = TextEditingController();
-  final _phone = TextEditingController();
   final _address = TextEditingController();
   final _fee = TextEditingController();
   final _bio = TextEditingController();
 
   Map<String, dynamic>? _userData;
   List<String> _specialties = [];
-  String? _state;
   bool _isLoading = true;
   bool _isSaving = false;
   bool _isVip = false;
@@ -38,9 +40,6 @@ class _ProfileTabState extends State<ProfileTab> {
 
   @override
   void dispose() {
-    _firstName.dispose();
-    _lastName.dispose();
-    _phone.dispose();
     _address.dispose();
     _fee.dispose();
     _bio.dispose();
@@ -69,12 +68,7 @@ class _ProfileTabState extends State<ProfileTab> {
         }
       }
       if (!mounted) return;
-      _firstName.text = user['first_name']?.toString() ?? '';
-      _lastName.text = user['last_name']?.toString() ?? '';
-      _phone.text = user['phone']?.toString() ?? '';
       _address.text = user['address']?.toString() ?? '';
-      _state =
-          veStates.contains(user['state']) ? user['state'] as String : null;
       _fee.text = doctor?['consultation_fee']?.toString() ?? '';
       _bio.text = doctor?['bio']?.toString() ?? '';
       _specialties =
@@ -126,127 +120,29 @@ class _ProfileTabState extends State<ProfileTab> {
     }
   }
 
-  Future<void> _saveProfile() async {
-    final fee = double.tryParse(_fee.text.trim().replaceAll(',', '.'));
-    if (_isDoctor && (fee == null || fee < 0)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ingresa un precio de consulta válido.')),
-      );
-      return;
-    }
-    if (_isDoctor && _specialties.length > 5) return;
-
-    setState(() => _isSaving = true);
-    try {
-      final userResponse = await ApiClient.put('/users/me', {
-        'first_name': _firstName.text.trim(),
-        'last_name': _lastName.text.trim(),
-        'phone': _phone.text.trim(),
-        'address': _address.text.trim(),
-        'state': _state,
-      });
-      if (userResponse.statusCode != 200) {
-        throw Exception('No se pudo guardar la información personal');
-      }
-
-      if (_isDoctor) {
-        final doctorResponse = await ApiClient.put('/doctors/me', {
-          'consultation_fee': fee,
-          'bio': _bio.text.trim(),
-          'specialties': _specialties,
-        });
-        if (doctorResponse.statusCode != 200) {
-          throw Exception('No se pudo guardar el precio o las especialidades');
-        }
-      }
-
-      if (!mounted) return;
-      setState(() {
-        _userData = {
-          ...?_userData,
-          'first_name': _firstName.text.trim(),
-          'last_name': _lastName.text.trim(),
-          'phone': _phone.text.trim(),
-          'address': _address.text.trim(),
-          'state': _state,
-        };
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Perfil actualizado correctamente.'),
-            backgroundColor: Colors.green),
-      );
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error al guardar: $e')));
-      }
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
-    }
-  }
-
-  Future<void> _chooseSpecialties() async {
-    final selection = Set<String>.from(_specialties);
-    final result = await showDialog<List<String>>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, updateDialog) => AlertDialog(
-          title: Text('Especialidades (${selection.length}/5)'),
-          content: SizedBox(
-            width: 420,
-            height: 440,
-            child: ListView.builder(
-              itemCount: medicalSpecialties.length,
-              itemBuilder: (context, index) {
-                final specialty = medicalSpecialties[index];
-                final selected = selection.contains(specialty);
-                return CheckboxListTile(
-                  dense: true,
-                  value: selected,
-                  title: Text(specialty),
-                  onChanged: !selected && selection.length >= 5
-                      ? null
-                      : (checked) => updateDialog(() {
-                            if (checked == true) {
-                              selection.add(specialty);
-                            } else {
-                              selection.remove(specialty);
-                            }
-                          }),
-                );
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('Cancelar')),
-            FilledButton(
-                onPressed: () =>
-                    Navigator.pop(dialogContext, selection.toList()),
-                child: const Text('Guardar')),
-          ],
-        ),
+  void _open(String title, Widget page) {
+    Navigator.of(context)
+        .push(PageRouteBuilder<void>(
+      pageBuilder: (_, animation, __) => page,
+      transitionsBuilder: (_, animation, __, child) => SlideTransition(
+        position: Tween<Offset>(begin: const Offset(0.08, 0), end: Offset.zero)
+            .animate(
+                CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
+        child: FadeTransition(opacity: animation, child: child),
       ),
-    );
-    if (result != null && mounted) setState(() => _specialties = result);
+    ))
+        .then((_) {
+      if (mounted) _fetchData();
+    });
   }
 
-  Widget _textField(String label, TextEditingController controller,
-      {int maxLines = 1, TextInputType? keyboardType}) {
-    return TextField(
-      controller: controller,
-      maxLines: maxLines,
-      keyboardType: keyboardType,
-      decoration: InputDecoration(
-        labelText: label,
-        filled: true,
-        fillColor: Colors.white.withOpacity(0.65),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  }
+  Widget _menuRow(String title, VoidCallback onTap) => ListTile(
+        title: Text(title,
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: onTap,
+        shape: const Border(bottom: BorderSide(color: Color(0x220B2545))),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -289,90 +185,424 @@ class _ProfileTabState extends State<ProfileTab> {
               ),
             ),
             const SizedBox(height: 12),
-            _textField('Nombre', _firstName),
-            const SizedBox(height: 14),
-            _textField('Apellido', _lastName),
-            const SizedBox(height: 14),
-            _textField('Teléfono de contacto', _phone,
-                keyboardType: TextInputType.phone),
-            const SizedBox(height: 14),
-            DropdownButtonFormField<String>(
-              value: _state,
-              isExpanded: true,
-              decoration: InputDecoration(
-                labelText: 'Estado / ubicación',
-                filled: true,
-                fillColor: Colors.white.withOpacity(0.65),
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              items: [
-                const DropdownMenuItem<String>(
-                    value: null, child: Text('Selecciona un estado')),
-                ...veStates.map((state) =>
-                    DropdownMenuItem(value: state, child: Text(state))),
-              ],
-              onChanged: (value) => setState(() => _state = value),
-            ),
-            const SizedBox(height: 14),
-            _textField('Dirección', _address, maxLines: 2),
-            if (_isDoctor) ...[
-              const SizedBox(height: 22),
-              const Text('Perfil médico',
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0B2545))),
-              const SizedBox(height: 14),
-              _textField('Precio de consulta', _fee,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true)),
-              const SizedBox(height: 14),
-              _textField('Biografía', _bio, maxLines: 4),
-              const SizedBox(height: 18),
-              Row(
-                children: [
-                  const Expanded(
-                      child: Text('Especialidades (máximo 5)',
-                          style: TextStyle(fontWeight: FontWeight.bold))),
-                  TextButton.icon(
-                      onPressed: _chooseSpecialties,
-                      icon: const Icon(Icons.edit),
-                      label: const Text('Editar')),
-                ],
-              ),
-              Wrap(
-                spacing: 8,
-                runSpacing: 4,
-                children: _specialties
-                    .map((specialty) => InputChip(
-                          label: Text(specialty),
-                          onDeleted: () =>
-                              setState(() => _specialties.remove(specialty)),
-                        ))
-                    .toList(),
-              ),
-              if (_specialties.isEmpty)
-                const Text('Selecciona al menos una especialidad.',
-                    style: TextStyle(color: Colors.grey)),
-            ],
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: _isSaving ? null : _saveProfile,
-              icon: _isSaving
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white))
-                  : const Icon(Icons.save),
-              label: const Text('Guardar cambios'),
-              style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16)),
-            ),
+            const SizedBox(height: 18),
+            _menuRow(
+                'Tus Datos',
+                () => _open(
+                    'Tus Datos',
+                    _ProfileMenu(title: 'Tus Datos', children: [
+                      _menuRow(
+                          'Información Personal',
+                          () => _open('Información Personal',
+                              _PersonalInfoPage(user: _userData ?? const {}))),
+                      _menuRow(
+                          'Mis Direcciones',
+                          () => _open('Mis Direcciones',
+                              _AddressPage(user: _userData ?? const {}))),
+                    ]))),
+            if (_isDoctor)
+              _menuRow(
+                  'Datos Laborales',
+                  () => _open(
+                      'Datos Laborales',
+                      _DoctorDataPage(doctor: {
+                        'bio': _bio.text,
+                        'consultation_fee': _fee.text,
+                        'specialties': _specialties,
+                        'clinic_info': _address.text
+                      }))),
+            if (_userData?['role'] == 'clinic')
+              _menuRow(
+                  'Datos de la clínica',
+                  () => _open('Datos de la clínica',
+                      _ClinicDataPage(user: _userData ?? const {}))),
+            _menuRow('Seguridad de tu cuenta',
+                () => _open('Seguridad de tu cuenta', const _SecurityPage())),
+            _menuRow(
+                'Acerca de Salud Now',
+                () => _open('Acerca de Salud Now',
+                    _AboutPage(onOpen: _open, menuRow: _menuRow))),
           ],
         ),
       ),
     );
   }
 }
+
+class _ProfileMenu extends StatelessWidget {
+  const _ProfileMenu({required this.title, required this.children});
+  final String title;
+  final List<Widget> children;
+  @override
+  Widget build(BuildContext context) =>
+      _SettingsPage(title: title, children: children);
+}
+
+class _SettingsPage extends StatelessWidget {
+  const _SettingsPage({required this.title, required this.children});
+  final String title;
+  final List<Widget> children;
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: Text(title), backgroundColor: Colors.transparent),
+        body: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            children: children),
+      );
+}
+
+class _PersonalInfoPage extends StatefulWidget {
+  const _PersonalInfoPage({required this.user});
+  final Map<String, dynamic> user;
+  @override
+  State<_PersonalInfoPage> createState() => _PersonalInfoPageState();
+}
+
+class _PersonalInfoPageState extends State<_PersonalInfoPage> {
+  late final name =
+      TextEditingController(text: widget.user['first_name']?.toString());
+  late final surname =
+      TextEditingController(text: widget.user['last_name']?.toString());
+  late final phone =
+      TextEditingController(text: widget.user['phone']?.toString());
+  bool saving = false;
+  @override
+  Widget build(BuildContext context) =>
+      _SettingsPage(title: 'Información Personal', children: [
+        _field('Nombres', name),
+        _field('Apellidos', surname),
+        _field('Teléfono de contacto', phone, type: TextInputType.phone),
+        _field('Correo electrónico',
+            TextEditingController(text: widget.user['email']?.toString()),
+            enabled: false),
+        FilledButton(
+            onPressed: saving
+                ? null
+                : () async {
+                    setState(() => saving = true);
+                    final response = await ApiClient.put('/users/me', {
+                      'first_name': name.text.trim(),
+                      'last_name': surname.text.trim(),
+                      'phone': phone.text.trim()
+                    });
+                    if (context.mounted) {
+                      setState(() => saving = false);
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(response.statusCode == 200
+                              ? 'Información guardada.'
+                              : 'No se pudo guardar.')));
+                    }
+                  },
+            child: const Text('Guardar cambios')),
+      ]);
+}
+
+class _AddressPage extends StatefulWidget {
+  const _AddressPage({required this.user});
+  final Map<String, dynamic> user;
+  @override
+  State<_AddressPage> createState() => _AddressPageState();
+}
+
+class _AddressPageState extends State<_AddressPage> {
+  late final state =
+      TextEditingController(text: widget.user['state']?.toString());
+  late final address =
+      TextEditingController(text: widget.user['address']?.toString());
+  @override
+  Widget build(BuildContext context) =>
+      _SettingsPage(title: 'Mis Direcciones', children: [
+        _field('Estado', state),
+        _field('Dirección', address, lines: 3),
+        FilledButton(
+            onPressed: () async {
+              final r = await ApiClient.put('/users/me',
+                  {'state': state.text.trim(), 'address': address.text.trim()});
+              if (context.mounted)
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text(r.statusCode == 200
+                        ? 'Dirección guardada.'
+                        : 'No se pudo guardar.')));
+            },
+            child: const Text('Guardar cambios')),
+      ]);
+}
+
+class _DoctorDataPage extends StatefulWidget {
+  const _DoctorDataPage({required this.doctor});
+  final Map<String, dynamic> doctor;
+  @override
+  State<_DoctorDataPage> createState() => _DoctorDataPageState();
+}
+
+class _DoctorDataPageState extends State<_DoctorDataPage> {
+  late final bio =
+      TextEditingController(text: widget.doctor['bio']?.toString());
+  late final fee = TextEditingController(
+      text: widget.doctor['consultation_fee']?.toString());
+  late final location =
+      TextEditingController(text: widget.doctor['clinic_info']?.toString());
+  late final specialtiesInput = TextEditingController(
+      text: (widget.doctor['specialties'] as List? ?? const []).join(', '));
+  late List<String> specialties =
+      List<String>.from(widget.doctor['specialties'] ?? const []);
+  @override
+  Widget build(BuildContext context) =>
+      _SettingsPage(title: 'Datos Laborales', children: [
+        _field('Biografía', bio, lines: 4),
+        _field('Especialidades (separadas por coma)', specialtiesInput),
+        _field('Precio de la consulta', fee,
+            type: const TextInputType.numberWithOptions(decimal: true)),
+        _field('Ubicación de consultorio', location, lines: 2),
+        FilledButton(
+            onPressed: () async {
+              specialties = specialtiesInput.text
+                  .split(',')
+                  .map((v) => v.trim())
+                  .where((v) => v.isNotEmpty)
+                  .take(5)
+                  .toList();
+              final r = await ApiClient.put('/doctors/me', {
+                'bio': bio.text.trim(),
+                'consultation_fee':
+                    double.tryParse(fee.text.replaceAll(',', '.')),
+                'clinic_info': location.text.trim(),
+                'specialties': specialties
+              });
+              if (context.mounted)
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text(r.statusCode == 200
+                        ? 'Datos laborales guardados.'
+                        : 'No se pudieron guardar.')));
+            },
+            child: const Text('Guardar cambios')),
+      ]);
+}
+
+class _ClinicDataPage extends StatefulWidget {
+  const _ClinicDataPage({required this.user});
+  final Map<String, dynamic> user;
+  @override
+  State<_ClinicDataPage> createState() => _ClinicDataPageState();
+}
+
+class _ClinicDataPageState extends State<_ClinicDataPage> {
+  late final description = TextEditingController();
+  late final location =
+      TextEditingController(text: widget.user['address']?.toString());
+  late final specialties = TextEditingController();
+  late final phone2 = TextEditingController();
+  late final phone =
+      TextEditingController(text: widget.user['phone']?.toString());
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final r = await ApiClient.get('/clinics/me');
+    if (r.statusCode == 200) {
+      final d = Map<String, dynamic>.from(jsonDecode(r.body));
+      description.text = d['description']?.toString() ?? '';
+      specialties.text = (d['specialties'] as List? ?? []).join(', ');
+      phone2.text = d['contact_phone_2']?.toString() ?? '';
+      if (mounted) setState(() {});
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      _SettingsPage(title: 'Datos de la clínica', children: [
+        _field('Descripción', description, lines: 4),
+        _field('Ubicación', location, lines: 2),
+        _field('Especialidades (separadas por coma)', specialties),
+        _field('Número de contacto', phone, type: TextInputType.phone),
+        _field('Segundo número de contacto', phone2, type: TextInputType.phone),
+        FilledButton(
+            onPressed: () async {
+              final u = await ApiClient.put('/users/me', {
+                'address': location.text.trim(),
+                'phone': phone.text.trim()
+              });
+              final c = await ApiClient.put('/clinics/me', {
+                'description': description.text.trim(),
+                'specialties': specialties.text
+                    .split(',')
+                    .map((v) => v.trim())
+                    .where((v) => v.isNotEmpty)
+                    .toList(),
+                'contact_phone_2': phone2.text.trim()
+              });
+              if (context.mounted)
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text(u.statusCode == 200 && c.statusCode == 200
+                        ? 'Datos guardados.'
+                        : 'No se pudieron guardar los datos.')));
+            },
+            child: const Text('Guardar cambios')),
+      ]);
+}
+
+class _SecurityPage extends StatelessWidget {
+  const _SecurityPage();
+  @override
+  Widget build(BuildContext context) =>
+      _SettingsPage(title: 'Seguridad de tu cuenta', children: [
+        ListTile(
+            title: const Text('Cambiar contraseña'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const _ChangePasswordPage())))
+      ]);
+}
+
+class _ChangePasswordPage extends StatefulWidget {
+  const _ChangePasswordPage();
+  @override
+  State<_ChangePasswordPage> createState() => _ChangePasswordPageState();
+}
+
+class _ChangePasswordPageState extends State<_ChangePasswordPage> {
+  final current = TextEditingController(),
+      next = TextEditingController(),
+      repeat = TextEditingController();
+  bool busy = false;
+  @override
+  Widget build(BuildContext context) =>
+      _SettingsPage(title: 'Cambiar contraseña', children: [
+        _field('Contraseña actual', current, secret: true),
+        _field('Nueva contraseña', next, secret: true),
+        _field('Repetir nueva contraseña', repeat, secret: true),
+        const Text(
+            'Debe tener al menos 6 caracteres, letras, números y una mayúscula.'),
+        FilledButton(
+            onPressed: busy
+                ? null
+                : () async {
+                    final p = next.text;
+                    if (p != repeat.text ||
+                        p.length < 6 ||
+                        !RegExp(r'[A-Z]').hasMatch(p) ||
+                        !RegExp(r'[a-zA-Z]').hasMatch(p) ||
+                        !RegExp(r'[0-9]').hasMatch(p)) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text(
+                              'La nueva contraseña no cumple los requisitos o no coincide.')));
+                      return;
+                    }
+                    setState(() => busy = true);
+                    final r = await ApiClient.put('/users/me/password',
+                        {'current_password': current.text, 'new_password': p});
+                    if (context.mounted) {
+                      setState(() => busy = false);
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(r.statusCode == 200
+                              ? 'Contraseña actualizada.'
+                              : 'La contraseña actual es incorrecta.')));
+                    }
+                  },
+            child: const Text('Actualizar contraseña')),
+      ]);
+}
+
+class _AboutPage extends StatelessWidget {
+  const _AboutPage({required this.onOpen, required this.menuRow});
+  final void Function(String, Widget) onOpen;
+  final Widget Function(String, VoidCallback) menuRow;
+  @override
+  Widget build(BuildContext context) =>
+      _SettingsPage(title: 'Acerca de Salud Now', children: [
+        const Padding(
+            padding: EdgeInsets.all(12),
+            child: Text('Preferencia de Datos',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))),
+        menuRow(
+            'Política de Privacidad',
+            () => onOpen(
+                'Política de Privacidad',
+                _TextPage(
+                    title: 'Política de Privacidad', text: _privacyText))),
+        menuRow(
+            'Cookies',
+            () => onOpen(
+                'Cookies',
+                const _TextPage(
+                    title: 'Cookies',
+                    text: 'Esta opción aún no está configurada.'))),
+        const Padding(
+            padding: EdgeInsets.all(12),
+            child: Text('Información Legal',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))),
+        menuRow(
+            'Términos y Condiciones',
+            () => onOpen('Términos y Condiciones',
+                _TextPage(title: 'Términos y Condiciones', text: _termsText))),
+        ListTile(
+            leading: const Icon(Icons.delete_outline, color: Colors.red),
+            title: const Text('Eliminar Cuenta de Salud Now',
+                style: TextStyle(color: Colors.red)),
+            onTap: () => _confirmDelete(context)),
+      ]);
+  Future<void> _confirmDelete(BuildContext context) async {
+    final yes = await showDialog<bool>(
+        context: context,
+        builder: (c) => AlertDialog(
+                title: const Text('Eliminar cuenta'),
+                content: const Text(
+                    'Se eliminarán tus datos personales. Las referencias anonimizadas necesarias para conservar el historial de citas podrían mantenerse. ¿Continuar?'),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(c, false),
+                      child: const Text('Cancelar')),
+                  TextButton(
+                      onPressed: () => Navigator.pop(c, true),
+                      child: const Text('Eliminar'))
+                ]));
+    if (yes == true) {
+      final r = await ApiClient.delete('/users/me');
+      if (r.statusCode == 200) {
+        await AuthHelper.logout();
+        if (context.mounted) {
+          Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+            MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
+            (_) => false,
+          );
+        }
+      }
+      if (context.mounted)
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(r.statusCode == 200
+                ? 'Cuenta eliminada.'
+                : 'No se pudo eliminar la cuenta.')));
+    }
+  }
+}
+
+class _TextPage extends StatelessWidget {
+  const _TextPage({required this.title, required this.text});
+  final String title, text;
+  @override
+  Widget build(BuildContext context) => _SettingsPage(title: title, children: [
+        Padding(
+            padding: const EdgeInsets.all(12),
+            child:
+                Text(text, style: const TextStyle(fontSize: 16, height: 1.55)))
+      ]);
+}
+
+Widget _field(String label, TextEditingController controller,
+        {TextInputType? type,
+        int lines = 1,
+        bool secret = false,
+        bool enabled = true}) =>
+    Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: TextField(
+            controller: controller,
+            keyboardType: type,
+            maxLines: secret ? 1 : lines,
+            obscureText: secret,
+            enabled: enabled,
+            decoration: InputDecoration(
+                labelText: label, border: const OutlineInputBorder())));

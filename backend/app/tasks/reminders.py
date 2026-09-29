@@ -45,6 +45,9 @@ def send_appointment_reminders():
         ).scalars().unique().all()
         
         for appt in appointments:
+            # Manually entered patients have no Salud Now account to notify.
+            if appt.patient is None:
+                continue
             # Check if doctor is VIP
             sub = session.execute(
                 select(Subscription).where(

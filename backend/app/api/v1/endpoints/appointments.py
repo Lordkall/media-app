@@ -1,17 +1,169 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from app.api.dependencies import get_db, get_current_patient
 from app.api.v1.endpoints.users import get_current_user
 from app.models.users import User, RoleEnum
 from app.models.appointments import Appointment, AppointmentStatus
 from app.schemas.appointments import AppointmentCreate, AppointmentResponse
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date as date_type
 from zoneinfo import ZoneInfo
 from app.models.doctors import Doctor, Availability
 from app.models.patients import Patient
+from pydantic import BaseModel, Field, field_validator
 
 router = APIRouter()
+
+class ManualAppointmentCreate(BaseModel):
+    appointment_date: date_type
+    turn_number: int = Field(gt=0)
+    patient_first_name: str = Field(min_length=1, max_length=100)
+    patient_last_name: str = Field(min_length=1, max_length=100)
+    patient_phone: str = Field(min_length=5, max_length=30)
+    appointment_reason: str = Field(min_length=1, max_length=500)
+
+    @field_validator("patient_first_name", "patient_last_name", "patient_phone", "appointment_reason")
+    @classmethod
+    def strip_and_require_value(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Este dato es obligatorio")
+        return value
+
+async def _staff_doctor(current_user: User, db: AsyncSession) -> Doctor:
+    if current_user.role == RoleEnum.DOCTOR:
+        doctor = await db.scalar(select(Doctor).where(Doctor.user_id == current_user.id))
+    elif current_user.role == RoleEnum.ASSISTANT:
+        if not current_user.linked_doctor_id:
+            raise HTTPException(status_code=403, detail="El asistente no está vinculado a un doctor")
+        doctor = await db.get(Doctor, current_user.linked_doctor_id)
+    else:
+        raise HTTPException(status_code=403, detail="Solo doctores y asistentes pueden agendar citas manuales")
+    if not doctor:
+        raise HTTPException(status_code=404, detail="No se encontró el perfil del doctor")
+    return doctor
+
+def _slot_label(start_minutes: int, turn_number: int) -> str:
+    minutes = start_minutes + (turn_number - 1) * 30
+    return (datetime.min + timedelta(minutes=minutes)).strftime("%I:%M %p")
+
+@router.get("/manual/slots")
+async def get_manual_slots(
+    appointment_date: date_type = Query(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    doctor = await _staff_doctor(current_user, db)
+    availability = await db.scalar(select(Availability).where(
+        Availability.doctor_id == doctor.id, Availability.date == appointment_date
+    ))
+    if not availability:
+        return {"date": appointment_date.isoformat(), "slots": []}
+    start_hour, start_minute = map(int, availability.start_time[:5].split(":"))
+    end_hour, end_minute = map(int, availability.end_time[:5].split(":"))
+    start_minutes = start_hour * 60 + start_minute
+    slot_count = max(0, (end_hour * 60 + end_minute - start_minutes) // 30)
+    booked = set((await db.scalars(select(Appointment.turn_number).where(
+        Appointment.doctor_id == doctor.id,
+        Appointment.appointment_date == appointment_date,
+        Appointment.status != AppointmentStatus.CANCELLED,
+    ))).all())
+    local_now = datetime.now(ZoneInfo("America/Caracas"))
+    slots = []
+    for turn in range(1, slot_count + 1):
+        slot_start = start_minutes + (turn - 1) * 30
+        if appointment_date < local_now.date() or (
+            appointment_date == local_now.date()
+            and slot_start <= local_now.hour * 60 + local_now.minute
+        ):
+            continue
+        if turn not in booked:
+            slots.append({"turn_number": turn, "time_block": _slot_label(start_minutes, turn)})
+    return {"date": appointment_date.isoformat(), "slots": slots}
+
+@router.post("/manual", status_code=status.HTTP_201_CREATED)
+async def create_manual_appointment(
+    payload: ManualAppointmentCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    doctor = await _staff_doctor(current_user, db)
+    local_now = datetime.now(ZoneInfo("America/Caracas"))
+    try:
+        async with db.begin_nested():
+            # Serialize booking paths for this doctor; the unique index also
+            # protects the slot if another writer does not take this lock.
+            doctor = await db.scalar(
+                select(Doctor).where(Doctor.id == doctor.id).with_for_update()
+            )
+            availability = await db.scalar(
+                select(Availability).where(
+                    Availability.doctor_id == doctor.id,
+                    Availability.date == payload.appointment_date,
+                )
+            )
+            if not availability:
+                raise HTTPException(
+                    status_code=400,
+                    detail="El doctor no tiene disponibilidad ese día",
+                )
+            start_hour, start_minute = map(int, availability.start_time[:5].split(":"))
+            end_hour, end_minute = map(int, availability.end_time[:5].split(":"))
+            start_minutes = start_hour * 60 + start_minute
+            end_minutes = end_hour * 60 + end_minute
+            slot_count = max(0, (end_minutes - start_minutes) // 30)
+            if payload.turn_number > slot_count:
+                raise HTTPException(
+                    status_code=400,
+                    detail="El turno está fuera del horario disponible",
+                )
+            slot_start = start_minutes + (payload.turn_number - 1) * 30
+            if payload.appointment_date < local_now.date() or (
+                payload.appointment_date == local_now.date()
+                and slot_start <= local_now.hour * 60 + local_now.minute
+            ):
+                raise HTTPException(status_code=400, detail="Ese horario ya pasó")
+            occupied = await db.scalar(
+                select(Appointment.id)
+                .where(
+                    Appointment.doctor_id == doctor.id,
+                    Appointment.appointment_date == payload.appointment_date,
+                    Appointment.turn_number == payload.turn_number,
+                    Appointment.status != AppointmentStatus.CANCELLED,
+                )
+                .limit(1)
+            )
+            if occupied:
+                raise HTTPException(
+                    status_code=409,
+                    detail="Ese horario acaba de ser reservado; actualiza los turnos",
+                )
+            appointment = Appointment(
+                doctor_id=doctor.id,
+                patient_id=None,
+                appointment_date=payload.appointment_date,
+                turn_number=payload.turn_number,
+                patient_first_name=payload.patient_first_name,
+                patient_last_name=payload.patient_last_name,
+                patient_phone=payload.patient_phone,
+                appointment_reason=payload.appointment_reason,
+                booking_source="manual",
+                status=AppointmentStatus.SCHEDULED,
+            )
+            db.add(appointment)
+            await db.flush()
+    except IntegrityError:
+        raise HTTPException(status_code=409, detail="Ese horario acaba de ser reservado; actualiza los turnos")
+    await db.commit()
+    return {
+        "id": appointment.id,
+        "doctor_id": doctor.id,
+        "date": appointment.appointment_date.isoformat(),
+        "turn_number": appointment.turn_number,
+        "time_block": _slot_label(start_minutes, appointment.turn_number),
+        "status": appointment.status.value,
+    }
 
 @router.post("/", response_model=AppointmentResponse, status_code=status.HTTP_201_CREATED)
 async def create_appointment(
@@ -126,18 +278,20 @@ async def cancel_appointment(
             raise HTTPException(status_code=400, detail="Already cancelled")
 
         doctor = await db.scalar(select(Doctor).where(Doctor.id == appt.doctor_id))
-        patient = await db.scalar(select(Patient).where(Patient.id == appt.patient_id))
-        if not doctor or not patient:
+        patient = await db.scalar(select(Patient).where(Patient.id == appt.patient_id)) if appt.patient_id else None
+        if not doctor or (appt.patient_id and not patient):
             raise HTTPException(status_code=404, detail="Appointment participant not found")
 
-        if current_user.role == RoleEnum.DOCTOR:
-            if doctor.user_id != current_user.id:
+        if current_user.role in (RoleEnum.DOCTOR, RoleEnum.ASSISTANT):
+            if (current_user.role == RoleEnum.DOCTOR and doctor.user_id != current_user.id) or (
+                current_user.role == RoleEnum.ASSISTANT and current_user.linked_doctor_id != doctor.id
+            ):
                 raise HTTPException(status_code=403, detail="You cannot cancel this appointment")
-            recipient_user_id = patient.user_id
+            recipient_user_id = patient.user_id if patient else None
             cancelled_by = "doctor"
             actor_name = "El doctor"
         elif current_user.role == RoleEnum.PATIENT:
-            if patient.user_id != current_user.id:
+            if not patient or patient.user_id != current_user.id:
                 raise HTTPException(status_code=403, detail="You cannot cancel this appointment")
             recipient_user_id = doctor.user_id
             cancelled_by = "patient"
@@ -149,9 +303,12 @@ async def cancel_appointment(
         
     await db.commit()
 
-    # Notify the participant who did not cancel the appointment.
+    # Notify the participant who did not cancel the appointment. The Notification
+    # insert hook sends the phone push, so do not send another push here.
     try:
         from app.models.notifications import Notification, NotificationType
+        if recipient_user_id is None:
+            return {"message": "Cita cancelada y turno liberado."}
         notif = Notification(
             user_id=recipient_user_id,
             type=NotificationType.APPOINTMENT_CANCELLED,
@@ -160,15 +317,6 @@ async def cancel_appointment(
         )
         db.add(notif)
         await db.commit()
-        recipient = await db.get(User, recipient_user_id)
-        if recipient and recipient.fcm_token:
-            from app.core.firebase import send_push_notification
-            send_push_notification(
-                recipient.fcm_token,
-                notif.title,
-                notif.message,
-                {"type": "appointment_cancelled", "appointment_id": str(appt.id)},
-            )
     except Exception as e:
         print(f"Error saving cancellation notification: {e}")
 
@@ -181,16 +329,20 @@ async def get_my_appointments(
 ):
     # This queries the appointments related to the current user
     from sqlalchemy.orm import selectinload
-    if current_user.role == RoleEnum.DOCTOR:
-        doctor_query = select(Doctor).where(Doctor.user_id == current_user.id)
-        doctor = (await db.execute(doctor_query)).scalar_one_or_none()
-        if not doctor:
+    doctor_view = current_user.role in (RoleEnum.DOCTOR, RoleEnum.ASSISTANT)
+    if doctor_view:
+        doctor_id = current_user.linked_doctor_id if current_user.role == RoleEnum.ASSISTANT else None
+        if current_user.role == RoleEnum.DOCTOR:
+            doctor_query = select(Doctor).where(Doctor.user_id == current_user.id)
+            doctor = (await db.execute(doctor_query)).scalar_one_or_none()
+            doctor_id = doctor.id if doctor else None
+        if not doctor_id:
             return []
         query = select(Appointment).options(
             selectinload(Appointment.doctor).selectinload(Doctor.user),
             selectinload(Appointment.doctor).selectinload(Doctor.availabilities),
             selectinload(Appointment.patient).selectinload(Patient.user)
-        ).where(Appointment.doctor_id == doctor.id).order_by(Appointment.appointment_date.asc(), Appointment.id.asc())
+        ).where(Appointment.doctor_id == doctor_id).order_by(Appointment.appointment_date.asc(), Appointment.id.asc())
     else:
         patient_query = select(Patient).where(Patient.user_id == current_user.id)
         patient = (await db.execute(patient_query)).scalar_one_or_none()
@@ -209,9 +361,15 @@ async def get_my_appointments(
     for appt in appointments:
         doc = appt.doctor
         pat = appt.patient
-        if current_user.role == RoleEnum.DOCTOR:
+        if doctor_view:
             # Show patient info instead of doctor info
-            if pat and pat.user:
+            if appt.patient_id is None:
+                display_name = f"{appt.patient_first_name or ''} {appt.patient_last_name or ''}".strip() or "Paciente presencial"
+                display_loc = ""
+                avatar = ""
+                phone = appt.patient_phone or ""
+                motivo = appt.appointment_reason or "Consulta"
+            elif pat and pat.user:
                 display_name = f"{pat.user.first_name} {pat.user.last_name}"
                 display_loc = pat.user.state or ""
                 avatar = pat.user.avatar_url or ""
@@ -260,6 +418,7 @@ async def get_my_appointments(
             "time_block": time_block,
             "status": appt.status.value,
             "date": appt.appointment_date.isoformat(),
-            "turn_number": appt.turn_number
+            "turn_number": appt.turn_number,
+            "booking_source": appt.booking_source,
         })
     return out

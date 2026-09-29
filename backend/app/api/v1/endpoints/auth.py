@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import timedelta, datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
@@ -72,6 +72,10 @@ async def register(
             state=user_in.state,
             address=user_in.address,
             gender=user_in.gender,
+            terms_accepted_at=datetime.now(timezone.utc),
+            privacy_accepted_at=datetime.now(timezone.utc),
+            terms_version="1.0",
+            privacy_version="1.0",
         )
         db.add(new_user)
         await db.flush() # Para obtener new_user.id

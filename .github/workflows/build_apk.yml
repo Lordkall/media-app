@@ -10,6 +10,8 @@ jobs:
   build:
     name: Build APK
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout Repository
@@ -46,3 +48,15 @@ jobs:
           name: SaludNow-APK
           path: frontend_flutter/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
+
+      - name: Publish APK as a direct download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="saludnow-${{ github.run_number }}-${{ github.run_attempt }}"
+          gh release create "$TAG" \
+            "frontend_flutter/build/app/outputs/flutter-apk/app-release.apk#SaludNow.apk" \
+            --target "${{ github.sha }}" \
+            --title "Salud Now $TAG" \
+            --notes "Descarga directa de la aplicación Salud Now para Android." \
+            --latest

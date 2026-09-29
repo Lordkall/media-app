@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import '../core/api_client.dart';
 import 'dart:convert';
 
@@ -13,34 +14,66 @@ class SupportChatScreen extends StatefulWidget {
 
 class _SupportChatScreenState extends State<SupportChatScreen> {
   final TextEditingController _messageController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   List<Map<String, dynamic>> _chatMessages = [];
   bool _isClosed = false;
+  bool _isLoadingMessages = false;
+  int? _currentUserId;
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     _isClosed = widget.ticket['status'] == 'Cerrado';
     _loadMessages();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      _loadMessages();
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    _messageController.dispose();
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadMessages() async {
-    // In a real app we'd fetch messages if we don't have them, but the ticket 
-    // object already contains `all_messages`.
-    final msgs = widget.ticket['all_messages'] as List<dynamic>? ?? [];
-    // We assume the first message was from the user (sender). Wait, we need to know who is who.
-    // The API doesn't tell us if it's "me" or not directly in all_messages, 
-    // but the support endpoint could. For now, since it's a support chat, we assume
-    // messages from `sender_id` match the ticket creator? The API only gives us sender_id.
-    // Let's just alternate or assume if sender_id == 0 it's me. Actually, we'll fetch /users/me
-    final me = jsonDecode((await ApiClient.get('/users/me')).body);
-    
-    setState(() {
-      _chatMessages = msgs.map((m) => {
-        'text': m['message'],
-        'isMe': m['sender_id'] == me['id'],
-        'time': '', // Backend doesn't provide time per message yet
-      }).toList();
-    });
+    if (_isLoadingMessages || !mounted) return;
+    _isLoadingMessages = true;
+    try {
+      if (_currentUserId == null) {
+        final userResponse = await ApiClient.get('/users/me');
+        if (userResponse.statusCode != 200) return;
+        final me = jsonDecode(userResponse.body) as Map<String, dynamic>;
+        _currentUserId = me['id'] as int;
+      }
+      final response = await ApiClient.get(
+          '/support/${widget.ticket['id']}/messages');
+      if (response.statusCode != 200 || !mounted) return;
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final messages = List<dynamic>.from(data['messages'] as List);
+      setState(() {
+        _chatMessages = messages
+            .map((message) => {
+                  'text': message['message']?.toString() ?? '',
+                  'isMe': message['sender_id'] == _currentUserId,
+                  'time': '',
+                })
+            .toList();
+        _isClosed = data['status'] == 'Cerrado';
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients) {
+          _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+        }
+      });
+    } catch (e) {
+      debugPrint('Could not refresh support chat: $e');
+    } finally {
+      _isLoadingMessages = false;
+    }
   }
 
   Future<void> _closeChat() async {
@@ -60,15 +93,20 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
     if (_messageController.text.trim().isEmpty || _isClosed) return;
     
     final text = _messageController.text.trim();
-    setState(() {
-      _chatMessages.add({'text': text, 'isMe': true, 'time': ''});
-      _messageController.clear();
-    });
-    
     try {
-      await ApiClient.post('/support/${widget.ticket['id']}/reply', {'message': text});
+      final response = await ApiClient.post(
+          '/support/${widget.ticket['id']}/reply', {'message': text});
+      if (response.statusCode != 200) {
+        throw Exception('No se pudo enviar el mensaje');
+      }
+      _messageController.clear();
+      await _loadMessages();
     } catch (e) {
-      print('Error sending: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se pudo enviar el mensaje: $e')),
+        );
+      }
     }
   }
 
@@ -129,6 +167,7 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
           children: [
             Expanded(
               child: ListView.builder(
+                controller: _scrollController,
                 padding: const EdgeInsets.all(16),
                 itemCount: _chatMessages.length,
                 itemBuilder: (context, index) {

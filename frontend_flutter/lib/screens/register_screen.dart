@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'dart:convert';
 import 'dart:ui';
 import '../core/api_client.dart';
 import '../models/ve_catalogs.dart';
@@ -11,6 +13,10 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
+  static const _termsText =
+      'El uso de esta aplicación implica la aceptación de todas las normas y condiciones descritas. El usuario es responsable de garantizar la veracidad de su información y mantener la seguridad de su cuenta. No nos hacemos responsables por la calidad del servicio médico ni por interrupciones en el sistema.';
+  static const _privacyText =
+      'Recolectamos datos de contacto y el motivo de la cita registrado por el usuario, como consulta o entrega de exámenes, para gestionar la agenda y mejorar la plataforma. No manejamos información médica detallada o diagnósticos. Sus datos están protegidos y no se comparten sin su consentimiento, y el usuario tiene el derecho de acceder, modificar o eliminar su información en cualquier momento.';
   final _formKey = GlobalKey<FormState>();
   String _role = 'patient';
   String _gender = 'Prefiero no decirlo';
@@ -60,6 +66,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
+    final accepted = await _showConsentDialog();
+    if (accepted != true || !mounted) return;
+
     setState(() => _isLoading = true);
 
     try {
@@ -74,7 +83,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         "password": _passwordCtrl.text,
         "role": _role,
         "specialties": _selectedSpecialties.toList(),
-        "clinic_description": _clinicDescriptionCtrl.text.trim()
+        "clinic_description": _clinicDescriptionCtrl.text.trim(),
+        "accept_terms": true,
+        "accept_privacy": true,
       };
 
       if (_role == 'clinic') {
@@ -91,18 +102,86 @@ class _RegisterScreenState extends State<RegisterScreen> {
         );
         Navigator.pop(context);
       } else {
+        final detail = _registrationError(response.body);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text(
-                  'Error al registrar. Verifica los datos o si el correo ya existe.')),
+          SnackBar(content: Text(detail), backgroundColor: Colors.red),
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  String _registrationError(String body) {
+    try {
+      final decoded = jsonDecode(body);
+      final detail = decoded is Map ? decoded['detail'] : null;
+      if (detail is String && detail.isNotEmpty) return detail;
+      if (detail is List && detail.isNotEmpty) {
+        final first = detail.first;
+        if (first is Map && first['msg'] != null) {
+          return first['msg'].toString();
+        }
+      }
+    } catch (_) {}
+    return 'Verifica los datos o si el correo ya existe.';
+  }
+
+  Future<bool?> _showConsentDialog() {
+    bool terms = false;
+    bool privacy = false;
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, update) => AlertDialog(
+          title: const Text('Términos y privacidad'),
+          content: SizedBox(
+            width: 520,
+            child: SingleChildScrollView(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Términos y Condiciones',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Text(_termsText),
+                    CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        value: terms,
+                        title: const Text('Acepto los Términos y Condiciones'),
+                        onChanged: (v) => update(() => terms = v ?? false)),
+                    const Divider(),
+                    const Text('Política de Privacidad',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Text(_privacyText),
+                    CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        value: privacy,
+                        title: const Text('Acepto la Política de Privacidad'),
+                        onChanged: (v) => update(() => privacy = v ?? false)),
+                  ]),
+            ),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Rechazar')),
+            FilledButton(
+                onPressed: terms && privacy
+                    ? () => Navigator.pop(dialogContext, true)
+                    : null,
+                child: const Text('Aceptar y registrarme')),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildRoleButton(String title, IconData icon, String roleValue) {
@@ -145,7 +224,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       {bool isPassword = false,
       bool? obscureText,
       VoidCallback? onToggleObscure,
-      TextInputType? keyboardType}) {
+      TextInputType? keyboardType,
+      List<TextInputFormatter>? inputFormatters,
+      int? maxLength}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: isPassword
@@ -156,6 +237,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   controller: controller,
                   obscureText: localObscure,
                   keyboardType: keyboardType,
+                  inputFormatters: inputFormatters,
+                  maxLength: maxLength,
                   decoration: InputDecoration(
                     labelText: label,
                     filled: true,
@@ -203,6 +286,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               obscureText: false,
               keyboardType: keyboardType,
+              inputFormatters: inputFormatters,
+              maxLength: maxLength,
               validator: (value) => value!.isEmpty ? 'Campo requerido' : null,
             ),
     );
@@ -364,7 +449,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 _buildTextField(
                                     'Teléfono de Contacto (ej: 04141234567)',
                                     _phoneCtrl,
-                                    keyboardType: TextInputType.phone),
+                                    keyboardType: TextInputType.number,
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.digitsOnly,
+                                      LengthLimitingTextInputFormatter(11),
+                                    ],
+                                    maxLength: 11),
                                 if (_role == 'doctor') ...[
                                   const SizedBox(height: 10),
                                   Autocomplete<String>(

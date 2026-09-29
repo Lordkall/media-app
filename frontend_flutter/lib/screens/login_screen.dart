@@ -22,7 +22,8 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   static final Uri _latestReleasesUri =
-      Uri.parse('https://github.com/Lordkall/media-app/releases/latest');
+      Uri.parse(
+          'https://github.com/Lordkall/media-app/releases/latest/download/SaludNow.apk');
 
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();

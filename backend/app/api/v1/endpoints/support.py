@@ -74,7 +74,7 @@ async def create_ticket(
                 print(f"Support push skipped for admin {admin.id}: no FCM token")
     except Exception as e:
         print(f"Failed to notify admins: {e}")
-        pass
+        await db.rollback()
 
     return {"message": "Ticket created"}
 @router.get("/debug-tickets")
@@ -131,6 +131,31 @@ async def get_tickets(
         })
     return output
 
+@router.get("/{ticket_id}/messages")
+async def get_ticket_messages(
+    ticket_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(SupportTicket)
+        .options(selectinload(SupportTicket.messages))
+        .where(SupportTicket.id == ticket_id)
+    )
+    ticket = result.scalar_one_or_none()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Chat no encontrado")
+    is_admin = current_user.role == RoleEnum.ADMIN or current_user.role == "admin"
+    if not is_admin and ticket.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No tienes acceso a este chat")
+    return {
+        "status": ticket.status,
+        "messages": [
+            {"sender_id": item.sender_id, "message": item.message}
+            for item in ticket.messages
+        ],
+    }
+
 @router.patch("/{ticket_id}/close")
 async def close_ticket(
     ticket_id: int,
@@ -160,6 +185,9 @@ async def reply_ticket(
     ticket = result.scalar_one_or_none()
     if not ticket or ticket.status == "Cerrado":
         raise HTTPException(status_code=400, detail="Cannot reply to closed or non-existent ticket")
+    is_admin = current_user.role == RoleEnum.ADMIN or current_user.role == "admin"
+    if not is_admin and ticket.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No tienes acceso a este chat")
         
     msg = TicketMessage(
         ticket_id=ticket.id,
@@ -171,7 +199,6 @@ async def reply_ticket(
 
     # Send an in-app notification and a push to the other side of the conversation.
     try:
-        is_admin = (current_user.role == RoleEnum.ADMIN or current_user.role == "admin")
         if is_admin:
             # Admin replied -> notify the ticket owner
             notif_user_id = ticket.user_id
@@ -213,6 +240,7 @@ async def reply_ticket(
                 )
     except Exception as e:
         print(f"Error sending reply notification: {e}")
+        await db.rollback()
 
     return {"message": "Reply sent"}
 

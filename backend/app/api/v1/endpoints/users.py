@@ -90,6 +90,49 @@ async def update_password_me(
     await db.commit()
     return {"message": "Contraseña actualizada exitosamente"}
 
+@router.delete("/me")
+async def delete_my_account(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    # Anonymize the account while retaining appointment and billing references.
+    import secrets
+    current_user.email = f"deleted-{current_user.id}-{secrets.token_hex(8)}@invalid.saludnow"
+    current_user.first_name = "Cuenta"
+    current_user.last_name = "eliminada"
+    current_user.phone = ""
+    current_user.state = None
+    current_user.address = None
+    current_user.gender = None
+    current_user.avatar_url = None
+    current_user.avatar_data = None
+    current_user.avatar_content_type = None
+    current_user.session_token = None
+    current_user.fcm_token = None
+    current_user.hashed_password = get_password_hash(secrets.token_urlsafe(40))
+    current_user.terms_accepted_at = None
+    current_user.privacy_accepted_at = None
+    current_user.terms_version = None
+    current_user.privacy_version = None
+    from app.models.patients import Patient
+    from app.models.doctors import Doctor
+    from app.models.clinics import Clinic
+    patient = await db.scalar(select(Patient).where(Patient.user_id == current_user.id))
+    if patient:
+        patient.contact_phone = ""
+    doctor = await db.scalar(select(Doctor).where(Doctor.user_id == current_user.id))
+    if doctor:
+        doctor.bio = None
+        doctor.clinic_info = None
+        doctor.specialties = []
+    clinic = await db.scalar(select(Clinic).where(Clinic.user_id == current_user.id))
+    if clinic:
+        clinic.description = None
+        clinic.specialties = []
+        clinic.contact_phone_2 = None
+    await db.commit()
+    return {"message": "Cuenta eliminada"}
+
 @router.get("/bcv-rate")
 async def get_bcv_rate(db: AsyncSession = Depends(get_db)):
     from app.models.exchange_rate import ExchangeRate
@@ -106,8 +149,6 @@ async def get_my_notifications(
     from app.models.subscriptions import Subscription
     role_str = str(current_user.role.value) if hasattr(current_user.role, 'value') else str(current_user.role)
     query = select(Notification).where(Notification.user_id == current_user.id).order_by(Notification.created_at.desc())
-    if role_str != "admin":
-        query = query.limit(3)
     result = await db.execute(query)
     notifications = result.scalars().all()
     
