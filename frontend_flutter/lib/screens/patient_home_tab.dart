@@ -215,6 +215,7 @@ class _PatientHomeTabState extends State<PatientHomeTab> {
           ProfileAvatar(
               imageUrl: _userData?['avatar_url']?.toString(),
               currentUser: true,
+              fallbackRole: 'patient',
               size: 80,
               borderColor: const Color(0xFF0056B3),
               borderWidth: 3),
@@ -275,7 +276,7 @@ class _PatientHomeTabState extends State<PatientHomeTab> {
       ),
       child: Row(
         children: [
-          ProfileAvatar(imageUrl: avatarUrl, size: 60),
+          ProfileAvatar(imageUrl: avatarUrl, size: 60, fallbackRole: 'doctor'),
           const SizedBox(width: 16),
           Expanded(
             child: Column(

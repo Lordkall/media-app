@@ -312,6 +312,7 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
           ProfileAvatar(
             imageUrl: _userData?['avatar_url']?.toString(),
             currentUser: true,
+            fallbackRole: _userData?['role']?.toString() ?? 'doctor',
             size: 80,
             borderColor:
                 isVip ? const Color(0xFFFFC107) : const Color(0xFF0056B3),

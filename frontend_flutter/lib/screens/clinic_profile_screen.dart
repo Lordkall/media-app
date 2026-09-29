@@ -59,6 +59,7 @@ class _ClinicProfileScreenState extends State<ClinicProfileScreen> {
                     children: [
                       ProfileAvatar(
                         imageUrl: widget.clinic['avatar_url']?.toString(),
+                        fallbackRole: 'clinic',
                         size: 80,
                         borderColor: widget.clinic['is_vip'] == true
                             ? const Color(0xFFFFC107)
@@ -100,6 +101,7 @@ class _ClinicProfileScreenState extends State<ClinicProfileScreen> {
                           child: ListTile(
                             leading: ProfileAvatar(
                                 imageUrl: doc['avatar_url']?.toString(),
+                                fallbackRole: 'doctor',
                                 size: 44),
                             title: Text(
                                 'Dr. ${doc['first_name']} ${doc['last_name']}'),

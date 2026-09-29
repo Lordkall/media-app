@@ -4,7 +4,9 @@ import 'package:image_picker/image_picker.dart';
 import '../core/api_client.dart';
 import '../core/auth_helper.dart';
 import '../core/profile_image_helper.dart';
+import '../models/avatar_catalog.dart';
 import '../widgets/profile_avatar.dart';
+import '../widgets/avatar_sprite.dart';
 import 'login_screen.dart';
 
 const _privacyText =
@@ -49,8 +51,9 @@ class _ProfileTabState extends State<ProfileTab> {
   Future<void> _fetchData() async {
     try {
       final userResponse = await ApiClient.get('/users/me');
-      if (userResponse.statusCode != 200)
+      if (userResponse.statusCode != 200) {
         throw Exception('No se pudo cargar el perfil');
+      }
       final user = Map<String, dynamic>.from(jsonDecode(userResponse.body));
       Map<String, dynamic>? doctor;
       Map<String, dynamic>? subscription;
@@ -120,6 +123,51 @@ class _ProfileTabState extends State<ProfileTab> {
     }
   }
 
+  Future<void> _chooseAvatar() async {
+    final role = AvatarCatalog.normalizeRole(_userData?['role']?.toString());
+    final current = AvatarCatalog.parse(_userData?['avatar_url']?.toString());
+    final index = await showModalBottomSheet<int>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.white,
+      builder: (context) => _AvatarPickerSheet(
+        role: role,
+        selectedIndex: current?.role == role ? current?.index : null,
+      ),
+    );
+    if (index == null || !mounted) return;
+
+    final avatarUrl = AvatarCatalog.presetUrl(role, index);
+    setState(() => _isSaving = true);
+    try {
+      final response = await ApiClient.put(
+        '/users/me',
+        {'avatar_url': avatarUrl},
+      );
+      if (response.statusCode != 200) {
+        throw Exception('El servidor no pudo guardar el avatar.');
+      }
+      if (!mounted) return;
+      setState(() => _userData = {...?_userData, 'avatar_url': avatarUrl});
+      ProfileImageHelper.updateCurrentUserAvatar(avatarUrl);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Avatar de perfil actualizado.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se pudo guardar el avatar: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
   void _open(String title, Widget page) {
     Navigator.of(context)
         .push(PageRouteBuilder<void>(
@@ -170,6 +218,7 @@ class _ProfileTabState extends State<ProfileTab> {
               child: ProfileAvatar(
                 imageUrl: _userData?['avatar_url']?.toString(),
                 currentUser: true,
+                fallbackRole: _userData?['role']?.toString() ?? 'patient',
                 size: 120,
                 borderColor: _isDoctor && _isVip
                     ? const Color(0xFFFFC107)
@@ -177,12 +226,21 @@ class _ProfileTabState extends State<ProfileTab> {
                 borderWidth: 4,
               ),
             ),
-            Center(
-              child: TextButton.icon(
-                onPressed: _isSaving ? null : _pickImage,
-                icon: const Icon(Icons.cloud_upload),
-                label: const Text('Cambiar Foto de Perfil'),
-              ),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 8,
+              children: [
+                TextButton.icon(
+                  onPressed: _isSaving ? null : _pickImage,
+                  icon: const Icon(Icons.cloud_upload),
+                  label: const Text('Subir foto'),
+                ),
+                TextButton.icon(
+                  onPressed: _isSaving ? null : _chooseAvatar,
+                  icon: const Icon(Icons.face_retouching_natural),
+                  label: const Text('Elegir avatar'),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             const SizedBox(height: 18),
@@ -224,6 +282,98 @@ class _ProfileTabState extends State<ProfileTab> {
                     _AboutPage(onOpen: _open, menuRow: _menuRow))),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _AvatarPickerSheet extends StatelessWidget {
+  const _AvatarPickerSheet({required this.role, this.selectedIndex});
+
+  final String role;
+  final int? selectedIndex;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = switch (role) {
+      'doctor' => 'Avatares para doctores',
+      'assistant' => 'Avatares para asistentes',
+      'clinic' => 'Avatares para clínicas',
+      _ => 'Avatares para pacientes',
+    };
+
+    return SizedBox(
+      height: MediaQuery.sizeOf(context).height * 0.76,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 12, 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0B2545),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Cerrar',
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+          ),
+          const Text('Selecciona una imagen para tu perfil.'),
+          const SizedBox(height: 12),
+          Expanded(
+            child: GridView.builder(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 14,
+                mainAxisSpacing: 14,
+              ),
+              itemCount: AvatarCatalog.countForRole(role),
+              itemBuilder: (context, index) {
+                final isSelected = selectedIndex == index;
+                return Semantics(
+                  button: true,
+                  label: 'Avatar ${index + 1}',
+                  selected: isSelected,
+                  child: InkWell(
+                    onTap: () => Navigator.pop(context, index),
+                    customBorder: const CircleBorder(),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 160),
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isSelected
+                              ? const Color(0xFF0056B3)
+                              : const Color(0xFFE0EAFC),
+                          width: isSelected ? 3 : 1,
+                        ),
+                      ),
+                      child: ClipOval(
+                        child: AvatarSprite(
+                          role: role,
+                          index: index,
+                          size: double.infinity,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -318,11 +468,12 @@ class _AddressPageState extends State<_AddressPage> {
             onPressed: () async {
               final r = await ApiClient.put('/users/me',
                   {'state': state.text.trim(), 'address': address.text.trim()});
-              if (context.mounted)
+              if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                     content: Text(r.statusCode == 200
                         ? 'Dirección guardada.'
                         : 'No se pudo guardar.')));
+              }
             },
             child: const Text('Guardar cambios')),
       ]);
@@ -369,11 +520,12 @@ class _DoctorDataPageState extends State<_DoctorDataPage> {
                 'clinic_info': location.text.trim(),
                 'specialties': specialties
               });
-              if (context.mounted)
+              if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                     content: Text(r.statusCode == 200
                         ? 'Datos laborales guardados.'
                         : 'No se pudieron guardar.')));
+              }
             },
             child: const Text('Guardar cambios')),
       ]);
@@ -434,11 +586,12 @@ class _ClinicDataPageState extends State<_ClinicDataPage> {
                     .toList(),
                 'contact_phone_2': phone2.text.trim()
               });
-              if (context.mounted)
+              if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                     content: Text(u.statusCode == 200 && c.statusCode == 200
                         ? 'Datos guardados.'
                         : 'No se pudieron guardar los datos.')));
+              }
             },
             child: const Text('Guardar cambios')),
       ]);
@@ -521,7 +674,7 @@ class _AboutPage extends StatelessWidget {
             'Política de Privacidad',
             () => onOpen(
                 'Política de Privacidad',
-                _TextPage(
+                const _TextPage(
                     title: 'Política de Privacidad', text: _privacyText))),
         menuRow(
             'Cookies',
@@ -536,8 +689,10 @@ class _AboutPage extends StatelessWidget {
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))),
         menuRow(
             'Términos y Condiciones',
-            () => onOpen('Términos y Condiciones',
-                _TextPage(title: 'Términos y Condiciones', text: _termsText))),
+            () => onOpen(
+                'Términos y Condiciones',
+                const _TextPage(
+                    title: 'Términos y Condiciones', text: _termsText))),
         ListTile(
             leading: const Icon(Icons.delete_outline, color: Colors.red),
             title: const Text('Eliminar Cuenta de Salud Now',
@@ -570,11 +725,12 @@ class _AboutPage extends StatelessWidget {
           );
         }
       }
-      if (context.mounted)
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(r.statusCode == 200
                 ? 'Cuenta eliminada.'
                 : 'No se pudo eliminar la cuenta.')));
+      }
     }
   }
 }

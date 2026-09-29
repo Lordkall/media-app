@@ -271,6 +271,7 @@ class _MisCitasTabState extends State<MisCitasTab> {
                                           ProfileAvatar(
                                               imageUrl: appt['doctor_avatar']
                                                   ?.toString(),
+                                              fallbackRole: 'doctor',
                                               size: 60),
                                           const SizedBox(width: 12),
                                           Expanded(

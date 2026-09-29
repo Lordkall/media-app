@@ -66,6 +66,19 @@ async def update_users_me(
     db: AsyncSession = Depends(get_db)
 ):
     update_data = user_in.model_dump(exclude_unset=True)
+    avatar_url = update_data.get("avatar_url")
+    if isinstance(avatar_url, str) and avatar_url.startswith("preset:"):
+        parts = avatar_url.split(":")
+        role = current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role)
+        expected_role = "patient" if role == "admin" else role
+        avatar_counts = {"patient": 15, "doctor": 15, "assistant": 15, "clinic": 6}
+        if (
+            len(parts) != 3
+            or parts[1] != expected_role
+            or not parts[2].isdigit()
+            or int(parts[2]) >= avatar_counts.get(expected_role, 0)
+        ):
+            raise HTTPException(status_code=400, detail="El avatar no corresponde a tu tipo de cuenta.")
     for field, value in update_data.items():
         setattr(current_user, field, value)
         

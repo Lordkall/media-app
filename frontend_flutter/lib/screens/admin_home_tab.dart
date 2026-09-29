@@ -201,6 +201,7 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
           ProfileAvatar(
             imageUrl: _userData?['avatar_url']?.toString(),
             currentUser: true,
+            fallbackRole: 'patient',
             size: 80,
             borderColor: const Color(0xFF0056B3),
             borderWidth: 3,

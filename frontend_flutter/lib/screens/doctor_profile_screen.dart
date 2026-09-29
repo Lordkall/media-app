@@ -101,6 +101,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
               children: [
                 ProfileAvatar(
                   imageUrl: imageUrl?.toString(),
+                  fallbackRole: 'doctor',
                   size: 120,
                   borderColor:
                       isVip ? const Color(0xFFFFC107) : const Color(0xFF0056B3),

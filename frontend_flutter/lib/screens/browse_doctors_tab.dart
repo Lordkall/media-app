@@ -571,6 +571,7 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
                           ),
                           child: ProfileAvatar(
                             imageUrl: imageUrl,
+                            fallbackRole: isClinic ? 'clinic' : 'doctor',
                             size: avatarSize,
                             borderColor: Colors.white,
                             borderWidth: 2,

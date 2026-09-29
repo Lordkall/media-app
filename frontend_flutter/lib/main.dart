@@ -6,6 +6,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'core/local_notification_service.dart';
 import 'screens/login_screen.dart';
+import 'widgets/profile_avatar.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -122,11 +123,10 @@ class HomeScreen extends StatelessWidget {
             padding: const EdgeInsets.all(16.0),
             child: Row(
               children: [
-                const CircleAvatar(
-                  radius: 30,
-                  backgroundImage: NetworkImage(
-                      'https://cdn-icons-png.flaticon.com/512/3069/3069172.png'), // Placeholder cat doctor
-                  backgroundColor: Colors.white,
+                const ProfileAvatar(
+                  imageUrl: null,
+                  fallbackRole: 'doctor',
+                  size: 60,
                 ),
                 const SizedBox(width: 16),
                 const Expanded(
