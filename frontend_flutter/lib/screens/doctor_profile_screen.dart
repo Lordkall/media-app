@@ -177,7 +177,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                           ListTile(
                               leading: const Icon(Icons.calendar_today,
                                   color: Color(0xFF0056B3)),
-                              title: const Text('Días Laborables'),
+                              title: const Text('Días laborables esta semana'),
                               subtitle: Text(schedule['days']!)),
                           ListTile(
                               leading: const Icon(Icons.access_time,

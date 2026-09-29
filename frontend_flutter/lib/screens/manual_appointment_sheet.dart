@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/services.dart';
 
 import 'package:flutter/material.dart';
 
@@ -17,7 +18,8 @@ class _ManualAppointmentSheetState extends State<ManualAppointmentSheet> {
   final _firstName = TextEditingController();
   final _lastName = TextEditingController();
   final _phone = TextEditingController();
-  final _reason = TextEditingController();
+  String? _reason;
+  static const _reasons = ['Consulta', 'Entrega de examenes', 'Otros'];
   DateTime? _date;
   List<Map<String, dynamic>> _slots = [];
   int? _turn;
@@ -29,7 +31,6 @@ class _ManualAppointmentSheetState extends State<ManualAppointmentSheet> {
     _firstName.dispose();
     _lastName.dispose();
     _phone.dispose();
-    _reason.dispose();
     super.dispose();
   }
 
@@ -97,7 +98,7 @@ class _ManualAppointmentSheetState extends State<ManualAppointmentSheet> {
         'patient_first_name': _firstName.text.trim(),
         'patient_last_name': _lastName.text.trim(),
         'patient_phone': _phone.text.trim(),
-        'appointment_reason': _reason.text.trim(),
+        'appointment_reason': _reason!,
       });
       if (response.statusCode == 201) {
         if (mounted) Navigator.of(context).pop(true);
@@ -163,18 +164,31 @@ class _ManualAppointmentSheetState extends State<ManualAppointmentSheet> {
                 const SizedBox(height: 12),
                 TextFormField(
                     controller: _phone,
-                    keyboardType: TextInputType.phone,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(11)
+                    ],
+                    maxLength: 11,
                     decoration: _decoration('Teléfono de contacto'),
-                    validator: (value) => (value?.trim().length ?? 0) < 5
+                    validator: (value) => (value?.trim().length ?? 0) < 5 ||
+                            (value?.trim().length ?? 0) > 11
                         ? 'Ingresa un teléfono válido'
                         : null),
                 const SizedBox(height: 12),
-                TextFormField(
-                    controller: _reason,
-                    textCapitalization: TextCapitalization.sentences,
-                    maxLines: 2,
-                    decoration: _decoration('Motivo de la cita'),
-                    validator: _required),
+                DropdownButtonFormField<String>(
+                  value: _reason,
+                  decoration: _decoration('Motivo de la cita'),
+                  items: _reasons
+                      .map((reason) =>
+                          DropdownMenuItem(value: reason, child: Text(reason)))
+                      .toList(),
+                  onChanged: _saving
+                      ? null
+                      : (value) => setState(() => _reason = value),
+                  validator: (value) =>
+                      value == null ? 'Selecciona el motivo de la cita' : null,
+                ),
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
                   onPressed: _saving ? null : _chooseDate,

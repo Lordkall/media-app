@@ -133,7 +133,7 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
     } else {
       // doctor
       return [
-        const DoctorHomeTab(),
+        DoctorHomeTab(onProfileTap: () => setState(() => _currentIndex = 4)),
         const MiDisponibilidadTab(),
         const BrowseDoctorsTab(),
         const MisCitasTab(),

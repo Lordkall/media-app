@@ -11,7 +11,8 @@ import 'select_plan_screen.dart';
 import 'support_messages_screen.dart';
 
 class DoctorHomeTab extends StatefulWidget {
-  const DoctorHomeTab({super.key});
+  const DoctorHomeTab({super.key, this.onProfileTap});
+  final VoidCallback? onProfileTap;
 
   @override
   State<DoctorHomeTab> createState() => _DoctorHomeTabState();
@@ -309,14 +310,18 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
       padding: const EdgeInsets.symmetric(horizontal: 24.0),
       child: Row(
         children: [
-          ProfileAvatar(
-            imageUrl: _userData?['avatar_url']?.toString(),
-            currentUser: true,
-            fallbackRole: _userData?['role']?.toString() ?? 'doctor',
-            size: 80,
-            borderColor:
-                isVip ? const Color(0xFFFFC107) : const Color(0xFF0056B3),
-            borderWidth: 3,
+          InkWell(
+            onTap: widget.onProfileTap,
+            customBorder: const CircleBorder(),
+            child: ProfileAvatar(
+              imageUrl: _userData?['avatar_url']?.toString(),
+              currentUser: true,
+              fallbackRole: _userData?['role']?.toString() ?? 'doctor',
+              size: 80,
+              borderColor:
+                  isVip ? const Color(0xFFFFC107) : const Color(0xFF0056B3),
+              borderWidth: 3,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(

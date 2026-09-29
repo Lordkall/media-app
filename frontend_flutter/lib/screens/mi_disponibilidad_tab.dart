@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../core/api_client.dart';
 import '../models/ve_catalogs.dart';
 import 'dart:convert';
+import 'dart:async';
 
 class MiDisponibilidadTab extends StatefulWidget {
   const MiDisponibilidadTab({super.key});
@@ -16,6 +17,26 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
   String _selectedEndTime = '18:00';
   int _slotDurationMinutes = 30;
   int _weekOffset = 0;
+  Timer? _weekRefreshTimer;
+
+  String _formatWeek(DateTime start) {
+    const months = [
+      'ene',
+      'feb',
+      'mar',
+      'abr',
+      'may',
+      'jun',
+      'jul',
+      'ago',
+      'sep',
+      'oct',
+      'nov',
+      'dic'
+    ];
+    final end = start.add(const Duration(days: 6));
+    return '${months[start.month - 1]} ${start.day} - ${start.month == end.month ? '' : '${months[end.month - 1]} '}${end.day}';
+  }
 
   List<Map<String, dynamic>> get _currentWeekDays {
     final today = caracasNow();
@@ -55,10 +76,15 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
   void initState() {
     super.initState();
     _fetchAvailability();
+    _weekRefreshTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (!mounted || _weekOffset != 0) return;
+      setState(() {});
+    });
   }
 
   @override
   void dispose() {
+    _weekRefreshTimer?.cancel();
     super.dispose();
   }
 
@@ -80,7 +106,8 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
               _selectedEndTime =
                   avails.first['end_time'].toString().substring(0, 5);
               _slotDurationMinutes =
-                  (avails.first['slot_duration_minutes'] as num?)?.toInt() ?? 30;
+                  (avails.first['slot_duration_minutes'] as num?)?.toInt() ??
+                      30;
             }
           });
         }
@@ -224,7 +251,8 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
                       const SizedBox(height: 8),
                       const Text(
                         'Este bloque se aplicará a los turnos de los días seleccionados.',
-                        style: TextStyle(color: Color(0xFF475569), fontSize: 14),
+                        style:
+                            TextStyle(color: Color(0xFF475569), fontSize: 14),
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<int>(
@@ -291,7 +319,12 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
                                             setState(() => _weekOffset--);
                                           }),
                                       Text(
-                                          'Sep ${21 + (_weekOffset * 7)} - ${27 + (_weekOffset * 7)}',
+                                          _formatWeek(caracasNow()
+                                              .subtract(Duration(
+                                                  days:
+                                                      caracasNow().weekday - 1))
+                                              .add(Duration(
+                                                  days: _weekOffset * 7))),
                                           style: const TextStyle(
                                               fontWeight: FontWeight.bold,
                                               color: Color(0xFF0B2545))),

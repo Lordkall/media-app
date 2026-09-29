@@ -144,13 +144,6 @@ class _MisCitasTabState extends State<MisCitasTab> {
       ),
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        floatingActionButton: _canManageAppointments
-            ? FloatingActionButton.extended(
-                onPressed: _newManualAppointment,
-                icon: const Icon(Icons.add),
-                label: const Text('Nueva cita manual'),
-              )
-            : null,
         body: SafeArea(
           child: Center(
             child: SingleChildScrollView(
@@ -183,6 +176,14 @@ class _MisCitasTabState extends State<MisCitasTab> {
                                 color: Color(0xFF0B2545))),
                       ],
                     ),
+                    if (_canManageAppointments) ...[
+                      const SizedBox(height: 16),
+                      FilledButton.icon(
+                        onPressed: _newManualAppointment,
+                        icon: const Icon(Icons.add),
+                        label: const Text('Nueva cita manual'),
+                      ),
+                    ],
                     const SizedBox(height: 24),
                     Wrap(
                       alignment: WrapAlignment.spaceBetween,

@@ -5,6 +5,7 @@ import '../core/api_client.dart';
 import '../core/auth_helper.dart';
 import '../core/profile_image_helper.dart';
 import '../models/avatar_catalog.dart';
+import '../models/ve_catalogs.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/avatar_sprite.dart';
 import 'login_screen.dart';
@@ -493,26 +494,55 @@ class _DoctorDataPageState extends State<_DoctorDataPage> {
       text: widget.doctor['consultation_fee']?.toString());
   late final location =
       TextEditingController(text: widget.doctor['clinic_info']?.toString());
-  late final specialtiesInput = TextEditingController(
-      text: (widget.doctor['specialties'] as List? ?? const []).join(', '));
   late List<String> specialties =
-      List<String>.from(widget.doctor['specialties'] ?? const []);
+      (widget.doctor['specialties'] as List? ?? const [])
+          .map((value) => value.toString())
+          .toSet()
+          .take(5)
+          .toList();
   @override
   Widget build(BuildContext context) =>
       _SettingsPage(title: 'Datos Laborales', children: [
         _field('Biografía', bio, lines: 4),
-        _field('Especialidades (separadas por coma)', specialtiesInput),
+        Autocomplete<String>(
+          optionsBuilder: (value) => medicalSpecialties.where((item) =>
+              item.toLowerCase().contains(value.text.trim().toLowerCase()) &&
+              !specialties.contains(item)),
+          onSelected: (value) {
+            if (specialties.length >= 5) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                  content: Text('Máximo 5 especialidades permitidas')));
+              return;
+            }
+            setState(() => specialties.add(value));
+          },
+          fieldViewBuilder: (context, controller, focusNode, onSubmitted) =>
+              TextField(
+            controller: controller,
+            focusNode: focusNode,
+            decoration: const InputDecoration(
+              labelText: 'Buscar especialidad',
+              prefixIcon: Icon(Icons.search),
+              border: OutlineInputBorder(),
+            ),
+          ),
+        ),
+        if (specialties.isNotEmpty)
+          Wrap(
+            spacing: 8,
+            children: specialties
+                .map((specialty) => Chip(
+                      label: Text(specialty),
+                      onDeleted: () =>
+                          setState(() => specialties.remove(specialty)),
+                    ))
+                .toList(),
+          ),
         _field('Precio de la consulta', fee,
             type: const TextInputType.numberWithOptions(decimal: true)),
         _field('Ubicación de consultorio', location, lines: 2),
         FilledButton(
             onPressed: () async {
-              specialties = specialtiesInput.text
-                  .split(',')
-                  .map((v) => v.trim())
-                  .where((v) => v.isNotEmpty)
-                  .take(5)
-                  .toList();
               final r = await ApiClient.put('/doctors/me', {
                 'bio': bio.text.trim(),
                 'consultation_fee':
