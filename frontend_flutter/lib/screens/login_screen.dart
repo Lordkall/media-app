@@ -21,9 +21,8 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  static final Uri _latestReleasesUri =
-      Uri.parse(
-          'https://github.com/Lordkall/media-app/releases/latest/download/SaludNow.apk');
+  static final Uri _latestReleasesUri = Uri.parse(
+      'https://github.com/Lordkall/media-app/releases/latest/download/SaludNow.apk');
 
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -62,10 +61,18 @@ class _LoginScreenState extends State<LoginScreen> {
       await prefs.remove('saved_biometric_token');
       await prefs.remove('logged_username');
       if (mounted) {
-        _emailController.clear();
-        _passwordController.clear();
+        setState(() {
+          _emailController.clear();
+          _passwordController.clear();
+          _emailShowsMask = false;
+          _passwordShowsMask = false;
+          _obscurePassword = true;
+        });
       }
-    } else if (token != null && savedEmail != null && savedEmail.isNotEmpty && mounted) {
+    } else if (token != null &&
+        savedEmail != null &&
+        savedEmail.isNotEmpty &&
+        mounted) {
       setState(() {
         _emailController.text = _maskEmail(savedEmail);
         _emailShowsMask = true;
@@ -177,11 +184,18 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
-    if (_emailShowsMask || _passwordShowsMask) {
+    if (!kIsWeb && (_emailShowsMask || _passwordShowsMask)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Escribe tu correo y contraseña o inicia con huella.'),
         ),
+      );
+      return;
+    }
+    if (_emailController.text.trim().isEmpty ||
+        _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ingresa tu correo y contraseña.')),
       );
       return;
     }
@@ -199,7 +213,8 @@ class _LoginScreenState extends State<LoginScreen> {
         await prefs.setString('access_token', data['access_token']);
         if (!kIsWeb) {
           await prefs.setString('saved_biometric_token', data['access_token']);
-          await prefs.setString('logged_username', _emailController.text.trim());
+          await prefs.setString(
+              'logged_username', _emailController.text.trim());
         } else {
           await prefs.remove('saved_biometric_token');
           await prefs.remove('logged_username');
