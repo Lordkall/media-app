@@ -11,8 +11,9 @@ import 'select_plan_screen.dart';
 import 'support_messages_screen.dart';
 
 class DoctorHomeTab extends StatefulWidget {
-  const DoctorHomeTab({super.key, this.onProfileTap});
+  const DoctorHomeTab({super.key, this.onProfileTap, this.onCitasHoyTap});
   final VoidCallback? onProfileTap;
+  final VoidCallback? onCitasHoyTap;
 
   @override
   State<DoctorHomeTab> createState() => _DoctorHomeTabState();
@@ -158,49 +159,53 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
                       );
                     }).toList(),
                   const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF00A896),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2))
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Row(
-                          children: [
-                            Icon(Icons.event_available,
-                                color: Colors.white, size: 28),
-                            SizedBox(width: 12),
-                            Text('Citas para hoy',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
+                  InkWell(
+                    onTap: widget.onCitasHoyTap,
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00A896),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2))
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.event_available,
+                                  color: Colors.white, size: 28),
+                              SizedBox(width: 12),
+                              Text('Citas para hoy',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold)),
+                            ],
                           ),
-                          child: Text(
-                            '$_citasHoy',
-                            style: const TextStyle(
-                                color: Color(0xFF00A896),
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Text(
+                              '$_citasHoy',
+                              style: const TextStyle(
+                                  color: Color(0xFF00A896),
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -328,7 +333,7 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('¡Hola, Doctor!',
+                Text(_greeting,
                     style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
@@ -363,5 +368,20 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
         ],
       ),
     );
+  }
+
+  String get _greeting {
+    final user = _userData ?? const <String, dynamic>{};
+    final role = user['role']?.toString();
+    final firstName = user['first_name']?.toString().trim() ?? '';
+    if (role == 'clinic')
+      return '¡Hola, ${firstName.isEmpty ? 'Clínica' : firstName}!';
+    final lastName = user['last_name']?.toString().trim() ?? '';
+    final gender = user['gender']?.toString().toLowerCase() ?? '';
+    final title =
+        gender.startsWith('f') || gender.contains('femen') ? 'Dra.' : 'Dr.';
+    final fullName =
+        [lastName, firstName].where((name) => name.isNotEmpty).join(' ');
+    return '¡Hola, $title ${fullName.isEmpty ? 'Doctor' : fullName}!';
   }
 }

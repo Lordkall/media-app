@@ -430,7 +430,7 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
               ),
             ),
             const SizedBox(height: 20),
-            const Text('Horarios disponibles (turnos de 30 minutos)',
+            const Text('Horarios disponibles',
                 style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,

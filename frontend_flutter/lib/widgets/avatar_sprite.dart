@@ -110,19 +110,17 @@ class _AvatarSpritePainter extends CustomPainter {
 
     final column = index % columns;
     final row = index ~/ columns;
-    final cellWidth = sourceImage.width / columns;
-    // Avatar sheets use square tiles spaced by their width. The five-column
-    // sheets leave extra canvas below the last row; equal-height row slicing
-    // therefore cuts off the bottom of each portrait.
-    final sourceSide = cellWidth.toDouble();
-    final rowPitch = sourceSide;
-    final topInset = math.max(
-      0.0,
-      (sourceImage.height - rows * rowPitch) / 2 - sourceSide * 0.07,
-    );
+    final clinicSheet = columns == 3;
+    final xPitch = sourceImage.width / columns * 0.975;
+    final yPitch = sourceImage.height * (clinicSheet ? 0.469 : 0.293);
+    final centerX =
+        sourceImage.width / 2 + (column - (columns - 1) / 2) * xPitch;
+    final centerY =
+        sourceImage.height * (clinicSheet ? 0.254 : 0.186) + row * yPitch;
+    final sourceSide = math.min(xPitch, yPitch) * 0.93;
     final sourceRect = Rect.fromLTWH(
-      column * cellWidth,
-      topInset + row * rowPitch,
+      centerX - sourceSide / 2,
+      centerY - sourceSide / 2,
       sourceSide,
       sourceSide,
     );

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'home_tab.dart';
 import 'patient_home_tab.dart';
 import 'doctor_home_tab.dart';
 import 'admin_home_tab.dart';
@@ -13,6 +12,7 @@ import 'mi_disponibilidad_tab.dart';
 import 'mis_citas_tab.dart';
 import '../core/auth_helper.dart';
 import '../core/api_client.dart';
+import '../models/ve_catalogs.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import '../core/local_notification_service.dart';
 import 'package:flutter/foundation.dart';
@@ -133,10 +133,13 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
     } else {
       // doctor
       return [
-        DoctorHomeTab(onProfileTap: () => setState(() => _currentIndex = 4)),
+        DoctorHomeTab(
+          onProfileTap: () => setState(() => _currentIndex = 4),
+          onCitasHoyTap: () => setState(() => _currentIndex = 3),
+        ),
         const MiDisponibilidadTab(),
         const BrowseDoctorsTab(),
-        const MisCitasTab(),
+        MisCitasTab(initialDate: caracasNow()),
         const ProfileTab(),
       ];
     }

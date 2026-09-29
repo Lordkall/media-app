@@ -224,7 +224,8 @@ class _PatientHomeTabState extends State<PatientHomeTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('¡Hola, Paciente!',
+                Text(
+                    '¡Hola, ${(_userData?['first_name']?.toString().trim().isNotEmpty ?? false) ? _userData!['first_name'] : 'Paciente'}!',
                     style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w900,

@@ -8,14 +8,15 @@ import 'package:url_launcher/url_launcher.dart';
 import 'manual_appointment_sheet.dart';
 
 class MisCitasTab extends StatefulWidget {
-  const MisCitasTab({super.key});
+  const MisCitasTab({super.key, this.initialDate});
+  final DateTime? initialDate;
 
   @override
   State<MisCitasTab> createState() => _MisCitasTabState();
 }
 
 class _MisCitasTabState extends State<MisCitasTab> {
-  DateTime _selectedDate = caracasNow();
+  late DateTime _selectedDate = widget.initialDate ?? caracasNow();
   List<dynamic> _appointments = [];
   bool _isLoading = true;
   String? _role;
