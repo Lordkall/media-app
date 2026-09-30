@@ -11,6 +11,7 @@ import '../widgets/profile_avatar.dart';
 import 'login_screen.dart';
 import 'support_messages_screen.dart';
 import 'select_plan_screen.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 class ClinicJoinPendingScreen extends StatelessWidget {
   const ClinicJoinPendingScreen({super.key});
@@ -94,6 +95,20 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
   bool _isVip = false;
   bool _isSubLoaded = false;
   int? _doctorCount;
+  Map<String, dynamic>? _subData;
+
+  int _getDaysRemaining() {
+    if (_subData == null || _subData!['current'] == null) return 0;
+    final endStr = _subData!['current']['end_date'];
+    if (endStr == null) return 0;
+    try {
+      final end = DateTime.parse(endStr.toString());
+      final diff = end.difference(DateTime.now()).inDays;
+      return diff > 0 ? diff : 0;
+    } catch (_) {
+      return 0;
+    }
+  }
 
   @override
   void initState() {
@@ -118,6 +133,7 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
           setState(() {
             _isVip = plan == 'clinic_vip' || plan == 'vip';
             _isSubLoaded = true;
+            _subData = sub;
           });
         }
       } else {
@@ -251,8 +267,8 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
                             borderRadius: BorderRadius.circular(12)),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-                      child: const Text('Renovar o Cambiar Plan',
-                          style: TextStyle(
+                      child: Text('Renovar o Cambiar Plan (Quedan ${_getDaysRemaining()} días)',
+                          style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold)),
                     ),
@@ -332,7 +348,7 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
                           else ...[
                             if (_isVip) ...
                               const [Icon(Icons.star, size: 12, color: Colors.white), SizedBox(width: 4)],
-                            Text(_isVip ? 'Clínica VIP' : 'Clínica',
+                            Text(_isVip ? 'VIP' : 'Clínica',
                                 style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 12,
@@ -420,32 +436,83 @@ class _ClinicCalendarTabState extends State<ClinicCalendarTab> {
     return ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 110),
         children: [
-          Text('Calendario', style: Theme.of(context).textTheme.headlineSmall),
+          Text('Calendario', 
+              style: const TextStyle(
+                  fontSize: 26, 
+                  fontWeight: FontWeight.bold, 
+                  color: Color(0xFF0B2545),
+                  letterSpacing: 0.5)),
           const SizedBox(height: 12),
           Card(
-              child: CalendarDatePicker(
-            initialDate: _selectedDay,
-            firstDate: DateTime(2020),
-            lastDate: DateTime(2100),
-            currentDate: DateTime.now(),
-            onDateChanged: (day) {
-              final changedMonth = day.year != _displayedMonth.year ||
-                  day.month != _displayedMonth.month;
-              setState(() {
-                _selectedDay = day;
-                _displayedMonth = DateTime(day.year, day.month);
-              });
-              if (changedMonth) _loadMonth();
-            },
-            onDisplayedMonthChanged: (month) {
-              if (month.year != _displayedMonth.year ||
-                  month.month != _displayedMonth.month) {
-                setState(
-                    () => _displayedMonth = DateTime(month.year, month.month));
-                _loadMonth();
-              }
-            },
-          )),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: TableCalendar(
+                firstDay: DateTime(2020),
+                lastDay: DateTime(2100),
+                focusedDay: _displayedMonth,
+                currentDay: DateTime.now(),
+                selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                onDaySelected: (selectedDay, focusedDay) {
+                  final changedMonth = selectedDay.year != _displayedMonth.year ||
+                      selectedDay.month != _displayedMonth.month;
+                  setState(() {
+                    _selectedDay = selectedDay;
+                    _displayedMonth = focusedDay;
+                  });
+                  if (changedMonth) _loadMonth();
+                },
+                onPageChanged: (focusedDay) {
+                  setState(() => _displayedMonth = focusedDay);
+                  _loadMonth();
+                },
+                availableCalendarFormats: const {CalendarFormat.month: 'Mes'},
+                headerStyle: const HeaderStyle(
+                  titleCentered: true,
+                  formatButtonVisible: false,
+                  titleTextStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                calendarStyle: CalendarStyle(
+                  selectedDecoration: const BoxDecoration(
+                    color: Color(0xFF0056B3),
+                    shape: BoxShape.circle,
+                  ),
+                  todayDecoration: BoxDecoration(
+                    color: const Color(0xFF0056B3).withOpacity(0.3),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                daysOfWeekStyle: DaysOfWeekStyle(
+                  dowTextFormatter: (date, locale) {
+                    switch (date.weekday) {
+                      case 1: return 'L';
+                      case 2: return 'M';
+                      case 3: return 'X';
+                      case 4: return 'J';
+                      case 5: return 'V';
+                      case 6: return 'S';
+                      case 7: return 'D';
+                      default: return '';
+                    }
+                  },
+                ),
+                calendarBuilders: CalendarBuilders(
+                  dowBuilder: (context, day) {
+                    final text = ['D', 'L', 'M', 'X', 'J', 'V', 'S'][day.weekday % 7];
+                    return Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      decoration: const BoxDecoration(
+                        border: Border(bottom: BorderSide(color: Color(0xFF0056B3), width: 2)),
+                      ),
+                      child: Center(
+                        child: Text(text, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0B2545))),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
           const SizedBox(height: 12),
           Text(
               'Doctores del ${_selectedDay.day}/${_selectedDay.month}/${_selectedDay.year}',

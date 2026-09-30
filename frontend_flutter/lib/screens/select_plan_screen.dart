@@ -290,7 +290,7 @@ class _SelectPlanScreenState extends State<SelectPlanScreen> {
                             'clinic_basic'),
                         const SizedBox(height: 16),
                         _buildPlanCard(
-                            'Clínica VIP',
+                            'VIP',
                             vipPrice.toString(),
                             (vipPrice * bcvRate).toStringAsFixed(2),
                             'Todos los beneficios VIP de clínica\n• Máximo 15 doctores asociados\n• Posicionamiento VIP\n• Soporte prioritario y reportes',
