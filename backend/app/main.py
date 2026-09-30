@@ -196,6 +196,20 @@ app.include_router(api_router, prefix="/api/v1")
 os.makedirs("uploads/avatars", exist_ok=True)
 app.mount("/api/v1/uploads", StaticFiles(directory="uploads"), name="uploads")
 
+# No-cache middleware for Flutter JS files to prevent stale browser cache
+NO_CACHE_FILES = {"main.dart.js", "flutter_bootstrap.js", "flutter_service_worker.js", "index.html", "manifest.json"}
+
+@app.middleware("http")
+async def no_cache_for_js(request, call_next):
+    response = await call_next(request)
+    path = request.url.path.lstrip("/")
+    filename = path.split("/")[-1] if path else ""
+    if filename in NO_CACHE_FILES or not filename:
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
 app.mount("/", StaticFiles(directory="static", html=True), name="flutter_web")
 
 from fastapi import Request
