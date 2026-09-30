@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
-import 'dart:io';
 import '../core/api_client.dart';
-import 'main_doctor_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'package:salud_now/screens/payment_pending_screen.dart';

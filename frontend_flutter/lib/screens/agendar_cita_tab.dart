@@ -107,7 +107,9 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
     List<String> specs = [];
     for (var doc in _allDoctors) {
       if (_selectedEstado != null &&
-          doc['state']?.toString() != _selectedEstado) continue;
+          doc['state']?.toString() != _selectedEstado) {
+        continue;
+      }
       if (doc['specialties'] != null) {
         for (var s in doc['specialties']) {
           if (!specs.contains(s.toString())) specs.add(s.toString());
@@ -122,7 +124,9 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
     Set<String> docs = {};
     for (var doc in _allDoctors) {
       if (_selectedEstado != null &&
-          doc['state']?.toString() != _selectedEstado) continue;
+          doc['state']?.toString() != _selectedEstado) {
+        continue;
+      }
 
       bool hasSpec = false;
       if (doc['specialties'] != null) {
@@ -294,9 +298,9 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 52),
                 alignment: Alignment.centerLeft,
-                backgroundColor: Colors.white.withOpacity(0.5),
+                backgroundColor: Colors.white.withValues(alpha: 0.5),
                 foregroundColor: const Color(0xFF0B2545),
-                side: BorderSide(color: Colors.grey.withOpacity(0.3)),
+                side: BorderSide(color: Colors.grey.withValues(alpha: 0.3)),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),
@@ -336,7 +340,7 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.5),
+                color: Colors.white.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
@@ -442,14 +446,14 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
               const Text('No hay turnos disponibles para esta fecha.')
             else
               DropdownButtonFormField<int>(
-                value: _availableSlots.any(
+                initialValue: _availableSlots.any(
                         (slot) => slot['turn_number'] == _selectedTurnNumber)
                     ? _selectedTurnNumber
                     : null,
                 decoration: InputDecoration(
                   labelText: 'Selecciona hora y turno',
                   filled: true,
-                  fillColor: Colors.white.withOpacity(0.8),
+                  fillColor: Colors.white.withValues(alpha: 0.8),
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12)),
                 ),
@@ -498,6 +502,7 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                     try {
                       final response =
                           await ApiClient.post('/appointments/', reqBody);
+                      if (!context.mounted) return;
                       if (response.statusCode == 201) {
                         ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -550,9 +555,9 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.5),
+        color: Colors.white.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.withOpacity(0.3)),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(

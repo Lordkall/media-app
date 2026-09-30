@@ -147,7 +147,7 @@ class _PatientHomeTabState extends State<PatientHomeTab> {
                             a['status'].toString().toLowerCase(),
                             a['doctor_avatar']),
                       );
-                    }).toList(),
+                    }),
                   const SizedBox(height: 12),
                   const Text('Notificaciones Recientes',
                       style: TextStyle(
@@ -180,7 +180,7 @@ class _PatientHomeTabState extends State<PatientHomeTab> {
                           ),
                         ),
                       );
-                    }).toList(),
+                    }),
                   const SizedBox(height: 24),
                   ListTile(
                     onTap: () {
@@ -189,7 +189,7 @@ class _PatientHomeTabState extends State<PatientHomeTab> {
                     },
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
-                    tileColor: Colors.white.withOpacity(0.5),
+                    tileColor: Colors.white.withValues(alpha: 0.5),
                     leading: const Icon(Icons.forum, color: Color(0xFF0056B3)),
                     title: const Text('Buzón de Mensajes',
                         style: TextStyle(
@@ -231,7 +231,7 @@ class _PatientHomeTabState extends State<PatientHomeTab> {
               children: [
                 Text(
                     '¡Hola, ${(_userData?['first_name']?.toString().trim().isNotEmpty ?? false) ? _userData!['first_name'] : 'Paciente'}!',
-                    style: TextStyle(
+                    style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
                         color: Color(0xFF0B2545))),

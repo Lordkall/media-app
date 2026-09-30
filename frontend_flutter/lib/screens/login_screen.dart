@@ -128,6 +128,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _loginWithBiometrics() async {
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     final savedToken = prefs.getString('saved_biometric_token');
 
     if (savedToken == null) {
@@ -143,6 +144,7 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final canCheckBiometrics = await _localAuth.canCheckBiometrics;
       final isDeviceSupported = await _localAuth.isDeviceSupported();
+      if (!mounted) return;
 
       if (canCheckBiometrics || isDeviceSupported) {
         final didAuthenticate = await _localAuth.authenticate(
@@ -150,6 +152,7 @@ class _LoginScreenState extends State<LoginScreen> {
               'Inicia sesión con tu huella para acceder a Salud Now',
           options: const AuthenticationOptions(biometricOnly: true),
         );
+        if (!mounted) return;
 
         if (didAuthenticate) {
           await prefs.setString('access_token', savedToken);
@@ -194,7 +197,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       _clearBiometricPrefill();
-      print('Error de biometría: $e');
+      debugPrint('Error de biometría: $e');
     }
   }
 
@@ -232,6 +235,7 @@ class _LoginScreenState extends State<LoginScreen> {
         'username': _emailController.text.trim(),
         'password': _passwordController.text.trim(),
       });
+      if (!mounted) return;
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -257,11 +261,12 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error de conexión: $e')),
       );
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -269,16 +274,19 @@ class _LoginScreenState extends State<LoginScreen> {
     // Check if the user is a doctor and needs a plan
     try {
       final userResponse = await ApiClient.get('/users/me');
+      if (!mounted) return;
       if (userResponse.statusCode == 200) {
         final userData = jsonDecode(userResponse.body);
 
         if (userData['role'] == 'doctor') {
           // It's a doctor, check if they have a profile/subscription
           final docResponse = await ApiClient.get('/doctors/me');
+          if (!mounted) return;
           if (docResponse.statusCode == 200) {
             final docData = jsonDecode(docResponse.body);
             // Check their subscription status
             final subResp = await ApiClient.get('/subscriptions/me');
+            if (!mounted) return;
             if (subResp.statusCode == 200) {
               final subData = jsonDecode(subResp.body);
 
@@ -329,7 +337,7 @@ class _LoginScreenState extends State<LoginScreen> {
         return; // Prevent bypass
       }
     } catch (e) {
-      print('Navigation error: $e');
+      debugPrint('Navigation error: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Error de conexión: $e')));
@@ -497,9 +505,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             elevation: 0,
                           ),
                           child: _isLoading
-                              ? Row(
+                              ? const Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
-                                  children: const [
+                                  children: [
                                     SizedBox(
                                         width: 20,
                                         height: 20,

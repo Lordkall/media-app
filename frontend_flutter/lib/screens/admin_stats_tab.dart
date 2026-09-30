@@ -22,6 +22,7 @@ class _AdminStatsTabState extends State<AdminStatsTab> {
   Future<void> _fetchStats() async {
     try {
       final response = await ApiClient.get('/admin/stats');
+      if (!mounted) return;
       if (response.statusCode == 200) {
         setState(() {
           _statsData = jsonDecode(response.body);
@@ -31,7 +32,7 @@ class _AdminStatsTabState extends State<AdminStatsTab> {
         setState(() => _isLoading = false);
       }
     } catch (e) {
-      print('Error fetching stats: $e');
+      debugPrint('Error fetching stats: $e');
       setState(() => _isLoading = false);
     }
   }
@@ -46,7 +47,7 @@ class _AdminStatsTabState extends State<AdminStatsTab> {
     final doctors = _statsData?['doctors_count']?.toString() ?? '0';
     final clinics = _statsData?['clinics_count']?.toString() ?? '0';
     final subs = _statsData?['subscribed_doctors']?.toString() ?? '0';
-    
+
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -63,17 +64,22 @@ class _AdminStatsTabState extends State<AdminStatsTab> {
             children: [
               const Text(
                 'Estadísticas Globales',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF0B2545)),
+                style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0B2545)),
               ),
               const SizedBox(height: 24),
               Row(
                 children: [
                   Expanded(
-                    child: _buildStatCard('Pacientes\nRegistrados', patients, Icons.personal_injury, Colors.blue),
+                    child: _buildStatCard('Pacientes\nRegistrados', patients,
+                        Icons.personal_injury, Colors.blue),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: _buildStatCard('Doctores\nRegistrados', doctors, Icons.medical_services, Colors.teal),
+                    child: _buildStatCard('Doctores\nRegistrados', doctors,
+                        Icons.medical_services, Colors.teal),
                   ),
                 ],
               ),
@@ -81,18 +87,23 @@ class _AdminStatsTabState extends State<AdminStatsTab> {
               Row(
                 children: [
                   Expanded(
-                    child: _buildStatCard('Clínicas\nRegistradas', clinics, Icons.local_hospital, Colors.redAccent),
+                    child: _buildStatCard('Clínicas\nRegistradas', clinics,
+                        Icons.local_hospital, Colors.redAccent),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: _buildStatCard('Cuentas\nSuscritas', subs, Icons.workspace_premium, Colors.amber),
+                    child: _buildStatCard('Cuentas\nSuscritas', subs,
+                        Icons.workspace_premium, Colors.amber),
                   ),
                 ],
               ),
               const SizedBox(height: 32),
               const Text(
                 'Distribución por Estados',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0B2545)),
+                style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0B2545)),
               ),
               const SizedBox(height: 16),
               _buildStateList(),
@@ -104,13 +115,19 @@ class _AdminStatsTabState extends State<AdminStatsTab> {
     );
   }
 
-  Widget _buildStatCard(String title, String count, IconData icon, Color color) {
+  Widget _buildStatCard(
+      String title, String count, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4))
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -119,7 +136,10 @@ class _AdminStatsTabState extends State<AdminStatsTab> {
           const SizedBox(height: 16),
           Text(
             count,
-            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF0B2545)),
+            style: const TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0B2545)),
           ),
           const SizedBox(height: 4),
           Text(
@@ -142,7 +162,12 @@ class _AdminStatsTabState extends State<AdminStatsTab> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4))
+        ],
       ),
       child: ListView.separated(
         shrinkWrap: true,
@@ -152,8 +177,12 @@ class _AdminStatsTabState extends State<AdminStatsTab> {
         itemBuilder: (context, index) {
           final state = states[index];
           return ListTile(
-            title: Text(state['name'] as String, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0B2545))),
-            subtitle: Text('Pacientes: ${state['patients']} | Doctores: ${state['doctors']} | Clínicas: ${state['clinics']}', style: const TextStyle(color: Color(0xFF475569))),
+            title: Text(state['name'] as String,
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold, color: Color(0xFF0B2545))),
+            subtitle: Text(
+                'Pacientes: ${state['patients']} | Doctores: ${state['doctors']} | Clínicas: ${state['clinics']}',
+                style: const TextStyle(color: Color(0xFF475569))),
             trailing: const Icon(Icons.map, color: Color(0xFF38B6FF)),
           );
         },

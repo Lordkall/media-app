@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:ui';
 import 'dart:async';
 import 'dart:convert';
 import '../widgets/doctor_header.dart';
@@ -70,9 +69,10 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
               appointment['date'].toString().startsWith(today) &&
               appointment['status'] == 'scheduled')
           .length;
-      if (user != null)
+      if (user != null) {
         ProfileImageHelper.updateCurrentUserAvatar(
             user['avatar_url']?.toString());
+      }
       if (mounted) {
         setState(() {
           _userData = user ?? _userData;
@@ -84,11 +84,12 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
         });
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _isLoadingNotifications = false;
           _isLoadingProfile = false;
         });
+      }
     }
   }
 
@@ -157,7 +158,7 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
                           ),
                         ),
                       );
-                    }).toList(),
+                    }),
                   const SizedBox(height: 16),
                   InkWell(
                     onTap: widget.onCitasHoyTap,
@@ -170,7 +171,7 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
+                              color: Colors.black.withValues(alpha: 0.1),
                               blurRadius: 4,
                               offset: const Offset(0, 2))
                         ],
@@ -212,7 +213,7 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withValues(alpha: 0.8),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                           color: const Color(0xFF0056B3), width: 1.5),
@@ -286,7 +287,7 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
                     },
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
-                    tileColor: Colors.white.withOpacity(0.5),
+                    tileColor: Colors.white.withValues(alpha: 0.5),
                     leading: const Icon(Icons.forum, color: Color(0xFF0056B3)),
                     title: const Text('Buzón de Mensajes',
                         style: TextStyle(
@@ -334,7 +335,7 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(_greeting,
-                    style: TextStyle(
+                    style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
                         color: Color(0xFF0B2545))),
@@ -377,10 +378,12 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
     final user = _userData ?? const <String, dynamic>{};
     final role = user['role']?.toString();
     final firstName = user['first_name']?.toString().trim() ?? '';
-    if (role == 'clinic')
+    if (role == 'clinic') {
       return '¡Hola, ${firstName.isEmpty ? 'Clínica' : firstName}!';
-    if (role == 'assistant')
+    }
+    if (role == 'assistant') {
       return '¡Hola, asistente ${firstName.isEmpty ? '' : firstName}!';
+    }
     final lastName = user['last_name']?.toString().trim() ?? '';
     final gender = user['gender']?.toString().toLowerCase() ?? '';
     final title =

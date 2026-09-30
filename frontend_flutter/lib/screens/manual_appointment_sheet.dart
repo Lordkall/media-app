@@ -177,7 +177,7 @@ class _ManualAppointmentSheetState extends State<ManualAppointmentSheet> {
                         : null),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: _reason,
+                  initialValue: _reason,
                   decoration: _decoration('Motivo de la cita'),
                   items: _reasons
                       .map((reason) =>

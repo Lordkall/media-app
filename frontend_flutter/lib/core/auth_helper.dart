@@ -27,7 +27,7 @@ class AuthHelper {
       final String decoded = utf8.decode(base64Url.decode(payload));
       return jsonDecode(decoded);
     } catch (e) {
-      print('Error decoding token: $e');
+      debugPrint('Error decoding token: $e');
       return null;
     }
   }

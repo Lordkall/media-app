@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../core/auth_helper.dart';
 import '../screens/login_screen.dart';
-import '../screens/login_screen.dart';
 import '../screens/notifications_screen.dart';
 import '../screens/assistant_management_screen.dart';
 import '../core/api_client.dart';

@@ -31,6 +31,7 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
     try {
       final response =
           await ApiClient.post('/password-reset/request', {'email': email});
+      if (!mounted) return;
       if (response.statusCode == 200 || response.statusCode == 202) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -54,11 +55,12 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
       );
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -80,6 +82,7 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
         'token': token,
         'new_password': newPassword,
       });
+      if (!mounted) return;
 
       if (response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -94,11 +97,12 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
       );
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 

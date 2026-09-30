@@ -93,6 +93,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
 
       final response = await ApiClient.post('/auth/register', payload);
+      if (!mounted) return;
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -150,7 +151,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     const Text('Términos y Condiciones',
                         style: TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
-                    Text(_termsText),
+                    const Text(_termsText),
                     CheckboxListTile(
                         contentPadding: EdgeInsets.zero,
                         value: terms,
@@ -160,7 +161,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     const Text('Política de Privacidad',
                         style: TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
-                    Text(_privacyText),
+                    const Text(_privacyText),
                     CheckboxListTile(
                         contentPadding: EdgeInsets.zero,
                         value: privacy,
@@ -299,9 +300,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       children: [
         Radio<String>(
           value: val,
-          groupValue: _gender,
           activeColor: const Color(0xFF0056B3),
-          onChanged: (newValue) => setState(() => _gender = newValue!),
         ),
         Text(val,
             style: const TextStyle(color: Color(0xFF0B2545), fontSize: 16)),
@@ -412,26 +411,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     data: Theme.of(context).copyWith(
                                         unselectedWidgetColor:
                                             const Color(0xFF0B2545)),
-                                    child: Column(
-                                      children: [
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            _buildRadio('Masculino'),
-                                            const SizedBox(width: 16),
-                                            _buildRadio('Femenino'),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            _buildRadio('Prefiero no decirlo'),
-                                          ],
-                                        ),
-                                      ],
+                                    child: RadioGroup<String>(
+                                      groupValue: _gender,
+                                      onChanged: (value) {
+                                        if (value != null) {
+                                          setState(() => _gender = value);
+                                        }
+                                      },
+                                      child: Column(
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              _buildRadio('Masculino'),
+                                              const SizedBox(width: 16),
+                                              _buildRadio('Femenino'),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              _buildRadio(
+                                                  'Prefiero no decirlo'),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ],

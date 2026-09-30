@@ -44,8 +44,9 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
       for (final row in rows) {
         final date = DateTime.tryParse(row['date']?.toString() ?? '');
         if (date == null ||
-            date.isBefore(DateTime(today.year, today.month, today.day)))
+            date.isBefore(DateTime(today.year, today.month, today.day))) {
           continue;
+        }
         days.add(date.weekday);
         final start = _formatTime(row['start_time']?.toString());
         final end = _formatTime(row['end_time']?.toString());
@@ -149,7 +150,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                        color: Colors.black.withOpacity(0.05), blurRadius: 5)
+                        color: Colors.black.withValues(alpha: 0.05), blurRadius: 5)
                   ]),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

@@ -465,7 +465,7 @@ class _AddressPageState extends State<_AddressPage> {
   Widget build(BuildContext context) =>
       _SettingsPage(title: 'Mis Direcciones', children: [
         DropdownButtonFormField<String>(
-          value: _selectedState,
+          initialValue: _selectedState,
           decoration: const InputDecoration(
               labelText: 'Estado', border: OutlineInputBorder()),
           items: veStates

@@ -105,7 +105,7 @@ class _AssistantManagementScreenState extends State<AssistantManagementScreen> {
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: assistantState,
+                    initialValue: assistantState,
                     decoration: InputDecoration(
                       labelText: 'Estado',
                       border: OutlineInputBorder(
@@ -168,6 +168,7 @@ class _AssistantManagementScreenState extends State<AssistantManagementScreen> {
                       'state': assistantState,
                       'password': password,
                     });
+                    if (!context.mounted) return;
 
                     if (response.statusCode == 200) {
                       Navigator.pop(context);
@@ -208,12 +209,14 @@ class _AssistantManagementScreenState extends State<AssistantManagementScreen> {
   Future<void> _removeAssistant(int id) async {
     try {
       final response = await ApiClient.delete('/assistants/$id');
+      if (!mounted) return;
       if (response.statusCode == 200) {
         _fetchAssistants();
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Asistente eliminado.')));
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Error al eliminar asistente.')));
     }

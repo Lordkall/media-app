@@ -86,11 +86,15 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
         final name =
             'Dr. ${item['first_name']} ${item['last_name']}'.toLowerCase();
         if (_searchQuery.isNotEmpty &&
-            !name.contains(_searchQuery.toLowerCase())) return false;
+            !name.contains(_searchQuery.toLowerCase())) {
+          return false;
+        }
       } else {
         final name = '${item['first_name']}'.toLowerCase();
         if (_searchQuery.isNotEmpty &&
-            !name.contains(_searchQuery.toLowerCase())) return false;
+            !name.contains(_searchQuery.toLowerCase())) {
+          return false;
+        }
       }
 
       if (_selectedState != 'Todos') {
@@ -102,8 +106,9 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
                 ?.map((e) => e.toString())
                 .toList() ??
             [];
-        if (!specialties.any((s) => s.contains(_selectedSpecialty)))
+        if (!specialties.any((s) => s.contains(_selectedSpecialty))) {
           return false;
+        }
       }
 
       return true;
@@ -172,7 +177,7 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
         _isLoading = false;
       });
     } catch (e) {
-      print('Error fetching data: $e');
+      debugPrint('Error fetching data: $e');
       setState(() => _isLoading = false);
     }
   }
@@ -266,7 +271,7 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
                   prefixIcon:
                       const Icon(Icons.search, color: Color(0xFF475569)),
                   filled: true,
-                  fillColor: Colors.white.withOpacity(0.8),
+                  fillColor: Colors.white.withValues(alpha: 0.8),
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none),
@@ -279,7 +284,7 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha: 0.8),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: const Color(0xFF0B2545)),
                 ),
@@ -319,7 +324,7 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 52),
                   alignment: Alignment.centerLeft,
-                  backgroundColor: Colors.white.withOpacity(0.8),
+                  backgroundColor: Colors.white.withValues(alpha: 0.8),
                   foregroundColor: const Color(0xFF0B2545),
                   side: const BorderSide(color: Color(0xFF0B2545)),
                   shape: RoundedRectangleBorder(
@@ -333,10 +338,10 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha: 0.8),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                      color: const Color(0xFF0056B3).withOpacity(0.3)),
+                      color: const Color(0xFF0056B3).withValues(alpha: 0.3)),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
@@ -376,7 +381,7 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
                               'No hay ${_searchType.toLowerCase()} registrados con estos filtros.'))
                       : LayoutBuilder(builder: (context, constraints) {
                           final columns = constraints.maxWidth >= 600 ? 3 : 2;
-                          final gap = 12.0;
+                          const gap = 12.0;
                           final cardWidth = (constraints.maxWidth -
                                   32 -
                                   gap * (columns - 1)) /
@@ -431,7 +436,7 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
                                       ));
                                 } else {
                                   final name = item['first_name'] ?? 'Clínica';
-                                  final specialty = 'Clínica';
+                                  const specialty = 'Clínica';
                                   final address = item['address']
                                               ?.toString()
                                               .trim()
@@ -490,7 +495,7 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
         boxShadow: [
           BoxShadow(
             color: (isVip ? vipGold : const Color(0xFF0B2545))
-                .withOpacity(isVip ? 0.24 : 0.10),
+                .withValues(alpha: isVip ? 0.24 : 0.10),
             blurRadius: isVip ? 12 : 8,
             offset: const Offset(0, 4),
           ),
@@ -681,14 +686,14 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
 class _MedicalCardDotsPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white.withOpacity(0.42);
+    final paint = Paint()..color = Colors.white.withValues(alpha: 0.42);
     for (var y = 12.0; y < size.height; y += 18) {
       for (var x = size.width * 0.32; x < size.width; x += 19) {
         canvas.drawCircle(Offset(x, y), 2.2, paint);
       }
     }
     final outline = Paint()
-      ..color = Colors.white.withOpacity(0.65)
+      ..color = Colors.white.withValues(alpha: 0.65)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.2;
     canvas.drawCircle(Offset(size.width * 0.67, -4), 28, outline);

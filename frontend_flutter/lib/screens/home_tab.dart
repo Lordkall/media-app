@@ -30,12 +30,12 @@ class HomeTab extends StatelessWidget {
                 child: Text('Menú Principal', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF0B2545))),
               ),
               const SizedBox(height: 24),
-              Row(
+              const Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Fecha:', style: TextStyle(fontSize: 16, color: Color(0xFF0B2545))),
+                  Text('Fecha:', style: TextStyle(fontSize: 16, color: Color(0xFF0B2545))),
                   Row(
-                    children: const [
+                    children: [
                       Icon(Icons.calendar_month, color: Color(0xFF0056B3)),
                       SizedBox(width: 8),
                       Text('24/09/2026', style: TextStyle(fontSize: 16, color: Color(0xFF0B2545))),

@@ -133,7 +133,7 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
         }
       }
     } catch (e) {
-      print(e);
+      debugPrint('$e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -278,7 +278,7 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
                           ),
                           const SizedBox(height: 12),
                           DropdownButtonFormField<int>(
-                            value: _slotDurationMinutes,
+                            initialValue: _slotDurationMinutes,
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: Colors.white,
@@ -310,7 +310,7 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.5),
+                              color: Colors.white.withValues(alpha: 0.5),
                               borderRadius: BorderRadius.circular(16),
                             ),
                             child: Column(
@@ -477,8 +477,8 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            border:
-                Border.all(color: const Color(0xFF0056B3).withOpacity(0.35)),
+            border: Border.all(
+                color: const Color(0xFF0056B3).withValues(alpha: 0.35)),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -526,7 +526,7 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
           boxShadow: [
             if (isSelected)
               BoxShadow(
-                  color: const Color(0xFF38B6FF).withOpacity(0.4),
+                  color: const Color(0xFF38B6FF).withValues(alpha: 0.4),
                   blurRadius: 8,
                   offset: const Offset(0, 4))
           ],

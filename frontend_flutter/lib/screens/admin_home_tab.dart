@@ -157,7 +157,7 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
                           notification: n,
                         ),
                       );
-                    }).toList(),
+                    }),
                   const SizedBox(height: 24),
                   const Text(
                     'Accesos Directos',
@@ -218,7 +218,7 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
               children: [
                 Text(
                   '¡Hola, ${_userData?['first_name'] ?? 'Administrador'}!',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w900,
                     color: Color(0xFF0B2545),
@@ -265,6 +265,7 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
     try {
       final response =
           await ApiClient.post('/admin/subscriptions/$subId/$action', {});
+      if (!mounted) return;
       if (response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(
@@ -272,7 +273,7 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
         _fetchNotifications();
       }
     } catch (e) {
-      print('Error en accion de pago: $e');
+      debugPrint('Error en accion de pago: $e');
     }
   }
 
@@ -320,7 +321,7 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 5,
             offset: const Offset(0, 2),
           ),
@@ -335,7 +336,7 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, color: color, size: 24),
@@ -372,9 +373,9 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.05),
+                color: Colors.blue.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.blue.withOpacity(0.2)),
+                border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -466,13 +467,13 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.4),
+            color: Colors.white.withValues(alpha: 0.4),
             borderRadius: BorderRadius.circular(16),
-            border:
-                Border.all(color: Colors.white.withOpacity(0.6), width: 1.5),
+            border: Border.all(
+                color: Colors.white.withValues(alpha: 0.6), width: 1.5),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -484,7 +485,7 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.5),
+                  color: Colors.white.withValues(alpha: 0.5),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(iconData, color: const Color(0xFF38B6FF), size: 30),

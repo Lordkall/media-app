@@ -58,6 +58,7 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
     try {
       final docRes = await ApiClient.get('/admin/doctors');
       final cliRes = await ApiClient.get('/admin/clinics');
+      if (!mounted) return;
 
       setState(() {
         if (docRes.statusCode == 200) {
@@ -69,7 +70,8 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
         _isLoading = false;
       });
     } catch (e) {
-      print('Error fetching data: $e');
+      if (!mounted) return;
+      debugPrint('Error fetching data: $e');
       setState(() => _isLoading = false);
     }
   }
@@ -83,16 +85,17 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
       } else if (action == 'reject') {
         url = '/admin/subscriptions/$id/reject';
       } else if (_searchType == 'Doctores') {
-        url = '/admin/subscriptions/$id/$action' +
-            (plan != null ? '?plan=$plan' : '');
+        url =
+            '/admin/subscriptions/$id/$action${plan != null ? '?plan=$plan' : ''}';
       } else {
-        url = '/admin/clinic_subscriptions/$id/$action' +
-            (plan != null ? '?plan=$plan' : '');
+        url =
+            '/admin/clinic_subscriptions/$id/$action${plan != null ? '?plan=$plan' : ''}';
       }
 
       final response = await ApiClient.post(url, {});
+      if (!mounted) return;
       if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text('✓ Suscripción actualizada'),
             backgroundColor: Colors.green));
         _fetchData();
@@ -102,6 +105,7 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
             backgroundColor: Colors.red));
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
     }
@@ -131,6 +135,7 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
         ],
       ),
     );
+    if (!mounted) return;
     if (confirmed != true || !mounted) return;
 
     try {
@@ -253,11 +258,11 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: DropdownButtonFormField<String>(
-                value: _selectedStatus,
+                initialValue: _selectedStatus,
                 decoration: InputDecoration(
                   labelText: 'Filtrar por estado',
                   filled: true,
-                  fillColor: Colors.white.withOpacity(0.8),
+                  fillColor: Colors.white.withValues(alpha: 0.8),
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12)),
                 ),
@@ -302,10 +307,11 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
                             final plan = item['plan'];
 
                             Color planColor = Colors.grey;
-                            if (plan == 'sponsored' || plan == 'clinic_vip')
+                            if (plan == 'sponsored' || plan == 'clinic_vip') {
                               planColor = const Color(0xFF0056B3);
-                            else if (plan == 'basic' || plan == 'featured')
+                            } else if (plan == 'basic' || plan == 'featured') {
                               planColor = const Color(0xFF00BCD4);
+                            }
 
                             final daysRemaining = item['days_remaining'] ?? 0;
 
@@ -350,9 +356,9 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.6),
+        color: Colors.white.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.8)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

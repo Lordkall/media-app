@@ -13,7 +13,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   if (!kIsWeb) {
     await Firebase.initializeApp();
   }
-  print("Handling a background message: ${message.messageId}");
+  debugPrint("Handling a background message: ${message.messageId}");
 }
 
 void main() async {
@@ -176,14 +176,14 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
 
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Fecha:', style: TextStyle(fontSize: 16)),
+                Text('Fecha:', style: TextStyle(fontSize: 16)),
                 Row(
-                  children: const [
+                  children: [
                     Icon(Icons.calendar_today,
                         color: Color(0xFF0F4C81), size: 18),
                     SizedBox(width: 8),
