@@ -62,6 +62,9 @@ async def ensure_clinic_plan_enum_labels() -> None:
         return
     async with engine.begin() as conn:
         await conn.execute(
+            text("ALTER TABLE subscriptions ALTER COLUMN doctor_id DROP NOT NULL")
+        )
+        await conn.execute(
             text("ALTER TYPE subscriptionplan ADD VALUE IF NOT EXISTS 'CLINIC_BASIC'")
         )
         await conn.execute(

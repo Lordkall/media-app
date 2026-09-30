@@ -137,6 +137,9 @@ async def lifespan(app: FastAPI):
                     await conn.execute(text(f"ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS {col_def}"))
                 except Exception:
                     pass
+            await conn.execute(
+                text("ALTER TABLE subscriptions ALTER COLUMN doctor_id DROP NOT NULL")
+            )
             print("Subscriptions migration done.")
     except Exception as e:
         print(f"Subscriptions migration error: {e}")

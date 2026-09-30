@@ -498,7 +498,20 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
                       backgroundColor: const Color(0xFF0056B3)),
                 ),
               ),
-              if (_searchType == 'Doctores') ...[
+              if (_searchType == 'Clínicas') ...[
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () =>
+                        _updateSub(targetId, 'activate', 'clinic_basic'),
+                    icon: const Icon(Icons.check, color: Colors.white, size: 16),
+                    label: const Text('Básico',
+                        style: TextStyle(color: Colors.white, fontSize: 12)),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF00BCD4)),
+                  ),
+                ),
+              ] else ...[
                 const SizedBox(width: 8),
                 Expanded(
                   child: ElevatedButton.icon(
