@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, text
 from datetime import datetime, timedelta
 from typing import Optional
 from pydantic import BaseModel
 
-from app.core.database import get_db
+from app.core.database import get_db, engine
 from app.models.users import User, RoleEnum
 from app.models.doctors import Doctor
 from app.models.subscriptions import Subscription, SubscriptionStatus, SubscriptionPlan
@@ -54,6 +54,19 @@ def get_plan_enum(plan_name: str) -> SubscriptionPlan:
         return plan_aliases[normalized]
     except KeyError:
         raise HTTPException(status_code=422, detail="El plan seleccionado no es válido")
+
+
+async def ensure_clinic_plan_enum_labels() -> None:
+    """Repair legacy PostgreSQL enum labels before a clinic plan is inserted."""
+    if engine.dialect.name != "postgresql":
+        return
+    async with engine.begin() as conn:
+        await conn.execute(
+            text("ALTER TYPE subscriptionplan ADD VALUE IF NOT EXISTS 'CLINIC_BASIC'")
+        )
+        await conn.execute(
+            text("ALTER TYPE subscriptionplan ADD VALUE IF NOT EXISTS 'CLINIC_VIP'")
+        )
 
 def get_plan_price(plan: SubscriptionPlan, cycle: str) -> float:
     if plan == SubscriptionPlan.SPONSORED:
@@ -319,6 +332,16 @@ async def renew_subscription(
     if role not in ["doctor", "clinic"]:
         raise HTTPException(status_code=403, detail="Solo los doctores y clínicas pueden renovar suscripciones")
 
+    if role == "clinic":
+        try:
+            await ensure_clinic_plan_enum_labels()
+        except Exception as e:
+            print(f"Could not ensure clinic subscription enum labels: {e}")
+            raise HTTPException(
+                status_code=503,
+                detail="No se pudo preparar el plan de clínica. Inténtalo de nuevo más tarde.",
+            ) from e
+
     if role == "doctor":
         result = await db.execute(select(Doctor).where(Doctor.user_id == current_user.id))
         doc = result.scalars().first()
@@ -398,7 +421,7 @@ async def renew_subscription(
             
         await db.commit()
     except Exception as e:
-        print(f"Error in /renew: {e}")
+        print(f"Error in /renew ({type(e).__name__}): {e!r}")
         await db.rollback()
         raise HTTPException(
             status_code=500,
