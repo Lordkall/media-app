@@ -254,9 +254,29 @@ class _LoginScreenState extends State<LoginScreen> {
 
         _navigateToHome();
       } else {
+        var message = 'No se pudo iniciar sesión. Inténtalo de nuevo.';
+        try {
+          final responseData = jsonDecode(response.body);
+          final detail = responseData is Map ? responseData['detail'] : null;
+          if (response.statusCode == 401) {
+            message = 'Correo o contraseña incorrectos.';
+          } else if (detail is String && detail.isNotEmpty) {
+            message = 'Error del servidor (${response.statusCode}): $detail';
+          } else {
+            message =
+                'Error del servidor (${response.statusCode}). Inténtalo más tarde.';
+          }
+        } catch (_) {
+          if (response.statusCode == 401) {
+            message = 'Correo o contraseña incorrectos.';
+          } else {
+            message =
+                'Error del servidor (${response.statusCode}). Inténtalo más tarde.';
+          }
+        }
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Credenciales incorrectas'),
+          SnackBar(
+            content: Text(message),
             backgroundColor: Colors.red,
           ),
         );

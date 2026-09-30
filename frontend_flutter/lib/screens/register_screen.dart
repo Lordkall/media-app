@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:ui';
 import '../core/api_client.dart';
 import '../models/ve_catalogs.dart';
+import 'select_plan_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key, this.initialClinicInviteCode});
@@ -156,6 +159,39 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (!mounted) return;
 
       if (response.statusCode == 200 || response.statusCode == 201) {
+        if (_role == 'clinic') {
+          final loginResponse = await ApiClient.postForm('/auth/login', {
+            'username': _emailCtrl.text.trim().toLowerCase(),
+            'password': _passwordCtrl.text,
+          });
+          if (!mounted) return;
+          if (loginResponse.statusCode == 200) {
+            final loginData = jsonDecode(loginResponse.body);
+            final prefs = await SharedPreferences.getInstance();
+            final token = loginData['access_token'] as String;
+            await prefs.setString('access_token', token);
+            if (!kIsWeb) {
+              await prefs.setString('saved_biometric_token', token);
+              await prefs.setString(
+                  'logged_username', _emailCtrl.text.trim().toLowerCase());
+            }
+            if (!mounted) return;
+            Navigator.of(context).pushReplacement(MaterialPageRoute(
+              builder: (_) => const SelectPlanScreen(
+                doctorData: {'role': 'clinic'},
+              ),
+            ));
+            return;
+          }
+
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'La clínica se creó, pero no se pudo iniciar sesión automáticamente. Vuelve al login para entrar.'),
+            backgroundColor: Colors.orange,
+          ));
+          Navigator.pop(context);
+          return;
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content: Text('¡Cuenta creada exitosamente!'),
