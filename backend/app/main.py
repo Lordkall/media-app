@@ -107,6 +107,19 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             print(f"Role enum migration error: {e}")
 
+        # Keep the database enum aligned with clinic subscription plans. The
+        # labels must be committed before /subscriptions/renew inserts a row.
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(
+                    text("ALTER TYPE subscriptionplan ADD VALUE IF NOT EXISTS 'CLINIC_BASIC'")
+                )
+                await conn.execute(
+                    text("ALTER TYPE subscriptionplan ADD VALUE IF NOT EXISTS 'CLINIC_VIP'")
+                )
+        except Exception as e:
+            print(f"Subscription plan enum migration error: {e}")
+
     # Auto-migrate subscriptions table
     try:
         async with engine.begin() as conn:

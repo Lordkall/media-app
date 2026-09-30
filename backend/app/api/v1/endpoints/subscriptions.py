@@ -399,7 +399,11 @@ async def renew_subscription(
         await db.commit()
     except Exception as e:
         print(f"Error in /renew: {e}")
-        raise HTTPException(status_code=500, detail=f"Error en la base de datos: {e}")
+        await db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="No se pudo registrar el pago. Inténtalo de nuevo más tarde.",
+        ) from e
 
     return SubscriptionResponse(
         status="PENDING_APPROVAL",
