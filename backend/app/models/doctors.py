@@ -92,7 +92,9 @@ class Doctor(Base):
 
     # Relaciones
     user: Mapped["User"] = relationship(back_populates="doctor_profile", foreign_keys="[Doctor.user_id]")
-    clinic: Mapped[Optional["Clinic"]] = relationship(back_populates="doctors")
+    clinic: Mapped[Optional["Clinic"]] = relationship(
+        back_populates="doctors", foreign_keys=[clinic_id]
+    )
     availabilities: Mapped[List["Availability"]] = relationship(back_populates="doctor")
     appointments: Mapped[List["Appointment"]] = relationship(back_populates="doctor")
     subscriptions: Mapped[List["Subscription"]] = relationship(back_populates="doctor")

@@ -21,5 +21,7 @@ class Clinic(Base):
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="clinic_profile", foreign_keys="[Clinic.user_id]")
-    doctors: Mapped[List["Doctor"]] = relationship(back_populates="clinic")
+    doctors: Mapped[List["Doctor"]] = relationship(
+        back_populates="clinic", foreign_keys="Doctor.clinic_id"
+    )
     subscriptions: Mapped[List["Subscription"]] = relationship(back_populates="clinic")
