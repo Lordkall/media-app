@@ -36,6 +36,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
     user = result.scalars().first()
     if user is None:
         raise credentials_exception
+    if user.session_token is not None and payload.get("sid") != user.session_token:
+        raise credentials_exception
     return user
 
 @router.get("/me", response_model=UserResponse)
@@ -66,6 +68,13 @@ async def update_users_me(
     db: AsyncSession = Depends(get_db)
 ):
     update_data = user_in.model_dump(exclude_unset=True)
+    new_fcm_token = update_data.get("fcm_token")
+    if new_fcm_token:
+        await db.execute(
+            update(User)
+            .where(User.id != current_user.id, User.fcm_token == new_fcm_token)
+            .values(fcm_token=None)
+        )
     avatar_url = update_data.get("avatar_url")
     if isinstance(avatar_url, str) and avatar_url.startswith("preset:"):
         parts = avatar_url.split(":")
@@ -108,7 +117,7 @@ async def delete_my_account(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # Anonymize the account while retaining appointment and billing references.
+    # Anonymize the account and invalidate tokens previously issued to it.
     import secrets
     current_user.email = f"deleted-{current_user.id}-{secrets.token_hex(8)}@invalid.saludnow"
     current_user.first_name = "Cuenta"
@@ -120,7 +129,7 @@ async def delete_my_account(
     current_user.avatar_url = None
     current_user.avatar_data = None
     current_user.avatar_content_type = None
-    current_user.session_token = None
+    current_user.session_token = secrets.token_urlsafe(32)
     current_user.fcm_token = None
     current_user.hashed_password = get_password_hash(secrets.token_urlsafe(40))
     current_user.terms_accepted_at = None
@@ -132,7 +141,19 @@ async def delete_my_account(
     from app.models.clinics import Clinic
     patient = await db.scalar(select(Patient).where(Patient.user_id == current_user.id))
     if patient:
+        from app.models.appointments import Appointment
+        await db.execute(delete(Appointment).where(Appointment.patient_id == patient.id))
         patient.contact_phone = ""
+
+    from app.models.support import SupportTicket, TicketMessage
+    ticket_ids = list((await db.scalars(
+        select(SupportTicket.id).where(SupportTicket.user_id == current_user.id)
+    )).all())
+    if ticket_ids:
+        await db.execute(delete(TicketMessage).where(TicketMessage.ticket_id.in_(ticket_ids)))
+        await db.execute(delete(SupportTicket).where(SupportTicket.id.in_(ticket_ids)))
+    from app.models.notifications import Notification
+    await db.execute(delete(Notification).where(Notification.user_id == current_user.id))
     doctor = await db.scalar(select(Doctor).where(Doctor.user_id == current_user.id))
     if doctor:
         doctor.bio = None

@@ -347,8 +347,11 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
                       decoration: BoxDecoration(
                           color: const Color(0xFF38B6FF),
                           borderRadius: BorderRadius.circular(12)),
-                      child: const Text('Doctor',
-                          style: TextStyle(
+                      child: Text(
+                          _userData?['role'] == 'assistant'
+                              ? 'Asistente'
+                              : 'Doctor',
+                          style: const TextStyle(
                               color: Colors.white,
                               fontSize: 12,
                               fontWeight: FontWeight.bold)),
@@ -376,6 +379,8 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
     final firstName = user['first_name']?.toString().trim() ?? '';
     if (role == 'clinic')
       return '¡Hola, ${firstName.isEmpty ? 'Clínica' : firstName}!';
+    if (role == 'assistant')
+      return '¡Hola, asistente ${firstName.isEmpty ? '' : firstName}!';
     final lastName = user['last_name']?.toString().trim() ?? '';
     final gender = user['gender']?.toString().toLowerCase() ?? '';
     final title =

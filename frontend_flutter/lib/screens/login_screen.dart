@@ -153,6 +153,32 @@ class _LoginScreenState extends State<LoginScreen> {
 
         if (didAuthenticate) {
           await prefs.setString('access_token', savedToken);
+          final accountCheck = await ApiClient.get('/users/me');
+          if (accountCheck.statusCode == 401 ||
+              accountCheck.statusCode == 403 ||
+              accountCheck.statusCode == 404) {
+            await prefs.remove('access_token');
+            await prefs.remove('saved_biometric_token');
+            await prefs.remove('logged_username');
+            _clearBiometricPrefill();
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text(
+                    'La cuenta guardada ya no está disponible. Inicia sesión con otra cuenta.'),
+              ));
+            }
+            return;
+          }
+          if (accountCheck.statusCode != 200) {
+            await prefs.remove('access_token');
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text(
+                    'No se pudo verificar la cuenta. Comprueba tu conexión e inténtalo de nuevo.'),
+              ));
+            }
+            return;
+          }
           ProfileImageHelper.updateCurrentUserAvatar(null);
           _navigateToHome();
         } else {

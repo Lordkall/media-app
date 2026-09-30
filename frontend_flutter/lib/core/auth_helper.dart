@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 import 'profile_image_helper.dart';
+import 'api_client.dart';
 
 class AuthHelper {
   static Map<String, dynamic>? decodeToken(String token) {
@@ -40,13 +41,20 @@ class AuthHelper {
     return decoded?['role']?.toString();
   }
 
-  static Future<void> logout() async {
+  static Future<void> logout({bool preserveBiometricToken = true}) async {
     ProfileImageHelper.updateCurrentUserAvatar(null);
     final prefs = await SharedPreferences.getInstance();
     final currentToken = prefs.getString('access_token');
     if (!kIsWeb && currentToken != null) {
+      try {
+        await ApiClient.put('/users/me', {'fcm_token': null});
+      } catch (error) {
+        debugPrint('Could not unregister this device token: $error');
+      }
+    }
+    if (!kIsWeb && preserveBiometricToken && currentToken != null) {
       await prefs.setString('saved_biometric_token', currentToken);
-    } else if (kIsWeb) {
+    } else {
       await prefs.remove('saved_biometric_token');
       await prefs.remove('logged_username');
     }

@@ -8,7 +8,8 @@ import '../models/ve_catalogs.dart';
 import 'support_messages_screen.dart';
 
 class PatientHomeTab extends StatefulWidget {
-  const PatientHomeTab({super.key});
+  const PatientHomeTab({super.key, this.onProfileTap});
+  final VoidCallback? onProfileTap;
 
   @override
   State<PatientHomeTab> createState() => _PatientHomeTabState();
@@ -212,13 +213,17 @@ class _PatientHomeTabState extends State<PatientHomeTab> {
       padding: const EdgeInsets.symmetric(horizontal: 24.0),
       child: Row(
         children: [
-          ProfileAvatar(
-              imageUrl: _userData?['avatar_url']?.toString(),
-              currentUser: true,
-              fallbackRole: 'patient',
-              size: 80,
-              borderColor: const Color(0xFF0056B3),
-              borderWidth: 3),
+          InkWell(
+            onTap: widget.onProfileTap,
+            customBorder: const CircleBorder(),
+            child: ProfileAvatar(
+                imageUrl: _userData?['avatar_url']?.toString(),
+                currentUser: true,
+                fallbackRole: 'patient',
+                size: 80,
+                borderColor: const Color(0xFF0056B3),
+                borderWidth: 3),
+          ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(

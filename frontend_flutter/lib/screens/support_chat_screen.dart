@@ -49,8 +49,8 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
         final me = jsonDecode(userResponse.body) as Map<String, dynamic>;
         _currentUserId = me['id'] as int;
       }
-      final response = await ApiClient.get(
-          '/support/${widget.ticket['id']}/messages');
+      final response =
+          await ApiClient.get('/support/${widget.ticket['id']}/messages');
       if (response.statusCode != 200 || !mounted) return;
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       final messages = List<dynamic>.from(data['messages'] as List);
@@ -78,20 +78,29 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
 
   Future<void> _closeChat() async {
     try {
-      await ApiClient.patch('/support/${widget.ticket['id']}/close', {});
+      final response =
+          await ApiClient.patch('/support/${widget.ticket['id']}/close', {});
+      if (response.statusCode != 200) {
+        throw Exception('No se pudo cerrar el chat (${response.statusCode})');
+      }
+      if (!mounted) return;
       setState(() {
         _isClosed = true;
       });
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Chat cerrado.')));
-      Navigator.pop(context, true); // return true to refresh list
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Chat cerrado.')));
+      Navigator.pop(context, true);
     } catch (e) {
-      print('Error closing: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('No se pudo cerrar el chat: $e')));
+      }
     }
   }
 
   Future<void> _sendMessage() async {
     if (_messageController.text.trim().isEmpty || _isClosed) return;
-    
+
     final text = _messageController.text.trim();
     try {
       final response = await ApiClient.post(
@@ -139,16 +148,21 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
                   context: context,
                   builder: (context) => AlertDialog(
                     title: const Text('Cerrar Chat'),
-                    content: const Text('¿Estás seguro de que quieres dar por terminada esta conversación?'),
+                    content: const Text(
+                        '¿Estás seguro de que quieres dar por terminada esta conversación?'),
                     actions: [
-                      TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+                      TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancelar')),
                       ElevatedButton(
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red),
                         onPressed: () {
                           Navigator.pop(context);
                           _closeChat();
                         },
-                        child: const Text('Cerrar Chat', style: TextStyle(color: Colors.white)),
+                        child: const Text('Cerrar Chat',
+                            style: TextStyle(color: Colors.white)),
                       ),
                     ],
                   ),
@@ -176,12 +190,17 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
                     return Center(
                       child: Container(
                         margin: const EdgeInsets.symmetric(vertical: 8),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
                         decoration: BoxDecoration(
                           color: Colors.grey[300],
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: Text(msg['text'], style: const TextStyle(fontSize: 12, color: Colors.black54, fontStyle: FontStyle.italic)),
+                        child: Text(msg['text'],
+                            style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.black54,
+                                fontStyle: FontStyle.italic)),
                       ),
                     );
                   }
@@ -198,7 +217,8 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
                 child: const Text(
                   'Este chat ha sido cerrado',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.black54, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      color: Colors.black54, fontWeight: FontWeight.bold),
                 ),
               )
             else
@@ -220,8 +240,10 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),
-            bottomLeft: isMe ? const Radius.circular(16) : const Radius.circular(0),
-            bottomRight: isMe ? const Radius.circular(0) : const Radius.circular(16),
+            bottomLeft:
+                isMe ? const Radius.circular(16) : const Radius.circular(0),
+            bottomRight:
+                isMe ? const Radius.circular(0) : const Radius.circular(16),
           ),
           boxShadow: [
             BoxShadow(
@@ -231,9 +253,11 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
             )
           ],
         ),
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+        constraints:
+            BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
         child: Column(
-          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          crossAxisAlignment:
+              isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
             Text(
               text,
@@ -272,20 +296,24 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
                 controller: _messageController,
                 enabled: !_isClosed,
                 decoration: InputDecoration(
-                  hintText: _isClosed ? 'El chat está cerrado' : 'Escribe un mensaje...',
+                  hintText: _isClosed
+                      ? 'El chat está cerrado'
+                      : 'Escribe un mensaje...',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
                     borderSide: BorderSide.none,
                   ),
                   filled: true,
                   fillColor: Colors.grey[200],
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 ),
               ),
             ),
             const SizedBox(width: 8),
             CircleAvatar(
-              backgroundColor: _isClosed ? Colors.grey : const Color(0xFF0056B3),
+              backgroundColor:
+                  _isClosed ? Colors.grey : const Color(0xFF0056B3),
               child: IconButton(
                 icon: const Icon(Icons.send, color: Colors.white, size: 20),
                 onPressed: _isClosed ? null : _sendMessage,

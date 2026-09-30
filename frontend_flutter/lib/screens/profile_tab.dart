@@ -456,19 +456,29 @@ class _AddressPage extends StatefulWidget {
 }
 
 class _AddressPageState extends State<_AddressPage> {
-  late final state =
-      TextEditingController(text: widget.user['state']?.toString());
+  late String? _selectedState = veStates.contains(widget.user['state'])
+      ? widget.user['state']?.toString()
+      : null;
   late final address =
       TextEditingController(text: widget.user['address']?.toString());
   @override
   Widget build(BuildContext context) =>
       _SettingsPage(title: 'Mis Direcciones', children: [
-        _field('Estado', state),
+        DropdownButtonFormField<String>(
+          value: _selectedState,
+          decoration: const InputDecoration(
+              labelText: 'Estado', border: OutlineInputBorder()),
+          items: veStates
+              .map(
+                  (value) => DropdownMenuItem(value: value, child: Text(value)))
+              .toList(),
+          onChanged: (value) => setState(() => _selectedState = value),
+        ),
         _field('Dirección', address, lines: 3),
         FilledButton(
             onPressed: () async {
               final r = await ApiClient.put('/users/me',
-                  {'state': state.text.trim(), 'address': address.text.trim()});
+                  {'state': _selectedState, 'address': address.text.trim()});
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                     content: Text(r.statusCode == 200
@@ -747,7 +757,7 @@ class _AboutPage extends StatelessWidget {
         builder: (c) => AlertDialog(
                 title: const Text('Eliminar cuenta'),
                 content: const Text(
-                    'Se eliminarán tus datos personales. Las referencias anonimizadas necesarias para conservar el historial de citas podrían mantenerse. ¿Continuar?'),
+                    'Se eliminarán tus datos personales, tus chats de soporte y todas tus citas agendadas. ¿Continuar?'),
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.pop(c, false),
@@ -759,7 +769,7 @@ class _AboutPage extends StatelessWidget {
     if (yes == true) {
       final r = await ApiClient.delete('/users/me');
       if (r.statusCode == 200) {
-        await AuthHelper.logout();
+        await AuthHelper.logout(preserveBiometricToken: false);
         if (context.mounted) {
           Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
             MaterialPageRoute<void>(builder: (_) => const LoginScreen()),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/api_client.dart';
 import '../models/ve_catalogs.dart';
+import '../core/auth_helper.dart';
 import 'dart:convert';
 import 'dart:async';
 
@@ -71,6 +72,8 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
   Set<String> _selectedDates = {};
   bool _isLoading = true;
   int? _doctorId;
+  bool _isAssistant = false;
+  List<Map<String, dynamic>> _assistantAvailability = [];
 
   @override
   void initState() {
@@ -90,6 +93,23 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
 
   Future<void> _fetchAvailability() async {
     try {
+      _isAssistant = await AuthHelper.getRole() == 'assistant';
+      if (_isAssistant) {
+        final userRes = await ApiClient.get('/users/me');
+        if (userRes.statusCode == 200) {
+          final user = jsonDecode(userRes.body) as Map<String, dynamic>;
+          final linkedDoctorId = user['linked_doctor_id'];
+          if (linkedDoctorId != null) {
+            final availabilityRes =
+                await ApiClient.get('/doctors/$linkedDoctorId/availability');
+            if (availabilityRes.statusCode == 200) {
+              _assistantAvailability = List<Map<String, dynamic>>.from(
+                  jsonDecode(availabilityRes.body));
+            }
+          }
+        }
+        return;
+      }
       final docRes = await ApiClient.get('/doctors/me');
       if (docRes.statusCode == 200) {
         final doc = jsonDecode(docRes.body);
@@ -221,173 +241,220 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
           ),
           body: _isLoading
               ? const Center(child: CircularProgressIndicator())
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildSectionTitle('Hora de Inicio Laboral'),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Selecciona la hora en la que inician tus consultas.',
-                        style:
-                            TextStyle(color: Color(0xFF475569), fontSize: 14),
-                      ),
-                      const SizedBox(height: 16),
-                      _timePickerTile('Hora de inicio', _selectedStartTime,
-                          () => _selectTime(isStart: true)),
-                      const SizedBox(height: 32),
-                      _buildSectionTitle('Hora de Fin Laboral'),
-                      const SizedBox(height: 8),
-                      const Text(
-                          'Selecciona la hora en la que finalizan tus consultas.',
-                          style: TextStyle(
-                              color: Color(0xFF475569), fontSize: 14)),
-                      const SizedBox(height: 16),
-                      _timePickerTile('Hora de fin', _selectedEndTime,
-                          () => _selectTime(isStart: false)),
-                      const SizedBox(height: 32),
-                      _buildSectionTitle('Duración de cada cita'),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Este bloque se aplicará a los turnos de los días seleccionados.',
-                        style:
-                            TextStyle(color: Color(0xFF475569), fontSize: 14),
-                      ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<int>(
-                        value: _slotDurationMinutes,
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+              : _isAssistant
+                  ? _buildAssistantSchedule()
+                  : SingleChildScrollView(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildSectionTitle('Hora de Inicio Laboral'),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Selecciona la hora en la que inician tus consultas.',
+                            style: TextStyle(
+                                color: Color(0xFF475569), fontSize: 14),
                           ),
-                          prefixIcon: const Icon(Icons.timelapse,
-                              color: Color(0xFF0056B3)),
-                        ),
-                        items: const [30, 60, 120]
-                            .map((minutes) => DropdownMenuItem<int>(
-                                  value: minutes,
-                                  child: Text(minutes == 30
-                                      ? '30 minutos'
-                                      : minutes == 60
-                                          ? '1 hora'
-                                          : '2 horas'),
-                                ))
-                            .toList(),
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() => _slotDurationMinutes = value);
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 32),
-                      _buildSectionTitle('Días Laborables'),
-                      const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.5),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Column(
-                          children: [
-                            const Text('TOQUE PARA SELECCIONAR DÍAS LABORABLES',
-                                style: TextStyle(
-                                    color: Color(0xFF475569),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 16),
-                            FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text('SEMANA ACTUAL',
-                                      style: TextStyle(
-                                          color: Color(0xFF38B6FF),
-                                          fontWeight: FontWeight.bold)),
-                                  const SizedBox(width: 8),
-                                  Row(
+                          const SizedBox(height: 16),
+                          _timePickerTile('Hora de inicio', _selectedStartTime,
+                              () => _selectTime(isStart: true)),
+                          const SizedBox(height: 32),
+                          _buildSectionTitle('Hora de Fin Laboral'),
+                          const SizedBox(height: 8),
+                          const Text(
+                              'Selecciona la hora en la que finalizan tus consultas.',
+                              style: TextStyle(
+                                  color: Color(0xFF475569), fontSize: 14)),
+                          const SizedBox(height: 16),
+                          _timePickerTile('Hora de fin', _selectedEndTime,
+                              () => _selectTime(isStart: false)),
+                          const SizedBox(height: 32),
+                          _buildSectionTitle('Duración de cada cita'),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Este bloque se aplicará a los turnos de los días seleccionados.',
+                            style: TextStyle(
+                                color: Color(0xFF475569), fontSize: 14),
+                          ),
+                          const SizedBox(height: 12),
+                          DropdownButtonFormField<int>(
+                            value: _slotDurationMinutes,
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              prefixIcon: const Icon(Icons.timelapse,
+                                  color: Color(0xFF0056B3)),
+                            ),
+                            items: const [30, 60, 120]
+                                .map((minutes) => DropdownMenuItem<int>(
+                                      value: minutes,
+                                      child: Text(minutes == 30
+                                          ? '30 minutos'
+                                          : minutes == 60
+                                              ? '1 hora'
+                                              : '2 horas'),
+                                    ))
+                                .toList(),
+                            onChanged: (value) {
+                              if (value != null) {
+                                setState(() => _slotDurationMinutes = value);
+                              }
+                            },
+                          ),
+                          const SizedBox(height: 32),
+                          _buildSectionTitle('Días Laborables'),
+                          const SizedBox(height: 16),
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.5),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Column(
+                              children: [
+                                const Text(
+                                    'TOQUE PARA SELECCIONAR DÍAS LABORABLES',
+                                    style: TextStyle(
+                                        color: Color(0xFF475569),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold)),
+                                const SizedBox(height: 16),
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
-                                      IconButton(
-                                          icon: const Icon(Icons.chevron_left,
-                                              color: Color(0xFF0056B3)),
-                                          onPressed: () {
-                                            setState(() => _weekOffset--);
-                                          }),
-                                      Text(
-                                          _formatWeek(caracasNow()
-                                              .subtract(Duration(
-                                                  days:
-                                                      caracasNow().weekday - 1))
-                                              .add(Duration(
-                                                  days: _weekOffset * 7))),
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              color: Color(0xFF0B2545))),
-                                      IconButton(
-                                          icon: const Icon(Icons.chevron_right,
-                                              color: Color(0xFF0056B3)),
-                                          onPressed: () {
-                                            setState(() => _weekOffset++);
-                                          }),
+                                      const Text('SEMANA ACTUAL',
+                                          style: TextStyle(
+                                              color: Color(0xFF38B6FF),
+                                              fontWeight: FontWeight.bold)),
+                                      const SizedBox(width: 8),
+                                      Row(
+                                        children: [
+                                          IconButton(
+                                              icon: const Icon(
+                                                  Icons.chevron_left,
+                                                  color: Color(0xFF0056B3)),
+                                              onPressed: () {
+                                                setState(() => _weekOffset--);
+                                              }),
+                                          Text(
+                                              _formatWeek(caracasNow()
+                                                  .subtract(Duration(
+                                                      days:
+                                                          caracasNow().weekday -
+                                                              1))
+                                                  .add(Duration(
+                                                      days: _weekOffset * 7))),
+                                              style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Color(0xFF0B2545))),
+                                          IconButton(
+                                              icon: const Icon(
+                                                  Icons.chevron_right,
+                                                  color: Color(0xFF0056B3)),
+                                              onPressed: () {
+                                                setState(() => _weekOffset++);
+                                              }),
+                                        ],
+                                      ),
                                     ],
                                   ),
-                                ],
+                                ),
+                                const SizedBox(height: 16),
+                                Wrap(
+                                  spacing: 12,
+                                  runSpacing: 12,
+                                  alignment: WrapAlignment.center,
+                                  children: _currentWeekDays
+                                      .map((day) => _buildDayCard(day))
+                                      .toList(),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: _isLoading ? null : _saveAvailability,
+                              icon: _isLoading
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                          color: Colors.white, strokeWidth: 2))
+                                  : Icon(_isSuccess ? Icons.check : Icons.save,
+                                      color: Colors.white),
+                              label: Text(
+                                  _isSuccess
+                                      ? '¡Guardado!'
+                                      : 'Guardar Disponibilidad',
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _isSuccess
+                                    ? Colors.green
+                                    : const Color(0xFF0056B3),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12)),
                               ),
                             ),
-                            const SizedBox(height: 16),
-                            Wrap(
-                              spacing: 12,
-                              runSpacing: 12,
-                              alignment: WrapAlignment.center,
-                              children: _currentWeekDays
-                                  .map((day) => _buildDayCard(day))
-                                  .toList(),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: _isLoading ? null : _saveAvailability,
-                          icon: _isLoading
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                      color: Colors.white, strokeWidth: 2))
-                              : Icon(_isSuccess ? Icons.check : Icons.save,
-                                  color: Colors.white),
-                          label: Text(
-                              _isSuccess
-                                  ? '¡Guardado!'
-                                  : 'Guardar Disponibilidad',
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _isSuccess
-                                ? Colors.green
-                                : const Color(0xFF0056B3),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
                           ),
-                        ),
+                          const SizedBox(height: 80),
+                        ],
                       ),
-                      const SizedBox(height: 80),
-                    ],
-                  ),
-                ),
+                    ),
         ),
       ),
+    );
+  }
+
+  Widget _buildAssistantSchedule() {
+    final dates = List<Map<String, dynamic>>.from(_assistantAvailability)
+      ..sort((a, b) => a['date'].toString().compareTo(b['date'].toString()));
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        const Text('Horario del doctor',
+            style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0B2545))),
+        const SizedBox(height: 8),
+        const Text('Esta es la disponibilidad configurada por tu doctor.',
+            style: TextStyle(color: Color(0xFF475569))),
+        const SizedBox(height: 16),
+        if (dates.isEmpty)
+          const Card(
+              child: Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Text('El doctor todavía no tiene días disponibles.')))
+        else
+          ...dates.map((day) {
+            final parsed = DateTime.tryParse(day['date']?.toString() ?? '');
+            final dateLabel = parsed == null
+                ? day['date'].toString()
+                : '${parsed.day.toString().padLeft(2, '0')}/${parsed.month.toString().padLeft(2, '0')}/${parsed.year}';
+            return Card(
+              child: ListTile(
+                leading:
+                    const Icon(Icons.calendar_month, color: Color(0xFF0056B3)),
+                title: Text(dateLabel),
+                subtitle: Text(
+                    '${day['start_time']?.toString().substring(0, 5) ?? '--:--'} - ${day['end_time']?.toString().substring(0, 5) ?? '--:--'}'),
+              ),
+            );
+          }),
+      ],
     );
   }
 

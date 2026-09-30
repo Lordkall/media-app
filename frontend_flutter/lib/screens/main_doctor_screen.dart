@@ -112,7 +112,7 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
   List<Widget> get _tabs {
     if (_role == 'admin') {
       return [
-        const AdminHomeTab(),
+        AdminHomeTab(onProfileTap: () => setState(() => _currentIndex = 4)),
         const AdminSubscriptionsTab(),
         const BrowseDoctorsTab(),
         const AdminStatsTab(),
@@ -120,7 +120,7 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
       ];
     } else if (_role == 'patient') {
       return [
-        const PatientHomeTab(),
+        PatientHomeTab(onProfileTap: () => setState(() => _currentIndex = 4)),
         AgendarCitaTab(onCitaAgendada: () {
           setState(() {
             _currentIndex = 0;

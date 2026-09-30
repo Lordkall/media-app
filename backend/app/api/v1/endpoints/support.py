@@ -162,13 +162,13 @@ async def close_ticket(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    if current_user.role != RoleEnum.ADMIN:
-        raise HTTPException(status_code=403)
-        
     result = await db.execute(select(SupportTicket).where(SupportTicket.id == ticket_id))
     ticket = result.scalar_one_or_none()
     if not ticket:
         raise HTTPException(status_code=404)
+    is_admin = current_user.role == RoleEnum.ADMIN or current_user.role == "admin"
+    if not is_admin and ticket.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No tienes acceso a este chat")
         
     ticket.status = "Cerrado"
     await db.commit()
@@ -183,7 +183,7 @@ async def reply_ticket(
 ):
     result = await db.execute(select(SupportTicket).where(SupportTicket.id == ticket_id))
     ticket = result.scalar_one_or_none()
-    if not ticket or ticket.status == "Cerrado":
+    if not ticket or str(ticket.status).casefold() in {"cerrado", "closed"}:
         raise HTTPException(status_code=400, detail="Cannot reply to closed or non-existent ticket")
     is_admin = current_user.role == RoleEnum.ADMIN or current_user.role == "admin"
     if not is_admin and ticket.user_id != current_user.id:
@@ -250,16 +250,17 @@ async def delete_ticket(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    if current_user.role != RoleEnum.ADMIN:
-        raise HTTPException(status_code=403, detail="Not authorized to delete tickets")
-        
     result = await db.execute(select(SupportTicket).where(SupportTicket.id == ticket_id))
     ticket = result.scalar_one_or_none()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
+
+    is_admin = current_user.role == RoleEnum.ADMIN or current_user.role == "admin"
+    if not is_admin and ticket.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No tienes acceso a este chat")
         
     # Optional: ensure ticket is closed before deleting
-    if ticket.status != "Cerrado":
+    if str(ticket.status).casefold() not in {"cerrado", "closed"}:
         raise HTTPException(status_code=400, detail="Cannot delete open tickets")
 
     # Messages will be cascade-deleted or we need to delete them first

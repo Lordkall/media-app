@@ -9,7 +9,8 @@ import '../widgets/profile_avatar.dart';
 import 'support_messages_screen.dart';
 
 class AdminHomeTab extends StatefulWidget {
-  const AdminHomeTab({super.key});
+  const AdminHomeTab({super.key, this.onProfileTap});
+  final VoidCallback? onProfileTap;
 
   @override
   State<AdminHomeTab> createState() => _AdminHomeTabState();
@@ -198,13 +199,17 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
       padding: const EdgeInsets.symmetric(horizontal: 24.0),
       child: Row(
         children: [
-          ProfileAvatar(
-            imageUrl: _userData?['avatar_url']?.toString(),
-            currentUser: true,
-            fallbackRole: 'patient',
-            size: 80,
-            borderColor: const Color(0xFF0056B3),
-            borderWidth: 3,
+          InkWell(
+            onTap: widget.onProfileTap,
+            customBorder: const CircleBorder(),
+            child: ProfileAvatar(
+              imageUrl: _userData?['avatar_url']?.toString(),
+              currentUser: true,
+              fallbackRole: 'patient',
+              size: 80,
+              borderColor: const Color(0xFF0056B3),
+              borderWidth: 3,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(

@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+import secrets
 from app.core.database import get_db
 from app.core.security import verify_password, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 from app.models.users import User
@@ -46,8 +47,16 @@ async def login_for_access_token(
             raise HTTPException(status_code=403, detail="Acceso denegado. El doctor ya no cuenta con un plan VIP activo.")
             
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    session_id = secrets.token_urlsafe(32)
+    user.session_token = session_id
+    await db.commit()
     access_token = create_access_token(
-        data={"sub": user.email, "id": str(user.id), "role": user.role.value},
+        data={
+            "sub": user.email,
+            "id": str(user.id),
+            "role": user.role.value,
+            "sid": session_id,
+        },
         expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
