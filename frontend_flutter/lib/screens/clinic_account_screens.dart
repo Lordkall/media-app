@@ -91,6 +91,7 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
   List<dynamic> _notifications = [];
   bool _isLoadingNotifications = true;
   bool _isVip = false;
+  bool _isSubLoaded = false;
 
   @override
   void initState() {
@@ -111,7 +112,14 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
       if (subResponse.statusCode == 200) {
         final sub = jsonDecode(subResponse.body) as Map<String, dynamic>;
         final plan = sub['current']?['plan']?.toString() ?? '';
-        if (mounted) setState(() => _isVip = plan == 'clinic_vip' || plan == 'vip');
+        if (mounted) {
+          setState(() {
+            _isVip = plan == 'clinic_vip' || plan == 'vip';
+            _isSubLoaded = true;
+          });
+        }
+      } else {
+        if (mounted) setState(() => _isSubLoaded = true);
       }
 
       final notifResponse = await ApiClient.get('/users/me/notifications');
@@ -126,7 +134,12 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
         if (mounted) setState(() => _isLoadingNotifications = false);
       }
     } catch (_) {
-      if (mounted) setState(() => _isLoadingNotifications = false);
+      if (mounted) {
+        setState(() {
+          _isLoadingNotifications = false;
+          _isSubLoaded = true;
+        });
+      }
     }
   }
 
@@ -277,13 +290,17 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (_isVip) ...
-                            const [Icon(Icons.star, size: 12, color: Colors.white), SizedBox(width: 4)],
-                          Text(_isVip ? 'Clínica VIP' : 'Clínica',
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold)),
+                          if (!_isSubLoaded)
+                            const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          else ...[
+                            if (_isVip) ...
+                              const [Icon(Icons.star, size: 12, color: Colors.white), SizedBox(width: 4)],
+                            Text(_isVip ? 'Clínica VIP' : 'Clínica',
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold)),
+                          ],
                         ],
                       ),
                     ),

@@ -148,7 +148,7 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
   Future<void> _fetchDoctors() async {
     try {
       final response = await ApiClient.get('/admin/doctors');
-      final clinicResponse = await ApiClient.get('/clinics');
+      final clinicResponse = await ApiClient.get('/clinics/');
       final userResponse = await ApiClient.get('/users/me');
 
       List<dynamic> allDocs = [];
