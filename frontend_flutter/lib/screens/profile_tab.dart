@@ -484,6 +484,7 @@ class _AddressPageState extends State<_AddressPage> {
               .toList(),
           onChanged: (value) => setState(() => _selectedState = value),
         ),
+        const SizedBox(height: 14),
         _field('Dirección', address, lines: 3),
         FilledButton(
             onPressed: () async {
@@ -631,8 +632,8 @@ class _ClinicDataPageState extends State<_ClinicDataPage> {
         _field('Descripción', description, lines: 4),
         _field('Ubicación', location, lines: 2),
         _field('Especialidades (separadas por coma)', specialties),
-        _field('Número de contacto', phone, type: TextInputType.phone),
-        _field('Segundo número de contacto', phone2, type: TextInputType.phone),
+        _field('Número de contacto', phone, type: TextInputType.phone, maxLength: 11),
+        _field('Segundo número de contacto', phone2, type: TextInputType.phone, maxLength: 11),
         FilledButton(
             onPressed: () async {
               final u = await ApiClient.put('/users/me', {
@@ -813,7 +814,8 @@ Widget _field(String label, TextEditingController controller,
         {TextInputType? type,
         int lines = 1,
         bool secret = false,
-        bool enabled = true}) =>
+        bool enabled = true,
+        int? maxLength}) =>
     Padding(
         padding: const EdgeInsets.only(bottom: 14),
         child: TextField(
@@ -822,5 +824,6 @@ Widget _field(String label, TextEditingController controller,
             maxLines: secret ? 1 : lines,
             obscureText: secret,
             enabled: enabled,
+            maxLength: maxLength,
             decoration: InputDecoration(
                 labelText: label, border: const OutlineInputBorder())));

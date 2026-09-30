@@ -251,6 +251,9 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
   }
 
   Widget _buildProfileSection() {
+    if (_userData == null || !_isSubLoaded) {
+      return const SizedBox(height: 80);
+    }
     final name = (_userData?['first_name']?.toString().trim().isNotEmpty ?? false)
         ? _userData!['first_name']
         : 'Clínica';

@@ -90,6 +90,19 @@ class _ClinicProfileScreenState extends State<ClinicProfileScreen> {
                   Text(widget.clinic['description'] ?? 'Sin descripción.',
                       style: const TextStyle(fontSize: 16)),
                   const SizedBox(height: 24),
+                  const Text('Contactos',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Text(widget.clinic['phone'] ?? 'Sin número de contacto principal',
+                      style: const TextStyle(fontSize: 16)),
+                  if (widget.clinic['contact_phone_2'] != null &&
+                      widget.clinic['contact_phone_2'].toString().trim().isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(widget.clinic['contact_phone_2'].toString(),
+                        style: const TextStyle(fontSize: 16)),
+                  ],
+                  const SizedBox(height: 24),
                   const Text('Doctores Asociados',
                       style:
                           TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
