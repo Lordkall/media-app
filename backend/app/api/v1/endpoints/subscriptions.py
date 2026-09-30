@@ -77,6 +77,8 @@ class SubscriptionDetail(BaseModel):
 class DoctorSubscriptionsResponse(BaseModel):
     current: Optional[SubscriptionDetail] = None
     pending: Optional[SubscriptionDetail] = None
+    clinic_access_blocked: bool = False
+    is_clinic_member: bool = False
 
 @router.get("/me", response_model=DoctorSubscriptionsResponse)
 async def get_my_subscriptions(
@@ -93,6 +95,27 @@ async def get_my_subscriptions(
             raise HTTPException(status_code=404, detail="Perfil de doctor no encontrado")
         entity_id = doc.id
         is_doctor = True
+        if doc.clinic_join_status == "pending":
+            return DoctorSubscriptionsResponse(is_clinic_member=True)
+        if doc.clinic_id:
+            from app.core.clinic_access import active_clinic_subscription
+            clinic_sub = await active_clinic_subscription(db, doc.clinic_id)
+            if not clinic_sub:
+                return DoctorSubscriptionsResponse(
+                    clinic_access_blocked=True,
+                    is_clinic_member=True,
+                )
+            return DoctorSubscriptionsResponse(
+                current=SubscriptionDetail(
+                    id=clinic_sub.id,
+                    plan=clinic_sub.plan.value,
+                    status=clinic_sub.status.value,
+                    start_date=clinic_sub.start_date,
+                    end_date=clinic_sub.end_date,
+                    grace_end_date=clinic_sub.grace_end_date,
+                ),
+                is_clinic_member=True,
+            )
     else:
         from app.models.clinics import Clinic
         result = await db.execute(select(Clinic).where(Clinic.user_id == current_user.id))
@@ -325,6 +348,10 @@ async def renew_subscription(
 
     days_added = 365 if req.billing_cycle == "Anual" else 30
     plan_enum = get_plan_enum(req.plan_name)
+    if is_doctor and plan_enum in (SubscriptionPlan.CLINIC_BASIC, SubscriptionPlan.CLINIC_VIP):
+        raise HTTPException(status_code=422, detail="Los planes de clínica solo pueden ser contratados por una clínica")
+    if not is_doctor and plan_enum not in (SubscriptionPlan.CLINIC_BASIC, SubscriptionPlan.CLINIC_VIP):
+        raise HTTPException(status_code=422, detail="Selecciona un plan para clínicas")
     
     if current_sub:
         start_date = current_sub.end_date

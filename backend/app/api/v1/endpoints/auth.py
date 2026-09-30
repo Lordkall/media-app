@@ -72,6 +72,28 @@ async def register(
     db: AsyncSession = Depends(get_db)
 ):
     try:
+        requested_clinic = None
+        if user_in.role.value == "doctor" and user_in.clinic_id is not None:
+            from app.models.clinics import Clinic
+            from app.core.clinic_access import active_clinic_subscription, clinic_has_capacity
+            from app.models.doctors import Doctor
+
+            requested_clinic = await db.scalar(
+                select(Clinic).where(Clinic.id == user_in.clinic_id)
+            )
+            if not requested_clinic or not requested_clinic.is_approved:
+                raise HTTPException(status_code=400, detail="La clínica seleccionada no está disponible")
+            requested_clinic_user_state = await db.scalar(
+                select(User.state).where(User.id == requested_clinic.user_id)
+            )
+            if requested_clinic_user_state != user_in.state:
+                raise HTTPException(status_code=400, detail="La clínica debe pertenecer al mismo estado")
+            clinic_sub = await active_clinic_subscription(db, requested_clinic.id)
+            if not clinic_sub:
+                raise HTTPException(status_code=400, detail="La clínica no tiene un plan activo")
+            if not await clinic_has_capacity(db, requested_clinic.id, clinic_sub.plan):
+                raise HTTPException(status_code=400, detail="La clínica alcanzó el máximo de doctores de su plan")
+
         new_user = User(
             email=user_in.email,
             first_name=user_in.first_name,
@@ -100,7 +122,9 @@ async def register(
                 consultation_fee=50.0,
                 is_sponsored=False,
                 is_featured=False,
-                is_approved=False
+                is_approved=False,
+                requested_clinic_id=requested_clinic.id if requested_clinic else None,
+                clinic_join_status="pending" if requested_clinic else None,
             )
             db.add(new_doc)
             
@@ -116,6 +140,16 @@ async def register(
                     action_url=None
                 )
                 db.add(notif)
+
+            if requested_clinic:
+                clinic_notification = Notification(
+                    user_id=requested_clinic.user_id,
+                    type=NotificationType.CLINIC_JOIN_REQUEST,
+                    title="Solicitud de afiliación",
+                    message=f"El doctor {new_user.first_name} {new_user.last_name} solicita unirse a tu clínica.",
+                    action_url="clinic_doctor_requests",
+                )
+                db.add(clinic_notification)
                 
         elif user_in.role.value == "patient":
             from app.models.patients import Patient
@@ -127,7 +161,8 @@ async def register(
             new_clinic = Clinic(
                 user_id=new_user.id,
                 description=user_in.clinic_description or "Nueva clínica en la plataforma.",
-                is_approved=False
+                is_approved=False,
+                invite_code=secrets.token_urlsafe(9),
             )
             db.add(new_clinic)
             

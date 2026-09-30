@@ -87,6 +87,8 @@ class Doctor(Base):
     max_patients_per_day: Mapped[int] = mapped_column(Integer, default=5, nullable=False)
 
     clinic_id: Mapped[Optional[int]] = mapped_column(ForeignKey("clinics.id", ondelete="SET NULL"), nullable=True)
+    requested_clinic_id: Mapped[Optional[int]] = mapped_column(ForeignKey("clinics.id", ondelete="SET NULL"), nullable=True)
+    clinic_join_status: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
 
     # Relaciones
     user: Mapped["User"] = relationship(back_populates="doctor_profile", foreign_keys="[Doctor.user_id]")

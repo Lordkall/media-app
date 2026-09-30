@@ -49,6 +49,10 @@ async def lifespan(app: FastAPI):
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS privacy_version VARCHAR(30);"))
             await conn.execute(text("ALTER TABLE clinics ADD COLUMN IF NOT EXISTS specialties JSON;"))
             await conn.execute(text("ALTER TABLE clinics ADD COLUMN IF NOT EXISTS contact_phone_2 VARCHAR(20);"))
+            await conn.execute(text("ALTER TABLE clinics ADD COLUMN IF NOT EXISTS invite_code VARCHAR(32);"))
+            await conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_clinics_invite_code ON clinics (invite_code) WHERE invite_code IS NOT NULL;"))
+            await conn.execute(text("ALTER TABLE doctors ADD COLUMN IF NOT EXISTS requested_clinic_id INTEGER REFERENCES clinics(id) ON DELETE SET NULL;"))
+            await conn.execute(text("ALTER TABLE doctors ADD COLUMN IF NOT EXISTS clinic_join_status VARCHAR(20);"))
             await conn.execute(text("ALTER TABLE appointments ALTER COLUMN patient_id DROP NOT NULL;"))
             await conn.execute(text("ALTER TABLE appointments ADD COLUMN IF NOT EXISTS patient_first_name VARCHAR(100);"))
             await conn.execute(text("ALTER TABLE appointments ADD COLUMN IF NOT EXISTS patient_last_name VARCHAR(100);"))
@@ -77,6 +81,8 @@ async def lifespan(app: FastAPI):
             "DOCTOR_REGISTERED",
             "DOCTOR_APPROVED",
             "SUPPORT_MESSAGE",
+            "CLINIC_JOIN_REQUEST",
+            "CLINIC_JOIN_APPROVED",
         ]
         async with engine.begin() as conn:
             for value in notification_values:

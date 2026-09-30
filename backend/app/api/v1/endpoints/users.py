@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from datetime import timezone
 from zoneinfo import ZoneInfo
 import base64
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import delete, select, update
 from app.core.database import get_db
-from app.models.users import User
+from app.models.users import User, RoleEnum as DatabaseRoleEnum
 from app.schemas.users import UserResponse, UserUpdate, PasswordChange
 
 # ... (the rest is unchanged below, but the import was at line 6, I should replace line 6)
@@ -17,7 +17,7 @@ from app.core.security import SECRET_KEY, ALGORITHM, verify_password, get_passwo
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
-async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)):
+async def get_current_user(request: Request, token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -38,6 +38,53 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
         raise credentials_exception
     if user.session_token is not None and payload.get("sid") != user.session_token:
         raise credentials_exception
+
+    restricted = False
+    clinic_id = None
+    if user.role == DatabaseRoleEnum.CLINIC:
+        from app.models.clinics import Clinic
+        clinic_id = await db.scalar(select(Clinic.id).where(Clinic.user_id == user.id))
+        restricted = True
+    elif user.role in (DatabaseRoleEnum.DOCTOR, DatabaseRoleEnum.ASSISTANT):
+        from app.models.doctors import Doctor
+        if user.role == DatabaseRoleEnum.DOCTOR:
+            doctor = await db.scalar(select(Doctor).where(Doctor.user_id == user.id))
+        else:
+            doctor = await db.get(Doctor, user.linked_doctor_id) if user.linked_doctor_id else None
+        if doctor and doctor.clinic_join_status == "pending":
+            restricted = True
+        elif doctor and doctor.clinic_id:
+            clinic_id = doctor.clinic_id
+            restricted = True
+
+    if restricted:
+        request_path = request.url.path
+        allowed = (
+            request_path == "/api/v1/users/me"
+            or request_path.startswith("/api/v1/subscriptions/")
+            or request_path == "/api/v1/doctors/me"
+            or request_path == "/api/v1/clinics/me"
+        )
+        if not allowed:
+            from app.core.clinic_access import active_clinic_subscription
+            clinic_has_active_plan = bool(
+                clinic_id
+                and await active_clinic_subscription(db, clinic_id)
+            )
+            doctor_pending = False
+            if user.role == DatabaseRoleEnum.DOCTOR:
+                from app.models.doctors import Doctor
+                doctor_pending = await db.scalar(
+                    select(Doctor.id).where(
+                        Doctor.user_id == user.id,
+                        Doctor.clinic_join_status == "pending",
+                    )
+                ) is not None
+            if not clinic_has_active_plan or doctor_pending:
+                raise HTTPException(
+                    status_code=403,
+                    detail="La clínica debe tener un plan activo y aprobar tu afiliación para habilitar el acceso.",
+                )
     return user
 
 @router.get("/me", response_model=UserResponse)

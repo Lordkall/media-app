@@ -485,6 +485,12 @@ async def approve_subscription(
             doc = await db.scalar(select(Doctor).where(Doctor.id == sub.doctor_id))
             if doc:
                 target_user_id = doc.user_id
+        elif sub.clinic_id:
+            from app.models.clinics import Clinic
+            clinic = await db.scalar(select(Clinic).where(Clinic.id == sub.clinic_id))
+            if clinic:
+                clinic.is_approved = True
+                target_user_id = clinic.user_id
         
         if target_user_id:
             approval_notif = Notification(

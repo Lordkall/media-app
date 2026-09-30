@@ -33,6 +33,9 @@ class DoctorResponse(BaseModel):
     total_reviews: int
     max_patients_per_day: int
     is_vip: Optional[bool] = False # A computed field for the frontend
+    clinic_id: Optional[int] = None
+    requested_clinic_id: Optional[int] = None
+    clinic_join_status: Optional[str] = None
     
     class Config:
         from_attributes = True

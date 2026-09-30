@@ -12,6 +12,7 @@ import 'register_screen.dart';
 import 'password_recovery_screen.dart';
 import 'select_plan_screen.dart';
 import 'payment_pending_screen.dart';
+import 'clinic_account_screens.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -284,11 +285,29 @@ class _LoginScreenState extends State<LoginScreen> {
           if (!mounted) return;
           if (docResponse.statusCode == 200) {
             final docData = jsonDecode(docResponse.body);
+            if (docData['clinic_join_status'] == 'pending') {
+              Navigator.of(context).pushReplacement(MaterialPageRoute(
+                  builder: (_) => const ClinicJoinPendingScreen()));
+              return;
+            }
             // Check their subscription status
             final subResp = await ApiClient.get('/subscriptions/me');
             if (!mounted) return;
             if (subResp.statusCode == 200) {
               final subData = jsonDecode(subResp.body);
+
+              if (subData['is_clinic_member'] == true) {
+                if (subData['clinic_access_blocked'] == true) {
+                  Navigator.of(context).pushReplacement(MaterialPageRoute(
+                      builder: (_) => const ClinicAccessBlockedScreen()));
+                  return;
+                }
+                if (subData['current'] != null) {
+                  Navigator.of(context).pushReplacement(MaterialPageRoute(
+                      builder: (_) => const MainDoctorScreen()));
+                  return;
+                }
+              }
 
               if (subData['current'] != null) {
                 final graceEnd =
@@ -328,6 +347,34 @@ class _LoginScreenState extends State<LoginScreen> {
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                 content: Text('Error al cargar perfil de doctor.')));
             return; // Prevent bypass
+          }
+        } else if (userData['role'] == 'clinic') {
+          final subResp = await ApiClient.get('/subscriptions/me');
+          if (!mounted) return;
+          if (subResp.statusCode != 200) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text('No se pudo verificar el plan de la clínica.')));
+            return;
+          }
+          final subData = jsonDecode(subResp.body);
+          final clinicData = <String, dynamic>{'role': 'clinic'};
+          if (subData['pending'] != null) {
+            Navigator.of(context).pushReplacement(MaterialPageRoute(
+                builder: (_) => const PaymentPendingScreen(isClinic: true)));
+            return;
+          }
+          if (subData['current'] == null) {
+            Navigator.of(context).pushReplacement(MaterialPageRoute(
+                builder: (_) => SelectPlanScreen(doctorData: clinicData)));
+            return;
+          }
+          final graceEnd = DateTime.tryParse(
+              subData['current']['grace_end_date']?.toString() ?? '');
+          if (graceEnd == null || DateTime.now().isAfter(graceEnd)) {
+            Navigator.of(context).pushReplacement(MaterialPageRoute(
+                builder: (_) =>
+                    SelectPlanScreen(doctorData: clinicData, isRenewal: true)));
+            return;
           }
         }
       } else {
@@ -576,8 +623,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                       Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                              builder: (_) =>
-                                                  const RegisterScreen()));
+                                              builder: (_) => RegisterScreen(
+                                                    initialClinicInviteCode: kIsWeb
+                                                        ? Uri.base
+                                                                .queryParameters[
+                                                            'clinic_invite']
+                                                        : null,
+                                                  )));
                                     },
                                     child: const Text('Crear cuenta',
                                         style: TextStyle(

@@ -16,6 +16,7 @@ import '../models/ve_catalogs.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import '../core/local_notification_service.dart';
 import 'package:flutter/foundation.dart';
+import 'clinic_account_screens.dart';
 
 class MainDoctorScreen extends StatefulWidget {
   const MainDoctorScreen({super.key});
@@ -110,7 +111,18 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
   }
 
   List<Widget> get _tabs {
-    if (_role == 'admin') {
+    if (_role == 'clinic') {
+      return [
+        ClinicHomeTab(
+          onCalendar: () => setState(() => _currentIndex = 1),
+          onDoctors: () => setState(() => _currentIndex = 3),
+        ),
+        const ClinicCalendarTab(),
+        const SizedBox.shrink(),
+        const ClinicDoctorsTab(),
+        const ProfileTab(),
+      ];
+    } else if (_role == 'admin') {
       return [
         AdminHomeTab(onProfileTap: () => setState(() => _currentIndex = 4)),
         const AdminSubscriptionsTab(),
@@ -171,17 +183,19 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
             )
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        heroTag: 'searchFAB',
-        backgroundColor: const Color(0xFF0056B3),
-        shape: const CircleBorder(),
-        onPressed: () {
-          setState(() {
-            _currentIndex = 2;
-          });
-        },
-        child: const Icon(Icons.search, color: Colors.white, size: 28),
-      ),
+      floatingActionButton: _role == 'clinic'
+          ? null
+          : FloatingActionButton(
+              heroTag: 'searchFAB',
+              backgroundColor: const Color(0xFF0056B3),
+              shape: const CircleBorder(),
+              onPressed: () {
+                setState(() {
+                  _currentIndex = 2;
+                });
+              },
+              child: const Icon(Icons.search, color: Colors.white, size: 28),
+            ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
@@ -193,7 +207,11 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildNavItem(Icons.home, 'Home', 0),
-              if (_role == 'admin') ...[
+              if (_role == 'clinic') ...[
+                _buildNavItem(Icons.calendar_month, 'Calendario', 1),
+                const SizedBox(width: 8),
+                _buildNavItem(Icons.groups, 'Doctores', 3),
+              ] else if (_role == 'admin') ...[
                 _buildNavItem(Icons.card_membership, 'Suscripción', 1),
                 const SizedBox(width: 48),
                 _buildNavItem(Icons.bar_chart, 'Estadísticas', 3),

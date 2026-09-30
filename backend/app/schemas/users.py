@@ -21,6 +21,7 @@ class UserCreate(BaseModel):
     gender: Optional[str] = "No Especificado"
     specialties: Optional[list[str]] = Field(default=None, max_length=5)
     clinic_description: Optional[str] = None
+    clinic_id: Optional[int] = None
     accept_terms: bool
     accept_privacy: bool
 

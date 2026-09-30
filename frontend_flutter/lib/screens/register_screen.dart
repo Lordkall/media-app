@@ -6,7 +6,8 @@ import '../core/api_client.dart';
 import '../models/ve_catalogs.dart';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
+  const RegisterScreen({super.key, this.initialClinicInviteCode});
+  final String? initialClinicInviteCode;
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -21,6 +22,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String _role = 'patient';
   String _gender = 'Prefiero no decirlo';
   String? _state;
+  bool _belongsToClinic = false;
+  int? _selectedClinicId;
+  List<dynamic> _availableClinics = [];
+  bool _loadingClinics = false;
 
   final _emailCtrl = TextEditingController();
   final _firstNameCtrl = TextEditingController();
@@ -39,12 +44,65 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final List<String> _specialtiesList = medicalSpecialties;
   final Set<String> _selectedSpecialties = {};
 
+  @override
+  void initState() {
+    super.initState();
+    final inviteCode = widget.initialClinicInviteCode;
+    if (inviteCode != null && inviteCode.isNotEmpty) {
+      _resolveClinicInvite(inviteCode);
+    }
+  }
+
+  Future<void> _resolveClinicInvite(String code) async {
+    try {
+      final response = await ApiClient.get('/clinics/invite/$code');
+      if (!mounted || response.statusCode != 200) return;
+      final clinic = jsonDecode(response.body) as Map<String, dynamic>;
+      setState(() {
+        _belongsToClinic = true;
+        _selectedClinicId = clinic['id'] as int;
+        _state = clinic['state']?.toString();
+        _availableClinics = [clinic];
+      });
+    } catch (_) {
+      // A normal registration remains available if an invite has expired.
+    }
+  }
+
+  Future<void> _loadAvailableClinics(String state) async {
+    setState(() {
+      _loadingClinics = true;
+      _availableClinics = [];
+      _selectedClinicId = null;
+    });
+    try {
+      final response = await ApiClient.get(
+          '/clinics/available?state=${Uri.encodeQueryComponent(state)}');
+      if (!mounted) return;
+      setState(() {
+        if (response.statusCode == 200) {
+          _availableClinics = jsonDecode(response.body) as List<dynamic>;
+        }
+        _loadingClinics = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loadingClinics = false);
+    }
+  }
+
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
 
     if (_state == null) {
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Por favor, selecciona un estado.')));
+      return;
+    }
+    if (_role == 'doctor' && _belongsToClinic && _selectedClinicId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Selecciona una clínica para enviar la solicitud.')),
+      );
       return;
     }
 
@@ -84,6 +142,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         "role": _role,
         "specialties": _selectedSpecialties.toList(),
         "clinic_description": _clinicDescriptionCtrl.text.trim(),
+        if (_role == 'doctor' && _belongsToClinic && _selectedClinicId != null)
+          "clinic_id": _selectedClinicId,
         "accept_terms": true,
         "accept_privacy": true,
       };
@@ -558,9 +618,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     },
                                     onSelected: (String selection) {
                                       setState(() => _state = selection);
+                                      if (_belongsToClinic) {
+                                        _loadAvailableClinics(selection);
+                                      }
                                     },
                                     fieldViewBuilder: (context, controller,
                                         focusNode, onFieldSubmitted) {
+                                      if ((_state ?? '').isNotEmpty &&
+                                          controller.text.isEmpty) {
+                                        controller.text = _state!;
+                                      }
                                       return TextField(
                                         controller: controller,
                                         focusNode: focusNode,
@@ -587,6 +654,67 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     },
                                   ),
                                 ),
+                                if (_role == 'doctor') ...[
+                                  CheckboxListTile(
+                                    contentPadding: EdgeInsets.zero,
+                                    title: const Text(
+                                      '¿Perteneces a alguna clínica?',
+                                      style: TextStyle(
+                                          color: Color(0xFF0B2545),
+                                          fontWeight: FontWeight.w600),
+                                    ),
+                                    value: _belongsToClinic,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _belongsToClinic = value ?? false;
+                                        _selectedClinicId = null;
+                                        _availableClinics = [];
+                                      });
+                                      if ((value ?? false) && _state != null) {
+                                        _loadAvailableClinics(_state!);
+                                      }
+                                    },
+                                    controlAffinity:
+                                        ListTileControlAffinity.leading,
+                                    activeColor: const Color(0xFF0056B3),
+                                  ),
+                                  if (_belongsToClinic) ...[
+                                    if (_loadingClinics)
+                                      const LinearProgressIndicator(),
+                                    DropdownButtonFormField<int>(
+                                      initialValue: _availableClinics.any((c) =>
+                                              c['id'] == _selectedClinicId)
+                                          ? _selectedClinicId
+                                          : null,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Selecciona una clínica',
+                                        border: OutlineInputBorder(),
+                                      ),
+                                      items: _availableClinics
+                                          .map(
+                                              (clinic) => DropdownMenuItem<int>(
+                                                    value: clinic['id'] as int,
+                                                    child: Text(
+                                                        '${clinic['name']} (${clinic['doctor_count'] ?? 0}/${clinic['capacity'] ?? ''})'),
+                                                  ))
+                                          .toList(),
+                                      onChanged: _availableClinics.isEmpty
+                                          ? null
+                                          : (value) => setState(
+                                              () => _selectedClinicId = value),
+                                    ),
+                                    if (!_loadingClinics &&
+                                        _availableClinics.isEmpty)
+                                      const Padding(
+                                        padding: EdgeInsets.only(top: 6),
+                                        child: Text(
+                                          'No hay clínicas con cupo y plan activo en este estado.',
+                                          style: TextStyle(
+                                              color: Color(0xFF475569)),
+                                        ),
+                                      ),
+                                  ],
+                                ],
                                 if (_role == 'clinic') ...[
                                   const SizedBox(height: 10),
                                   _buildTextField(
