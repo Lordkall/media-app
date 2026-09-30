@@ -89,6 +89,18 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"Notification enum migration error: {e}")
 
+    # SQLAlchemy persists Python Enum member names (for example, "CLINIC")
+    # in PostgreSQL. The legacy clinic migration added the lowercase value,
+    # which does not match the value used by the ORM during registration.
+    if engine.dialect.name == "postgresql":
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(
+                    text("ALTER TYPE roleenum ADD VALUE IF NOT EXISTS 'CLINIC'")
+                )
+        except Exception as e:
+            print(f"Role enum migration error: {e}")
+
     # Auto-migrate subscriptions table
     try:
         async with engine.begin() as conn:
