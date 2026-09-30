@@ -60,8 +60,9 @@ class ClinicResponse(BaseModel):
     first_name: str
     last_name: str
     email: str
-    phone: str
+    phone: str | None = None
     address: str | None
+    state: str | None = None
     avatar_url: str | None
     is_vip: bool
 
@@ -89,6 +90,7 @@ async def get_clinics(db: AsyncSession = Depends(get_db)):
             "email": u.email,
             "phone": u.phone,
             "address": u.address,
+            "state": u.state,
             "avatar_url": u.avatar_url,
             "is_vip": is_vip
         })

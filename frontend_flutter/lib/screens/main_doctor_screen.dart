@@ -116,9 +116,10 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
         ClinicHomeTab(
           onCalendar: () => setState(() => _currentIndex = 1),
           onDoctors: () => setState(() => _currentIndex = 3),
+          onSearch: () => setState(() => _currentIndex = 2),
         ),
         const ClinicCalendarTab(),
-        const SizedBox.shrink(),
+        const BrowseDoctorsTab(),
         const ClinicDoctorsTab(),
         const ProfileTab(),
       ];
@@ -183,9 +184,7 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
             )
         ],
       ),
-      floatingActionButton: _role == 'clinic'
-          ? null
-          : FloatingActionButton(
+      floatingActionButton: FloatingActionButton(
               heroTag: 'searchFAB',
               backgroundColor: const Color(0xFF0056B3),
               shape: const CircleBorder(),
@@ -209,7 +208,7 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
               _buildNavItem(Icons.home, 'Home', 0),
               if (_role == 'clinic') ...[
                 _buildNavItem(Icons.calendar_month, 'Calendario', 1),
-                const SizedBox(width: 8),
+                const SizedBox(width: 48),
                 _buildNavItem(Icons.groups, 'Doctores', 3),
               ] else if (_role == 'admin') ...[
                 _buildNavItem(Icons.card_membership, 'Suscripción', 1),

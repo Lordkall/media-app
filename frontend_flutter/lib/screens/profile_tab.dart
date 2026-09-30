@@ -32,6 +32,7 @@ class _ProfileTabState extends State<ProfileTab> {
   bool _isLoading = true;
   bool _isSaving = false;
   bool _isVip = false;
+  bool _isClinicVip = false;
 
   bool get _isDoctor => _userData?['role'] == 'doctor';
 
@@ -69,6 +70,15 @@ class _ProfileTabState extends State<ProfileTab> {
         if (responses[1].statusCode == 200) {
           subscription =
               Map<String, dynamic>.from(jsonDecode(responses[1].body));
+        }
+      } else if (user['role'] == 'clinic') {
+        final subResp = await ApiClient.get('/subscriptions/me');
+        if (subResp.statusCode == 200) {
+          final sub = jsonDecode(subResp.body) as Map<String, dynamic>;
+          final plan = sub['current']?['plan']?.toString() ?? '';
+          if (mounted) {
+            setState(() => _isClinicVip = plan == 'clinic_vip' || plan == 'vip');
+          }
         }
       }
       if (!mounted) return;
@@ -221,8 +231,8 @@ class _ProfileTabState extends State<ProfileTab> {
                 currentUser: true,
                 fallbackRole: _userData?['role']?.toString() ?? 'patient',
                 size: 120,
-                borderColor: _isDoctor && _isVip
-                    ? const Color(0xFFFFC107)
+                borderColor: (_isDoctor && _isVip) || _isClinicVip
+                    ? const Color(0xFFD7AF48)
                     : const Color(0xFF0056B3),
                 borderWidth: 4,
               ),
