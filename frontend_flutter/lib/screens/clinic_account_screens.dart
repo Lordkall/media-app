@@ -10,6 +10,7 @@ import '../widgets/doctor_header.dart';
 import '../widgets/profile_avatar.dart';
 import 'login_screen.dart';
 import 'support_messages_screen.dart';
+import 'select_plan_screen.dart';
 
 class ClinicJoinPendingScreen extends StatelessWidget {
   const ClinicJoinPendingScreen({super.key});
@@ -233,6 +234,30 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
                       );
                     }),
                   const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        if (_userData != null) {
+                          Navigator.of(context).push(MaterialPageRoute(
+                              builder: (_) => SelectPlanScreen(
+                                  doctorData: _userData!,
+                                  isRenewal: true)));
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0056B3),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text('Renovar o Cambiar Plan',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   ListTile(
                     onTap: () {
                       Navigator.of(context).push(MaterialPageRoute(

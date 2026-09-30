@@ -378,7 +378,7 @@ class _LoginScreenState extends State<LoginScreen> {
           }
           final subData = jsonDecode(subResp.body);
           final clinicData = <String, dynamic>{'role': 'clinic'};
-          if (subData['pending'] != null) {
+          if (subData['current'] == null && subData['pending'] != null) {
             Navigator.of(context).pushReplacement(MaterialPageRoute(
                 builder: (_) => const PaymentPendingScreen(isClinic: true)));
             return;
