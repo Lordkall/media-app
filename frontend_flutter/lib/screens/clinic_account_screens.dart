@@ -92,6 +92,7 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
   bool _isLoadingNotifications = true;
   bool _isVip = false;
   bool _isSubLoaded = false;
+  int? _doctorCount;
 
   @override
   void initState() {
@@ -133,6 +134,16 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
       } else {
         if (mounted) setState(() => _isLoadingNotifications = false);
       }
+
+      final meClinicRes = await ApiClient.get('/clinics/me');
+      if (meClinicRes.statusCode == 200) {
+        final meClinic = jsonDecode(meClinicRes.body);
+        final docRes = await ApiClient.get('/clinics/${meClinic['id']}/doctors');
+        if (docRes.statusCode == 200) {
+          final docs = jsonDecode(docRes.body) as List;
+          if (mounted) setState(() => _doctorCount = docs.length);
+        }
+      }
     } catch (_) {
       if (mounted) {
         setState(() {
@@ -161,34 +172,32 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
             const SizedBox(height: 16),
             _buildProfileSection(),
             const SizedBox(height: 24),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24.0),
-              child: Text(
-                'Panel de la Clínica',
-                style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0B2545)),
-                textAlign: TextAlign.center,
-              ),
-            ),
-            const SizedBox(height: 16),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 children: [
-                  _ClinicActionCard(
-                    icon: Icons.calendar_month,
-                    title: 'Calendario',
-                    subtitle: 'Doctores programados y citas por fecha',
-                    onTap: widget.onCalendar,
-                  ),
-                  const SizedBox(height: 8),
-                  _ClinicActionCard(
-                    icon: Icons.groups,
-                    title: 'Doctores',
-                    subtitle: 'Gestiona doctores y solicitudes de afiliación',
-                    onTap: widget.onDoctors,
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        )
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.medical_services, size: 40, color: Color(0xFF0056B3)),
+                        const SizedBox(height: 8),
+                        const Text('Doctores Asociados', style: TextStyle(fontSize: 16, color: Color(0xFF475569))),
+                        const SizedBox(height: 4),
+                        Text(_doctorCount == null ? '...' : '$_doctorCount', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF0B2545))),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 24),
                   const Text('Notificaciones Recientes',
