@@ -61,6 +61,7 @@ class ClinicResponse(BaseModel):
     last_name: str
     email: str
     phone: str | None = None
+    contact_phone_2: str | None = None
     address: str | None
     state: str | None = None
     avatar_url: str | None
@@ -89,6 +90,7 @@ async def get_clinics(db: AsyncSession = Depends(get_db)):
             "last_name": u.last_name,
             "email": u.email,
             "phone": u.phone,
+            "contact_phone_2": c.contact_phone_2,
             "address": u.address,
             "state": u.state,
             "avatar_url": u.avatar_url,

@@ -75,8 +75,17 @@ class _ClinicProfileScreenState extends State<ClinicProfileScreen> {
                                 style: const TextStyle(
                                     fontSize: 22, fontWeight: FontWeight.bold)),
                             const SizedBox(height: 4),
-                            Text(widget.clinic['address'] ?? 'Sin dirección',
-                                style: const TextStyle(color: Colors.grey)),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(widget.clinic['address'] ?? 'Sin dirección',
+                                      style: const TextStyle(color: Colors.grey)),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       )
@@ -94,13 +103,25 @@ class _ClinicProfileScreenState extends State<ClinicProfileScreen> {
                       style:
                           TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
-                  Text(widget.clinic['phone'] ?? 'Sin número de contacto principal',
-                      style: const TextStyle(fontSize: 16)),
+                  Row(
+                    children: [
+                      const Icon(Icons.phone, size: 16, color: Color(0xFF0056B3)),
+                      const SizedBox(width: 8),
+                      Text(widget.clinic['phone'] ?? 'Sin número de contacto principal',
+                          style: const TextStyle(fontSize: 16)),
+                    ],
+                  ),
                   if (widget.clinic['contact_phone_2'] != null &&
                       widget.clinic['contact_phone_2'].toString().trim().isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(widget.clinic['contact_phone_2'].toString(),
-                        style: const TextStyle(fontSize: 16)),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.phone, size: 16, color: Color(0xFF0056B3)),
+                        const SizedBox(width: 8),
+                        Text(widget.clinic['contact_phone_2'].toString(),
+                            style: const TextStyle(fontSize: 16)),
+                      ],
+                    ),
                   ],
                   const SizedBox(height: 24),
                   const Text('Doctores Asociados',

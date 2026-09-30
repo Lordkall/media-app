@@ -436,7 +436,7 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
                                       ));
                                 } else {
                                   final name = item['first_name'] ?? 'Clínica';
-                                  const specialty = 'Clínica';
+                                  final specialty = item['phone'] ?? 'Sin contacto';
                                   final address = item['address']
                                               ?.toString()
                                               .trim()
@@ -460,7 +460,7 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
                                           name: name,
                                           specialty: specialty,
                                           address: address,
-                                          cost: item['phone'] ?? 'Sin contacto',
+                                          cost: 'Clínica',
                                           isVip: isVip,
                                           isClinic: true,
                                           imageUrl: item['avatar_url'],
