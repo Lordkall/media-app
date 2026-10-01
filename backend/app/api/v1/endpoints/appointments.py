@@ -459,3 +459,21 @@ async def get_my_appointments(
         })
     return out
 
+@router.delete("/{appointment_id}")
+async def delete_appointment(
+    appointment_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    query = select(Appointment).where(Appointment.id == appointment_id)
+    appointment = (await db.execute(query)).scalar_one_or_none()
+    
+    if not appointment:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+        
+    await db.delete(appointment)
+    await db.commit()
+    return {"message": "Cita eliminada correctamente"}
+
+ 
+ 

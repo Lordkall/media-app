@@ -435,12 +435,53 @@ class _MisCitasTabState extends State<MisCitasTab> {
                                                     ),
                                                   ],
                                                 )
-                                              : Text(
-                                                  appt['status'] == 'cancelled' ? 'Cancelada' : 'Completada',
-                                                  style: TextStyle(
-                                                      color: appt['status'] == 'cancelled' ? Colors.grey : Colors.white70,
-                                                      fontSize: 16,
-                                                      fontWeight: FontWeight.bold),
+                                              : Row(
+                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                  children: [
+                                                    Text(
+                                                      appt['status'] == 'cancelled' ? 'Cancelada' : 'Completada',
+                                                      style: TextStyle(
+                                                          color: appt['status'] == 'cancelled' ? Colors.grey : Colors.white70,
+                                                          fontSize: 16,
+                                                          fontWeight: FontWeight.bold),
+                                                    ),
+                                                    if (_filterMode == 'Historial')
+                                                      IconButton(
+                                                        icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                                                        onPressed: () async {
+                                                          final confirm = await showDialog<bool>(
+                                                            context: context,
+                                                            builder: (c) => AlertDialog(
+                                                              title: const Text('Eliminar Cita'),
+                                                              content: const Text('¿Estás seguro de que deseas eliminar esta cita del historial?'),
+                                                              actions: [
+                                                                TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancelar')),
+                                                                TextButton(
+                                                                  onPressed: () => Navigator.pop(c, true),
+                                                                  child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          );
+                                                          if (confirm == true) {
+                                                            try {
+                                                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Eliminando cita...')));
+                                                              final resp = await ApiClient.delete('/appointments/${appt["id"]}');
+                                                              if (!context.mounted) return;
+                                                              if (resp.statusCode == 200 || resp.statusCode == 204) {
+                                                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cita eliminada')));
+                                                                _fetchAppointments();
+                                                              } else {
+                                                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${resp.body}')));
+                                                              }
+                                                            } catch (e) {
+                                                              if (!context.mounted) return;
+                                                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                                                            }
+                                                          }
+                                                        },
+                                                      ),
+                                                  ],
                                                 ),
                                         ),
                                         const SizedBox(width: 8),
