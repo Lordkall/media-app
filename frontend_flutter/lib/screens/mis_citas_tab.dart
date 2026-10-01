@@ -6,6 +6,7 @@ import '../widgets/profile_avatar.dart';
 import '../models/ve_catalogs.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'manual_appointment_sheet.dart';
+import 'reschedule_appointment_sheet.dart';
 
 class MisCitasTab extends StatefulWidget {
   const MisCitasTab({super.key, this.initialDate});
@@ -386,55 +387,60 @@ class _MisCitasTabState extends State<MisCitasTab> {
                                         MainAxisAlignment.spaceBetween,
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
-                                      Expanded(
-                                        child: GestureDetector(
-                                          onTap: () async {
-                                            if (appt['status'] == 'cancelled') {
-                                              return;
-                                            }
-                                            try {
-                                              ScaffoldMessenger.of(context)
-                                                  .showSnackBar(const SnackBar(
-                                                      content: Text(
-                                                          'Cancelando cita...')));
-                                              final resp = await ApiClient.patch(
-                                                  '/appointments/${appt["id"]}/cancel',
-                                                  {});
-                                              if (!context.mounted) return;
-                                              if (resp.statusCode == 200) {
-                                                ScaffoldMessenger.of(context)
-                                                    .showSnackBar(const SnackBar(
-                                                        content: Text(
-                                                            'Cita cancelada con éxito')));
-                                                _fetchAppointments();
+                                        Expanded(
+                                          child: GestureDetector(
+                                            onTap: () async {
+                                              if (appt['status'] == 'cancelled') return;
+                                              if (!_doctorView && appt['status'] == 'scheduled') {
+                                                final success = await showModalBottomSheet<bool>(
+                                                  context: context,
+                                                  isScrollControlled: true,
+                                                  useSafeArea: true,
+                                                  backgroundColor: Theme.of(context).colorScheme.surface,
+                                                  builder: (_) => RescheduleAppointmentSheet(
+                                                    appointmentId: appt['id'],
+                                                    doctorId: appt['doctor_id'],
+                                                  ),
+                                                );
+                                                if (success == true) {
+                                                  _fetchAppointments();
+                                                  return;
+                                                }
                                               } else {
-                                                ScaffoldMessenger.of(context)
-                                                    .showSnackBar(SnackBar(
-                                                        content: Text(
-                                                            'Error: ${resp.body}')));
+                                                try {
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                      const SnackBar(content: Text('Cancelando cita...')));
+                                                  final resp = await ApiClient.patch(
+                                                      '/appointments/${appt["id"]}/cancel', {});
+                                                  if (!context.mounted) return;
+                                                  if (resp.statusCode == 200) {
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                        const SnackBar(content: Text('Cita cancelada con éxito')));
+                                                    _fetchAppointments();
+                                                  } else {
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                        SnackBar(content: Text('Error: ${resp.body}')));
+                                                  }
+                                                } catch (e) {
+                                                  if (!context.mounted) return;
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                      SnackBar(content: Text('Error: $e')));
+                                                }
                                               }
-                                            } catch (e) {
-                                              if (!context.mounted) return;
-                                              ScaffoldMessenger.of(context)
-                                                  .showSnackBar(SnackBar(
-                                                      content:
-                                                          Text('Error: $e')));
-                                            }
-                                          },
-                                          child: Text(
-                                              appt['status'] == 'cancelled'
-                                                  ? 'Cancelada'
-                                                  : 'Cancelar Cita',
-                                              style: TextStyle(
-                                                  color: appt['status'] ==
-                                                          'cancelled'
-                                                      ? Colors.grey
-                                                      : const Color(0xFFFFA07A),
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold)),
+                                            },
+                                            child: Text(
+                                                appt['status'] == 'cancelled'
+                                                    ? 'Cancelada'
+                                                    : (!_doctorView && appt['status'] == 'scheduled' ? 'Reprogramar Cita' : 'Cancelar Cita'),
+                                                style: TextStyle(
+                                                    color: appt['status'] == 'cancelled'
+                                                        ? Colors.grey
+                                                        : (!_doctorView && appt['status'] == 'scheduled' ? const Color(0xFF87CEFA) : const Color(0xFFFFA07A)),
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.bold)),
+                                          ),
                                         ),
-                                      ),
-                                      const SizedBox(width: 8),
+                                        const SizedBox(width: 8),
                                       Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.end,

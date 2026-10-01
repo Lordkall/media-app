@@ -15,6 +15,11 @@ from pydantic import BaseModel, Field, field_validator
 
 router = APIRouter()
 
+class RescheduleAppointment(BaseModel):
+    appointment_date: date_type
+    turn_number: int = Field(gt=0)
+
+
 class ManualAppointmentCreate(BaseModel):
     appointment_date: date_type
     turn_number: int = Field(gt=0)
@@ -339,6 +344,7 @@ async def cancel_appointment(
 
     return {"message": "Cita cancelada y turnos actualizados."}
 
+$new_func
 @router.get("/my")
 async def get_my_appointments(
     current_user: User = Depends(get_current_user),
@@ -425,7 +431,17 @@ async def get_my_appointments(
         else:
             slot_minutes = 8 * 60 + (appt.turn_number - 1) * 30
         time_block = (datetime.min + timedelta(minutes=slot_minutes)).strftime("%I:%M %p")
+        
+        local_now = datetime.now(ZoneInfo("America/Caracas"))
+        duration = appt.appointment_duration_minutes or 30
+        appt_end_datetime = datetime.combine(appt.appointment_date, datetime.min.time()).replace(tzinfo=ZoneInfo("America/Caracas")) + timedelta(minutes=slot_minutes + duration)
+        
+        if appt.status == AppointmentStatus.SCHEDULED and local_now > appt_end_datetime:
+            appt.status = AppointmentStatus.COMPLETED
+            db.add(appt)
+            await db.commit()
             
+
         out.append({
             "id": appt.id,
             "patient_id": appt.patient_id,
@@ -442,3 +458,4 @@ async def get_my_appointments(
             "booking_source": appt.booking_source,
         })
     return out
+
