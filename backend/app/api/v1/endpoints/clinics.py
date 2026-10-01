@@ -315,7 +315,7 @@ async def get_clinic_calendar(
             "appointment_count": sum(counts.values()),
             "doctors": [{
                 "doctor_id": doctor_id,
-                "name": f"Dr. {doctor_map[doctor_id].first_name} {doctor_map[doctor_id].last_name}",
+                "name": f"{'Dra.' if doctor_map[doctor_id].gender in ['Femenino', 'Femenina'] else 'Dr.'} {doctor_map[doctor_id].first_name} {doctor_map[doctor_id].last_name}",
                 "appointment_count": counts.get(doctor_id, 0),
                 "profile_picture_url": doctor_map[doctor_id].avatar_url,
             } for doctor_id in sorted(scheduled[day])],

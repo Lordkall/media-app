@@ -46,4 +46,4 @@ def process_vip_reminders(db: Session):
 
 def send_reminder_message(patient, doctor, timeframe):
     # Lógica de integración con WhatsApp API o Email
-    print(f"Enviando recordatorio de {timeframe} a paciente ID {patient.id} para cita con Dr. ID {doctor.id}")
+    print(f"Enviando recordatorio de {timeframe} a paciente ID {patient.id} para cita con {'Dra.' if doctor.user.gender in ['Femenino', 'Femenina'] else 'Dr.'} ID {doctor.id}")

@@ -402,7 +402,8 @@ async def get_my_appointments(
         else:
             # Show doctor info
             if doc and doc.user:
-                display_name = f"Dr. {doc.user.first_name} {doc.user.last_name}"
+                prefix = "Dra." if doc.user.gender in ["Femenino", "Femenina"] else "Dr."
+                display_name = f"{prefix} {doc.user.first_name} {doc.user.last_name}"
                 avatar = doc.user.avatar_url or ""
             else:
                 display_name = "Dr. Desconocido"

@@ -758,6 +758,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       'Descripción de los servicios ofrecidos',
                                       _clinicDescriptionCtrl),
                                 ],
+                                const SizedBox(height: 16),
                                 _buildTextField(
                                     'Dirección Completa', _addressCtrl),
                                 _buildTextField('Contraseña', _passwordCtrl,

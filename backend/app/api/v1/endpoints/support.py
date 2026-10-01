@@ -110,7 +110,7 @@ async def get_tickets(
             if t.user.role == RoleEnum.PATIENT:
                 sender_name = f"Paciente {t.user.first_name} {t.user.last_name}"
             elif t.user.role == RoleEnum.DOCTOR:
-                sender_name = f"Dr. {t.user.first_name} {t.user.last_name}"
+                sender_name = f"{'Dra.' if t.user.gender in ['Femenino', 'Femenina'] else 'Dr.'} {t.user.first_name} {t.user.last_name}"
             elif t.user.role == RoleEnum.ADMIN:
                 sender_name = f"Admin {t.user.first_name} {t.user.last_name}"
                 

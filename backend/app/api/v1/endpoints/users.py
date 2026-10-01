@@ -264,7 +264,7 @@ async def get_my_notifications(
                     )
                     owner = await db.get(User, doctor_user_id) if doctor_user_id else None
                     if owner:
-                        owner_name = f"Dr. {owner.first_name} {owner.last_name}"
+                        owner_name = f"{'Dra.' if owner.gender in ['Femenino', 'Femenina'] else 'Dr.'} {owner.first_name} {owner.last_name}"
                 elif sub.clinic_id:
                     from app.models.clinics import Clinic
                     clinic_user_id = await db.scalar(
