@@ -62,6 +62,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (!mounted || response.statusCode != 200) return;
       final clinic = jsonDecode(response.body) as Map<String, dynamic>;
       setState(() {
+        _role = 'doctor';
         _belongsToClinic = true;
         _selectedClinicId = clinic['id'] as int;
         _state = clinic['state']?.toString();
@@ -468,32 +469,41 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                         fontSize: 14,
                                         color: Color(0xFF475569))),
                                 const SizedBox(height: 20),
-                                const Text('¿Cómo deseas registrarte?',
-                                    style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF0B2545))),
-                                const SizedBox(height: 10),
-                                Column(
-                                  children: [
-                                    Row(
-                                      children: [
-                                        _buildRoleButton('Soy Paciente',
-                                            Icons.person, 'patient'),
-                                        const SizedBox(width: 5),
-                                        _buildRoleButton('Soy Doctor',
-                                            Icons.medical_services, 'doctor'),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 10),
-                                    Row(
-                                      children: [
-                                        _buildRoleButton('Soy una Clínica',
-                                            Icons.local_hospital, 'clinic'),
-                                      ],
-                                    ),
-                                  ],
-                                ),
+                                if (_belongsToClinic) ...[
+                                  const Text('Te estás registrando como Doctor por invitación de una clínica.',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF0056B3))),
+                                ] else ...[
+                                  const Text('¿Cómo deseas registrarte?',
+                                      style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF0B2545))),
+                                  const SizedBox(height: 10),
+                                  Column(
+                                    children: [
+                                      Row(
+                                        children: [
+                                          _buildRoleButton('Soy Paciente',
+                                              Icons.person, 'patient'),
+                                          const SizedBox(width: 5),
+                                          _buildRoleButton('Soy Doctor',
+                                              Icons.medical_services, 'doctor'),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Row(
+                                        children: [
+                                          _buildRoleButton('Soy una Clínica',
+                                              Icons.local_hospital, 'clinic'),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ],
                                 const SizedBox(height: 20),
                                 if (_role != 'clinic') ...[
                                   const Text('Género',
