@@ -45,6 +45,8 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
   }
 
   Future<void> _checkClinicInvite() async {
+    final role = await AuthHelper.getRole();
+    if (role != 'doctor') return;
     final inviteCode = Uri.base.queryParameters['clinic_invite'];
     if (inviteCode != null && inviteCode.isNotEmpty) {
       try {
