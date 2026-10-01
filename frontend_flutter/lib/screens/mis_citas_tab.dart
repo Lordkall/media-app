@@ -193,6 +193,7 @@ class _MisCitasTabState extends State<MisCitasTab> {
                         DropdownButton<String>(
                           value: _filterMode,
                           underline: const SizedBox.shrink(),
+                          items: const [
                             DropdownMenuItem(
                                 value: 'Fecha',
                                 child: Text('Filtrar por fecha')),
