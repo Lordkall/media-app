@@ -344,7 +344,7 @@ async def cancel_appointment(
 
     return {"message": "Cita cancelada y turnos actualizados."}
 
-$new_func
+
 @router.get("/my")
 async def get_my_appointments(
     current_user: User = Depends(get_current_user),
