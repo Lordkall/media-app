@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import delete, func, select, update, or_
 from app.core.database import get_db
 from app.models.users import User, RoleEnum
 from app.models.doctors import Doctor
@@ -179,7 +179,7 @@ async def get_all_doctors(
 ):
     query = select(Doctor, User, Subscription).join(User, Doctor.user_id == User.id).outerjoin(
         Subscription, 
-        (Subscription.doctor_id == Doctor.id) & (Subscription.status == SubscriptionStatus.ACTIVE)
+        or_((Subscription.doctor_id == Doctor.id) & (Subscription.status == SubscriptionStatus.ACTIVE), (Doctor.clinic_id.isnot(None)) & (Doctor.clinic_join_status == 'approved') & (Subscription.clinic_id == Doctor.clinic_id) & (Subscription.status == SubscriptionStatus.ACTIVE))
     )
     result = await db.execute(query)
     
@@ -209,7 +209,7 @@ async def get_all_doctors(
             "address": user.address or 'Sin dirección registrada',
             "consultation_fee": doc.consultation_fee or 0.0,
             "avatar_url": user.avatar_url,
-            "is_vip": sub is not None and sub.plan == SubscriptionPlan.SPONSORED,
+            "is_vip": sub is not None and sub.plan in (SubscriptionPlan.SPONSORED, SubscriptionPlan.CLINIC_VIP),
             "plan": sub.plan.value if sub else "Ninguno",
             "subscription_id": sub.id if sub else None,
             "days_remaining": days_remaining,
