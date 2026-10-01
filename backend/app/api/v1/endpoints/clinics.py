@@ -99,27 +99,6 @@ async def get_clinics(db: AsyncSession = Depends(get_db)):
         })
     return clinics
 
-@router.get("/{clinic_id}/doctors")
-async def get_clinic_doctors(clinic_id: int, db: AsyncSession = Depends(get_db)):
-    query = select(Doctor, User).join(User, Doctor.user_id == User.id).where(Doctor.clinic_id == clinic_id)
-    result = await db.execute(query)
-    rows = result.all()
-    
-    docs = []
-    for d, u in rows:
-        docs.append({
-            "id": d.id,
-            "user_id": d.user_id,
-            "first_name": u.first_name,
-            "last_name": u.last_name,
-            "specialties": d.specialties,
-            "address": u.address,
-            "consultation_fee": d.consultation_fee,
-            "is_vip": d.is_sponsored,
-            "avatar_url": u.avatar_url
-        })
-    return docs
-
 
 @router.get("/available")
 async def get_available_clinics(
@@ -349,3 +328,24 @@ async def get_clinic_invite(
         clinic.invite_code = secrets.token_urlsafe(9)
         await db.commit()
     return {"code": clinic.invite_code, "url": f"https://saludnow.site/?clinic_invite={clinic.invite_code}"}
+@router.get("/{clinic_id}/doctors")
+async def get_clinic_doctors(clinic_id: int, db: AsyncSession = Depends(get_db)):
+    query = select(Doctor, User).join(User, Doctor.user_id == User.id).where(Doctor.clinic_id == clinic_id)
+    result = await db.execute(query)
+    rows = result.all()
+    
+    docs = []
+    for d, u in rows:
+        docs.append({
+            "id": d.id,
+            "user_id": d.user_id,
+            "first_name": u.first_name,
+            "last_name": u.last_name,
+            "specialties": d.specialties,
+            "address": u.address,
+            "consultation_fee": d.consultation_fee,
+            "is_vip": d.is_sponsored,
+            "avatar_url": u.avatar_url
+        })
+    return docs
+
