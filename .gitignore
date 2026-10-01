@@ -11,4 +11,4 @@ backend/test_fp.py
 page_attrs.txt
 page_help.txt
 runs.json
-*.txt
+
