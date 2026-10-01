@@ -152,10 +152,15 @@ async def update_doctor_availability(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    if current_user.role.value != "doctor":
+    if current_user.role.value not in ["doctor", "assistant"]:
         raise HTTPException(status_code=403, detail="User is not a doctor")
         
-    query = select(Doctor).where(Doctor.user_id == current_user.id).with_for_update()
+    if current_user.role.value == "doctor":
+        query = select(Doctor).where(Doctor.user_id == current_user.id).with_for_update()
+    else:
+        if not current_user.linked_doctor_id:
+            raise HTTPException(status_code=403, detail="Asistente no vinculado a ningún doctor")
+        query = select(Doctor).where(Doctor.id == current_user.linked_doctor_id).with_for_update()
     result = await db.execute(query)
     doc = result.scalars().first()
     

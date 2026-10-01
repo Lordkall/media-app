@@ -103,33 +103,44 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
             final availabilityRes =
                 await ApiClient.get('/doctors/$linkedDoctorId/availability');
             if (availabilityRes.statusCode == 200) {
-              _assistantAvailability = List<Map<String, dynamic>>.from(
-                  jsonDecode(availabilityRes.body));
+              final List<dynamic> avails = jsonDecode(availabilityRes.body);
+              setState(() {
+                _selectedDates = avails.map((a) => a['date'].toString()).toSet();
+                if (avails.isNotEmpty) {
+                  _selectedStartTime =
+                      avails.first['start_time'].toString().substring(0, 5);
+                  _selectedEndTime =
+                      avails.first['end_time'].toString().substring(0, 5);
+                  _slotDurationMinutes =
+                      (avails.first['slot_duration_minutes'] as num?)?.toInt() ??
+                          30;
+                }
+              });
             }
           }
         }
-        return;
-      }
-      final docRes = await ApiClient.get('/doctors/me');
-      if (docRes.statusCode == 200) {
-        final doc = jsonDecode(docRes.body);
-        _doctorId = doc['id'];
-        final availRes =
-            await ApiClient.get('/doctors/$_doctorId/availability');
-        if (availRes.statusCode == 200) {
-          final List<dynamic> avails = jsonDecode(availRes.body);
-          setState(() {
-            _selectedDates = avails.map((a) => a['date'].toString()).toSet();
-            if (avails.isNotEmpty) {
-              _selectedStartTime =
-                  avails.first['start_time'].toString().substring(0, 5);
-              _selectedEndTime =
-                  avails.first['end_time'].toString().substring(0, 5);
-              _slotDurationMinutes =
-                  (avails.first['slot_duration_minutes'] as num?)?.toInt() ??
-                      30;
-            }
-          });
+      } else {
+        final docRes = await ApiClient.get('/doctors/me');
+        if (docRes.statusCode == 200) {
+          final doc = jsonDecode(docRes.body);
+          _doctorId = doc['id'];
+          final availRes =
+              await ApiClient.get('/doctors/$_doctorId/availability');
+          if (availRes.statusCode == 200) {
+            final List<dynamic> avails = jsonDecode(availRes.body);
+            setState(() {
+              _selectedDates = avails.map((a) => a['date'].toString()).toSet();
+              if (avails.isNotEmpty) {
+                _selectedStartTime =
+                    avails.first['start_time'].toString().substring(0, 5);
+                _selectedEndTime =
+                    avails.first['end_time'].toString().substring(0, 5);
+                _slotDurationMinutes =
+                    (avails.first['slot_duration_minutes'] as num?)?.toInt() ??
+                        30;
+              }
+            });
+          }
         }
       }
     } catch (e) {
@@ -241,9 +252,7 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
           ),
           body: _isLoading
               ? const Center(child: CircularProgressIndicator())
-              : _isAssistant
-                  ? _buildAssistantSchedule()
-                  : SingleChildScrollView(
+              : SingleChildScrollView(
                       padding: const EdgeInsets.all(24.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -415,46 +424,6 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
                     ),
         ),
       ),
-    );
-  }
-
-  Widget _buildAssistantSchedule() {
-    final dates = List<Map<String, dynamic>>.from(_assistantAvailability)
-      ..sort((a, b) => a['date'].toString().compareTo(b['date'].toString()));
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        const Text('Horario del doctor',
-            style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF0B2545))),
-        const SizedBox(height: 8),
-        const Text('Esta es la disponibilidad configurada por tu doctor.',
-            style: TextStyle(color: Color(0xFF475569))),
-        const SizedBox(height: 16),
-        if (dates.isEmpty)
-          const Card(
-              child: Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Text('El doctor todavía no tiene días disponibles.')))
-        else
-          ...dates.map((day) {
-            final parsed = DateTime.tryParse(day['date']?.toString() ?? '');
-            final dateLabel = parsed == null
-                ? day['date'].toString()
-                : '${parsed.day.toString().padLeft(2, '0')}/${parsed.month.toString().padLeft(2, '0')}/${parsed.year}';
-            return Card(
-              child: ListTile(
-                leading:
-                    const Icon(Icons.calendar_month, color: Color(0xFF0056B3)),
-                title: Text(dateLabel),
-                subtitle: Text(
-                    '${day['start_time']?.toString().substring(0, 5) ?? '--:--'} - ${day['end_time']?.toString().substring(0, 5) ?? '--:--'}'),
-              ),
-            );
-          }),
-      ],
     );
   }
 
