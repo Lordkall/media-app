@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/api_client.dart';
+import '../widgets/profile_avatar.dart';
 import '../core/profile_image_helper.dart';
 import '../widgets/doctor_header.dart';
 import '../widgets/profile_avatar.dart';
@@ -540,8 +541,10 @@ class _ClinicCalendarTabState extends State<ClinicCalendarTab> {
             else
               ...doctors.map((item) => Card(
                       child: ListTile(
-                    leading:
-                        const CircleAvatar(child: Icon(Icons.medical_services)),
+                    leading: ProfileAvatar(
+                        imageUrl: item['profile_picture_url']?.toString(),
+                        fallbackRole: 'doctor',
+                        size: 40),
                     title: Text(item['name']?.toString() ?? 'Doctor'),
                     subtitle: Text('${item['appointment_count'] ?? 0} citas'),
                   ))),

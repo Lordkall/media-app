@@ -722,6 +722,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                               c['id'] == _selectedClinicId)
                                           ? _selectedClinicId
                                           : null,
+                                      isExpanded: true,
                                       decoration: const InputDecoration(
                                         labelText: 'Selecciona una clínica',
                                         border: OutlineInputBorder(),

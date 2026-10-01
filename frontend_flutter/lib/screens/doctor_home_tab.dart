@@ -253,29 +253,30 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
                             style: const TextStyle(
                                 fontSize: 16, color: Color(0xFF475569))),
                         const SizedBox(height: 24),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              if (_userData != null) {
-                                Navigator.of(context).push(MaterialPageRoute(
-                                    builder: (_) => SelectPlanScreen(
-                                        doctorData: _userData!,
-                                        isRenewal: true)));
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF0056B3),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12)),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
+                        if (_subData?['is_clinic_member'] != true)
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                if (_userData != null) {
+                                  Navigator.of(context).push(MaterialPageRoute(
+                                      builder: (_) => SelectPlanScreen(
+                                          doctorData: _userData!,
+                                          isRenewal: true)));
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF0056B3),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12)),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              child: const Text('Renovar o Cambiar Plan',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold)),
                             ),
-                            child: const Text('Renovar o Cambiar Plan',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold)),
                           ),
-                        ),
                       ],
                     ),
                   ),

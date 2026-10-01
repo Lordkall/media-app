@@ -10,6 +10,7 @@ from app.models.doctors import Doctor, Availability
 from pydantic import BaseModel
 from app.api.v1.endpoints.users import get_current_user
 from app.models.users import RoleEnum
+from app.models.notifications import Notification, NotificationType
 
 router = APIRouter()
 
@@ -316,6 +317,7 @@ async def get_clinic_calendar(
                 "doctor_id": doctor_id,
                 "name": f"Dr. {doctor_map[doctor_id].first_name} {doctor_map[doctor_id].last_name}",
                 "appointment_count": counts.get(doctor_id, 0),
+                "profile_picture_url": doctor_map[doctor_id].avatar_url,
             } for doctor_id in sorted(scheduled[day])],
         })
     return {"year": year, "month": month, "days": days}
