@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select`nfrom sqlalchemy.orm import joinedload
+from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import IntegrityError
 from app.api.dependencies import get_db, get_current_patient
 from app.api.v1.endpoints.users import get_current_user
@@ -557,5 +558,5 @@ async def reschedule_appointment(
     return {"message": "Cita reprogramada correctamente"}
 
 
- 
- 
+
+
