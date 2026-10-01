@@ -477,7 +477,7 @@ async def delete_appointment(
     return {"message": "Cita eliminada correctamente"}
 
 class RescheduleAppointment(BaseModel):
-    appointment_date: date
+    appointment_date: date_type
     turn_number: int
 
 @router.patch("/{appointment_id}/reschedule")
