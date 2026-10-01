@@ -684,12 +684,32 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
       next = TextEditingController(),
       repeat = TextEditingController();
   bool busy = false;
+  bool _obs1 = true;
+  bool _obs2 = true;
+  bool _obs3 = true;
+
+  Widget _pwdField(String label, TextEditingController c, bool obs, VoidCallback toggle) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: TextField(
+            controller: c,
+            obscureText: obs,
+            decoration: InputDecoration(
+                labelText: label, 
+                border: const OutlineInputBorder(),
+                suffixIcon: IconButton(
+                    icon: Icon(obs ? Icons.visibility_off : Icons.visibility),
+                    onPressed: toggle,
+                )
+            )));
+  }
+
   @override
   Widget build(BuildContext context) =>
       _SettingsPage(title: 'Cambiar contraseña', children: [
-        _field('Contraseña actual', current, secret: true),
-        _field('Nueva contraseña', next, secret: true),
-        _field('Repetir nueva contraseña', repeat, secret: true),
+        _pwdField('Contraseña actual', current, _obs1, () => setState(() => _obs1 = !_obs1)),
+        _pwdField('Nueva contraseña', next, _obs2, () => setState(() => _obs2 = !_obs2)),
+        _pwdField('Repetir nueva contraseña', repeat, _obs3, () => setState(() => _obs3 = !_obs3)),
         const Text(
             'Debe tener al menos 6 caracteres, letras, números y una mayúscula.'),
         FilledButton(

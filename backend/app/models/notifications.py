@@ -62,8 +62,8 @@ def receive_after_insert(mapper, connection: Connection, target: Notification):
             import threading
             threading.Thread(
                 target=send_push_notification, 
-                args=(fcm_token, target.title, target.message),
-                daemon=True
+                args=(fcm_token, target.title, target.message, {'action_url': str(target.action_url)} if target.action_url else {}),
+                daemon=False
             ).start()
         else:
             print(f"[FCM] Push skipped: user {target.user_id} has no registered device token")
