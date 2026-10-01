@@ -545,15 +545,18 @@ async def reschedule_appointment(
         pat_record = (await db.execute(patient_query)).scalar_one_or_none()
         patient_name = f"{pat_record.user.first_name} {pat_record.user.last_name}" if pat_record and pat_record.user else "Un paciente"
         
-        # We don't have send_email imported here probably, but we can try
-        # Actually sending email requires the email module.
         try:
-            from app.services.email import send_email
-            subject = "Cita Reprogramada"
-            html_content = f"Hola Dr/Dra {doc_record.user.first_name}, el paciente {patient_name} ha reprogramado su cita para el {req_date} en el turno #{requested_turn}."
-            await send_email(doc_record.user.email, subject, html_content)
-        except Exception:
-            pass
+            from app.models.notifications import Notification, NotificationType
+            notif = Notification(
+                user_id=doc_record.user.id,
+                type=NotificationType.APPOINTMENT_CREATED,
+                title="Cita Reprogramada",
+                message=f"El paciente {patient_name} ha reprogramado su cita para el {req_date} en el turno #{requested_turn}."
+            )
+            db.add(notif)
+            await db.commit()
+        except Exception as e:
+            print(f"Error saving rescheduled appointment notification: {e}")
 
     return {"message": "Cita reprogramada correctamente"}
 
