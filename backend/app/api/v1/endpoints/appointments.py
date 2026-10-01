@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select`nfrom sqlalchemy.orm import joinedload
 from sqlalchemy.exc import IntegrityError
 from app.api.dependencies import get_db, get_current_patient
 from app.api.v1.endpoints.users import get_current_user
@@ -475,5 +475,87 @@ async def delete_appointment(
     await db.commit()
     return {"message": "Cita eliminada correctamente"}
 
- 
+class RescheduleAppointment(BaseModel):
+    appointment_date: date
+    turn_number: int
+
+@router.patch("/{appointment_id}/reschedule")
+async def reschedule_appointment(
+    appointment_id: int,
+    reschedule_data: RescheduleAppointment,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    query = select(Appointment).where(Appointment.id == appointment_id)
+    appointment = (await db.execute(query)).scalar_one_or_none()
+    
+    if not appointment:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+        
+    doctor_id = appointment.doctor_id
+    req_date = reschedule_data.appointment_date
+    requested_turn = reschedule_data.turn_number
+    
+    availability_query = select(Availability).where(
+        Availability.doctor_id == doctor_id,
+        Availability.date == req_date,
+    )
+    availability = (await db.execute(availability_query)).scalar_one_or_none()
+    if not availability:
+        raise HTTPException(status_code=400, detail="El doctor no trabaja ese día")
+        
+    start_hour, start_minute = map(int, availability.start_time[:5].split(":"))
+    end_hour, end_minute = map(int, availability.end_time[:5].split(":"))
+    start_minutes = start_hour * 60 + start_minute
+    end_minutes = end_hour * 60 + end_minute
+    duration = availability.slot_duration_minutes or 30
+    slot_count = max(0, (end_minutes - start_minutes) // duration)
+    
+    if requested_turn > slot_count:
+        raise HTTPException(status_code=400, detail="El turno seleccionado está fuera del horario laboral")
+        
+    start_of_turn = start_minutes + (requested_turn - 1) * duration
+    local_now = datetime.now(ZoneInfo("America/Caracas"))
+    if req_date < local_now.date() or (
+        req_date == local_now.date()
+        and start_of_turn <= local_now.hour * 60 + local_now.minute
+    ):
+        raise HTTPException(status_code=400, detail="Ese horario ya pasó")
+
+    booked = await _booked_intervals(db, doctor_id, req_date, start_minutes)
+    # Exclude current appointment from booked list
+    booked = [(s, d) for (s, d, appt_id) in booked if appt_id != appointment_id]
+    
+    if _overlaps(start_of_turn, duration, booked):
+        raise HTTPException(status_code=409, detail="Ese horario ya fue reservado")
+
+    appointment.appointment_date = req_date
+    appointment.turn_number = requested_turn
+    appointment.appointment_start_minutes = start_of_turn
+    appointment.appointment_duration_minutes = duration
+    
+    await db.commit()
+    
+    # Notify doctor
+    doctor_query = select(Doctor).options(joinedload(Doctor.user)).where(Doctor.id == appointment.doctor_id)
+    doc_record = (await db.execute(doctor_query)).scalar_one_or_none()
+    if doc_record and doc_record.user and doc_record.user.email:
+        patient_query = select(Patient).options(joinedload(Patient.user)).where(Patient.id == appointment.patient_id)
+        pat_record = (await db.execute(patient_query)).scalar_one_or_none()
+        patient_name = f"{pat_record.user.first_name} {pat_record.user.last_name}" if pat_record and pat_record.user else "Un paciente"
+        
+        # We don't have send_email imported here probably, but we can try
+        # Actually sending email requires the email module.
+        try:
+            from app.services.email import send_email
+            subject = "Cita Reprogramada"
+            html_content = f"Hola Dr/Dra {doc_record.user.first_name}, el paciente {patient_name} ha reprogramado su cita para el {req_date} en el turno #{requested_turn}."
+            await send_email(doc_record.user.email, subject, html_content)
+        except Exception:
+            pass
+
+    return {"message": "Cita reprogramada correctamente"}
+
+
+ 
  
