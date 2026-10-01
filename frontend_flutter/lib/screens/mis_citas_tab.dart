@@ -43,32 +43,29 @@ class _MisCitasTabState extends State<MisCitasTab> {
   }
 
   List<dynamic> get _visibleAppointments {
-    final activeAppointments = _appointments
-        .where((appointment) => appointment['status'] != 'cancelled');
     if (_filterMode == 'Fecha') {
       final date = _selectedDate.toIso8601String().split('T')[0];
-      return activeAppointments
+      return _appointments
           .where((a) => a['date'].toString().startsWith(date))
           .toList();
     }
-    final recent = List<dynamic>.from(activeAppointments);
     final now = caracasNow();
-    recent.sort((a, b) {
+    if (_filterMode == 'Historial') {
+      final past = _appointments.where((a) {
+        final aDateTime = _appointmentDateTime(a);
+        return aDateTime.isBefore(now) || a['status'] == 'completed' || a['status'] == 'cancelled';
+      }).toList();
+      past.sort((a, b) => _appointmentDateTime(b).compareTo(_appointmentDateTime(a)));
+      return past;
+    }
+    
+    // Más próximas
+    final upcoming = _appointments.where((a) {
       final aDateTime = _appointmentDateTime(a);
-      final bDateTime = _appointmentDateTime(b);
-      final aUpcoming = !aDateTime.isBefore(now);
-      final bUpcoming = !bDateTime.isBefore(now);
-      if (aUpcoming != bUpcoming) return aUpcoming ? -1 : 1;
-      // Put the closest future appointment first. For past appointments,
-      // retain the most recently completed appointment at the top of history.
-      final byDate = aUpcoming
-          ? aDateTime.compareTo(bDateTime)
-          : bDateTime.compareTo(aDateTime);
-      if (byDate != 0) return byDate;
-      return (int.tryParse(a['id'].toString()) ?? 0)
-          .compareTo(int.tryParse(b['id'].toString()) ?? 0);
-    });
-    return recent;
+      return !aDateTime.isBefore(now) && a['status'] == 'scheduled';
+    }).toList();
+    upcoming.sort((a, b) => _appointmentDateTime(a).compareTo(_appointmentDateTime(b)));
+    return upcoming;
   }
 
   @override
@@ -196,13 +193,15 @@ class _MisCitasTabState extends State<MisCitasTab> {
                         DropdownButton<String>(
                           value: _filterMode,
                           underline: const SizedBox.shrink(),
-                          items: const [
                             DropdownMenuItem(
                                 value: 'Fecha',
                                 child: Text('Filtrar por fecha')),
                             DropdownMenuItem(
                                 value: 'Más próximas',
-                                child: Text('Más próximas')),
+                                child: Text('Próximas citas')),
+                            DropdownMenuItem(
+                                value: 'Historial',
+                                child: Text('Historial')),
                           ],
                           onChanged: (value) {
                             if (value != null) {
@@ -388,57 +387,60 @@ class _MisCitasTabState extends State<MisCitasTab> {
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
                                         Expanded(
-                                          child: GestureDetector(
-                                            onTap: () async {
-                                              if (appt['status'] == 'cancelled') return;
-                                              if (!_doctorView && appt['status'] == 'scheduled') {
-                                                final success = await showModalBottomSheet<bool>(
-                                                  context: context,
-                                                  isScrollControlled: true,
-                                                  useSafeArea: true,
-                                                  backgroundColor: Theme.of(context).colorScheme.surface,
-                                                  builder: (_) => RescheduleAppointmentSheet(
-                                                    appointmentId: appt['id'],
-                                                    doctorId: appt['doctor_id'],
-                                                  ),
-                                                );
-                                                if (success == true) {
-                                                  _fetchAppointments();
-                                                  return;
-                                                }
-                                              } else {
-                                                try {
-                                                  ScaffoldMessenger.of(context).showSnackBar(
-                                                      const SnackBar(content: Text('Cancelando cita...')));
-                                                  final resp = await ApiClient.patch(
-                                                      '/appointments/${appt["id"]}/cancel', {});
-                                                  if (!context.mounted) return;
-                                                  if (resp.statusCode == 200) {
-                                                    ScaffoldMessenger.of(context).showSnackBar(
-                                                        const SnackBar(content: Text('Cita cancelada con éxito')));
-                                                    _fetchAppointments();
-                                                  } else {
-                                                    ScaffoldMessenger.of(context).showSnackBar(
-                                                        SnackBar(content: Text('Error: ${resp.body}')));
-                                                  }
-                                                } catch (e) {
-                                                  if (!context.mounted) return;
-                                                  ScaffoldMessenger.of(context).showSnackBar(
-                                                      SnackBar(content: Text('Error: $e')));
-                                                }
-                                              }
-                                            },
-                                            child: Text(
-                                                appt['status'] == 'cancelled'
-                                                    ? 'Cancelada'
-                                                    : (!_doctorView && appt['status'] == 'scheduled' ? 'Reprogramar Cita' : 'Cancelar Cita'),
-                                                style: TextStyle(
-                                                    color: appt['status'] == 'cancelled'
-                                                        ? Colors.grey
-                                                        : (!_doctorView && appt['status'] == 'scheduled' ? const Color(0xFF87CEFA) : const Color(0xFFFFA07A)),
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.bold)),
-                                          ),
+                                          child: appt['status'] == 'scheduled'
+                                              ? Row(
+                                                  children: [
+                                                    if (!_doctorView) ...[
+                                                      GestureDetector(
+                                                        onTap: () async {
+                                                          final success = await showModalBottomSheet<bool>(
+                                                            context: context,
+                                                            isScrollControlled: true,
+                                                            useSafeArea: true,
+                                                            backgroundColor: Theme.of(context).colorScheme.surface,
+                                                            builder: (_) => RescheduleAppointmentSheet(
+                                                              appointmentId: appt['id'],
+                                                              doctorId: appt['doctor_id'],
+                                                            ),
+                                                          );
+                                                          if (success == true) {
+                                                            _fetchAppointments();
+                                                          }
+                                                        },
+                                                        child: const Text('Reprogramar',
+                                                            style: TextStyle(color: Color(0xFF87CEFA), fontSize: 16, fontWeight: FontWeight.bold)),
+                                                      ),
+                                                      const SizedBox(width: 16),
+                                                    ],
+                                                    GestureDetector(
+                                                      onTap: () async {
+                                                        try {
+                                                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cancelando cita...')));
+                                                          final resp = await ApiClient.patch('/appointments/${appt["id"]}/cancel', {});
+                                                          if (!context.mounted) return;
+                                                          if (resp.statusCode == 200) {
+                                                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cita cancelada con éxito')));
+                                                            _fetchAppointments();
+                                                          } else {
+                                                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${resp.body}')));
+                                                          }
+                                                        } catch (e) {
+                                                          if (!context.mounted) return;
+                                                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                                                        }
+                                                      },
+                                                      child: const Text('Cancelar Cita',
+                                                          style: TextStyle(color: Color(0xFFFFA07A), fontSize: 16, fontWeight: FontWeight.bold)),
+                                                    ),
+                                                  ],
+                                                )
+                                              : Text(
+                                                  appt['status'] == 'cancelled' ? 'Cancelada' : 'Completada',
+                                                  style: TextStyle(
+                                                      color: appt['status'] == 'cancelled' ? Colors.grey : Colors.white70,
+                                                      fontSize: 16,
+                                                      fontWeight: FontWeight.bold),
+                                                ),
                                         ),
                                         const SizedBox(width: 8),
                                       Column(
