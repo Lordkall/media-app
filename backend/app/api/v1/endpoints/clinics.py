@@ -153,6 +153,40 @@ async def resolve_clinic_invite(invite_code: str, db: AsyncSession = Depends(get
         "capacity": clinic_doctor_limit(subscription.plan),
     }
 
+@router.post("/invite/{invite_code}/join")
+async def join_clinic(invite_code: str, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    if current_user.role != RoleEnum.DOCTOR:
+        raise HTTPException(status_code=403, detail="Solo los doctores pueden unirse a una clínica")
+        
+    clinic = await db.scalar(
+        select(Clinic).where(Clinic.invite_code == invite_code, Clinic.is_approved.is_(True))
+    )
+    if not clinic:
+        raise HTTPException(status_code=404, detail="El enlace de invitación no es válido")
+        
+    subscription = await active_clinic_subscription(db, clinic.id)
+    if not subscription or not await clinic_has_capacity(db, clinic.id, subscription.plan):
+        raise HTTPException(status_code=409, detail="La clínica no acepta solicitudes en este momento")
+        
+    doctor = await db.scalar(select(Doctor).where(Doctor.user_id == current_user.id).with_for_update())
+    if not doctor:
+        raise HTTPException(status_code=404, detail="Doctor no encontrado")
+        
+    doctor.requested_clinic_id = clinic.id
+    doctor.clinic_join_status = "pending"
+    
+    from app.models.notifications import Notification, NotificationType
+    notif = Notification(
+        user_id=clinic.user_id,
+        type=NotificationType.CLINIC_JOIN_REQUEST,
+        title="Nueva solicitud de afiliación",
+        message=f"El Dr. {current_user.first_name} {current_user.last_name} ha solicitado unirse a tu clínica.",
+    )
+    db.add(notif)
+    
+    await db.commit()
+    return {"message": "Solicitud enviada a la clínica"}
+
 
 async def _owned_clinic(current_user: User, db: AsyncSession) -> Clinic:
     if current_user.role != RoleEnum.CLINIC:
@@ -181,6 +215,7 @@ async def get_my_doctors(
         "doctor_id": doctor.id, "user_id": user.id,
         "first_name": user.first_name, "last_name": user.last_name,
         "email": user.email, "phone": user.phone, "state": user.state,
+        "avatar_url": user.avatar_url,
         "specialties": doctor.specialties or [],
         "clinic_join_status": doctor.clinic_join_status or "approved",
     } for doctor, user in rows]
@@ -252,6 +287,22 @@ async def reject_doctor_request(
     doctor.clinic_join_status = "rejected"
     await db.commit()
     return {"message": "Solicitud rechazada"}
+
+@router.delete("/me/doctors/{doctor_id}")
+async def remove_doctor(
+    doctor_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    clinic = await _owned_clinic(current_user, db)
+    doctor = await db.scalar(select(Doctor).where(Doctor.id == doctor_id).with_for_update())
+    if not doctor or doctor.clinic_id != clinic.id:
+        raise HTTPException(status_code=404, detail="Doctor no encontrado en tu clínica")
+    
+    doctor.clinic_id = None
+    doctor.clinic_join_status = None
+    await db.commit()
+    return {"message": "Doctor expulsado correctamente"}
 
 
 @router.get("/me/calendar")

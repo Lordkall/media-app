@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'patient_home_tab.dart';
 import 'doctor_home_tab.dart';
@@ -36,6 +37,49 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
     super.initState();
     _loadRole();
     _setupFCM();
+    if (kIsWeb) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _checkClinicInvite();
+      });
+    }
+  }
+
+  Future<void> _checkClinicInvite() async {
+    final inviteCode = Uri.base.queryParameters['clinic_invite'];
+    if (inviteCode != null && inviteCode.isNotEmpty) {
+      try {
+        final infoRes = await ApiClient.get('/clinics/invite/$inviteCode');
+        if (!mounted) return;
+        if (infoRes.statusCode == 200) {
+          final info = jsonDecode(infoRes.body);
+          final confirm = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Invitación de clínica'),
+              content: Text('¿Deseas unirte a la clínica "${info['name']}"?'),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Rechazar')),
+                FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Aceptar')),
+              ],
+            ),
+          );
+          if (confirm == true && mounted) {
+            final res = await ApiClient.post('/clinics/invite/$inviteCode/join', {});
+            if (res.statusCode == 200) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Solicitud enviada a la clínica.')));
+            } else {
+              final d = jsonDecode(res.body);
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(d['detail']?.toString() ?? 'Error al enviar solicitud')));
+            }
+          }
+        } else {
+          final d = jsonDecode(infoRes.body);
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(d['detail']?.toString() ?? 'Enlace inválido')));
+        }
+      } catch (e) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error al procesar la invitación')));
+      }
+    }
   }
 
   Future<void> _setupFCM() async {

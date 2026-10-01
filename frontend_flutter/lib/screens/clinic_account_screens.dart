@@ -622,6 +622,43 @@ class _ClinicDoctorsTabState extends State<ClinicDoctorsTab>
     }
   }
 
+  Future<void> _removeDoctor(int doctorId, String name) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Expulsar doctor'),
+        content: Text('¿Estás seguro de que deseas expulsar al Dr. $name de tu clínica?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Expulsar'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
+    try {
+      final res = await ApiClient.delete('/clinics/me/doctors/$doctorId');
+      if (!mounted) return;
+      if (res.statusCode == 200) {
+        await _load();
+      } else {
+        var detail = 'Error desconocido';
+        try {
+          detail = jsonDecode(res.body)['detail']?.toString() ?? detail;
+        } catch (_) {}
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(detail)));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
+  }
+
   Future<void> _shareInvite() async {
     final response = await ApiClient.get('/clinics/me/invite');
     if (!mounted) return;
@@ -704,11 +741,18 @@ class _ClinicDoctorsTabState extends State<ClinicDoctorsTab>
                                   margin: const EdgeInsets.symmetric(
                                       horizontal: 16, vertical: 6),
                                   child: ListTile(
-                                    leading: const CircleAvatar(
-                                        child: Icon(Icons.medical_services)),
+                                    leading: ProfileAvatar(
+                                      imageUrl: item['avatar_url']?.toString(),
+                                      size: 40,
+                                      fallbackRole: 'doctor',
+                                    ),
                                     title: Text(
                                         'Dr. ${item['first_name'] ?? ''} ${item['last_name'] ?? ''}'),
                                     subtitle: Text(specialties.join(', ')),
+                                    trailing: IconButton(
+                                      icon: const Icon(Icons.delete, color: Colors.red),
+                                      onPressed: () => _removeDoctor(item['doctor_id'] as int, '${item['first_name']} ${item['last_name']}'),
+                                    ),
                                   ),
                                 );
                               }).toList(),
