@@ -462,6 +462,22 @@ async def approve_subscription(
         ))
         for e in existing.scalars():
             e.status = SubscriptionStatus.CANCELLED
+            
+        from app.core.clinic_access import clinic_doctor_limit
+        new_limit = clinic_doctor_limit(sub.plan)
+        # Fetch active doctors ordered by id (oldest first or newest first? Let's say we keep oldest and expel newest, or just the last in the list)
+        doctors_query = select(Doctor).where(
+            Doctor.clinic_id == sub.clinic_id,
+            Doctor.clinic_join_status == "approved"
+        ).order_by(Doctor.id)
+        active_doctors = (await db.execute(doctors_query)).scalars().all()
+        if len(active_doctors) > new_limit:
+            excess = len(active_doctors) - new_limit
+            # Expel the last 'excess' doctors
+            doctors_to_expel = active_doctors[-excess:]
+            for doc in doctors_to_expel:
+                doc.clinic_id = None
+                doc.clinic_join_status = None
         
     sub.status = SubscriptionStatus.ACTIVE
     sub.start_date = datetime.datetime.utcnow()

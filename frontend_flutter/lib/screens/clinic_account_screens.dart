@@ -567,6 +567,7 @@ class _ClinicDoctorsTabState extends State<ClinicDoctorsTab>
   List<dynamic> _requests = [];
   bool _loading = true;
   String? _inviteUrl;
+  int? _maxDoctors;
 
   @override
   void initState() {
@@ -584,7 +585,13 @@ class _ClinicDoctorsTabState extends State<ClinicDoctorsTab>
       if (!mounted) return;
       setState(() {
         if (results[0].statusCode == 200) {
-          _doctors = jsonDecode(results[0].body) as List<dynamic>;
+          final data = jsonDecode(results[0].body);
+          if (data is Map<String, dynamic>) {
+            _doctors = data['doctors'] as List<dynamic>;
+            _maxDoctors = data['max_doctors'] as int?;
+          } else {
+            _doctors = data as List<dynamic>;
+          }
         }
         if (results[1].statusCode == 200) {
           _requests = jsonDecode(results[1].body) as List<dynamic>;
@@ -664,7 +671,7 @@ class _ClinicDoctorsTabState extends State<ClinicDoctorsTab>
             ),
           TabBar(controller: _controller, tabs: [
             Tab(text: 'Solicitudes (${_requests.length})'),
-            Tab(text: 'Activos (${_doctors.length})'),
+            Tab(text: 'Activos (${_doctors.length}${_maxDoctors != null ? '/$_maxDoctors' : ''})'),
           ]),
           Expanded(
             child: _loading

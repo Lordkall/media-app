@@ -95,3 +95,39 @@ def send_reset_email(to_email: str, raw_token: str):
     except Exception as e:
         logger.error(f"Fallo al contactar Resend: {e}")
         raise Exception(f"Fallo conectando al servidor de correos: {str(e)}")
+
+async def send_email(to_email: str, subject: str, html_content: str):
+    """
+    Envía un correo HTML genérico usando el API de Resend de forma asíncrona (no bloqueante en asyncio pero envolviendo la llamada requests, o simplemente usando requests en threadpool).
+    Para simplicidad, usaremos requests en el event loop o aiohttp si estuviese, pero aquí requests basta si el tráfico no es extremo,
+    aunque lo ideal es usar asyncio.to_thread para no bloquear.
+    """
+    import asyncio
+    if not RESEND_API_KEY:
+        print(f"\n--- [MOCK EMAIL] ---")
+        print(f"To: {to_email}")
+        print(f"Subject: {subject}")
+        print(f"--------------------\n")
+        return
+        
+    headers = {
+        "Authorization": f"Bearer {RESEND_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    
+    data = {
+        "from": f"Salud Now <{SENDER_EMAIL}>",
+        "to": [to_email],
+        "subject": subject,
+        "html": html_content
+    }
+    
+    def _send():
+        response = requests.post("https://api.resend.com/emails", headers=headers, json=data, timeout=10)
+        if response.status_code >= 400:
+            logger.error(f"Error de Resend: {response.text}")
+    
+    try:
+        await asyncio.to_thread(_send)
+    except Exception as e:
+        logger.error(f"Fallo enviando email: {e}")

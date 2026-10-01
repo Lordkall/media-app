@@ -193,13 +193,23 @@ async def get_my_doctors(
         select(Doctor, User).join(User, User.id == Doctor.user_id)
         .where(Doctor.clinic_id == clinic.id, or_(Doctor.clinic_join_status.is_(None), Doctor.clinic_join_status == "approved")).order_by(User.first_name)
     )
-    return [{
+    from app.core.clinic_access import active_clinic_subscription, clinic_doctor_limit
+    
+    subscription = await active_clinic_subscription(db, clinic.id)
+    max_doc = clinic_doctor_limit(subscription.plan) if subscription else 0
+
+    doctors_list = [{
         "doctor_id": doctor.id, "user_id": user.id,
         "first_name": user.first_name, "last_name": user.last_name,
         "email": user.email, "phone": user.phone, "state": user.state,
         "specialties": doctor.specialties or [],
         "clinic_join_status": doctor.clinic_join_status or "approved",
     } for doctor, user in rows]
+    
+    return {
+        "doctors": doctors_list,
+        "max_doctors": max_doc
+    }
 
 
 @router.get("/me/doctor-requests")
