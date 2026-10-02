@@ -139,13 +139,7 @@ class _PatientHomeTabState extends State<PatientHomeTab> {
                         .map((a) {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12.0),
-                        child: _buildUpcomingAppointment(
-                            a['doctor_name'] ?? 'Dr. Desconocido',
-                            a['doctor_specialty'] ?? 'General',
-                            '${a['date']} · ${a['time_block'] ?? 'Hora pendiente'} · Turno #${a['turn_number']}',
-                            a['doctor_location']?.toString() ?? '',
-                            a['status'].toString().toLowerCase(),
-                            a['doctor_avatar']),
+                        child: _buildUpcomingAppointment(a),
                       );
                     }),
                   const SizedBox(height: 12),
@@ -267,93 +261,248 @@ class _PatientHomeTabState extends State<PatientHomeTab> {
     );
   }
 
-  Widget _buildUpcomingAppointment(String doctor, String specialty, String date,
-      String location, String status, String? avatarUrl) {
-    String displayStatus =
-        status == 'scheduled' ? 'PROGRAMADA' : status.toUpperCase();
-    return Container(
-      padding: const EdgeInsets.all(20), // Agrandado
-      decoration: BoxDecoration(
-        color: const Color(0xFF0056B3),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3))
-        ],
-      ),
-      child: Row(
-        children: [
-          ProfileAvatar(imageUrl: avatarUrl, size: 60, fallbackRole: 'doctor'),
-          const SizedBox(width: 16),
-          Expanded(
+    void _showAppointmentDetails(Map<String, dynamic> appt) {
+    final doctor = appt['doctor_name'] ?? 'Dr. Desconocido';
+    final specialty = appt['doctor_specialty'] ?? 'General';
+    final date = appt['date']?.toString() ?? '';
+    final time = appt['time_block']?.toString() ?? 'Hora pendiente';
+    final turn = appt['turn_number']?.toString() ?? '-';
+    final location = appt['doctor_location']?.toString() ?? '';
+    final reason = appt['appointment_reason']?.toString() ?? 'Consulta Médica';
+    final status = (appt['status'] ?? 'scheduled').toString().toLowerCase();
+    final avatarUrl = appt['doctor_avatar'] as String?;
+    final String displayStatus = status == 'scheduled' ? 'PROGRAMADA' : status.toUpperCase();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        contentPadding: const EdgeInsets.all(24),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: SingleChildScrollView(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(doctor,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18),
-                    overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 6),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                        child: Text(specialty,
-                            style: const TextStyle(
-                                color: Colors.white70, fontSize: 14),
-                            overflow: TextOverflow.ellipsis)),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                          color: Colors.green,
-                          borderRadius: BorderRadius.circular(8)),
-                      child: Text(displayStatus,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    const Icon(Icons.event, size: 14, color: Colors.white70),
-                    const SizedBox(width: 5),
-                    Expanded(
-                      child: Text(date,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis),
-                    ),
-                  ],
-                ),
-                if (location.trim().isNotEmpty) ...[
-                  const SizedBox(height: 5),
-                  Row(
+                Center(
+                  child: Column(
                     children: [
-                      const Icon(Icons.location_on,
-                          size: 14, color: Colors.white70),
-                      const SizedBox(width: 5),
-                      Expanded(
-                        child: Text(location,
-                            style: const TextStyle(
-                                color: Colors.white70, fontSize: 12),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis),
+                      ProfileAvatar(imageUrl: avatarUrl, size: 84, fallbackRole: 'doctor'),
+                      const SizedBox(height: 12),
+                      Text(
+                        doctor,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0B2545),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        specialty,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          color: Color(0xFF0056B3),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: status == 'scheduled' ? Colors.green.shade600 : Colors.blueGrey,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          displayStatus,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
                       ),
                     ],
                   ),
+                ),
+                const SizedBox(height: 20),
+                const Divider(),
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE2F1F8),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFF0056B3).withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.confirmation_number_outlined, color: Color(0xFF0056B3), size: 28),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('TURNO ASIGNADO',
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0056B3))),
+                            Text('Turno #$turn',
+                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0B2545))),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildDetailRow(Icons.calendar_today, 'Fecha', date),
+                const SizedBox(height: 12),
+                _buildDetailRow(Icons.access_time, 'Hora estimada', time),
+                if (location.trim().isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  _buildDetailRow(Icons.location_on, 'Ubicación / Consultorio', location),
+                ],
+                if (reason.trim().isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  _buildDetailRow(Icons.medical_services_outlined, 'Motivo de consulta', reason),
                 ],
               ],
             ),
           ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cerrar', style: TextStyle(color: Color(0xFF0056B3), fontWeight: FontWeight.bold, fontSize: 16)),
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: const Color(0xFF0056B3)),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 2),
+              Text(value, style: const TextStyle(fontSize: 14, color: Color(0xFF0B2545), fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildUpcomingAppointment(Map<String, dynamic> appt) {
+    final doctor = appt['doctor_name'] ?? 'Dr. Desconocido';
+    final specialty = appt['doctor_specialty'] ?? 'General';
+    final date = '${appt['date']} · ${appt['time_block'] ?? 'Hora pendiente'} · Turno #${appt['turn_number']}';
+    final location = appt['doctor_location']?.toString() ?? '';
+    final status = (appt['status'] ?? 'scheduled').toString().toLowerCase();
+    final avatarUrl = appt['doctor_avatar'] as String?;
+    final String displayStatus = status == 'scheduled' ? 'PROGRAMADA' : status.toUpperCase();
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () => _showAppointmentDetails(appt),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0056B3),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: const [
+              BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3))
+            ],
+          ),
+          child: Row(
+            children: [
+              ProfileAvatar(imageUrl: avatarUrl, size: 60, fallbackRole: 'doctor'),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(doctor,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18),
+                        overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                            child: Text(specialty,
+                                style: const TextStyle(
+                                    color: Colors.white70, fontSize: 14),
+                                overflow: TextOverflow.ellipsis)),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                              color: Colors.green,
+                              borderRadius: BorderRadius.circular(8)),
+                          child: Text(displayStatus,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(Icons.event, size: 14, color: Colors.white70),
+                        const SizedBox(width: 5),
+                        Expanded(
+                          child: Text(date,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis),
+                        ),
+                      ],
+                    ),
+                    if (location.trim().isNotEmpty) ...[
+                      const SizedBox(height: 5),
+                      Row(
+                        children: [
+                          const Icon(Icons.location_on,
+                              size: 14, color: Colors.white70),
+                          const SizedBox(width: 5),
+                          Expanded(
+                            child: Text(location,
+                                style: const TextStyle(
+                                    color: Colors.white70, fontSize: 12),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

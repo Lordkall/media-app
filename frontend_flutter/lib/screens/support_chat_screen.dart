@@ -261,10 +261,10 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
       final base64Image = base64Encode(bytes);
       final extension = image.name.split('.').last.toLowerCase();
       final mimeType = extension == 'png' ? 'image/png' : 'image/jpeg';
-      final dataUri = 'data:;base64,';
+      final dataUri = 'data:$mimeType;base64,$base64Image';
       
       final response = await ApiClient.post(
-          '/support//reply', {'message': dataUri});
+          '/support/${widget.ticket['id']}/reply', {'message': dataUri});
       if (response.statusCode != 200) {
         throw Exception('No se pudo enviar la imagen');
       }
@@ -272,7 +272,7 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al enviar imagen: ')),
+          SnackBar(content: Text('Error al enviar imagen: $e')),
         );
       }
     } finally {

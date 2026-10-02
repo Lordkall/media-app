@@ -63,6 +63,9 @@ async def lifespan(app: FastAPI):
             await conn.execute(text("ALTER TABLE appointments ADD COLUMN IF NOT EXISTS appointment_start_minutes INTEGER;"))
             await conn.execute(text("ALTER TABLE appointments ADD COLUMN IF NOT EXISTS appointment_duration_minutes INTEGER NOT NULL DEFAULT 30;"))
             await conn.execute(text("UPDATE appointments a SET appointment_start_minutes = (split_part(v.start_time, ':', 1)::INTEGER * 60 + split_part(v.start_time, ':', 2)::INTEGER + (a.turn_number - 1) * 30) FROM availabilities v WHERE v.doctor_id = a.doctor_id AND v.date = a.appointment_date AND a.appointment_start_minutes IS NULL;"))
+            await conn.execute(text("ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS deleted_by_user BOOLEAN DEFAULT FALSE;"))
+            await conn.execute(text("ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS deleted_by_admin BOOLEAN DEFAULT FALSE;"))
+            await conn.execute(text("ALTER TABLE ticket_messages ADD COLUMN IF NOT EXISTS is_read BOOLEAN DEFAULT FALSE;"))
             await conn.execute(text("DROP INDEX IF EXISTS uq_appointments_active_slot;"))
             await conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_appointments_active_start ON appointments (doctor_id, appointment_date, appointment_start_minutes) WHERE status <> 'CANCELLED' AND appointment_start_minutes IS NOT NULL;"))
     except Exception as e:
@@ -83,6 +86,18 @@ async def lifespan(app: FastAPI):
             "SUPPORT_MESSAGE",
             "CLINIC_JOIN_REQUEST",
             "CLINIC_JOIN_APPROVED",
+            "new_subscription",
+            "renewal_reminder",
+            "grace_period_warning",
+            "subscription_revoked",
+            "subscription_renewed",
+            "appointment_created",
+            "appointment_cancelled",
+            "doctor_registered",
+            "doctor_approved",
+            "support_message",
+            "clinic_join_request",
+            "clinic_join_approved",
         ]
         async with engine.begin() as conn:
             for value in notification_values:

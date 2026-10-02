@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.orm import selectinload
 from app.core.database import get_db
 from app.models.users import User, RoleEnum
@@ -20,7 +20,8 @@ class SupportCreate(BaseModel):
 class ReplyCreate(BaseModel):
     message: str
 
-@router.post("/")
+@router.post("", status_code=200)
+@router.post("/", status_code=200)
 async def create_ticket(
     ticket_in: SupportCreate,
     current_user: User = Depends(get_current_user),
@@ -28,8 +29,10 @@ async def create_ticket(
 ):
     new_ticket = SupportTicket(
         user_id=current_user.id,
-        subject=ticket_in.subject,
-        status="Pendiente"
+        subject=ticket_in.subject.strip(),
+        status="Pendiente",
+        deleted_by_user=False,
+        deleted_by_admin=False
     )
     db.add(new_ticket)
     await db.commit()
@@ -38,7 +41,8 @@ async def create_ticket(
     first_message = TicketMessage(
         ticket_id=new_ticket.id,
         sender_id=current_user.id,
-        message=ticket_in.message
+        message=ticket_in.message.strip(),
+        is_read=False
     )
     db.add(first_message)
     await db.commit()
@@ -46,43 +50,51 @@ async def create_ticket(
     # Persist an in-app notification and send a push after the commit.
     try:
         admins_result = await db.execute(select(User))
-        admins = [u for u in admins_result.scalars().all() if u.role == RoleEnum.ADMIN or u.role == "admin"]
+        admins = [u for u in admins_result.scalars().all() if getattr(u, 'role', None) in (RoleEnum.ADMIN, "admin", "ADMIN")]
         from app.core.firebase import send_push_notification
+        user_display = f"{current_user.first_name} {current_user.last_name or ''}".strip()
         for admin in admins:
-            notification = Notification(
-                user_id=admin.id,
-                type=NotificationType.SUPPORT_MESSAGE,
-                title="Nuevo ticket de soporte",
-                message=f"{current_user.first_name} {current_user.last_name} ha enviado un mensaje: {ticket_in.subject}",
-                action_url=f"support_ticket:{new_ticket.id}"
-            )
-            db.add(notification)
+            try:
+                notification = Notification(
+                    user_id=admin.id,
+                    type=NotificationType.SUPPORT_MESSAGE,
+                    title="Nuevo ticket de soporte",
+                    message=f"{user_display} ha enviado un mensaje: {ticket_in.subject}",
+                    action_url=f"support_ticket:{new_ticket.id}"
+                )
+                db.add(notification)
+                await db.commit()
+            except Exception as notif_err:
+                print(f"Error saving in-app notification for admin {admin.id}: {notif_err}")
+                await db.rollback()
             
-        await db.commit()
-        
         # Send push to all admins (after commit so FCM tokens are fresh)
         for admin in admins:
             if admin.fcm_token:
-                sent = send_push_notification(
-                    admin.fcm_token,
-                    "Nuevo ticket de soporte",
-                    f"{current_user.first_name} {current_user.last_name}: {ticket_in.subject}",
-                    {"type": "support_message", "ticket_id": str(new_ticket.id)}
-                )
-                print(f"Support push to admin {admin.id}: {'sent' if sent else 'failed'}")
+                try:
+                    sent = send_push_notification(
+                        admin.fcm_token,
+                        "Nuevo ticket de soporte",
+                        f"{user_display}: {ticket_in.subject}",
+                        {"type": "support_message", "ticket_id": str(new_ticket.id)}
+                    )
+                    print(f"Support push to admin {admin.id}: {'sent' if sent else 'failed'}")
+                except Exception as push_err:
+                    print(f"Push notification error for admin {admin.id}: {push_err}")
             else:
                 print(f"Support push skipped for admin {admin.id}: no FCM token")
     except Exception as e:
         print(f"Failed to notify admins: {e}")
-        await db.rollback()
 
-    return {"message": "Ticket created"}
+    return {"message": "Ticket created", "id": new_ticket.id}
+
 @router.get("/debug-tickets")
 async def debug_tickets(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(SupportTicket))
     tickets = result.scalars().all()
     return [{"id": t.id, "subject": t.subject, "user_id": t.user_id} for t in tickets]
 
+@router.get("")
 @router.get("/")
 async def get_tickets(
     current_user: User = Depends(get_current_user),
@@ -91,7 +103,7 @@ async def get_tickets(
     if current_user.role == RoleEnum.ADMIN or current_user.role == "admin":
         result = await db.execute(
             select(SupportTicket)
-            .where(SupportTicket.deleted_by_admin == False)
+            .where(or_(SupportTicket.deleted_by_admin == False, SupportTicket.deleted_by_admin == None))
             .options(selectinload(SupportTicket.user), selectinload(SupportTicket.messages))
             .order_by(SupportTicket.created_at.desc())
         )
@@ -100,7 +112,7 @@ async def get_tickets(
             select(SupportTicket)
             .options(selectinload(SupportTicket.user), selectinload(SupportTicket.messages))
             .where(SupportTicket.user_id == current_user.id)
-            .where(SupportTicket.deleted_by_user == False)
+            .where(or_(SupportTicket.deleted_by_user == False, SupportTicket.deleted_by_user == None))
             .order_by(SupportTicket.created_at.desc())
         )
     tickets = result.scalars().all()

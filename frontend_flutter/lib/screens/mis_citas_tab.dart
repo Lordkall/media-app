@@ -17,6 +17,47 @@ class MisCitasTab extends StatefulWidget {
 }
 
 class _MisCitasTabState extends State<MisCitasTab> {
+  Future<void> _deleteAppointment(Map<String, dynamic> appt) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Eliminar Cita'),
+        content: const Text(
+            '¿Estás seguro de que deseas eliminar esta cita del historial?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(c, false),
+              child: const Text('Cancelar')),
+          TextButton(
+            onPressed: () => Navigator.pop(c, true),
+            child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      try {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Eliminando cita...')));
+        final resp = await ApiClient.delete('/appointments/${appt["id"]}');
+        if (!mounted) return;
+        if (resp.statusCode == 200 || resp.statusCode == 204) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Cita eliminada')));
+          _fetchAppointments();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Error: ${resp.body}')));
+        }
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: $e')));
+      }
+    }
+  }
+
+
   late DateTime _selectedDate = widget.initialDate ?? caracasNow();
   List<dynamic> _appointments = [];
   bool _isLoading = true;
@@ -350,35 +391,49 @@ class _MisCitasTabState extends State<MisCitasTab> {
                                           ],
                                         ),
                                       ),
-                                      if (appt['patient_phone'] != null &&
-                                          appt['patient_phone']
-                                              .toString()
-                                              .isNotEmpty)
-                                        IconButton(
-                                          icon: const Icon(Icons.message,
-                                              color: Colors.greenAccent,
-                                              size: 32),
-                                          onPressed: () async {
-                                            final phone = appt['patient_phone']
-                                                .toString()
-                                                .replaceAll(
-                                                    RegExp(r'[^\d+]'), '');
-                                            final url = Uri.parse(
-                                                'https://wa.me/$phone');
-                                            try {
-                                              await launchUrl(url,
-                                                  mode: LaunchMode
-                                                      .externalApplication);
-                                            } catch (e) {
-                                              if (context.mounted) {
-                                                ScaffoldMessenger.of(context)
-                                                    .showSnackBar(const SnackBar(
-                                                        content: Text(
-                                                            'No se pudo abrir WhatsApp')));
-                                              }
-                                            }
-                                          },
-                                        ),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          if (appt['patient_phone'] != null &&
+                                              appt['patient_phone']
+                                                  .toString()
+                                                  .isNotEmpty)
+                                            IconButton(
+                                              icon: const Icon(Icons.message,
+                                                  color: Colors.greenAccent,
+                                                  size: 28),
+                                              tooltip: 'WhatsApp',
+                                              onPressed: () async {
+                                                final phone = appt['patient_phone']
+                                                    .toString()
+                                                    .replaceAll(
+                                                        RegExp(r'[^\d+]'), '');
+                                                final url = Uri.parse(
+                                                    'https://wa.me/$phone');
+                                                try {
+                                                  await launchUrl(url,
+                                                      mode: LaunchMode
+                                                          .externalApplication);
+                                                } catch (e) {
+                                                  if (context.mounted) {
+                                                    ScaffoldMessenger.of(context)
+                                                        .showSnackBar(const SnackBar(
+                                                            content: Text(
+                                                                'No se pudo abrir WhatsApp')));
+                                                  }
+                                                }
+                                              },
+                                            ),
+                                          if (_filterMode == 'Historial')
+                                            IconButton(
+                                              icon: const Icon(Icons.delete_outline,
+                                                  color: Colors.redAccent,
+                                                  size: 26),
+                                              tooltip: 'Eliminar del historial',
+                                              onPressed: () => _deleteAppointment(appt),
+                                            ),
+                                        ],
+                                      ),
                                     ],
                                   ),
                                   const SizedBox(height: 20),
@@ -436,54 +491,13 @@ class _MisCitasTabState extends State<MisCitasTab> {
                                                     ),
                                                   ],
                                                 )
-                                              : Row(
-                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                  children: [
-                                                    Text(
-                                                      appt['status'] == 'cancelled' ? 'Cancelada' : 'Completada',
-                                                      style: TextStyle(
-                                                          color: appt['status'] == 'cancelled' ? Colors.grey : Colors.white70,
-                                                          fontSize: 16,
-                                                          fontWeight: FontWeight.bold),
-                                                    ),
-                                                    if (_filterMode == 'Historial')
-                                                      IconButton(
-                                                        icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                                                        onPressed: () async {
-                                                          final confirm = await showDialog<bool>(
-                                                            context: context,
-                                                            builder: (c) => AlertDialog(
-                                                              title: const Text('Eliminar Cita'),
-                                                              content: const Text('¿Estás seguro de que deseas eliminar esta cita del historial?'),
-                                                              actions: [
-                                                                TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancelar')),
-                                                                TextButton(
-                                                                  onPressed: () => Navigator.pop(c, true),
-                                                                  child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
-                                                                ),
-                                                              ],
-                                                            ),
-                                                          );
-                                                          if (confirm == true) {
-                                                            try {
-                                                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Eliminando cita...')));
-                                                              final resp = await ApiClient.delete('/appointments/${appt["id"]}');
-                                                              if (!context.mounted) return;
-                                                              if (resp.statusCode == 200 || resp.statusCode == 204) {
-                                                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cita eliminada')));
-                                                                _fetchAppointments();
-                                                              } else {
-                                                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${resp.body}')));
-                                                              }
-                                                            } catch (e) {
-                                                              if (!context.mounted) return;
-                                                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-                                                            }
-                                                          }
-                                                        },
-                                                      ),
-                                                  ],
-                                                ),
+                                                                                             : Text(
+                                                   appt['status'] == 'cancelled' ? 'Cancelada' : 'Completada',
+                                                   style: TextStyle(
+                                                       color: appt['status'] == 'cancelled' ? Colors.grey : Colors.white70,
+                                                       fontSize: 16,
+                                                       fontWeight: FontWeight.bold),
+                                                 ),
                                         ),
                                         const SizedBox(width: 8),
                                       Column(

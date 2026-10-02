@@ -422,6 +422,8 @@ async def get_my_appointments(
                 display_name = f"{pat.user.first_name} {pat.user.last_name}"
                 display_loc = pat.user.state or ""
                 avatar = pat.user.avatar_url or ""
+                if not avatar and pat.user.avatar_data:
+                    avatar = f"data:{pat.user.avatar_content_type or 'image/jpeg'};base64,{pat.user.avatar_data}"
                 phone = pat.contact_phone or ""
                 motivo = pat.medical_history or "Consulta"
             else:
@@ -437,6 +439,8 @@ async def get_my_appointments(
                 prefix = "Dra." if doc.user.gender in ["Femenino", "Femenina"] else "Dr."
                 display_name = f"{prefix} {doc.user.first_name} {doc.user.last_name}"
                 avatar = doc.user.avatar_url or ""
+                if not avatar and doc.user.avatar_data:
+                    avatar = f"data:{doc.user.avatar_content_type or 'image/jpeg'};base64,{doc.user.avatar_data}"
             else:
                 display_name = "Dr. Desconocido"
                 avatar = ""
@@ -482,6 +486,7 @@ async def get_my_appointments(
             "date": appt.appointment_date.isoformat(),
             "turn_number": appt.turn_number,
             "booking_source": appt.booking_source,
+            "appointment_reason": appt.appointment_reason or (pat.medical_history if pat else "Consulta Médica"),
         })
     return out
 
