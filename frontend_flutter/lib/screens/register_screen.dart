@@ -7,6 +7,7 @@ import 'dart:ui';
 import '../core/api_client.dart';
 import '../models/ve_catalogs.dart';
 import 'select_plan_screen.dart';
+import 'legal_screens.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key, this.initialClinicInviteCode});
@@ -17,10 +18,7 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  static const _termsText =
-      'El uso de esta aplicación implica la aceptación de todas las normas y condiciones descritas. El usuario es responsable de garantizar la veracidad de su información y mantener la seguridad de su cuenta. No nos hacemos responsables por la calidad del servicio médico ni por interrupciones en el sistema.';
-  static const _privacyText =
-      'Recolectamos datos de contacto y el motivo de la cita registrado por el usuario, como consulta o entrega de exámenes, para gestionar la agenda y mejorar la plataforma. No manejamos información médica detallada o diagnósticos. Sus datos están protegidos y no se comparten sin su consentimiento, y el usuario tiene el derecho de acceder, modificar o eliminar su información en cualquier momento.';
+  bool _acceptedTerms = false;
   final _formKey = GlobalKey<FormState>();
   String _role = 'patient';
   String _gender = 'Prefiero no decirlo';
@@ -128,8 +126,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    final accepted = await _showConsentDialog();
-    if (accepted != true || !mounted) return;
+    if (!_acceptedTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Debes aceptar los Términos y Políticas para continuar.')));
+      return;
+    }
 
     setState(() => _isLoading = true);
 
@@ -230,57 +231,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return 'Verifica los datos o si el correo ya existe.';
   }
 
-  Future<bool?> _showConsentDialog() {
-    bool terms = false;
-    bool privacy = false;
-    return showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, update) => AlertDialog(
-          title: const Text('Términos y privacidad'),
-          content: SizedBox(
-            width: 520,
-            child: SingleChildScrollView(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Términos y Condiciones',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    const Text(_termsText),
-                    CheckboxListTile(
-                        contentPadding: EdgeInsets.zero,
-                        value: terms,
-                        title: const Text('Acepto los Términos y Condiciones'),
-                        onChanged: (v) => update(() => terms = v ?? false)),
-                    const Divider(),
-                    const Text('Política de Privacidad',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    const Text(_privacyText),
-                    CheckboxListTile(
-                        contentPadding: EdgeInsets.zero,
-                        value: privacy,
-                        title: const Text('Acepto la Política de Privacidad'),
-                        onChanged: (v) => update(() => privacy = v ?? false)),
-                  ]),
-            ),
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(dialogContext, false),
-                child: const Text('Rechazar')),
-            FilledButton(
-                onPressed: terms && privacy
-                    ? () => Navigator.pop(dialogContext, true)
-                    : null,
-                child: const Text('Aceptar y registrarme')),
-          ],
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildRoleButton(String title, IconData icon, String roleValue) {
     final isSelected = _role == roleValue;
@@ -781,8 +732,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     isPassword: true,
                                     obscureText: _obscureRepeatPassword,
                                     onToggleObscure: () => setState(() =>
-                                        _obscureRepeatPassword =
+                                      _obscureRepeatPassword =
                                             !_obscureRepeatPassword)),
+                                const SizedBox(height: 10),
+                                CheckboxListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  controlAffinity: ListTileControlAffinity.leading,
+                                  activeColor: const Color(0xFF0056B3),
+                                  value: _acceptedTerms,
+                                  onChanged: (val) => setState(() => _acceptedTerms = val ?? false),
+                                  title: Wrap(
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    children: [
+                                      const Text('Acepto los ', style: TextStyle(fontSize: 12)),
+                                      InkWell(
+                                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TermsAndConditionsScreen())),
+                                        child: const Text('Términos y Condiciones', style: TextStyle(fontSize: 12, color: Color(0xFF0056B3), decoration: TextDecoration.underline)),
+                                      ),
+                                      const Text(', la ', style: TextStyle(fontSize: 12)),
+                                      InkWell(
+                                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen())),
+                                        child: const Text('Política de Privacidad', style: TextStyle(fontSize: 12, color: Color(0xFF0056B3), decoration: TextDecoration.underline)),
+                                      ),
+                                      const Text(' y la ', style: TextStyle(fontSize: 12)),
+                                      InkWell(
+                                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CookiesPolicyScreen())),
+                                        child: const Text('Política de Cookies', style: TextStyle(fontSize: 12, color: Color(0xFF0056B3), decoration: TextDecoration.underline)),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                                 const SizedBox(height: 20),
                                 ElevatedButton(
                                   onPressed: _isLoading ? null : _register,
