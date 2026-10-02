@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:app_links/app_links.dart';
+import 'dart:async';
 import '../core/api_client.dart';
 import '../core/profile_image_helper.dart';
 import 'main_doctor_screen.dart';
@@ -32,6 +34,9 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _emailShowsMask = false;
   bool _passwordShowsMask = false;
   final LocalAuthentication _localAuth = LocalAuthentication();
+  late AppLinks _appLinks;
+  StreamSubscription<Uri>? _linkSubscription;
+  String? _clinicInviteCode;
 
   Future<void> _openLatestRelease() async {
     final opened = await launchUrl(
@@ -49,7 +54,39 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
+    _initAppLinks();
     _checkSavedLogin();
+  }
+
+  Future<void> _initAppLinks() async {
+    _appLinks = AppLinks();
+    try {
+      final initialUri = await _appLinks.getInitialLink();
+      if (initialUri != null) {
+        _handleDeepLink(initialUri);
+      }
+    } catch (e) {
+      debugPrint("Error al obtener el link inicial: $e");
+    }
+    _linkSubscription = _appLinks.uriLinkStream.listen((uri) {
+      _handleDeepLink(uri);
+    });
+  }
+
+  void _handleDeepLink(Uri uri) {
+    if (uri.queryParameters.containsKey('clinic_invite')) {
+      setState(() {
+        _clinicInviteCode = uri.queryParameters['clinic_invite'];
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _linkSubscription?.cancel();
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 
   Future<void> _checkSavedLogin() async {
@@ -120,12 +157,6 @@ class _LoginScreenState extends State<LoginScreen> {
     return '${localPart.substring(0, visibleCount)}${List.filled(maskedCount, '*').join()}${email.substring(atIndex)}';
   }
 
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
 
   Future<void> _loginWithBiometrics() async {
     final prefs = await SharedPreferences.getInstance();
@@ -648,7 +679,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                                         ? Uri.base
                                                                 .queryParameters[
                                                             'clinic_invite']
-                                                        : null,
+                                                        : _clinicInviteCode,
                                                   )));
                                     },
                                     child: const Text('Crear cuenta',
