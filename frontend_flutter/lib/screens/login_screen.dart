@@ -159,7 +159,6 @@ class _LoginScreenState extends State<LoginScreen> {
     return '${localPart.substring(0, visibleCount)}${List.filled(maskedCount, '*').join()}${email.substring(atIndex)}';
   }
 
-
   Future<void> _loginWithBiometrics() async {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
@@ -480,259 +479,294 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Center(
                         child: Padding(
                           padding: const EdgeInsets.all(24.0),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(25),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                  child: Container(
-                    padding: const EdgeInsets.all(24.0),
-                    decoration: BoxDecoration(
-                      color: const Color(0x50FFFFFF),
-                      borderRadius: BorderRadius.circular(25),
-                      border:
-                          Border.all(color: const Color(0x80FFFFFF), width: 1),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Image.asset(
-                          'assets/logo.png',
-                          height: 100,
-                          errorBuilder: (context, error, stackTrace) {
-                            return const Icon(Icons.medical_services,
-                                size: 80, color: Color(0xFF0056B3));
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Inicie sesión',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF0056B3),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Ingrese a su cuenta de Salud Now',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF475569),
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-                        TextField(
-                          controller: _emailController,
-                          onTap: () {
-                            if (_emailShowsMask) {
-                              _emailController.clear();
-                              setState(() => _emailShowsMask = false);
-                            }
-                          },
-                          textInputAction: TextInputAction.next,
-                          decoration: InputDecoration(
-                            labelText: 'Correo Electrónico',
-                            filled: true,
-                            fillColor: const Color(0x20FFFFFF),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide:
-                                  const BorderSide(color: Color(0x60FFFFFF)),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide:
-                                  const BorderSide(color: Color(0x60FFFFFF)),
-                            ),
-                            prefixIcon: const Icon(Icons.email,
-                                color: Color(0xFF0B3C85)),
-                            labelStyle:
-                                const TextStyle(color: Color(0xFF0B2545)),
-                          ),
-                          keyboardType: TextInputType.emailAddress,
-                          style: const TextStyle(color: Color(0xFF0B2545)),
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: _passwordController,
-                          onTap: () {
-                            if (_passwordShowsMask) {
-                              _passwordController.clear();
-                              setState(() {
-                                _passwordShowsMask = false;
-                                _obscurePassword = true;
-                              });
-                            }
-                          },
-                          textInputAction: TextInputAction.done,
-                          onSubmitted: (_) => _isLoading ? null : _login(),
-                          decoration: InputDecoration(
-                            labelText: 'Contraseña',
-                            filled: true,
-                            fillColor: const Color(0x20FFFFFF),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide:
-                                  const BorderSide(color: Color(0x60FFFFFF)),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide:
-                                  const BorderSide(color: Color(0x60FFFFFF)),
-                            ),
-                            prefixIcon: const Icon(Icons.lock,
-                                color: Color(0xFF0B3C85)),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility_off
-                                    : Icons.visibility,
-                                color: const Color(0xFF0B3C85),
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _obscurePassword = !_obscurePassword;
-                                });
-                              },
-                            ),
-                            labelStyle:
-                                const TextStyle(color: Color(0xFF0B2545)),
-                          ),
-                          obscureText: _obscurePassword,
-                          style: const TextStyle(color: Color(0xFF0B2545)),
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton(
-                          onPressed: _isLoading ? null : _login,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF0056B3),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
-                            elevation: 0,
-                          ),
-                          child: _isLoading
-                              ? const Row(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(25),
+                            child: BackdropFilter(
+                              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                              child: Container(
+                                padding: const EdgeInsets.all(24.0),
+                                decoration: BoxDecoration(
+                                  color: const Color(0x50FFFFFF),
+                                  borderRadius: BorderRadius.circular(25),
+                                  border: Border.all(
+                                      color: const Color(0x80FFFFFF), width: 1),
+                                ),
+                                child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
                                   children: [
-                                    SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                            color: Colors.white,
-                                            strokeWidth: 2)),
-                                    SizedBox(width: 12),
-                                    Text('Ingresando...',
-                                        style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white)),
+                                    Image.asset(
+                                      'assets/logo.png',
+                                      height: 100,
+                                      errorBuilder:
+                                          (context, error, stackTrace) {
+                                        return const Icon(
+                                            Icons.medical_services,
+                                            size: 80,
+                                            color: Color(0xFF0056B3));
+                                      },
+                                    ),
+                                    const SizedBox(height: 16),
+                                    const Text(
+                                      'Inicie sesión',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.w800,
+                                        color: Color(0xFF0056B3),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    const Text(
+                                      'Ingrese a su cuenta de Salud Now',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Color(0xFF475569),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 32),
+                                    TextField(
+                                      controller: _emailController,
+                                      onTap: () {
+                                        if (_emailShowsMask) {
+                                          _emailController.clear();
+                                          setState(
+                                              () => _emailShowsMask = false);
+                                        }
+                                      },
+                                      textInputAction: TextInputAction.next,
+                                      decoration: InputDecoration(
+                                        labelText: 'Correo Electrónico',
+                                        filled: true,
+                                        fillColor: const Color(0x20FFFFFF),
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          borderSide: const BorderSide(
+                                              color: Color(0x60FFFFFF)),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          borderSide: const BorderSide(
+                                              color: Color(0x60FFFFFF)),
+                                        ),
+                                        prefixIcon: const Icon(Icons.email,
+                                            color: Color(0xFF0B3C85)),
+                                        labelStyle: const TextStyle(
+                                            color: Color(0xFF0B2545)),
+                                      ),
+                                      keyboardType: TextInputType.emailAddress,
+                                      style: const TextStyle(
+                                          color: Color(0xFF0B2545)),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    TextField(
+                                      controller: _passwordController,
+                                      onTap: () {
+                                        if (_passwordShowsMask) {
+                                          _passwordController.clear();
+                                          setState(() {
+                                            _passwordShowsMask = false;
+                                            _obscurePassword = true;
+                                          });
+                                        }
+                                      },
+                                      textInputAction: TextInputAction.done,
+                                      onSubmitted: (_) =>
+                                          _isLoading ? null : _login(),
+                                      decoration: InputDecoration(
+                                        labelText: 'Contraseña',
+                                        filled: true,
+                                        fillColor: const Color(0x20FFFFFF),
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          borderSide: const BorderSide(
+                                              color: Color(0x60FFFFFF)),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          borderSide: const BorderSide(
+                                              color: Color(0x60FFFFFF)),
+                                        ),
+                                        prefixIcon: const Icon(Icons.lock,
+                                            color: Color(0xFF0B3C85)),
+                                        suffixIcon: IconButton(
+                                          icon: Icon(
+                                            _obscurePassword
+                                                ? Icons.visibility_off
+                                                : Icons.visibility,
+                                            color: const Color(0xFF0B3C85),
+                                          ),
+                                          onPressed: () {
+                                            setState(() {
+                                              _obscurePassword =
+                                                  !_obscurePassword;
+                                            });
+                                          },
+                                        ),
+                                        labelStyle: const TextStyle(
+                                            color: Color(0xFF0B2545)),
+                                      ),
+                                      obscureText: _obscurePassword,
+                                      style: const TextStyle(
+                                          color: Color(0xFF0B2545)),
+                                    ),
+                                    const SizedBox(height: 24),
+                                    ElevatedButton(
+                                      onPressed: _isLoading ? null : _login,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor:
+                                            const Color(0xFF0056B3),
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 16),
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(8)),
+                                        elevation: 0,
+                                      ),
+                                      child: _isLoading
+                                          ? const Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                SizedBox(
+                                                    width: 20,
+                                                    height: 20,
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                            color: Colors.white,
+                                                            strokeWidth: 2)),
+                                                SizedBox(width: 12),
+                                                Text('Ingresando...',
+                                                    style: TextStyle(
+                                                        fontSize: 16,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: Colors.white)),
+                                              ],
+                                            )
+                                          : const Text('Ingresar',
+                                              style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.white)),
+                                    ),
+                                    if (kIsWeb) ...[
+                                      const SizedBox(height: 12),
+                                      ElevatedButton.icon(
+                                        onPressed: _openLatestRelease,
+                                        icon:
+                                            const Icon(Icons.android, size: 22),
+                                        label: const Text('Descargar app'),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor:
+                                              const Color(0xFF2E9D4D),
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 14),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          elevation: 0,
+                                        ),
+                                      ),
+                                    ],
+                                    const SizedBox(height: 16),
+                                    if (!kIsWeb)
+                                      IconButton(
+                                        onPressed: _loginWithBiometrics,
+                                        icon: const Icon(Icons.fingerprint,
+                                            size: 50, color: Color(0xFF0056B3)),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                      ),
+                                    const SizedBox(height: 24),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 12, horizontal: 16),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0x20FFFFFF),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          Wrap(
+                                            alignment: WrapAlignment.center,
+                                            children: [
+                                              const Text(
+                                                  '¿Aún no te has registrado? ',
+                                                  style: TextStyle(
+                                                      color: Color(0xFF475569),
+                                                      fontSize: 12)),
+                                              GestureDetector(
+                                                onTap: () {
+                                                  Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                          builder: (_) =>
+                                                              RegisterScreen(
+                                                                initialClinicInviteCode: kIsWeb
+                                                                    ? Uri.base
+                                                                            .queryParameters[
+                                                                        'clinic_invite']
+                                                                    : _clinicInviteCode,
+                                                              )));
+                                                },
+                                                child: const Text(
+                                                    'Crear cuenta',
+                                                    style: TextStyle(
+                                                        color:
+                                                            Color(0xFF0056B3),
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.bold)),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Wrap(
+                                            alignment: WrapAlignment.center,
+                                            children: [
+                                              const Text(
+                                                  '¿Olvidaste tu contraseña? ',
+                                                  style: TextStyle(
+                                                      color: Color(0xFF475569),
+                                                      fontSize: 12)),
+                                              GestureDetector(
+                                                onTap: () {
+                                                  Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                          builder: (_) =>
+                                                              const PasswordRecoveryScreen()));
+                                                },
+                                                child: const Text(
+                                                    'Recupérala aquí',
+                                                    style: TextStyle(
+                                                        color:
+                                                            Color(0xFF0056B3),
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.bold)),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   ],
-                                )
-                              : const Text('Ingresar',
-                                  style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white)),
-                        ),
-                        if (kIsWeb) ...[
-                          const SizedBox(height: 12),
-                          ElevatedButton.icon(
-                            onPressed: _openLatestRelease,
-                            icon: const Icon(Icons.android, size: 22),
-                            label: const Text('Descargar app'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF2E9D4D),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                ),
                               ),
-                              elevation: 0,
                             ),
                           ),
-                        ],
-                        const SizedBox(height: 16),
-                        if (!kIsWeb)
-                          IconButton(
-                            onPressed: _loginWithBiometrics,
-                            icon: const Icon(Icons.fingerprint,
-                                size: 50, color: Color(0xFF0056B3)),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                          ),
-                        const SizedBox(height: 24),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 12, horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: const Color(0x20FFFFFF),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Column(
-                            children: [
-                              Wrap(
-                                alignment: WrapAlignment.center,
-                                children: [
-                                  const Text('¿Aún no te has registrado? ',
-                                      style: TextStyle(
-                                          color: Color(0xFF475569),
-                                          fontSize: 12)),
-                                  GestureDetector(
-                                    onTap: () {
-                                      Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                              builder: (_) => RegisterScreen(
-                                                    initialClinicInviteCode: kIsWeb
-                                                        ? Uri.base
-                                                                .queryParameters[
-                                                            'clinic_invite']
-                                                        : _clinicInviteCode,
-                                                  )));
-                                    },
-                                    child: const Text('Crear cuenta',
-                                        style: TextStyle(
-                                            color: Color(0xFF0056B3),
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold)),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Wrap(
-                                alignment: WrapAlignment.center,
-                                children: [
-                                  const Text('¿Olvidaste tu contraseña? ',
-                                      style: TextStyle(
-                                          color: Color(0xFF475569),
-                                          fontSize: 12)),
-                                  GestureDetector(
-                                    onTap: () {
-                                      Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                              builder: (_) =>
-                                                  const PasswordRecoveryScreen()));
-                                    },
-                                    child: const Text('Recupérala aquí',
-                                        style: TextStyle(
-                                            color: Color(0xFF0056B3),
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold)),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
                         ),
-                      ],
-                    ),
-                  ),
-                ),
+                      ),
                     ),
                   ),
                 ),

@@ -245,21 +245,45 @@ class _AlliedDoctorsScreenState extends State<AlliedDoctorsScreen> {
   Future<void> _fetchDoctors() async {
     try {
       final response = await ApiClient.get('/doctors/public');
+      List<Map<String, dynamic>> finalDoctors = [];
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
-        final List<Map<String, dynamic>> doctors = data.map((e) => e as Map<String, dynamic>).toList();
-        
-        doctors.shuffle(Random());
-        setState(() {
-          _doctors = doctors.take(8).toList();
-          _isLoading = false;
-        });
-      } else {
-        _useFallbackDoctors();
+        finalDoctors = data.map((e) => e as Map<String, dynamic>).toList();
       }
+      
+      if (finalDoctors.length < 8) {
+        final fallbacks = _getFallbacks();
+        fallbacks.shuffle(Random());
+        for (var fallback in fallbacks) {
+          if (finalDoctors.length >= 8) break;
+          if (!finalDoctors.any((d) => d['name'] == fallback['name'])) {
+            finalDoctors.add(fallback);
+          }
+        }
+      }
+      
+      finalDoctors.shuffle(Random());
+      
+      setState(() {
+        _doctors = finalDoctors.take(8).toList();
+        _isLoading = false;
+      });
     } catch (e) {
       _useFallbackDoctors();
     }
+  }
+
+  List<Map<String, dynamic>> _getFallbacks() {
+    return [
+      {'name': 'Dr. Carlos Mendoza', 'specialty': 'Cardiología', 'avatar_url': 'assets/avatars/doc_1.jpg'},
+      {'name': 'Dra. María Fernanda López', 'specialty': 'Pediatría', 'avatar_url': 'assets/avatars/doc_2.jpg'},
+      {'name': 'Dr. José Ramírez', 'specialty': 'Traumatología', 'avatar_url': 'assets/avatars/doc_3.jpg'},
+      {'name': 'Dra. Elena Silva', 'specialty': 'Ginecología', 'avatar_url': 'assets/avatars/doc_2.jpg'},
+      {'name': 'Dr. Luis Hernández', 'specialty': 'Oftalmología', 'avatar_url': 'assets/avatars/doc_1.jpg'},
+      {'name': 'Dra. Ana González', 'specialty': 'Dermatología', 'avatar_url': 'assets/avatars/doc_2.jpg'},
+      {'name': 'Dr. Miguel Castillo', 'specialty': 'Medicina Interna', 'avatar_url': 'assets/avatars/doc_3.jpg'},
+      {'name': 'Dra. Sofía Rojas', 'specialty': 'Neurología', 'avatar_url': 'assets/avatars/doc_2.jpg'},
+    ];
   }
 
   void _useFallbackDoctors() {
@@ -518,13 +542,174 @@ class AlliedClinicsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('ClÃ­nicas Aliadas'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+      backgroundColor: Colors.white,
+      body: Column(
+        children: [
+          if (kIsWeb) const WebHeader(),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  _buildHeroSection(context),
+                  _buildClinicsGrid(context),
+                  if (kIsWeb) const WebFooter(),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
-      body: const Center(
-        child: Text('Pantalla ClÃ­nicas Aliadas en construcciÃ³n...'),
+    );
+  }
+
+  Widget _buildHeroSection(BuildContext context) {
+    final bool isDesktop = MediaQuery.of(context).size.width > 800;
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(
+        horizontal: isDesktop ? 100 : 24,
+        vertical: 80,
+      ),
+      decoration: const BoxDecoration(
+        color: Color(0xFF0B2545),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Centros Médicos\nAliados a Salud Now',
+            style: TextStyle(
+              fontSize: isDesktop ? 48 : 32,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              height: 1.1,
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Encuentra las mejores clínicas y hospitales de tu ciudad.\nDescubre dónde puedes atenderte con la mejor calidad.',
+            style: TextStyle(
+              fontSize: 18,
+              color: Colors.white70,
+              height: 1.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildClinicsGrid(BuildContext context) {
+    final bool isDesktop = MediaQuery.of(context).size.width > 800;
+    
+    final List<Map<String, String>> clinics = [
+      {'name': 'Clínica Sanitas', 'city': 'Caracas', 'type': 'Hospital General'},
+      {'name': 'Centro Médico Docente', 'city': 'Valencia', 'type': 'Clínica Especializada'},
+      {'name': 'Hospital de Clínicas', 'city': 'Maracaibo', 'type': 'Hospital General'},
+      {'name': 'Policlínica Metropolitana', 'city': 'Caracas', 'type': 'Centro Quirúrgico'},
+      {'name': 'Clínica El Ávila', 'city': 'Caracas', 'type': 'Clínica Especializada'},
+      {'name': 'Centro Médico de Caracas', 'city': 'Caracas', 'type': 'Hospital General'},
+      {'name': 'Clínica La Viña', 'city': 'Valencia', 'type': 'Clínica Especializada'},
+      {'name': 'Clínica Paraíso', 'city': 'Maracaibo', 'type': 'Maternidad'},
+    ];
+
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: isDesktop ? 100 : 24,
+        vertical: 80,
+      ),
+      color: Colors.white,
+      child: Column(
+        children: [
+          const Text(
+            'Red de Clínicas Aliadas',
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Contamos con una amplia red de clínicas para garantizar tu atención médica.',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.black54,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 48),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: isDesktop ? 4 : (MediaQuery.of(context).size.width > 500 ? 2 : 1),
+              crossAxisSpacing: 24,
+              mainAxisSpacing: 24,
+              childAspectRatio: 0.85,
+            ),
+            itemCount: clinics.length,
+            itemBuilder: (context, index) {
+              final clinic = clinics[index];
+              return Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF9FAFB),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircleAvatar(
+                      radius: 40,
+                      backgroundColor: const Color(0xFF0056B3).withOpacity(0.1),
+                      child: const Icon(Icons.local_hospital, size: 40, color: Color(0xFF0056B3)),
+                    ),
+                    const SizedBox(height: 16),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: Text(
+                        clinic['name']!,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      clinic['type']!,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF0056B3),
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.location_on, size: 14, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Text(
+                          clinic['city']!,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -536,13 +721,184 @@ class FaqScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Preguntas Frecuentes'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+      backgroundColor: Colors.white,
+      body: Column(
+        children: [
+          if (kIsWeb) const WebHeader(),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  _buildHeaderSection(context),
+                  _buildFaqGrid(context),
+                  if (kIsWeb) const WebFooter(),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
-      body: const Center(
-        child: Text('Pantalla Preguntas Frecuentes en construcciÃ³n...'),
+    );
+  }
+
+  Widget _buildHeaderSection(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: 24,
+        vertical: 80,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const Text(
+            'Preguntas Frecuentes',
+            style: TextStyle(
+              fontSize: 48,
+              fontWeight: FontWeight.w900,
+              color: Colors.black,
+              letterSpacing: -1,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'En este espacio diseñado especialmente para ti, encontrarás respuestas a las preguntas\nfrecuentes sobre el uso de nuestra aplicación.',
+            style: TextStyle(
+              fontSize: 18,
+              color: Colors.grey,
+              height: 1.5,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 48),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF1F2937),
+                  borderRadius: BorderRadius.horizontal(left: Radius.circular(24)),
+                ),
+                child: const Text(
+                  'Pacientes',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: const BorderRadius.horizontal(right: Radius.circular(24)),
+                ),
+                child: const Text(
+                  'Médicos',
+                  style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFaqGrid(BuildContext context) {
+    final bool isDesktop = MediaQuery.of(context).size.width > 800;
+    
+    final List<Map<String, dynamic>> faqs = [
+      {
+        'icon': Icons.health_and_safety,
+        'title': '¿Qué es Salud Now y cómo funciona?',
+        'desc': 'Conoce cómo funciona Salud Now, cómo buscar médicos y todo lo que puedes hacer con la app.'
+      },
+      {
+        'icon': Icons.person_add,
+        'title': 'Creación de cuenta y verificación de identidad',
+        'desc': 'Conoce todo sobre cómo puedes crear tu cuenta Salud Now y verificar tu identidad.'
+      },
+      {
+        'icon': Icons.login,
+        'title': 'Inicio de Sesión',
+        'desc': 'Conoce cómo puedes iniciar sesión en tu cuenta Salud Now utilizando las opciones que ponemos a tu disposición.'
+      },
+      {
+        'icon': Icons.security,
+        'title': 'Recuperación de Cuenta',
+        'desc': 'Descubre cómo puedes recuperar el acceso a tu cuenta fácilmente en caso de que hayas perdido tu contraseña.'
+      },
+      {
+        'icon': Icons.calendar_month,
+        'title': 'Agendar Citas',
+        'desc': 'Aprende a agendar consultas médicas con los especialistas disponibles en tu ciudad.'
+      },
+      {
+        'icon': Icons.history,
+        'title': 'Historial Médico',
+        'desc': 'Conoce cómo acceder a tu historial médico y visualizar los récipes emitidos por tus doctores.'
+      },
+    ];
+
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: isDesktop ? 100 : 24,
+      ),
+      margin: const EdgeInsets.only(bottom: 80),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: isDesktop ? 2 : 1,
+          crossAxisSpacing: 24,
+          mainAxisSpacing: 24,
+          childAspectRatio: isDesktop ? 2.5 : 2.0,
+        ),
+        itemCount: faqs.length,
+        itemBuilder: (context, index) {
+          final faq = faqs[index];
+          return Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF9FAFB),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.withOpacity(0.2)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(faq['icon'], size: 32, color: Colors.black),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  faq['title'],
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  faq['desc'],
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: Colors.grey,
+                    height: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
