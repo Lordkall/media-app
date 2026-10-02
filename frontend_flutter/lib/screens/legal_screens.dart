@@ -146,13 +146,10 @@ class _BaseLegalScreen extends StatelessWidget {
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0056B3),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.health_and_safety, color: Colors.white, size: 20),
+            Image.asset(
+              'assets/logo.png',
+              height: 32,
+              width: 32,
             ),
             const SizedBox(width: 8),
             const Text('Salud Now', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 18)),
@@ -210,7 +207,7 @@ class _BaseLegalScreen extends StatelessWidget {
             right: 24,
             child: FloatingActionButton(
               onPressed: () {},
-              backgroundColor: const Color(0xFF1F2937),
+              backgroundColor: const Color(0xFF0056B3),
               child: const Icon(Icons.chat_bubble_outline, color: Colors.white),
             ),
           )
