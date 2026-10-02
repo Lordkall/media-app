@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/api_client.dart';
+import '../widgets/profile_avatar.dart';
 import 'dart:convert';
 
 class AdminSubscriptionsTab extends StatefulWidget {
@@ -90,10 +91,32 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
 
       setState(() {
         if (docRes.statusCode == 200) {
-          _doctors = jsonDecode(docRes.body);
+          final List<dynamic> rawDocs = jsonDecode(docRes.body);
+          final seenEmails = <String>{};
+          final seenIds = <dynamic>{};
+          final uniqueDocs = <dynamic>[];
+          for (final d in rawDocs) {
+            final id = d['id'];
+            final email = (d['email'] ?? '').toString().toLowerCase().trim();
+            if (id != null && seenIds.contains(id)) continue;
+            if (email.isNotEmpty && seenEmails.contains(email)) continue;
+            if (id != null) seenIds.add(id);
+            if (email.isNotEmpty) seenEmails.add(email);
+            uniqueDocs.add(d);
+          }
+          _doctors = uniqueDocs;
         }
         if (cliRes.statusCode == 200) {
-          _clinics = jsonDecode(cliRes.body);
+          final List<dynamic> rawClinics = jsonDecode(cliRes.body);
+          final seenIds = <dynamic>{};
+          final uniqueClinics = <dynamic>[];
+          for (final c in rawClinics) {
+            final id = c['id'];
+            if (id != null && seenIds.contains(id)) continue;
+            if (id != null) seenIds.add(id);
+            uniqueClinics.add(c);
+          }
+          _clinics = uniqueClinics;
         }
         if (patRes.statusCode == 200) {
           _patients = jsonDecode(patRes.body);
@@ -389,6 +412,8 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
                               plan == 'Ninguno' ? 'Sin plan' : plan,
                               planColor,
                               daysRemaining,
+                              avatarUrl: item['avatar_url'],
+                              role: _searchType == 'Doctores' ? 'doctor' : 'clinic',
                               isBlocked: isBlocked,
                               pendingSubId: item['pending_sub_id'],
                               pendingPlan: item['pending_plan'],
@@ -444,6 +469,7 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
     final isBlocked = item['is_blocked'] == true;
     final userId = item['user_id'] as int;
     final patientId = item['id'] as int;
+    final avatarUrl = item['avatar_url'] as String?;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -458,16 +484,27 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 24,
-            backgroundColor: isBlocked
-                ? Colors.red.shade100
-                : const Color(0xFF0056B3).withValues(alpha: 0.1),
-            child: Icon(
-              isBlocked ? Icons.lock : Icons.person,
-              color: isBlocked ? Colors.red : const Color(0xFF0056B3),
-              size: 26,
-            ),
+          Stack(
+            children: [
+              ProfileAvatar(
+                imageUrl: avatarUrl,
+                size: 50,
+                fallbackRole: 'patient',
+              ),
+              if (isBlocked)
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.lock, size: 12, color: Colors.white),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -553,6 +590,7 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
               ],
             ),
           ),
+          const SizedBox(width: 8),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -560,24 +598,44 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
-                    tooltip: isBlocked ? 'Desbloquear paciente' : 'Bloquear paciente',
+                    tooltip: isBlocked ? 'Desbloquear cuenta' : 'Bloquear cuenta',
                     onPressed: () => _toggleBlockUser(userId, name, isBlocked),
-                    icon: Icon(
-                      isBlocked ? Icons.lock : Icons.lock_open,
-                      color: isBlocked ? Colors.red : Colors.green.shade700,
-                      size: 24,
+                    icon: Container(
+                      padding: const EdgeInsets.all(7),
+                      decoration: BoxDecoration(
+                        color: isBlocked ? Colors.red.shade50 : Colors.amber.shade50,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isBlocked ? Colors.red.shade300 : Colors.amber.shade600,
+                          width: 1.2,
+                        ),
+                      ),
+                      child: Icon(
+                        isBlocked ? Icons.lock : Icons.lock_open,
+                        color: isBlocked ? Colors.red.shade700 : Colors.amber.shade800,
+                        size: 18,
+                      ),
                     ),
                     visualDensity: VisualDensity.compact,
                     padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
                   ),
+                  const SizedBox(width: 4),
                   IconButton(
                     tooltip: 'Eliminar paciente',
                     onPressed: () => _deleteAccount(patientId, name),
-                    icon: const Icon(Icons.delete, color: Colors.red, size: 24),
+                    icon: Container(
+                      padding: const EdgeInsets.all(7),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.red.shade200, width: 1.2),
+                      ),
+                      child: const Icon(Icons.delete_outline, color: Colors.red, size: 18),
+                    ),
                     visualDensity: VisualDensity.compact,
                     padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
                   ),
                 ],
               ),
@@ -596,6 +654,8 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
     String plan,
     Color planColor,
     int daysRemaining, {
+    String? avatarUrl,
+    String role = 'doctor',
     bool isBlocked = false,
     int? pendingSubId,
     String? pendingPlan,
@@ -618,6 +678,29 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Stack(
+                children: [
+                  ProfileAvatar(
+                    imageUrl: avatarUrl,
+                    size: 50,
+                    fallbackRole: role,
+                  ),
+                  if (isBlocked)
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.lock, size: 12, color: Colors.white),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -627,7 +710,7 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF0B2545))),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Text(details,
                         style: const TextStyle(color: Color(0xFF475569))),
                     if (plan != 'Sin plan') ...[
@@ -675,6 +758,7 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
                   ],
                 ),
               ),
+              const SizedBox(width: 8),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -684,27 +768,48 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
                       IconButton(
                         tooltip: isBlocked ? 'Desbloquear cuenta' : 'Bloquear cuenta',
                         onPressed: () => _toggleBlockUser(userId, name, isBlocked),
-                        icon: Icon(
-                          isBlocked ? Icons.lock : Icons.lock_open,
-                          color: isBlocked ? Colors.red : Colors.green.shade700,
-                          size: 24,
+                        icon: Container(
+                          padding: const EdgeInsets.all(7),
+                          decoration: BoxDecoration(
+                            color: isBlocked ? Colors.red.shade50 : Colors.amber.shade50,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isBlocked ? Colors.red.shade300 : Colors.amber.shade600,
+                              width: 1.2,
+                            ),
+                          ),
+                          child: Icon(
+                            isBlocked ? Icons.lock : Icons.lock_open,
+                            color: isBlocked ? Colors.red.shade700 : Colors.amber.shade800,
+                            size: 18,
+                          ),
                         ),
                         visualDensity: VisualDensity.compact,
                         padding: EdgeInsets.zero,
                         constraints:
-                            const BoxConstraints(minWidth: 36, minHeight: 36),
+                            const BoxConstraints(minWidth: 38, minHeight: 38),
                       ),
+                      const SizedBox(width: 4),
                       IconButton(
                         tooltip: 'Eliminar registro',
                         onPressed: () => _deleteAccount(targetId, name),
-                        icon: const Icon(Icons.delete, color: Colors.red, size: 24),
+                        icon: Container(
+                          padding: const EdgeInsets.all(7),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.red.shade200, width: 1.2),
+                          ),
+                          child: const Icon(Icons.delete_outline, color: Colors.red, size: 18),
+                        ),
                         visualDensity: VisualDensity.compact,
                         padding: EdgeInsets.zero,
                         constraints:
-                            const BoxConstraints(minWidth: 36, minHeight: 36),
+                            const BoxConstraints(minWidth: 38, minHeight: 38),
                       ),
                     ],
                   ),
+                  const SizedBox(height: 6),
                   if (isBlocked) ...[
                     Container(
                       margin: const EdgeInsets.only(bottom: 6),

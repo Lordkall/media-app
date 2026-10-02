@@ -180,11 +180,16 @@ async def get_all_doctors(
     query = select(Doctor, User, Subscription).join(User, Doctor.user_id == User.id).outerjoin(
         Subscription, 
         or_((Subscription.doctor_id == Doctor.id) & (Subscription.status == SubscriptionStatus.ACTIVE), (Doctor.clinic_id.isnot(None)) & (Doctor.clinic_join_status == 'approved') & (Subscription.clinic_id == Doctor.clinic_id) & (Subscription.status == SubscriptionStatus.ACTIVE))
-    )
+    ).order_by(Doctor.id, Subscription.end_date.desc().nullslast())
     result = await db.execute(query)
     
     doctors_list = []
+    seen_doctor_ids = set()
     for doc, user, sub in result:
+        if doc.id in seen_doctor_ids:
+            continue
+        seen_doctor_ids.add(doc.id)
+
         days_remaining = 0
         if sub and sub.end_date:
             import datetime
@@ -234,11 +239,16 @@ async def get_all_clinics(
     query = select(Clinic, User, Subscription).join(User, Clinic.user_id == User.id).outerjoin(
         Subscription, 
         (Subscription.clinic_id == Clinic.id) & (Subscription.status == SubscriptionStatus.ACTIVE)
-    )
+    ).order_by(Clinic.id, Subscription.end_date.desc().nullslast())
     result = await db.execute(query)
     
     clinics_list = []
+    seen_clinic_ids = set()
     for clinic, user, sub in result:
+        if clinic.id in seen_clinic_ids:
+            continue
+        seen_clinic_ids.add(clinic.id)
+
         days_remaining = 0
         if sub and sub.end_date:
             import datetime
