@@ -14,6 +14,7 @@ import 'support_messages_screen.dart';
 import 'select_plan_screen.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'doctor_profile_screen.dart';
+import 'clinic_invite_doctor_screen.dart';
 
 class ClinicJoinPendingScreen extends StatelessWidget {
   const ClinicJoinPendingScreen({super.key});
@@ -693,8 +694,13 @@ class _ClinicDoctorsTabState extends State<ClinicDoctorsTab>
                   child: Text('Doctores',
                       style: Theme.of(context).textTheme.headlineSmall)),
               IconButton(
-                  onPressed: _shareInvite,
-                  tooltip: 'Copiar enlace para invitar',
+                  onPressed: () {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const ClinicInviteDoctorScreen()));
+                  },
+                  tooltip: 'Buscar e invitar doctor',
                   icon: const Icon(Icons.person_add_alt_1)),
               IconButton(
                   onPressed: _load,

@@ -20,6 +20,7 @@ class DoctorHomeTab extends StatefulWidget {
 
 class _DoctorHomeTabState extends State<DoctorHomeTab> {
   List<dynamic> _notifications = [];
+  List<dynamic> _invitations = [];
   bool _isLoadingNotifications = true;
   bool _isLoadingProfile = true;
   int _citasHoy = 0;
@@ -43,6 +44,25 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
     super.dispose();
   }
 
+  Future<void> _resolveInvitation(int clinicId, String action) async {
+    try {
+      final response = await ApiClient.post('/doctors/me/clinic-invitations/$clinicId/$action', {});
+      if (!mounted) return;
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invitación respondida.')));
+        _fetchData(); // Refresh UI
+      } else {
+        var detail = 'Error al procesar invitación';
+        try {
+          detail = jsonDecode(response.body)['detail']?.toString() ?? detail;
+        } catch (_) {}
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(detail)));
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
   Future<void> _fetchData() async {
     try {
       final responses = await Future.wait([
@@ -50,6 +70,7 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
         ApiClient.get('/users/me/notifications'),
         ApiClient.get('/appointments/my'),
         ApiClient.get('/subscriptions/me'),
+        ApiClient.get('/doctors/me/clinic-invitations'),
       ]);
       final user = responses[0].statusCode == 200
           ? Map<String, dynamic>.from(jsonDecode(responses[0].body))
@@ -63,6 +84,9 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
       final subscription = responses[3].statusCode == 200
           ? Map<String, dynamic>.from(jsonDecode(responses[3].body))
           : null;
+      final invitations = responses[4].statusCode == 200
+          ? List<dynamic>.from(jsonDecode(responses[4].body))
+          : _invitations;
       final today = caracasNow().toIso8601String().split('T')[0];
       final appointmentsToday = appointments
           .where((appointment) =>
@@ -77,6 +101,7 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
         setState(() {
           _userData = user ?? _userData;
           _notifications = notifications;
+          _invitations = invitations;
           _subData = subscription ?? _subData;
           _citasHoy = appointmentsToday;
           _isLoadingNotifications = false;
@@ -160,6 +185,32 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
                       );
                     }),
                   const SizedBox(height: 16),
+                  if (_invitations.isNotEmpty) ...[
+                    const Text('Invitaciones de Clínica', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0B2545))),
+                    const SizedBox(height: 12),
+                    ..._invitations.map((inv) => Card(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          child: ListTile(
+                            leading: ProfileAvatar(imageUrl: inv['avatar_url']?.toString(), size: 40, fallbackRole: 'clinic'),
+                            title: Text(inv['name'] ?? 'Clínica', style: const TextStyle(fontWeight: FontWeight.bold)),
+                            subtitle: const Text('Te ha invitado a unirte'),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.check, color: Colors.green),
+                                  onPressed: () => _resolveInvitation(inv['clinic_id'], 'accept'),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.close, color: Colors.red),
+                                  onPressed: () => _resolveInvitation(inv['clinic_id'], 'reject'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )),
+                    const SizedBox(height: 16),
+                  ],
                   InkWell(
                     onTap: widget.onCitasHoyTap,
                     borderRadius: BorderRadius.circular(16),
