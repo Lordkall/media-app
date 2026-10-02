@@ -254,3 +254,28 @@ async def resolve_clinic_invitation(
     await db.commit()
     return {"message": msg}
 
+@router.get("/public")
+async def get_public_doctors(db: AsyncSession = Depends(get_db)):
+    # Join Doctor and User to get details
+    query = select(Doctor, User).join(User, Doctor.user_id == User.id)
+    result = await db.execute(query)
+    doctors_data = result.all()
+    
+    out = []
+    for doc, user in doctors_data:
+        # Just return basic public info
+        prefix = "Dr."
+        if user.gender in ["Femenino", "Femenina"]:
+            prefix = "Dra."
+        
+        specialty = "Especialista"
+        if doc.specialties and isinstance(doc.specialties, list) and len(doc.specialties) > 0:
+            specialty = doc.specialties[0]
+            
+        out.append({
+            "id": doc.id,
+            "name": f"{prefix} {user.first_name} {user.last_name}",
+            "specialty": specialty,
+            "avatar_url": user.avatar_url
+        })
+    return out

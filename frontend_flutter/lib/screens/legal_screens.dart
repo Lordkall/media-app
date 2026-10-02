@@ -142,20 +142,13 @@ class _BaseLegalScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFF0056B3),
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Image.asset(
-              'assets/logo.png',
-              height: 32,
-              width: 32,
-            ),
-            const SizedBox(width: 8),
-            const Text('Salud Now', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 18)),
-          ],
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: Image.asset(
+          'assets/logo_white.png',
+          height: 40,
+          errorBuilder: (context, error, stackTrace) => const Icon(Icons.health_and_safety, color: Colors.white, size: 30),
         ),
         centerTitle: true,
       ),

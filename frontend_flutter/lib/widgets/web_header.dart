@@ -22,15 +22,12 @@ class WebHeader extends StatelessWidget {
               Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
             },
             child: Container(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: Image.asset(
-                  'assets/logo_transparent.png',
-                  height: 50,
-                  width: 50,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.health_and_safety, color: Colors.white, size: 40),
-                ),
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Image.asset(
+                'assets/logo_white.png',
+                height: 80,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) => const Icon(Icons.health_and_safety, color: Colors.white, size: 60),
               ),
             ),
           ),
