@@ -38,7 +38,7 @@ class ForUsersScreen extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           const Text(
-            'Reserva con los mejores especialistas, accede a tu historial médico y recibe recordatorios. Regístrate o descarga nuestra app y comienza a cuidar de ti.',
+            'Reserva con los mejores especialistas, accede a tu historial mÃ©dico y recibe recordatorios. RegÃ­strate o descarga nuestra app y comienza a cuidar de ti.',
             style: TextStyle(
               fontSize: 18,
               color: Colors.white70,
@@ -153,7 +153,7 @@ class ForUsersScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Somos la alternativa más accesible para que gestiones tu salud hoy.',
+            'Somos la alternativa mÃ¡s accesible para que gestiones tu salud hoy.',
             style: TextStyle(
               fontSize: 36,
               fontWeight: FontWeight.bold,
@@ -172,26 +172,26 @@ class ForUsersScreen extends StatelessWidget {
             children: [
               _buildFeatureCard(
                 icon: Icons.calendar_month,
-                title: 'Agenda tus citas fácilmente',
-                text: 'Encuentra al especialista que necesitas y agenda tu consulta en 3 minutos. Descarga nuestra app, regístrate y comienza.',
+                title: 'Agenda tus citas fÃ¡cilmente',
+                text: 'Encuentra al especialista que necesitas y agenda tu consulta en 3 minutos. Descarga nuestra app, regÃ­strate y comienza.',
                 color: const Color(0xFF0056B3),
               ),
               _buildFeatureCard(
                 icon: Icons.health_and_safety,
-                title: 'Conoce nuestras clínicas aliadas',
-                text: 'Traemos muchas opciones de salud para ti. Desde tus clínicas y doctores favoritos hasta laboratorios y farmacias.',
+                title: 'Conoce nuestras clÃ­nicas aliadas',
+                text: 'Traemos muchas opciones de salud para ti. Desde tus clÃ­nicas y doctores favoritos hasta laboratorios y farmacias.',
                 color: const Color(0xFF0056B3),
               ),
               _buildFeatureCard(
                 icon: Icons.star,
-                title: 'Amplía tus beneficios',
-                text: 'Al utilizar nuestra plataforma accederás a funciones VIP, historiales compartidos y descuentos especiales.',
+                title: 'AmplÃ­a tus beneficios',
+                text: 'Al utilizar nuestra plataforma accederÃ¡s a funciones VIP, historiales compartidos y descuentos especiales.',
                 color: const Color(0xFF0056B3),
               ),
               _buildFeatureCard(
                 icon: Icons.handshake,
                 title: 'Estamos siempre contigo',
-                text: 'Te enviaremos recordatorios para que nunca faltes a una cita y puedas mantener tu salud al día.',
+                text: 'Te enviaremos recordatorios para que nunca faltes a una cita y puedas mantener tu salud al dÃ­a.',
                 color: const Color(0xFF0056B3),
               ),
             ],
@@ -264,14 +264,14 @@ class _AlliedDoctorsScreenState extends State<AlliedDoctorsScreen> {
 
   void _useFallbackDoctors() {
     final fallbacks = [
-      {'name': 'Dr. Carlos Mendoza', 'specialty': 'Cardiolog�a', 'avatar_url': 'assets/avatars/doc_1.jpg'},
-      {'name': 'Dra. Mar�a Fernanda L�pez', 'specialty': 'Pediatr�a', 'avatar_url': 'assets/avatars/doc_2.jpg'},
-      {'name': 'Dr. Jos� Ram�rez', 'specialty': 'Traumatolog�a', 'avatar_url': 'assets/avatars/doc_3.jpg'},
-      {'name': 'Dra. Elena Silva', 'specialty': 'Ginecolog�a', 'avatar_url': 'assets/avatars/doc_2.jpg'},
-      {'name': 'Dr. Luis Hern�ndez', 'specialty': 'Oftalmolog�a', 'avatar_url': 'assets/avatars/doc_1.jpg'},
-      {'name': 'Dra. Ana Gonz�lez', 'specialty': 'Dermatolog�a', 'avatar_url': 'assets/avatars/doc_2.jpg'},
+      {'name': 'Dr. Carlos Mendoza', 'specialty': 'Cardiología', 'avatar_url': 'assets/avatars/doc_1.jpg'},
+      {'name': 'Dra. María Fernanda López', 'specialty': 'Pediatría', 'avatar_url': 'assets/avatars/doc_2.jpg'},
+      {'name': 'Dr. José Ramírez', 'specialty': 'Traumatología', 'avatar_url': 'assets/avatars/doc_3.jpg'},
+      {'name': 'Dra. Elena Silva', 'specialty': 'Ginecología', 'avatar_url': 'assets/avatars/doc_2.jpg'},
+      {'name': 'Dr. Luis Hernández', 'specialty': 'Oftalmología', 'avatar_url': 'assets/avatars/doc_1.jpg'},
+      {'name': 'Dra. Ana González', 'specialty': 'Dermatología', 'avatar_url': 'assets/avatars/doc_2.jpg'},
       {'name': 'Dr. Miguel Castillo', 'specialty': 'Medicina Interna', 'avatar_url': 'assets/avatars/doc_3.jpg'},
-      {'name': 'Dra. Sof�a Rojas', 'specialty': 'Neurolog�a', 'avatar_url': 'assets/avatars/doc_2.jpg'},
+      {'name': 'Dra. Sofía Rojas', 'specialty': 'Neurología', 'avatar_url': 'assets/avatars/doc_2.jpg'},
     ];
     fallbacks.shuffle(Random());
     setState(() {
@@ -323,7 +323,7 @@ class _AlliedDoctorsScreenState extends State<AlliedDoctorsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '�Qu� especialistas puedes\nencontrar en Salud Now?',
+            '¿Qué especialistas puedes\nencontrar en Salud Now?',
             style: TextStyle(
               fontSize: isDesktop ? 48 : 32,
               fontWeight: FontWeight.bold,
@@ -333,7 +333,7 @@ class _AlliedDoctorsScreenState extends State<AlliedDoctorsScreen> {
           ),
           const SizedBox(height: 24),
           const Text(
-            'Encuentra a los mejores m�dicos de tu ciudad.\nAgenda consultas presenciales o virtuales y recibe atenci�n de primera calidad.',
+            'Encuentra a los mejores médicos de tu ciudad.\nAgenda consultas presenciales o virtuales y recibe atención de primera calidad.',
             style: TextStyle(
               fontSize: 18,
               color: Colors.white70,
@@ -400,7 +400,7 @@ class _AlliedDoctorsScreenState extends State<AlliedDoctorsScreen> {
           ),
           const SizedBox(height: 16),
           const Text(
-            'Ahora tambi�n puedes ubicar y agendar a especialistas de confianza. Entra, busca y elige tu m�dico en la plataforma.',
+            'Ahora también puedes ubicar y agendar a especialistas de confianza. Entra, busca y elige tu médico en la plataforma.',
             style: TextStyle(
               fontSize: 16,
               color: Colors.black54,
@@ -509,6 +509,7 @@ class _DoctorHoverCardState extends State<DoctorHoverCard> {
         ),
       ),
     );
+  }
 }
 
 class AlliedClinicsScreen extends StatelessWidget {
@@ -518,12 +519,12 @@ class AlliedClinicsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Clínicas Aliadas'),
+        title: const Text('ClÃ­nicas Aliadas'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
       ),
       body: const Center(
-        child: Text('Pantalla Clínicas Aliadas en construcción...'),
+        child: Text('Pantalla ClÃ­nicas Aliadas en construcciÃ³n...'),
       ),
     );
   }
@@ -541,7 +542,7 @@ class FaqScreen extends StatelessWidget {
         foregroundColor: Colors.black,
       ),
       body: const Center(
-        child: Text('Pantalla Preguntas Frecuentes en construcción...'),
+        child: Text('Pantalla Preguntas Frecuentes en construcciÃ³n...'),
       ),
     );
   }
