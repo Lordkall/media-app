@@ -8,6 +8,7 @@ import '../core/api_client.dart';
 import '../models/ve_catalogs.dart';
 import 'select_plan_screen.dart';
 import 'legal_screens.dart';
+import '../widgets/web_footer.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key, this.initialClinicInviteCode});
@@ -359,15 +360,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFE0EAFC), Color(0xFFCFDEF3), Color(0xFFB3C6DF)],
-          ),
-        ),
-        child: SafeArea(
+      body: Column(
+        children: [
+          Expanded(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFE0EAFC), Color(0xFFCFDEF3), Color(0xFFB3C6DF)],
+                ),
+              ),
+              child: SafeArea(
           child: Column(
             children: [
               Align(
@@ -794,6 +798,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ],
           ),
         ),
+            ),
+          ),
+          if (kIsWeb) const WebFooter(),
+        ],
       ),
     );
   }

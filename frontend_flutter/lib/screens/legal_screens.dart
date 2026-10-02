@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
 const String _privacyMarkdown = """
-# Política de Privacidad y Tratamiento de Datos
-
-En **[Nombre de la Empresa]**, operando en **[País/Jurisdicción]**, actuamos como intermediarios tecnológicos a través de nuestra plataforma digital. Nuestro compromiso es garantizar la máxima privacidad y el cumplimiento de las normativas de protección de datos aplicables.
+En **Salud Now**, operando en **Venezuela**, actuamos como intermediarios tecnológicos a través de nuestra plataforma digital. Nuestro compromiso es garantizar la máxima privacidad y el cumplimiento de las normativas de protección de datos aplicables.
 
 ### 1. Definiciones previas
 - **Plataforma**: La aplicación web y móvil de agendamiento.
@@ -39,16 +37,14 @@ Nos reservamos el derecho de suspender cuentas por fraude, mala praxis administr
 Notificaremos cambios a esta política por correo. El uso continuado implica aceptación.
 
 ### 11. Ley aplicable
-Cualquier controversia será resuelta bajo las leyes de **[País/Jurisdicción]**.
+Cualquier controversia será resuelta bajo las leyes de **Venezuela**.
 
-Para consultas: **[Correo de Soporte]**
+Para consultas: **saludnowsite@gmail.com**
 """;
 
 const String _cookiesMarkdown = """
-# Política de Cookies y Tecnologías de Almacenamiento Local
-
 ### 1. Introducción y alcance
-En **[Nombre de la App]** operada por **[Razón Social]**, valoramos tu privacidad. Esta política explica cómo usamos cookies, Local Storage, SDKs móviles y tokens en nuestra plataforma.
+En **Salud Now** operada por **Salud Now C.A**, valoramos tu privacidad. Esta política explica cómo usamos cookies, Local Storage, SDKs móviles y tokens en nuestra plataforma.
 
 ### 2. ¿Qué son estas tecnologías?
 Son pequeños archivos de datos o identificadores almacenados en tu navegador o dispositivo móvil que permiten recordar tus preferencias, mantener tu sesión activa de forma segura y analizar el rendimiento general.
@@ -78,14 +74,12 @@ Las cookies de sesión se eliminan al cerrar el navegador. Las persistentes (ej.
 ### 8. Actualizaciones
 Cualquier cambio sustancial será notificado vía notificación push o correo.
 
-Dudas de privacidad: **[Correo de Privacidad]**
+Dudas de privacidad: **saludnowsite@gmail.com**
 """;
 
 const String _termsMarkdown = """
-# Términos y Condiciones Generales y Particulares de Uso
-
 ### 1. Aceptación de los Términos y Registro
-Al registrarte en **[Nombre de la Plataforma]** de **[Razón Social]**, aceptas estos términos. Debes ser mayor de edad o contar con representación legal para agendar.
+Al registrarte en **Salud Now** de **Salud Now C.A**, aceptas estos términos. Debes ser mayor de edad o contar con representación legal para agendar.
 
 ### 2. Glosario y Definiciones
 - **Paciente**: Quien busca agendar servicios.
@@ -125,18 +119,115 @@ Nos reservamos el derecho de bloquear cuentas inmediatamente por ejercicio ilega
 Se notificarán por la app o correo. El uso continuará implicando aceptación.
 
 ### 12. Resolución de Conflictos
-Se aplicarán las leyes de **[País/Ciudad]**. Se privilegiará la mediación como paso previo obligatorio a cualquier vía judicial.
+Se aplicarán las leyes de **Venezuela**. Se privilegiará la mediación como paso previo obligatorio a cualquier vía judicial.
 
-Contacto legal: **[Correo de Contacto Legal]**
+Contacto legal: **saludnowsite@gmail.com**
 """;
+
+class _BaseLegalScreen extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String markdownData;
+
+  const _BaseLegalScreen({
+    required this.title,
+    required this.subtitle,
+    required this.markdownData,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF9FAFB),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.black),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0056B3),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.health_and_safety, color: Colors.white, size: 20),
+            ),
+            const SizedBox(width: 8),
+            const Text('Salud Now', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 18)),
+          ],
+        ),
+        centerTitle: true,
+      ),
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 48,
+                    height: 1.1,
+                    letterSpacing: -1.5,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF111827),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  subtitle,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Color(0xFF6B7280),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 48),
+                Container(
+                  alignment: Alignment.centerLeft,
+                  child: MarkdownBody(
+                    data: markdownData,
+                    styleSheet: MarkdownStyleSheet(
+                      h1: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black),
+                      h3: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.black, height: 1.5),
+                      p: const TextStyle(fontSize: 15, color: Color(0xFF374151), height: 1.6),
+                      listBullet: const TextStyle(color: Color(0xFF374151)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 80), // Padding for FAB
+              ],
+            ),
+          ),
+          Positioned(
+            bottom: 24,
+            right: 24,
+            child: FloatingActionButton(
+              onPressed: () {},
+              backgroundColor: const Color(0xFF1F2937),
+              child: const Icon(Icons.chat_bubble_outline, color: Colors.white),
+            ),
+          )
+        ],
+      ),
+    );
+  }
+}
 
 class PrivacyPolicyScreen extends StatelessWidget {
   const PrivacyPolicyScreen({super.key});
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Política de Privacidad')),
-      body: const Markdown(data: _privacyMarkdown),
+    return const _BaseLegalScreen(
+      title: 'Política de\nPrivacidad',
+      subtitle: 'Conoce la Política de Privacidad\nde Salud Now.',
+      markdownData: _privacyMarkdown,
     );
   }
 }
@@ -145,9 +236,10 @@ class CookiesPolicyScreen extends StatelessWidget {
   const CookiesPolicyScreen({super.key});
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Política de Cookies')),
-      body: const Markdown(data: _cookiesMarkdown),
+    return const _BaseLegalScreen(
+      title: 'Política de\nCookies',
+      subtitle: 'Conoce la Política de Cookies\nde Salud Now.',
+      markdownData: _cookiesMarkdown,
     );
   }
 }
@@ -156,9 +248,10 @@ class TermsAndConditionsScreen extends StatelessWidget {
   const TermsAndConditionsScreen({super.key});
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Términos y Condiciones')),
-      body: const Markdown(data: _termsMarkdown),
+    return const _BaseLegalScreen(
+      title: 'Términos y\nCondiciones',
+      subtitle: 'Conoce los términos y condiciones del\nuso de Salud Now.',
+      markdownData: _termsMarkdown,
     );
   }
 }

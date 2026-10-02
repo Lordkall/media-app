@@ -15,6 +15,7 @@ import 'password_recovery_screen.dart';
 import 'select_plan_screen.dart';
 import 'payment_pending_screen.dart';
 import 'clinic_account_screens.dart';
+import '../widgets/web_footer.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -452,19 +453,22 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFE0EAFC),
-              Color(0xFFCFDEF3),
-              Color(0xFFB3C6DF),
-            ],
-          ),
-        ),
-        child: SafeArea(
+      body: Column(
+        children: [
+          Expanded(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFFE0EAFC),
+                    Color(0xFFCFDEF3),
+                    Color(0xFFB3C6DF),
+                  ],
+                ),
+              ),
+              child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24.0),
@@ -721,10 +725,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
-        ),
+          if (kIsWeb) const WebFooter(),
+        ],
       ),
     );
   }

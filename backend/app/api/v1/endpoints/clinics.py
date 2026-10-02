@@ -414,8 +414,10 @@ async def search_doctors_for_invite(
     clinic = await _owned_clinic(current_user, db)
     query = select(Doctor, User).join(User, Doctor.user_id == User.id).where(
         Doctor.clinic_id.is_(None),
-        Doctor.clinic_join_status.is_not("pending"),
-        Doctor.clinic_join_status.is_not("invited")
+        or_(
+            Doctor.clinic_join_status.is_(None),
+            Doctor.clinic_join_status.notin_(["pending", "invited"])
+        )
     )
     if name:
         query = query.where(func.concat(User.first_name, ' ', User.last_name).ilike(f"%{name}%"))
