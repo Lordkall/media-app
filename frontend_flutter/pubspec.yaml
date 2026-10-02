@@ -38,6 +38,8 @@ flutter:
 
   assets:
     - assets/logo.png
+    - assets/logo_transparent.png
+    - assets/doctor_patients_bg.jpg
     - assets/avatars/
 
 flutter_launcher_icons:
