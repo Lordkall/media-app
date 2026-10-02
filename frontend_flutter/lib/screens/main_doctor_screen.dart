@@ -163,6 +163,7 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
           onCalendar: () => setState(() => _currentIndex = 1),
           onDoctors: () => setState(() => _currentIndex = 3),
           onSearch: () => setState(() => _currentIndex = 2),
+          onProfileTap: () => setState(() => _currentIndex = 4),
         ),
         const ClinicCalendarTab(),
         const BrowseDoctorsTab(),

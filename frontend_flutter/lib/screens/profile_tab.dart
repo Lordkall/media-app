@@ -9,11 +9,7 @@ import '../models/ve_catalogs.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/avatar_sprite.dart';
 import 'login_screen.dart';
-
-const _privacyText =
-    'Recolectamos datos de contacto y el motivo de la cita registrado por el usuario, como consulta o entrega de exámenes, para gestionar la agenda y mejorar la plataforma. No manejamos información médica detallada o diagnósticos. Sus datos están protegidos y no se comparten sin su consentimiento, y el usuario tiene el derecho de acceder, modificar o eliminar su información en cualquier momento.';
-const _termsText =
-    'El uso de esta aplicación implica la aceptación de todas las normas y condiciones descritas. El usuario es responsable de garantizar la veracidad de su información y mantener la seguridad de su cuenta. No nos hacemos responsables por la calidad del servicio médico ni por interrupciones en el sistema.';
+import 'legal_screens.dart';
 
 class ProfileTab extends StatefulWidget {
   const ProfileTab({super.key});
@@ -26,6 +22,7 @@ class _ProfileTabState extends State<ProfileTab> {
   final _address = TextEditingController();
   final _fee = TextEditingController();
   final _bio = TextEditingController();
+  final _clinicInfo = TextEditingController();
 
   Map<String, dynamic>? _userData;
   List<String> _specialties = [];
@@ -47,6 +44,7 @@ class _ProfileTabState extends State<ProfileTab> {
     _address.dispose();
     _fee.dispose();
     _bio.dispose();
+    _clinicInfo.dispose();
     super.dispose();
   }
 
@@ -85,6 +83,7 @@ class _ProfileTabState extends State<ProfileTab> {
       _address.text = user['address']?.toString() ?? '';
       _fee.text = doctor?['consultation_fee']?.toString() ?? '';
       _bio.text = doctor?['bio']?.toString() ?? '';
+      _clinicInfo.text = doctor?['clinic_info']?.toString() ?? '';
       _specialties =
           List<String>.from(doctor?['specialties'] ?? const <String>[]);
       ProfileImageHelper.updateCurrentUserAvatar(
@@ -278,7 +277,7 @@ class _ProfileTabState extends State<ProfileTab> {
                         'bio': _bio.text,
                         'consultation_fee': _fee.text,
                         'specialties': _specialties,
-                        'clinic_info': _address.text
+                        'clinic_info': _clinicInfo.text
                       }))),
             if (_userData?['role'] == 'clinic')
               _menuRow(
@@ -757,15 +756,12 @@ class _AboutPage extends StatelessWidget {
             'Política de Privacidad',
             () => onOpen(
                 'Política de Privacidad',
-                const _TextPage(
-                    title: 'Política de Privacidad', text: _privacyText))),
+                const PrivacyPolicyScreen())),
         menuRow(
             'Cookies',
             () => onOpen(
                 'Cookies',
-                const _TextPage(
-                    title: 'Cookies',
-                    text: 'Esta opción aún no está configurada.'))),
+                const CookiesPolicyScreen())),
         const Padding(
             padding: EdgeInsets.all(12),
             child: Text('Información Legal',
@@ -774,8 +770,7 @@ class _AboutPage extends StatelessWidget {
             'Términos y Condiciones',
             () => onOpen(
                 'Términos y Condiciones',
-                const _TextPage(
-                    title: 'Términos y Condiciones', text: _termsText))),
+                const TermsAndConditionsScreen())),
         ListTile(
             leading: const Icon(Icons.delete_outline, color: Colors.red),
             title: const Text('Eliminar Cuenta de Salud Now',

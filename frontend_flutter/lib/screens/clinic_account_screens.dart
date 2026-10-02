@@ -82,10 +82,11 @@ class _ClinicStatusScreen extends StatelessWidget {
 
 class ClinicHomeTab extends StatefulWidget {
   const ClinicHomeTab(
-      {super.key, required this.onCalendar, required this.onDoctors, this.onSearch});
+      {super.key, required this.onCalendar, required this.onDoctors, this.onSearch, this.onProfileTap});
   final VoidCallback onCalendar;
   final VoidCallback onDoctors;
   final VoidCallback? onSearch;
+  final VoidCallback? onProfileTap;
 
   @override
   State<ClinicHomeTab> createState() => _ClinicHomeTabState();
@@ -314,13 +315,16 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
       padding: const EdgeInsets.symmetric(horizontal: 24.0),
       child: Row(
         children: [
-          ProfileAvatar(
-            imageUrl: _userData?['avatar_url']?.toString(),
-            currentUser: true,
-            fallbackRole: 'clinic',
-            size: 80,
-            borderColor: _isVip ? const Color(0xFFD7AF48) : const Color(0xFF0056B3),
-            borderWidth: _isVip ? 4 : 3,
+          GestureDetector(
+            onTap: widget.onProfileTap,
+            child: ProfileAvatar(
+              imageUrl: _userData?['avatar_url']?.toString(),
+              currentUser: true,
+              fallbackRole: 'clinic',
+              size: 80,
+              borderColor: _isVip ? const Color(0xFFD7AF48) : const Color(0xFF0056B3),
+              borderWidth: _isVip ? 4 : 3,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
