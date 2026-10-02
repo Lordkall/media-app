@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import '../widgets/web_footer.dart';
 
 const String _privacyMarkdown = """
 En **Salud Now**, operando en **Venezuela**, actuamos como intermediarios tecnológicos a través de nuestra plataforma digital. Nuestro compromiso es garantizar la máxima privacidad y el cumplimiento de las normativas de protección de datos aplicables.
@@ -199,6 +201,7 @@ class _BaseLegalScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 80), // Padding for FAB
+                if (kIsWeb) const WebFooter(),
               ],
             ),
           ),
