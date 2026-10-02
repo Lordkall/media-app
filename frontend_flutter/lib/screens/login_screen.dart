@@ -16,6 +16,7 @@ import 'select_plan_screen.dart';
 import 'payment_pending_screen.dart';
 import 'clinic_account_screens.dart';
 import '../widgets/web_footer.dart';
+import '../widgets/web_header.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -455,6 +456,7 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: Colors.white,
       body: Column(
         children: [
+          if (kIsWeb) const WebHeader(),
           Expanded(
             child: Container(
               decoration: const BoxDecoration(
