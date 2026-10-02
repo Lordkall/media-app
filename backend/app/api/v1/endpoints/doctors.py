@@ -272,10 +272,15 @@ async def get_public_doctors(db: AsyncSession = Depends(get_db)):
         if doc.specialties and isinstance(doc.specialties, list) and len(doc.specialties) > 0:
             specialty = doc.specialties[0]
             
+        avatar = user.avatar_url
+        if not avatar and user.avatar_data:
+            avatar = f"data:{user.avatar_content_type or 'image/jpeg'};base64,{user.avatar_data}"
+            
+        doctor_name = f"{prefix} {user.first_name or ''} {user.last_name or ''}".strip()
         out.append({
             "id": doc.id,
-            "name": f"{prefix} {user.first_name} {user.last_name}",
+            "name": doctor_name,
             "specialty": specialty,
-            "avatar_url": user.avatar_url
+            "avatar_url": avatar
         })
     return out

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 
 class ProfileImageHelper {
@@ -14,6 +15,12 @@ class ProfileImageHelper {
     }
 
     final finalUrl = avatarUrl.trim();
+    if (finalUrl.startsWith('data:image')) {
+      return MemoryImage(base64Decode(finalUrl.split(',').last));
+    }
+    if (finalUrl.startsWith('assets/')) {
+      return AssetImage(finalUrl);
+    }
     if (finalUrl.startsWith('https://')) return NetworkImage(finalUrl);
     if (finalUrl.startsWith('http://')) {
       return NetworkImage(finalUrl.replaceFirst('http://', 'https://'));

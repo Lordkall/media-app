@@ -461,24 +461,30 @@ async def invite_doctor(
 
 @router.get("/public")
 async def get_public_clinics(db: AsyncSession = Depends(get_db)):
-    """Return basic public info for all approved clinics."""
-    from app.models.subscriptions import Subscription, SubscriptionStatus, SubscriptionPlan
+    """Return basic public info for clinics."""
     query = (
         select(Clinic, User)
         .join(User, Clinic.user_id == User.id)
-        .where(Clinic.is_approved == True)
     )
     result = await db.execute(query)
     rows = result.all()
 
     out = []
     for clinic, user in rows:
+        avatar = user.avatar_url
+        if not avatar and user.avatar_data:
+            avatar = f"data:{user.avatar_content_type or 'image/jpeg'};base64,{user.avatar_data}"
+            
+        clinic_name = f"{user.first_name or ''} {user.last_name or ''}".strip()
+        if not clinic_name:
+            clinic_name = "Clínica"
+
         out.append({
             "id": clinic.id,
-            "name": f"{user.first_name} {user.last_name}",
+            "name": clinic_name,
             "city": user.state or "Venezuela",
             "type": (clinic.specialties[0] if clinic.specialties and len(clinic.specialties) > 0 else "Clínica General"),
-            "avatar_url": user.avatar_url,
+            "avatar_url": avatar,
         })
     return out
 

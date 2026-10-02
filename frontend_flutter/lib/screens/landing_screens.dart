@@ -5,6 +5,7 @@ import 'dart:math';
 import '../core/api_client.dart';
 import '../widgets/web_header.dart';
 import '../widgets/web_footer.dart';
+import '../widgets/profile_avatar.dart';
 
 class ForUsersScreen extends StatelessWidget {
   const ForUsersScreen({super.key});
@@ -38,7 +39,7 @@ class ForUsersScreen extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           const Text(
-            'Reserva con los mejores especialistas, accede a tu historial mÃ©dico y recibe recordatorios. RegÃ­strate o descarga nuestra app y comienza a cuidar de ti.',
+            'Reserva con los mejores especialistas, accede a tu historial médico y recibe recordatorios. Regístrate o descarga nuestra app y comienza a cuidar de ti.',
             style: TextStyle(
               fontSize: 18,
               color: Colors.white70,
@@ -153,7 +154,7 @@ class ForUsersScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Somos la alternativa mÃ¡s accesible para que gestiones tu salud hoy.',
+            'Somos la alternativa más accesible para que gestiones tu salud hoy.',
             style: TextStyle(
               fontSize: 36,
               fontWeight: FontWeight.bold,
@@ -172,26 +173,26 @@ class ForUsersScreen extends StatelessWidget {
             children: [
               _buildFeatureCard(
                 icon: Icons.calendar_month,
-                title: 'Agenda tus citas fÃ¡cilmente',
-                text: 'Encuentra al especialista que necesitas y agenda tu consulta en 3 minutos. Descarga nuestra app, regÃ­strate y comienza.',
+                title: 'Agenda tus citas fácilmente',
+                text: 'Encuentra al especialista que necesitas y agenda tu consulta en 3 minutos. Descarga nuestra app, regístrate y comienza.',
                 color: const Color(0xFF0056B3),
               ),
               _buildFeatureCard(
                 icon: Icons.health_and_safety,
-                title: 'Conoce nuestras clÃ­nicas aliadas',
-                text: 'Traemos muchas opciones de salud para ti. Desde tus clÃ­nicas y doctores favoritos hasta laboratorios y farmacias.',
+                title: 'Conoce nuestras clínicas aliadas',
+                text: 'Traemos muchas opciones de salud para ti. Desde tus clínicas y doctores favoritos hasta laboratorios y farmacias.',
                 color: const Color(0xFF0056B3),
               ),
               _buildFeatureCard(
                 icon: Icons.star,
-                title: 'AmplÃ­a tus beneficios',
-                text: 'Al utilizar nuestra plataforma accederÃ¡s a funciones VIP, historiales compartidos y descuentos especiales.',
+                title: 'Amplía tus beneficios',
+                text: 'Al utilizar nuestra plataforma accederás a funciones VIP, historiales compartidos y descuentos especiales.',
                 color: const Color(0xFF0056B3),
               ),
               _buildFeatureCard(
                 icon: Icons.handshake,
                 title: 'Estamos siempre contigo',
-                text: 'Te enviaremos recordatorios para que nunca faltes a una cita y puedas mantener tu salud al dÃ­a.',
+                text: 'Te enviaremos recordatorios para que nunca faltes a una cita y puedas mantener tu salud al día.',
                 color: const Color(0xFF0056B3),
               ),
             ],
@@ -468,38 +469,11 @@ class DoctorHoverCard extends StatefulWidget {
 class _DoctorHoverCardState extends State<DoctorHoverCard> {
   bool _isHovered = false;
 
-  ImageProvider? _resolveImage(String? url) {
-    if (url == null || url.isEmpty) return null;
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-      return NetworkImage(url);
-    }
-    if (url.startsWith('data:image')) {
-      // base64 embedded image
-      final base64Data = url.split(',').last;
-      try {
-        return MemoryImage(base64Decode(base64Data));
-      } catch (_) {
-        return null;
-      }
-    }
-    if (url.startsWith('assets/')) {
-      return AssetImage(url);
-    }
-    return null;
-  }
-
   @override
   Widget build(BuildContext context) {
     final doc = widget.doctor;
     final String? avatarUrl = doc['avatar_url'] as String?;
-    final ImageProvider? image = _resolveImage(avatarUrl);
-
-    // Initials fallback
     final String name = doc['name']?.toString() ?? '?';
-    final List<String> parts = name.split(' ');
-    final String initials = parts.length >= 2
-        ? '${parts[0][0]}${parts[parts.length - 1][0]}'
-        : name.substring(0, 1);
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -529,27 +503,18 @@ class _DoctorHoverCardState extends State<DoctorHoverCard> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircleAvatar(
-              radius: _isHovered ? 55 : 45,
-              backgroundColor: const Color(0xFF0056B3),
-              backgroundImage: image,
-              child: image == null
-                  ? Text(
-                      initials.toUpperCase(),
-                      style: const TextStyle(
-                          fontSize: 22,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold),
-                    )
-                  : null,
+            ProfileAvatar(
+              imageUrl: avatarUrl,
+              size: _isHovered ? 110 : 90,
+              fallbackRole: 'doctor',
             ),
             const SizedBox(height: 16),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
               child: Text(
                 name,
-                style: const TextStyle(
-                  fontSize: 18,
+                style: TextStyle(
+                  fontSize: _isHovered ? 20 : 18,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
                 ),
@@ -561,9 +526,9 @@ class _DoctorHoverCardState extends State<DoctorHoverCard> {
             const SizedBox(height: 8),
             Text(
               doc['specialty']?.toString() ?? 'Especialista',
-              style: const TextStyle(
-                fontSize: 14,
-                color: Color(0xFF0056B3),
+              style: TextStyle(
+                fontSize: _isHovered ? 16 : 14,
+                color: const Color(0xFF0056B3),
                 fontWeight: FontWeight.w600,
               ),
               textAlign: TextAlign.center,
@@ -669,6 +634,11 @@ class _AlliedClinicsScreenState extends State<AlliedClinicsScreen> {
       ),
       decoration: const BoxDecoration(
         color: Color(0xFF0B2545),
+        image: DecorationImage(
+          image: AssetImage('assets/allied_clinics_bg.jpg'),
+          fit: BoxFit.cover,
+          colorFilter: ColorFilter.mode(Colors.black54, BlendMode.darken),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -758,28 +728,12 @@ class ClinicHoverCard extends StatefulWidget {
 class _ClinicHoverCardState extends State<ClinicHoverCard> {
   bool _isHovered = false;
 
-  ImageProvider? _resolveImage(String? url) {
-    if (url == null || url.isEmpty) return null;
-    if (url.startsWith('http://') || url.startsWith('https://')) return NetworkImage(url);
-    if (url.startsWith('data:image')) {
-      try {
-        return MemoryImage(base64Decode(url.split(',').last));
-      } catch (_) {
-        return null;
-      }
-    }
-    if (url.startsWith('assets/')) return AssetImage(url);
-    return null;
-  }
-
   @override
   Widget build(BuildContext context) {
     final clinic = widget.clinic;
     final String name = clinic['name']?.toString() ?? 'Clínica';
     final String type = clinic['type']?.toString() ?? 'Clínica General';
     final String city = clinic['city']?.toString() ?? 'Venezuela';
-    final ImageProvider? image = _resolveImage(clinic['avatar_url'] as String?);
-    final String initial = name.isNotEmpty ? name[0].toUpperCase() : 'C';
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -808,27 +762,18 @@ class _ClinicHoverCardState extends State<ClinicHoverCard> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircleAvatar(
-              radius: _isHovered ? 50 : 40,
-              backgroundColor: const Color(0xFF0056B3).withOpacity(0.15),
-              backgroundImage: image,
-              child: image == null
-                  ? Text(
-                      initial,
-                      style: const TextStyle(
-                          fontSize: 28,
-                          color: Color(0xFF0056B3),
-                          fontWeight: FontWeight.bold),
-                    )
-                  : null,
+            ProfileAvatar(
+              imageUrl: clinic['avatar_url'] as String?,
+              size: _isHovered ? 110 : 90,
+              fallbackRole: 'clinic',
             ),
             const SizedBox(height: 16),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
               child: Text(
                 name,
-                style: const TextStyle(
-                  fontSize: 18,
+                style: TextStyle(
+                  fontSize: _isHovered ? 20 : 18,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
                 ),
@@ -840,9 +785,9 @@ class _ClinicHoverCardState extends State<ClinicHoverCard> {
             const SizedBox(height: 8),
             Text(
               type,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Color(0xFF0056B3),
+              style: TextStyle(
+                fontSize: _isHovered ? 16 : 14,
+                color: const Color(0xFF0056B3),
                 fontWeight: FontWeight.w600,
               ),
               textAlign: TextAlign.center,
@@ -993,65 +938,76 @@ class FaqScreen extends StatelessWidget {
       },
     ];
 
+    Widget buildFaqCard(Map<String, dynamic> faq) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(28),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF9FAFB),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.withOpacity(0.2)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(faq['icon'] as IconData, size: 30, color: Colors.black),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              faq['title'] as String,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              faq['desc'] as String,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: isDesktop ? 100 : 24,
       ),
       margin: const EdgeInsets.only(bottom: 80),
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: isDesktop ? 2 : 1,
-          crossAxisSpacing: 24,
-          mainAxisSpacing: 24,
-          childAspectRatio: isDesktop ? 2.5 : 2.0,
-        ),
-        itemCount: faqs.length,
-        itemBuilder: (context, index) {
-          final faq = faqs[index];
-          return Container(
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF9FAFB),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey.withOpacity(0.2)),
+      child: isDesktop
+          ? GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 24,
+                mainAxisSpacing: 24,
+                childAspectRatio: 2.2,
+              ),
+              itemCount: faqs.length,
+              itemBuilder: (context, index) => buildFaqCard(faqs[index]),
+            )
+          : Column(
+              children: faqs
+                  .map((faq) => Padding(
+                        padding: const EdgeInsets.only(bottom: 20),
+                        child: buildFaqCard(faq),
+                      ))
+                  .toList(),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(faq['icon'], size: 32, color: Colors.black),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  faq['title'],
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  faq['desc'],
-                  style: const TextStyle(
-                    fontSize: 15,
-                    color: Colors.grey,
-                    height: 1.5,
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
     );
   }
 }

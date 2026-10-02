@@ -42,6 +42,7 @@ flutter:
     - assets/logo_white.png
     - assets/doctor_patients_bg.jpg
     - assets/allied_doctors_bg.jpg
+    - assets/allied_clinics_bg.jpg
     - assets/avatars/
 
 flutter_launcher_icons:
