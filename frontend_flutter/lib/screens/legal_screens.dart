@@ -144,12 +144,12 @@ class _BaseLegalScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: const Color(0xFF0056B3),
         elevation: 0,
-        toolbarHeight: 80,
+        toolbarHeight: 64,
         iconTheme: const IconThemeData(color: Colors.white),
         title: Image.asset(
           'assets/logo_white.png',
-          height: 160,
-          errorBuilder: (context, error, stackTrace) => const Icon(Icons.health_and_safety, color: Colors.white, size: 60),
+          height: 48,
+          errorBuilder: (context, error, stackTrace) => const Icon(Icons.health_and_safety, color: Colors.white, size: 36),
         ),
         centerTitle: true,
       ),

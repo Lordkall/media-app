@@ -25,9 +25,9 @@ class WebHeader extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Image.asset(
                 'assets/logo_white.png',
-                height: 160,
+                height: 48,
                 fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) => const Icon(Icons.health_and_safety, color: Colors.white, size: 80),
+                errorBuilder: (context, error, stackTrace) => const Icon(Icons.health_and_safety, color: Colors.white, size: 36),
               ),
             ),
           ),
