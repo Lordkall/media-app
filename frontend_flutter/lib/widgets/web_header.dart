@@ -12,7 +12,7 @@ class WebHeader extends StatelessWidget {
     return Container(
       width: double.infinity,
       color: const Color(0xFF0056B3),
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 24),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -25,9 +25,9 @@ class WebHeader extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Image.asset(
                 'assets/logo_white.png',
-                height: 80,
+                height: 160,
                 fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) => const Icon(Icons.health_and_safety, color: Colors.white, size: 60),
+                errorBuilder: (context, error, stackTrace) => const Icon(Icons.health_and_safety, color: Colors.white, size: 80),
               ),
             ),
           ),

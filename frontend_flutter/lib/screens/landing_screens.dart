@@ -468,39 +468,78 @@ class DoctorHoverCard extends StatefulWidget {
 class _DoctorHoverCardState extends State<DoctorHoverCard> {
   bool _isHovered = false;
 
+  ImageProvider? _resolveImage(String? url) {
+    if (url == null || url.isEmpty) return null;
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return NetworkImage(url);
+    }
+    if (url.startsWith('data:image')) {
+      // base64 embedded image
+      final base64Data = url.split(',').last;
+      try {
+        return MemoryImage(base64Decode(base64Data));
+      } catch (_) {
+        return null;
+      }
+    }
+    if (url.startsWith('assets/')) {
+      return AssetImage(url);
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final doc = widget.doctor;
-    final String avatarUrl = doc['avatar_url'] ?? '';
-    
+    final String? avatarUrl = doc['avatar_url'] as String?;
+    final ImageProvider? image = _resolveImage(avatarUrl);
+
+    // Initials fallback
+    final String name = doc['name']?.toString() ?? '?';
+    final List<String> parts = name.split(' ');
+    final String initials = parts.length >= 2
+        ? '${parts[0][0]}${parts[parts.length - 1][0]}'
+        : name.substring(0, 1);
+
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeInOut,
-        transform: Matrix4.identity()..scale(_isHovered ? 1.05 : 1.0),
+        transform: Matrix4.identity()..scale(_isHovered ? 1.08 : 1.0),
+        transformAlignment: Alignment.center,
         decoration: BoxDecoration(
           color: _isHovered ? Colors.white : const Color(0xFFF9FAFB),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: _isHovered ? const Color(0xFF0056B3) : Colors.grey.withOpacity(0.2)),
+          border: Border.all(
+              color: _isHovered
+                  ? const Color(0xFF0056B3)
+                  : Colors.grey.withOpacity(0.2)),
           boxShadow: _isHovered
-              ? [BoxShadow(color: Colors.black12, blurRadius: 15, spreadRadius: 2, offset: const Offset(0, 8))]
+              ? [
+                  BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 15,
+                      spreadRadius: 2,
+                      offset: const Offset(0, 8))
+                ]
               : [],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             CircleAvatar(
-              radius: 45,
+              radius: _isHovered ? 55 : 45,
               backgroundColor: const Color(0xFF0056B3),
-              backgroundImage: avatarUrl.startsWith('http') || avatarUrl.startsWith('assets') 
-                  ? (avatarUrl.startsWith('http') ? NetworkImage(avatarUrl) : AssetImage(avatarUrl) as ImageProvider)
-                  : null,
-              child: (avatarUrl.isEmpty || (!avatarUrl.startsWith('http') && !avatarUrl.startsWith('assets')))
+              backgroundImage: image,
+              child: image == null
                   ? Text(
-                      doc['name']!.substring(4, 5) + doc['name']!.split(' ').last.substring(0, 1),
-                      style: const TextStyle(fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold),
+                      initials.toUpperCase(),
+                      style: const TextStyle(
+                          fontSize: 22,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold),
                     )
                   : null,
             ),
@@ -508,7 +547,7 @@ class _DoctorHoverCardState extends State<DoctorHoverCard> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
               child: Text(
-                doc['name']!,
+                name,
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -521,7 +560,7 @@ class _DoctorHoverCardState extends State<DoctorHoverCard> {
             ),
             const SizedBox(height: 8),
             Text(
-              doc['specialty']!,
+              doc['specialty']?.toString() ?? 'Especialista',
               style: const TextStyle(
                 fontSize: 14,
                 color: Color(0xFF0056B3),
@@ -536,8 +575,66 @@ class _DoctorHoverCardState extends State<DoctorHoverCard> {
   }
 }
 
-class AlliedClinicsScreen extends StatelessWidget {
+class AlliedClinicsScreen extends StatefulWidget {
   const AlliedClinicsScreen({super.key});
+
+  @override
+  State<AlliedClinicsScreen> createState() => _AlliedClinicsScreenState();
+}
+
+class _AlliedClinicsScreenState extends State<AlliedClinicsScreen> {
+  List<Map<String, dynamic>> _clinics = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchClinics();
+  }
+
+  Future<void> _fetchClinics() async {
+    try {
+      final response = await ApiClient.get('/clinics/public');
+      List<Map<String, dynamic>> fetched = [];
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        fetched = data.map((e) => e as Map<String, dynamic>).toList();
+      }
+      if (fetched.length < 8) {
+        final fallbacks = _getFallbackClinics();
+        fallbacks.shuffle(Random());
+        for (var f in fallbacks) {
+          if (fetched.length >= 8) break;
+          if (!fetched.any((c) => c['name'] == f['name'])) fetched.add(f);
+        }
+      }
+      fetched.shuffle(Random());
+      setState(() {
+        _clinics = fetched.take(8).toList();
+        _isLoading = false;
+      });
+    } catch (_) {
+      final fallbacks = _getFallbackClinics();
+      fallbacks.shuffle(Random());
+      setState(() {
+        _clinics = fallbacks.take(8).toList();
+        _isLoading = false;
+      });
+    }
+  }
+
+  List<Map<String, dynamic>> _getFallbackClinics() {
+    return [
+      {'name': 'Clínica Sanitas', 'city': 'Caracas', 'type': 'Hospital General', 'avatar_url': null},
+      {'name': 'Centro Médico Docente', 'city': 'Valencia', 'type': 'Clínica Especializada', 'avatar_url': null},
+      {'name': 'Hospital de Clínicas', 'city': 'Maracaibo', 'type': 'Hospital General', 'avatar_url': null},
+      {'name': 'Policlínica Metropolitana', 'city': 'Caracas', 'type': 'Centro Quirúrgico', 'avatar_url': null},
+      {'name': 'Clínica El Ávila', 'city': 'Caracas', 'type': 'Clínica Especializada', 'avatar_url': null},
+      {'name': 'Centro Médico de Caracas', 'city': 'Caracas', 'type': 'Hospital General', 'avatar_url': null},
+      {'name': 'Clínica La Viña', 'city': 'Valencia', 'type': 'Clínica Especializada', 'avatar_url': null},
+      {'name': 'Clínica Paraíso', 'city': 'Maracaibo', 'type': 'Maternidad', 'avatar_url': null},
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -601,18 +698,12 @@ class AlliedClinicsScreen extends StatelessWidget {
 
   Widget _buildClinicsGrid(BuildContext context) {
     final bool isDesktop = MediaQuery.of(context).size.width > 800;
-    
-    final List<Map<String, String>> clinics = [
-      {'name': 'Clínica Sanitas', 'city': 'Caracas', 'type': 'Hospital General'},
-      {'name': 'Centro Médico Docente', 'city': 'Valencia', 'type': 'Clínica Especializada'},
-      {'name': 'Hospital de Clínicas', 'city': 'Maracaibo', 'type': 'Hospital General'},
-      {'name': 'Policlínica Metropolitana', 'city': 'Caracas', 'type': 'Centro Quirúrgico'},
-      {'name': 'Clínica El Ávila', 'city': 'Caracas', 'type': 'Clínica Especializada'},
-      {'name': 'Centro Médico de Caracas', 'city': 'Caracas', 'type': 'Hospital General'},
-      {'name': 'Clínica La Viña', 'city': 'Valencia', 'type': 'Clínica Especializada'},
-      {'name': 'Clínica Paraíso', 'city': 'Maracaibo', 'type': 'Maternidad'},
-    ];
-
+    if (_isLoading) {
+      return const SizedBox(
+        height: 400,
+        child: Center(child: CircularProgressIndicator(color: Color(0xFF0056B3))),
+      );
+    }
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: isDesktop ? 100 : 24,
@@ -633,10 +724,7 @@ class AlliedClinicsScreen extends StatelessWidget {
           const SizedBox(height: 16),
           const Text(
             'Contamos con una amplia red de clínicas para garantizar tu atención médica.',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.black54,
-            ),
+            style: TextStyle(fontSize: 16, color: Colors.black54),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 48),
@@ -649,71 +737,135 @@ class AlliedClinicsScreen extends StatelessWidget {
               mainAxisSpacing: 24,
               childAspectRatio: 0.85,
             ),
-            itemCount: clinics.length,
-            itemBuilder: (context, index) {
-              final clinic = clinics[index];
-              return Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF9FAFB),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.withOpacity(0.2)),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircleAvatar(
-                      radius: 40,
-                      backgroundColor: const Color(0xFF0056B3).withOpacity(0.1),
-                      child: const Icon(Icons.local_hospital, size: 40, color: Color(0xFF0056B3)),
-                    ),
-                    const SizedBox(height: 16),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                      child: Text(
-                        clinic['name']!,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      clinic['type']!,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF0056B3),
-                        fontWeight: FontWeight.w600,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.location_on, size: 14, color: Colors.grey),
-                        const SizedBox(width: 4),
-                        Text(
-                          clinic['city']!,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            },
+            itemCount: _clinics.length,
+            itemBuilder: (context, index) =>
+                ClinicHoverCard(clinic: _clinics[index]),
           ),
         ],
       ),
     );
   }
 }
+
+class ClinicHoverCard extends StatefulWidget {
+  final Map<String, dynamic> clinic;
+  const ClinicHoverCard({super.key, required this.clinic});
+
+  @override
+  State<ClinicHoverCard> createState() => _ClinicHoverCardState();
+}
+
+class _ClinicHoverCardState extends State<ClinicHoverCard> {
+  bool _isHovered = false;
+
+  ImageProvider? _resolveImage(String? url) {
+    if (url == null || url.isEmpty) return null;
+    if (url.startsWith('http://') || url.startsWith('https://')) return NetworkImage(url);
+    if (url.startsWith('data:image')) {
+      try {
+        return MemoryImage(base64Decode(url.split(',').last));
+      } catch (_) {
+        return null;
+      }
+    }
+    if (url.startsWith('assets/')) return AssetImage(url);
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final clinic = widget.clinic;
+    final String name = clinic['name']?.toString() ?? 'Clínica';
+    final String type = clinic['type']?.toString() ?? 'Clínica General';
+    final String city = clinic['city']?.toString() ?? 'Venezuela';
+    final ImageProvider? image = _resolveImage(clinic['avatar_url'] as String?);
+    final String initial = name.isNotEmpty ? name[0].toUpperCase() : 'C';
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        transform: Matrix4.identity()..scale(_isHovered ? 1.08 : 1.0),
+        transformAlignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: _isHovered ? Colors.white : const Color(0xFFF9FAFB),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: _isHovered ? const Color(0xFF0056B3) : Colors.grey.withOpacity(0.2),
+          ),
+          boxShadow: _isHovered
+              ? [
+                  BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 15,
+                      spreadRadius: 2,
+                      offset: const Offset(0, 8))
+                ]
+              : [],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircleAvatar(
+              radius: _isHovered ? 50 : 40,
+              backgroundColor: const Color(0xFF0056B3).withOpacity(0.15),
+              backgroundImage: image,
+              child: image == null
+                  ? Text(
+                      initial,
+                      style: const TextStyle(
+                          fontSize: 28,
+                          color: Color(0xFF0056B3),
+                          fontWeight: FontWeight.bold),
+                    )
+                  : null,
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: Text(
+                name,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              type,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFF0056B3),
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.location_on, size: 14, color: Colors.grey),
+                const SizedBox(width: 4),
+                Text(
+                  city,
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 
 class FaqScreen extends StatelessWidget {
   const FaqScreen({super.key});

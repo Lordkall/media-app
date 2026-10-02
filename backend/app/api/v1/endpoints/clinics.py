@@ -459,3 +459,26 @@ async def invite_doctor(
     await db.commit()
     return {"message": "Invitación enviada"}
 
+@router.get("/public")
+async def get_public_clinics(db: AsyncSession = Depends(get_db)):
+    """Return basic public info for all approved clinics."""
+    from app.models.subscriptions import Subscription, SubscriptionStatus, SubscriptionPlan
+    query = (
+        select(Clinic, User)
+        .join(User, Clinic.user_id == User.id)
+        .where(Clinic.is_approved == True)
+    )
+    result = await db.execute(query)
+    rows = result.all()
+
+    out = []
+    for clinic, user in rows:
+        out.append({
+            "id": clinic.id,
+            "name": f"{user.first_name} {user.last_name}",
+            "city": user.state or "Venezuela",
+            "type": (clinic.specialties[0] if clinic.specialties and len(clinic.specialties) > 0 else "Clínica General"),
+            "avatar_url": user.avatar_url,
+        })
+    return out
+
