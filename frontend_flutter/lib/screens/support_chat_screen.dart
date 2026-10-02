@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import '../core/api_client.dart';
 import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
 
 class SupportChatScreen extends StatefulWidget {
   final Map<dynamic, dynamic> ticket;
@@ -98,8 +99,14 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
     }
   }
 
+  bool _isSending = false;
+
   Future<void> _sendMessage() async {
-    if (_messageController.text.trim().isEmpty || _isClosed) return;
+    if (_messageController.text.trim().isEmpty || _isClosed || _isSending) return;
+    
+    setState(() {
+      _isSending = true;
+    });
 
     final text = _messageController.text.trim();
     try {
@@ -115,6 +122,12 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('No se pudo enviar el mensaje: $e')),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSending = false;
+        });
       }
     }
   }
@@ -229,6 +242,48 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
     );
   }
 
+  
+  Future<void> _pickAndSendImage() async {
+    if (_isClosed || _isSending) return;
+    try {
+      final picker = ImagePicker();
+      final image = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 70,
+      );
+      if (image == null) return;
+      
+      setState(() {
+        _isSending = true;
+      });
+      
+      final bytes = await image.readAsBytes();
+      final base64Image = base64Encode(bytes);
+      final extension = image.name.split('.').last.toLowerCase();
+      final mimeType = extension == 'png' ? 'image/png' : 'image/jpeg';
+      final dataUri = 'data:;base64,';
+      
+      final response = await ApiClient.post(
+          '/support//reply', {'message': dataUri});
+      if (response.statusCode != 200) {
+        throw Exception('No se pudo enviar la imagen');
+      }
+      await _loadMessages();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al enviar imagen: ')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSending = false;
+        });
+      }
+    }
+  }
+
   Widget _buildChatBubble(String text, bool isMe, String time) {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
@@ -259,13 +314,22 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
           crossAxisAlignment:
               isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
-            Text(
-              text,
-              style: TextStyle(
-                color: isMe ? Colors.white : const Color(0xFF0B2545),
-                fontSize: 15,
-              ),
-            ),
+            text.startsWith('data:image/')
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.memory(
+                      base64Decode(text.split(',').last),
+                      width: 200,
+                      fit: BoxFit.cover,
+                    ),
+                  )
+                : Text(
+                    text,
+                    style: TextStyle(
+                      color: isMe ? Colors.white : const Color(0xFF0B2545),
+                      fontSize: 15,
+                    ),
+                  ),
             const SizedBox(height: 4),
             Text(
               time,
@@ -289,7 +353,7 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
           children: [
             IconButton(
               icon: const Icon(Icons.attach_file, color: Colors.grey),
-              onPressed: () {},
+              onPressed: _isClosed ? null : _pickAndSendImage,
             ),
             Expanded(
               child: TextField(
@@ -314,10 +378,16 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
             CircleAvatar(
               backgroundColor:
                   _isClosed ? Colors.grey : const Color(0xFF0056B3),
-              child: IconButton(
-                icon: const Icon(Icons.send, color: Colors.white, size: 20),
-                onPressed: _isClosed ? null : _sendMessage,
-              ),
+              child: _isSending
+                  ? const Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2),
+                    )
+                  : IconButton(
+                      icon: const Icon(Icons.send, color: Colors.white, size: 20),
+                      onPressed: _isClosed ? null : _sendMessage,
+                    ),
             ),
           ],
         ),

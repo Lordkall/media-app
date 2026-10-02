@@ -175,12 +175,13 @@ async def join_clinic(invite_code: str, current_user: User = Depends(get_current
     doctor.requested_clinic_id = clinic.id
     doctor.clinic_join_status = "pending"
     
+    prefix = "La Dra." if current_user.gender in ["Femenino", "Femenina"] else "El Dr."
     from app.models.notifications import Notification, NotificationType
     notif = Notification(
         user_id=clinic.user_id,
         type=NotificationType.CLINIC_JOIN_REQUEST,
         title="Nueva solicitud de afiliación",
-        message=f"El Dr. {current_user.first_name} {current_user.last_name} ha solicitado unirse a tu clínica.",
+        message=f"{prefix} {current_user.first_name} {current_user.last_name} ha solicitado unirse a tu clínica.",
     )
     db.add(notif)
     
@@ -212,12 +213,16 @@ async def get_my_doctors(
     max_doc = clinic_doctor_limit(subscription.plan) if subscription else 0
 
     doctors_list = [{
-        "doctor_id": doctor.id, "user_id": user.id,
+        "id": doctor.id, "user_id": user.id,
         "first_name": user.first_name, "last_name": user.last_name,
         "email": user.email, "phone": user.phone, "state": user.state,
+        "address": doctor.clinic_info or user.address,
         "avatar_url": user.avatar_url,
         "specialties": doctor.specialties or [],
         "clinic_join_status": doctor.clinic_join_status or "approved",
+        "bio": doctor.bio,
+        "consultation_fee": doctor.consultation_fee,
+        "is_vip": doctor.is_sponsored,
     } for doctor, user in rows]
     
     return {

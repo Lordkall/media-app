@@ -10,6 +10,8 @@ class SupportTicket(Base):
     subject = Column(String, nullable=False)
     status = Column(String, default="ABIERTO") # ABIERTO, CERRADO
     created_at = Column(DateTime, default=datetime.utcnow)
+    deleted_by_user = Column(Boolean, default=False)
+    deleted_by_admin = Column(Boolean, default=False)
     
     user = relationship("User")
     messages = relationship("TicketMessage", back_populates="ticket", cascade="all, delete-orphan", order_by="TicketMessage.created_at")

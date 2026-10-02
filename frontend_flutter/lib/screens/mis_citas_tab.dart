@@ -389,7 +389,9 @@ class _MisCitasTabState extends State<MisCitasTab> {
                                     children: [
                                         Expanded(
                                           child: appt['status'] == 'scheduled'
-                                              ? Row(
+                                              ? Wrap(
+                                                  spacing: 16,
+                                                  runSpacing: 8,
                                                   children: [
                                                     if (!_doctorView) ...[
                                                       GestureDetector(
@@ -411,7 +413,6 @@ class _MisCitasTabState extends State<MisCitasTab> {
                                                         child: const Text('Reprogramar',
                                                             style: TextStyle(color: Color(0xFF87CEFA), fontSize: 16, fontWeight: FontWeight.bold)),
                                                       ),
-                                                      const SizedBox(width: 16),
                                                     ],
                                                     GestureDetector(
                                                       onTap: () async {

@@ -300,11 +300,17 @@ async def cancel_appointment(
         if appt.status == AppointmentStatus.CANCELLED:
             raise HTTPException(status_code=400, detail="Already cancelled")
 
-        doctor = await db.scalar(select(Doctor).where(Doctor.id == appt.doctor_id))
-        patient = await db.scalar(select(Patient).where(Patient.id == appt.patient_id)) if appt.patient_id else None
+        doctor_query = select(Doctor).options(joinedload(Doctor.user)).where(Doctor.id == appt.doctor_id)
+        doctor = (await db.execute(doctor_query)).scalar_one_or_none()
+        patient = None
+        if appt.patient_id:
+            patient_query = select(Patient).options(joinedload(Patient.user)).where(Patient.id == appt.patient_id)
+            patient = (await db.execute(patient_query)).scalar_one_or_none()
+
         if not doctor or (appt.patient_id and not patient):
             raise HTTPException(status_code=404, detail="Appointment participant not found")
 
+        title = "Cita cancelada"
         if current_user.role in (RoleEnum.DOCTOR, RoleEnum.ASSISTANT):
             if (current_user.role == RoleEnum.DOCTOR and doctor.user_id != current_user.id) or (
                 current_user.role == RoleEnum.ASSISTANT and current_user.linked_doctor_id != doctor.id
@@ -312,13 +318,32 @@ async def cancel_appointment(
                 raise HTTPException(status_code=403, detail="You cannot cancel this appointment")
             recipient_user_id = patient.user_id if patient else None
             cancelled_by = "doctor"
-            actor_name = "El doctor"
+            if doctor and doctor.user:
+                doc_name = f"{doctor.user.first_name} {doctor.user.last_name}"
+                if doctor.user.gender in ["Femenino", "Femenina"]:
+                    actor_name = f"La Doctora {doc_name}"
+                    title = f"Cita Cancelada por la Doctora {doc_name}"
+                else:
+                    actor_name = f"El Doctor {doc_name}"
+                    title = f"Cita Cancelada por el Doctor {doc_name}"
+            else:
+                actor_name = "El doctor"
+                title = "Cita Cancelada por el Doctor"
         elif current_user.role == RoleEnum.PATIENT:
             if not patient or patient.user_id != current_user.id:
                 raise HTTPException(status_code=403, detail="You cannot cancel this appointment")
             recipient_user_id = doctor.user_id
             cancelled_by = "patient"
-            actor_name = "El paciente"
+            if patient and patient.user:
+                if patient.user.gender in ["Femenino", "Femenina"]:
+                    actor_name = "La paciente"
+                    title = "Cita Cancelada por la paciente"
+                else:
+                    actor_name = "El paciente"
+                    title = "Cita Cancelada por el paciente"
+            else:
+                actor_name = "El paciente"
+                title = "Cita Cancelada por el paciente"
         else:
             raise HTTPException(status_code=403, detail="Only an appointment participant can cancel")
             
@@ -335,8 +360,8 @@ async def cancel_appointment(
         notif = Notification(
             user_id=recipient_user_id,
             type=NotificationType.APPOINTMENT_CANCELLED,
-            title="Cita cancelada por el doctor" if cancelled_by == "doctor" else "Cita cancelada por el paciente",
-            message=f"{actor_name} canceló la cita del {appt.appointment_date} (turno #{appt.turn_number}).",
+            title=title,
+            message=f"Se canceló la cita para el día {appt.appointment_date} (Turno #{appt.turn_number}).",
         )
         db.add(notif)
         await db.commit()
@@ -543,7 +568,12 @@ async def reschedule_appointment(
     if doc_record and doc_record.user and doc_record.user.email:
         patient_query = select(Patient).options(joinedload(Patient.user)).where(Patient.id == appointment.patient_id)
         pat_record = (await db.execute(patient_query)).scalar_one_or_none()
-        patient_name = f"{pat_record.user.first_name} {pat_record.user.last_name}" if pat_record and pat_record.user else "Un paciente"
+        if pat_record and pat_record.user:
+            patient_name = f"{pat_record.user.first_name} {pat_record.user.last_name}"
+            prefix = "La paciente" if pat_record.user.gender in ["Femenino", "Femenina"] else "El paciente"
+        else:
+            patient_name = ""
+            prefix = "Un paciente"
         
         try:
             from app.models.notifications import Notification, NotificationType
@@ -551,7 +581,7 @@ async def reschedule_appointment(
                 user_id=doc_record.user.id,
                 type=NotificationType.APPOINTMENT_CREATED,
                 title="Cita Reprogramada",
-                message=f"El paciente {patient_name} ha reprogramado su cita para el {req_date} en el turno #{requested_turn}."
+                message=f"{prefix} {patient_name} ha reprogramado su cita para el {req_date} en el turno #{requested_turn}."
             )
             db.add(notif)
             await db.commit()

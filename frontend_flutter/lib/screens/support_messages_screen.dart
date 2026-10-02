@@ -157,7 +157,11 @@ class _SupportMessagesScreenState extends State<SupportMessagesScreen> {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                msg['message'] ?? '',
+                                (msg['message'] ?? '').startsWith('data:image/')
+                                    ? '[Imagen]'
+                                    : msg['message'] ?? '',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                                 style:
                                     const TextStyle(color: Color(0xFF475569)),
                               ),

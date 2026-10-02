@@ -91,6 +91,7 @@ async def get_tickets(
     if current_user.role == RoleEnum.ADMIN or current_user.role == "admin":
         result = await db.execute(
             select(SupportTicket)
+            .where(SupportTicket.deleted_by_admin == False)
             .options(selectinload(SupportTicket.user), selectinload(SupportTicket.messages))
             .order_by(SupportTicket.created_at.desc())
         )
@@ -99,6 +100,7 @@ async def get_tickets(
             select(SupportTicket)
             .options(selectinload(SupportTicket.user), selectinload(SupportTicket.messages))
             .where(SupportTicket.user_id == current_user.id)
+            .where(SupportTicket.deleted_by_user == False)
             .order_by(SupportTicket.created_at.desc())
         )
     tickets = result.scalars().all()
@@ -265,9 +267,18 @@ async def delete_ticket(
 
     # Messages will be cascade-deleted or we need to delete them first
     # In SQLAlchemy if cascade delete is not set, we should delete messages first
-    from app.models.support import TicketMessage
+    if is_admin:
+        ticket.deleted_by_admin = True
+    else:
+        ticket.deleted_by_user = True
+
+    if ticket.deleted_by_admin and ticket.deleted_by_user:
+        from app.models.support import TicketMessage
+        await db.execute(TicketMessage.__table__.delete().where(TicketMessage.ticket_id == ticket_id))
+        await db.delete(ticket)
+    else:
+        db.add(ticket)
     await db.execute(TicketMessage.__table__.delete().where(TicketMessage.ticket_id == ticket_id))
     
-    await db.delete(ticket)
     await db.commit()
     return {"message": "Ticket deleted"}

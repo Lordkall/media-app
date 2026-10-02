@@ -13,6 +13,7 @@ import 'login_screen.dart';
 import 'support_messages_screen.dart';
 import 'select_plan_screen.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'doctor_profile_screen.dart';
 
 class ClinicJoinPendingScreen extends StatelessWidget {
   const ClinicJoinPendingScreen({super.key});
@@ -741,6 +742,14 @@ class _ClinicDoctorsTabState extends State<ClinicDoctorsTab>
                                   margin: const EdgeInsets.symmetric(
                                       horizontal: 16, vertical: 6),
                                   child: ListTile(
+                                    onTap: () {
+                                      Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (context) =>
+                                                  DoctorProfileScreen(
+                                                      doctor: item)));
+                                    },
                                     leading: ProfileAvatar(
                                       imageUrl: item['avatar_url']?.toString(),
                                       size: 40,
@@ -751,7 +760,7 @@ class _ClinicDoctorsTabState extends State<ClinicDoctorsTab>
                                     subtitle: Text(specialties.join(', ')),
                                     trailing: IconButton(
                                       icon: const Icon(Icons.delete, color: Colors.red),
-                                      onPressed: () => _removeDoctor(item['doctor_id'] as int, '${item['first_name']} ${item['last_name']}'),
+                                      onPressed: () => _removeDoctor(item['id'] as int, '${item['first_name']} ${item['last_name']}'),
                                     ),
                                   ),
                                 );
