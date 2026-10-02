@@ -57,6 +57,162 @@ class _MisCitasTabState extends State<MisCitasTab> {
     }
   }
 
+  void _showAppointmentDetails(Map<String, dynamic> appt) {
+    final isDoctor = _doctorView;
+    final otherPersonName = appt['doctor_name'] ?? 'Desconocido';
+    final specialty = appt['doctor_specialty'] ?? (isDoctor ? 'Consulta Médica' : 'General');
+    final date = appt['date']?.toString() ?? '';
+    final time = appt['time_block']?.toString() ?? 'Hora pendiente';
+    final turn = appt['turn_number']?.toString() ?? '-';
+    final location = appt['doctor_location']?.toString() ?? '';
+    final reason = appt['appointment_reason']?.toString() ?? (appt['reason']?.toString() ?? 'Consulta Médica');
+    final status = (appt['status'] ?? 'scheduled').toString().toLowerCase();
+    final avatarUrl = appt['doctor_avatar'] as String?;
+    final String displayStatus = status == 'scheduled'
+        ? 'PROGRAMADA'
+        : (status == 'cancelled' ? 'CANCELADA' : status.toUpperCase());
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        contentPadding: const EdgeInsets.all(24),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Column(
+                    children: [
+                      ProfileAvatar(
+                        imageUrl: avatarUrl,
+                        size: 84,
+                        fallbackRole: isDoctor ? 'patient' : 'doctor',
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        otherPersonName,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0B2545),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        specialty,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          color: Color(0xFF0056B3),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: status == 'scheduled'
+                              ? Colors.green.shade600
+                              : (status == 'cancelled' ? Colors.red.shade400 : Colors.blueGrey),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          displayStatus,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Divider(),
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE2F1F8),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFF0056B3).withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.confirmation_number_outlined, color: Color(0xFF0056B3), size: 28),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('TURNO ASIGNADO',
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0056B3))),
+                            Text('Turno #$turn',
+                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0B2545))),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildDetailRow(Icons.calendar_today, 'Fecha', date),
+                const SizedBox(height: 12),
+                _buildDetailRow(Icons.access_time, 'Hora estimada / Bloque', time),
+                if (location.trim().isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  _buildDetailRow(Icons.location_on, 'Ubicación / Consultorio', location),
+                ],
+                if (appt['patient_phone'] != null && appt['patient_phone'].toString().trim().isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  _buildDetailRow(Icons.phone, 'Teléfono del paciente', appt['patient_phone'].toString()),
+                ],
+                if (reason.trim().isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  _buildDetailRow(Icons.medical_services_outlined, 'Motivo de consulta', reason),
+                ],
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cerrar', style: TextStyle(color: Color(0xFF0056B3), fontWeight: FontWeight.bold, fontSize: 16)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: const Color(0xFF0056B3)),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 2),
+              Text(value, style: const TextStyle(fontSize: 14, color: Color(0xFF0B2545), fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
 
   late DateTime _selectedDate = widget.initialDate ?? caracasNow();
   List<dynamic> _appointments = [];
@@ -292,18 +448,23 @@ class _MisCitasTabState extends State<MisCitasTab> {
                     else
                       ..._visibleAppointments.map((appt) => Padding(
                             padding: const EdgeInsets.only(bottom: 16.0),
-                            child: Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF0056B3),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
                                 borderRadius: BorderRadius.circular(20),
-                                boxShadow: const [
-                                  BoxShadow(
-                                      color: Colors.black26,
-                                      blurRadius: 6,
-                                      offset: Offset(0, 3))
-                                ],
-                              ),
+                                onTap: () => _showAppointmentDetails(appt),
+                                child: Container(
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF0056B3),
+                                    borderRadius: BorderRadius.circular(20),
+                                    boxShadow: const [
+                                      BoxShadow(
+                                          color: Colors.black26,
+                                          blurRadius: 6,
+                                          offset: Offset(0, 3))
+                                    ],
+                                  ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -519,6 +680,8 @@ class _MisCitasTabState extends State<MisCitasTab> {
                                     ],
                                   ),
                                 ],
+                                  ),
+                                ),
                               ),
                             ),
                           )),

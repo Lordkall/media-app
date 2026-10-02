@@ -54,16 +54,47 @@ class _SupportMessagesScreenState extends State<SupportMessagesScreen> {
   }
 
   Future<void> _deleteTicket(int ticketId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar chat'),
+        content: const Text('¿Estás seguro de que deseas eliminar este chat de soporte?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+
     try {
       final response = await ApiClient.delete('/support/$ticketId');
       if (!mounted) return;
       if (response.statusCode == 200) {
+        setState(() {
+          _messages.removeWhere((m) => m['id'] == ticketId);
+        });
         ScaffoldMessenger.of(context)
             .showSnackBar(const SnackBar(content: Text('Chat eliminado.')));
-        _fetchMessages();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al eliminar chat (${response.statusCode})')),
+        );
       }
     } catch (e) {
       debugPrint('Error al eliminar: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al eliminar: $e')),
+        );
+      }
     }
   }
 

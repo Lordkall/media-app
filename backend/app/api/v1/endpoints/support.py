@@ -272,25 +272,16 @@ async def delete_ticket(
     is_admin = current_user.role == RoleEnum.ADMIN or current_user.role == "admin"
     if not is_admin and ticket.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="No tienes acceso a este chat")
-        
-    # Optional: ensure ticket is closed before deleting
-    if str(ticket.status).casefold() not in {"cerrado", "closed"}:
-        raise HTTPException(status_code=400, detail="Cannot delete open tickets")
 
-    # Messages will be cascade-deleted or we need to delete them first
-    # In SQLAlchemy if cascade delete is not set, we should delete messages first
     if is_admin:
         ticket.deleted_by_admin = True
     else:
         ticket.deleted_by_user = True
 
     if ticket.deleted_by_admin and ticket.deleted_by_user:
-        from app.models.support import TicketMessage
-        await db.execute(TicketMessage.__table__.delete().where(TicketMessage.ticket_id == ticket_id))
         await db.delete(ticket)
     else:
         db.add(ticket)
-    await db.execute(TicketMessage.__table__.delete().where(TicketMessage.ticket_id == ticket_id))
     
     await db.commit()
     return {"message": "Ticket deleted"}
