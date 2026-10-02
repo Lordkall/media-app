@@ -1,5 +1,5 @@
 from typing import Optional, List
-from sqlalchemy import String, Enum, ForeignKey, Text, DateTime
+from sqlalchemy import String, Enum, ForeignKey, Text, DateTime, Boolean
 from datetime import datetime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base
@@ -35,6 +35,7 @@ class User(Base):
     privacy_accepted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     terms_version: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
     privacy_version: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
+    is_blocked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     
     # Relaciones
     doctor_profile: Mapped[Optional["Doctor"]] = relationship(back_populates="user", foreign_keys="[Doctor.user_id]")

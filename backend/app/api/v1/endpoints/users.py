@@ -39,6 +39,19 @@ async def get_current_user(request: Request, token: str = Depends(oauth2_scheme)
     if user.session_token is not None and payload.get("sid") != user.session_token:
         raise credentials_exception
 
+    if getattr(user, "is_blocked", False):
+        req_path = request.url.path
+        allowed_blocked = (
+            req_path == "/api/v1/users/me"
+            or req_path.startswith("/api/v1/support")
+            or req_path.startswith("/api/v1/auth")
+        )
+        if not allowed_blocked:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Tu cuenta ha sido bloqueada por incumplimiento de las normas.",
+            )
+
     restricted = False
     clinic_id = None
     if user.role == DatabaseRoleEnum.CLINIC:

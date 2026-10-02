@@ -10,8 +10,8 @@ En **Salud Now**, operando en **Venezuela**, actuamos como intermediarios tecnol
 - **Plataforma**: La aplicación web y móvil de agendamiento.
 - **Usuario**: Cualquier persona registrada (Paciente, Profesional o Clínica).
 
-### 2. Naturaleza del servicio
-Actuamos exclusivamente como intermediario tecnológico para la gestión de citas y conexión. **NO** prestamos servicios médicos ni emitimos diagnósticos. Ante cualquier emergencia, el paciente debe acudir a los servicios locales de urgencia.
+### 2. Descargo de Responsabilidad Médico y Naturaleza del Servicio
+La aplicación **SaludNow**, operada por la entidad mercantil **SaludNow, C.A.**, funciona exclusivamente como una herramienta tecnológica e intermediaria para la gestión de citas y conexión entre usuarios y prestadores de salud. Se establece de forma explícita e inequívoca que la aplicación **no es un dispositivo médico, no emite diagnósticos, no indica tratamientos** y su uso **no sustituye bajo ninguna circunstancia el criterio, la evaluación o el consejo de un profesional de la salud certificado**. Ante cualquier sospecha clínica, duda médica o emergencia, el usuario debe consultar a un médico calificado o acudir a los servicios locales de urgencia.
 
 ### 3. Registro, veracidad y seguridad
 Todo usuario debe registrarse con información veraz. Es su responsabilidad custodiar sus credenciales. Los Doctores y Clínicas deben proveer documentación comprobatoria de sus licencias.
@@ -89,9 +89,12 @@ Al registrarte en **Salud Now** de **Salud Now C.A**, aceptas estos términos. D
 - **Clínica/Aliado**: Centro con múltiples consultorios.
 - **No-Show**: Inasistencia sin aviso previo.
 
-### 3. Naturaleza del Servicio y Deslinde de Responsabilidad Médica
-Somos un **intermediario tecnológico**. NO prestamos servicios de salud, ni atendemos urgencias.
-**ADVERTENCIA DE EMERGENCIA**: En caso de riesgo vital, contacte a los servicios de auxilio locales.
+### 3. Descargo de Responsabilidad Médico
+La aplicación móvil y plataforma web **SaludNow**, operada por la entidad mercantil **SaludNow, C.A.**, funciona exclusivamente como una herramienta tecnológica e intermediaria de conexión y gestión de citas entre usuarios y profesionales o entidades de salud independientes. 
+
+Se establece de forma explícita e inequívoca que la aplicación **SaludNow no es un dispositivo médico ni software como dispositivo médico (SaMD)**, no emite diagnósticos clínicos, no prescribe ni indica tratamientos terapéuticos o farmacológicos, y no efectúa actos de medicina directa. Su uso **no sustituye bajo ninguna circunstancia el criterio, la evaluación presencial, el juicio diagnóstico o el consejo de un profesional de la salud certificado** y habilitado para el ejercicio de la medicina. 
+
+Ante cualquier duda sobre un cuadro de salud, sospecha de enfermedad o situación que implique riesgo para la salud o la vida, el usuario debe consultar inmediatamente a un médico calificado o dirigirse a un centro de urgencias médicas local. **SaludNow no es un servicio de atención de emergencias ni urgencias médicas**.
 
 ### 4. Condiciones Específicas para Pacientes
 - La información suministrada debe ser veraz.

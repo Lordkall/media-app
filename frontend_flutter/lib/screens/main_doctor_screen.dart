@@ -18,6 +18,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import '../core/local_notification_service.dart';
 import 'package:flutter/foundation.dart';
 import 'clinic_account_screens.dart';
+import 'blocked_account_screen.dart';
 
 class MainDoctorScreen extends StatefulWidget {
   const MainDoctorScreen({super.key});
@@ -142,6 +143,20 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
   }
 
   Future<void> _loadRole() async {
+    try {
+      final userRes = await ApiClient.get('/users/me');
+      if (userRes.statusCode == 200) {
+        final userData = jsonDecode(userRes.body);
+        if (userData['is_blocked'] == true) {
+          if (!mounted) return;
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const BlockedAccountScreen()),
+            (route) => false,
+          );
+          return;
+        }
+      }
+    } catch (_) {}
     final role = await AuthHelper.getRole();
     if (!mounted) return;
     setState(() {

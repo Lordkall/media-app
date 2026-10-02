@@ -68,6 +68,7 @@ async def lifespan(app: FastAPI):
             await conn.execute(text("ALTER TABLE ticket_messages ADD COLUMN IF NOT EXISTS is_read BOOLEAN DEFAULT FALSE;"))
             await conn.execute(text("DROP INDEX IF EXISTS uq_appointments_active_slot;"))
             await conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_appointments_active_start ON appointments (doctor_id, appointment_date, appointment_start_minutes) WHERE status <> 'CANCELLED' AND appointment_start_minutes IS NOT NULL;"))
+            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_blocked BOOLEAN DEFAULT FALSE;"))
     except Exception as e:
         print(f"Migration error (might already be TEXT): {e}")
 

@@ -15,6 +15,7 @@ import 'password_recovery_screen.dart';
 import 'select_plan_screen.dart';
 import 'payment_pending_screen.dart';
 import 'clinic_account_screens.dart';
+import 'blocked_account_screen.dart';
 import '../widgets/web_footer.dart';
 import '../widgets/web_header.dart';
 
@@ -330,6 +331,13 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       if (userResponse.statusCode == 200) {
         final userData = jsonDecode(userResponse.body);
+
+        if (userData['is_blocked'] == true) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const BlockedAccountScreen()),
+          );
+          return;
+        }
 
         if (userData['role'] == 'doctor') {
           // It's a doctor, check if they have a profile/subscription

@@ -215,6 +215,7 @@ async def get_all_doctors(
             "subscription_id": sub.id if sub else None,
             "days_remaining": days_remaining,
             "clinic_id": doc.clinic_id,
+            "is_blocked": bool(getattr(user, "is_blocked", False)),
             # Pending payment info
             "pending_sub_id": pending_sub.id if pending_sub else None,
             "pending_plan": pending_sub.plan.value if pending_sub else None,
@@ -265,6 +266,7 @@ async def get_all_clinics(
             "plan": sub.plan.value if sub else "Ninguno",
             "subscription_id": sub.id if sub else None,
             "days_remaining": days_remaining,
+            "is_blocked": bool(getattr(user, "is_blocked", False)),
             "pending_sub_id": pending_sub.id if pending_sub else None,
             "pending_plan": pending_sub.plan.value if pending_sub else None,
             "pending_reference": pending_sub.reference_number if pending_sub else None,
@@ -272,6 +274,78 @@ async def get_all_clinics(
         })
         
     return clinics_list
+
+
+@router.get("/patients")
+async def get_all_patients(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    check_admin(current_user)
+    query = select(Patient, User).join(User, Patient.user_id == User.id).order_by(User.first_name, User.last_name)
+    result = await db.execute(query)
+    
+    patients_list = []
+    for patient, user in result:
+        patients_list.append({
+            "id": patient.id,
+            "user_id": user.id,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "email": user.email,
+            "phone": user.phone,
+            "state": user.state,
+            "avatar_url": user.avatar_url,
+            "is_blocked": bool(getattr(user, "is_blocked", False)),
+        })
+        
+    return patients_list
+
+
+@router.patch("/users/{user_id}/toggle-block")
+async def toggle_user_block(
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    check_admin(current_user)
+    if current_user.id == user_id:
+        raise HTTPException(status_code=400, detail="No puedes bloquear tu propia cuenta de administrador.")
+    
+    user = await db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    
+    user.is_blocked = not bool(getattr(user, "is_blocked", False))
+    await db.commit()
+    await db.refresh(user)
+    return {
+        "user_id": user.id,
+        "is_blocked": user.is_blocked,
+        "message": f"Usuario {'bloqueado' if user.is_blocked else 'desbloqueado'} exitosamente."
+    }
+
+
+@router.delete("/patients/{patient_id}")
+async def delete_patient_record(
+    patient_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    check_admin(current_user)
+    patient = await db.scalar(select(Patient).where(Patient.id == patient_id))
+    if not patient:
+        raise HTTPException(status_code=404, detail="Paciente no encontrado")
+    
+    from app.models.appointments import Appointment
+    await db.execute(delete(Appointment).where(Appointment.patient_id == patient.id))
+    await delete_user_owned_data(db, [patient.user_id])
+    await db.delete(patient)
+    patient_user = await db.get(User, patient.user_id)
+    if patient_user:
+        await db.delete(patient_user)
+    await db.commit()
+    return {"message": "Paciente y sus registros asociados eliminados"}
 
 @router.post("/subscriptions/{doctor_id}/activate")
 async def activate_subscription(

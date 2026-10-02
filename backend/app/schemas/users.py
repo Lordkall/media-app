@@ -85,6 +85,7 @@ class UserResponse(BaseModel):
     gender: Optional[str] = None
     avatar_url: Optional[str] = None
     linked_doctor_id: Optional[int] = None
+    is_blocked: bool = False
     
     class Config:
         from_attributes = True
