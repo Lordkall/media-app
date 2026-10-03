@@ -186,13 +186,16 @@ async def lifespan(app: FastAPI):
         print(f"Doctors migration error: {e}")
 
         
-    # Start BCV background updater
+    # Start background tasks
     bcv_task = asyncio.create_task(bcv_updater_loop())
+    from app.tasks.reminders import appointment_reminders_loop
+    reminders_task = asyncio.create_task(appointment_reminders_loop())
     
     yield
     
     # Cleanup on shutdown
     bcv_task.cancel()
+    reminders_task.cancel()
 
 app = FastAPI(title="MedIA Backend", version="1.0.0", lifespan=lifespan)
 
