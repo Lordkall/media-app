@@ -4,6 +4,7 @@ import re
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
 TWILIO_WHATSAPP_NUMBER = os.getenv("TWILIO_WHATSAPP_NUMBER", "whatsapp:+17372508034")
+TWILIO_CONTENT_SID = os.getenv("TWILIO_CONTENT_SID", "HXfe5ab5f00277942d4d4200328b4d403c")
 
 def normalize_whatsapp_phone(phone: str) -> str | None:
     """
@@ -49,6 +50,20 @@ def send_whatsapp_appointment_reminder(to_phone: str, patient_name: str, doctor_
         to_whatsapp = f"whatsapp:{normalized_to}"
         from_whatsapp = TWILIO_WHATSAPP_NUMBER if TWILIO_WHATSAPP_NUMBER.startswith("whatsapp:") else f"whatsapp:{TWILIO_WHATSAPP_NUMBER}"
 
+        # 1. Intentar enviar con ContentSid (plantilla aprobada por Meta/Twilio Sandbox)
+        if TWILIO_CONTENT_SID:
+            try:
+                message = client.messages.create(
+                    from_=from_whatsapp,
+                    to=to_whatsapp,
+                    content_sid=TWILIO_CONTENT_SID
+                )
+                print(f"[TWILIO] WhatsApp enviado con éxito con ContentSid a {normalized_to}. SID: {message.sid}")
+                return True
+            except Exception as template_err:
+                print(f"[TWILIO] Falló envío con content_sid, intentando con cuerpo directo: {template_err}")
+
+        # 2. Si no tiene ContentSid o falla, intentar con cuerpo directo
         time_part = f" a las {appointment_time_str}" if appointment_time_str else ""
         body = (
             f"¡Hola {patient_name}! 👋 Te recordamos desde *Salud Now* que tu cita médica con {doctor_name} "
