@@ -30,6 +30,7 @@ class Appointment(Base):
     status: Mapped[AppointmentStatus] = mapped_column(Enum(AppointmentStatus), default=AppointmentStatus.SCHEDULED, nullable=False)
     reminder_24h_sent: Mapped[bool] = mapped_column(default=False, nullable=False)
     reminder_48h_sent: Mapped[bool] = mapped_column(default=False, nullable=False)
+    reminder_whatsapp_sent: Mapped[bool] = mapped_column(default=False, nullable=False)
 
     # Relaciones
     patient: Mapped["Patient"] = relationship(back_populates="appointments")
