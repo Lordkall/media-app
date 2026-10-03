@@ -1279,32 +1279,47 @@ class _FaqScreenState extends State<FaqScreen> {
       );
     }
 
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: isDesktop ? 100 : 24,
-      ),
-      margin: const EdgeInsets.only(bottom: 80),
-      child: isDesktop
-          ? GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 24,
-                mainAxisSpacing: 24,
-                childAspectRatio: 1.7,
+    // Group FAQs into pairs for desktop 2-column layout without forcing fixed aspect ratios
+    final List<Widget> desktopChildren = [];
+    for (int i = 0; i < faqs.length; i += 2) {
+      final leftFaq = faqs[i];
+      final rightFaq = (i + 1 < faqs.length) ? faqs[i + 1] : null;
+
+      desktopChildren.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 24),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: buildFaqCard(leftFaq)),
+              const SizedBox(width: 24),
+              Expanded(
+                child: rightFaq != null
+                    ? buildFaqCard(rightFaq)
+                    : const SizedBox.shrink(),
               ),
-              itemCount: faqs.length,
-              itemBuilder: (context, index) => buildFaqCard(faqs[index]),
-            )
-          : Column(
-              children: faqs
-                  .map((faq) => Padding(
-                        padding: const EdgeInsets.only(bottom: 20),
-                        child: buildFaqCard(faq),
-                      ))
-                  .toList(),
-            ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Center(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 1100),
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        margin: const EdgeInsets.only(bottom: 80),
+        child: isDesktop
+            ? Column(children: desktopChildren)
+            : Column(
+                children: faqs
+                    .map((faq) => Padding(
+                          padding: const EdgeInsets.only(bottom: 20),
+                          child: buildFaqCard(faq),
+                        ))
+                    .toList(),
+              ),
+      ),
     );
   }
 }

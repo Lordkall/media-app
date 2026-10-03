@@ -626,8 +626,29 @@ class _MisCitasTabState extends State<MisCitasTab> {
                                                             _fetchAppointments();
                                                           }
                                                         },
-                                                        child: const Text('Reprogramar',
-                                                            style: TextStyle(color: Color(0xFF87CEFA), fontSize: 16, fontWeight: FontWeight.bold)),
+                                                        child: Container(
+                                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                                          decoration: BoxDecoration(
+                                                            color: Colors.white.withValues(alpha: 0.18),
+                                                            borderRadius: BorderRadius.circular(8),
+                                                            border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
+                                                          ),
+                                                          child: const Row(
+                                                            mainAxisSize: MainAxisSize.min,
+                                                            children: [
+                                                              Icon(Icons.edit_calendar, size: 14, color: Colors.white),
+                                                              SizedBox(width: 5),
+                                                              Text(
+                                                                'Reprogramar',
+                                                                style: TextStyle(
+                                                                  color: Colors.white,
+                                                                  fontSize: 12,
+                                                                  fontWeight: FontWeight.bold,
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
                                                       ),
                                                     ],
                                                     GestureDetector(
@@ -647,8 +668,29 @@ class _MisCitasTabState extends State<MisCitasTab> {
                                                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
                                                         }
                                                       },
-                                                      child: const Text('Cancelar Cita',
-                                                          style: TextStyle(color: Color(0xFFFFA07A), fontSize: 16, fontWeight: FontWeight.bold)),
+                                                      child: Container(
+                                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                                        decoration: BoxDecoration(
+                                                          color: Colors.redAccent.withValues(alpha: 0.22),
+                                                          borderRadius: BorderRadius.circular(8),
+                                                          border: Border.all(color: Colors.redAccent.withValues(alpha: 0.6)),
+                                                        ),
+                                                        child: const Row(
+                                                          mainAxisSize: MainAxisSize.min,
+                                                          children: [
+                                                            Icon(Icons.cancel_outlined, size: 14, color: Colors.white),
+                                                            SizedBox(width: 4),
+                                                            Text(
+                                                              'Cancelar Cita',
+                                                              style: TextStyle(
+                                                                color: Colors.white,
+                                                                fontSize: 12,
+                                                                fontWeight: FontWeight.bold,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
                                                     ),
                                                   ],
                                                 )
