@@ -36,7 +36,7 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content: Text(
-                  'Si el correo está registrado, recibirás un token por correo.'),
+                  'Si el correo está registrado, recibirás un token. Recuerda revisar tu carpeta de spam o correo no deseado.'),
               backgroundColor: Colors.green),
         );
         _emailController.clear();
@@ -214,8 +214,37 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
                                             fontWeight: FontWeight.bold,
                                             color: Colors.white)),
                               ),
+                              const SizedBox(height: 12),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0x30FFFFFF),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                      color: const Color(0x400056B3)),
+                                ),
+                                child: const Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Icon(Icons.mark_email_unread_outlined,
+                                        size: 18, color: Color(0xFF0056B3)),
+                                    SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Recuerda revisar tu carpeta de correos no deseados o Spam si no ves el mensaje en la bandeja de entrada.',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Color(0xFF1E293B),
+                                          height: 1.35,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                               const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 24.0),
+                                padding: EdgeInsets.symmetric(vertical: 20.0),
                                 child: Divider(color: Color(0xFF475569)),
                               ),
                               const Text(

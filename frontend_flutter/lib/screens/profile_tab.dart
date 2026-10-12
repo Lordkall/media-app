@@ -1,6 +1,9 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:local_auth/local_auth.dart';
 import '../core/api_client.dart';
 import '../core/auth_helper.dart';
 import '../core/profile_image_helper.dart';
@@ -659,18 +662,130 @@ class _ClinicDataPageState extends State<_ClinicDataPage> {
       ]);
 }
 
-class _SecurityPage extends StatelessWidget {
-  const _SecurityPage();
+class SecurityPage extends StatefulWidget {
+  const SecurityPage({super.key});
+
+  @override
+  State<SecurityPage> createState() => _SecurityPageState();
+}
+
+class _SecurityPageState extends State<SecurityPage> {
+  bool _biometricsEnabled = false;
+  bool _isLoading = true;
+  final LocalAuthentication _localAuth = LocalAuthentication();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSetting();
+  }
+
+  Future<void> _loadSetting() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _biometricsEnabled = prefs.getBool('biometrics_enabled') ?? false;
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _toggleBiometrics(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (kIsWeb) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('El acceso biométrico no está disponible en la web.')),
+      );
+      return;
+    }
+
+    if (value) {
+      try {
+        final canCheck = await _localAuth.canCheckBiometrics;
+        final isSupported = await _localAuth.isDeviceSupported();
+        if (!canCheck && !isSupported) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text(
+                    'Tu dispositivo no cuenta con biometría configurada.')),
+          );
+          return;
+        }
+
+        final didAuth = await _localAuth.authenticate(
+          localizedReason:
+              'Confirma tu huella o rostro para activar el acceso biométrico',
+          options: const AuthenticationOptions(biometricOnly: true),
+        );
+
+        if (!didAuth) return;
+
+        final currentToken = prefs.getString('access_token');
+        if (currentToken != null) {
+          await prefs.setString('saved_biometric_token', currentToken);
+        }
+        await prefs.setBool('biometrics_enabled', true);
+        if (mounted) {
+          setState(() => _biometricsEnabled = true);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Acceso biométrico activado.')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error al configurar biometría: $e')),
+          );
+        }
+      }
+    } else {
+      await prefs.setBool('biometrics_enabled', false);
+      await prefs.remove('saved_biometric_token');
+      if (mounted) {
+        setState(() => _biometricsEnabled = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Acceso biométrico desactivado.')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) =>
-      _SettingsPage(title: 'Seguridad de tu cuenta', children: [
+      _SettingsPage(title: 'Seguridad', children: [
         ListTile(
-            title: const Text('Cambiar contraseña'),
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Cambiar clave de seguridad',
+                style: TextStyle(fontWeight: FontWeight.w500, fontSize: 16)),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const _ChangePasswordPage())))
+            onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const _ChangePasswordPage()))),
+        const Divider(height: 1),
+        if (!kIsWeb)
+          _isLoading
+              ? const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(12),
+                    child: CircularProgressIndicator(),
+                  ),
+                )
+              : SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Usar datos biométricos',
+                      style: TextStyle(fontWeight: FontWeight.w500, fontSize: 16)),
+                  subtitle: const Text('Aumenta la seguridad de la app.'),
+                  value: _biometricsEnabled,
+                  onChanged: _toggleBiometrics,
+                ),
       ]);
 }
+
+typedef _SecurityPage = SecurityPage;
 
 class _ChangePasswordPage extends StatefulWidget {
   const _ChangePasswordPage();
@@ -813,17 +928,6 @@ class _AboutPage extends StatelessWidget {
   }
 }
 
-class _TextPage extends StatelessWidget {
-  const _TextPage({required this.title, required this.text});
-  final String title, text;
-  @override
-  Widget build(BuildContext context) => _SettingsPage(title: title, children: [
-        Padding(
-            padding: const EdgeInsets.all(12),
-            child:
-                Text(text, style: const TextStyle(fontSize: 16, height: 1.55)))
-      ]);
-}
 
 Widget _field(String label, TextEditingController controller,
         {TextInputType? type,

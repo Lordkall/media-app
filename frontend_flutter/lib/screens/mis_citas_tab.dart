@@ -36,7 +36,7 @@ class _MisCitasTabState extends State<MisCitasTab> {
         ],
       ),
     );
-    if (confirm == true) {
+    if (confirm == true && mounted) {
       try {
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Eliminando cita...')));
@@ -144,7 +144,7 @@ class _MisCitasTabState extends State<MisCitasTab> {
                   decoration: BoxDecoration(
                     color: const Color(0xFFE2F1F8),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFF0056B3).withOpacity(0.3)),
+                    border: Border.all(color: const Color(0xFF0056B3).withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
@@ -702,130 +702,147 @@ class _MisCitasTabState extends State<MisCitasTab> {
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 20),
+                                                                    const SizedBox(height: 16),
+                                  const Divider(color: Colors.white24, height: 1),
+                                  const SizedBox(height: 12),
                                   Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                        Expanded(
-                                          child: appt['status'] == 'scheduled'
-                                              ? Wrap(
-                                                  spacing: 16,
-                                                  runSpacing: 8,
-                                                  children: [
-                                                    if (!_doctorView) ...[
-                                                      GestureDetector(
-                                                        onTap: () async {
-                                                          final success = await showModalBottomSheet<bool>(
-                                                            context: context,
-                                                            isScrollControlled: true,
-                                                            useSafeArea: true,
-                                                            backgroundColor: Theme.of(context).colorScheme.surface,
-                                                            builder: (_) => RescheduleAppointmentSheet(
-                                                              appointmentId: appt['id'],
-                                                              doctorId: appt['doctor_id'],
-                                                            ),
-                                                          );
-                                                          if (success == true) {
-                                                            _fetchAppointments();
-                                                          }
-                                                        },
-                                                        child: Container(
-                                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                                          decoration: BoxDecoration(
-                                                            color: Colors.white.withValues(alpha: 0.18),
-                                                            borderRadius: BorderRadius.circular(8),
-                                                            border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
-                                                          ),
-                                                          child: const Row(
-                                                            mainAxisSize: MainAxisSize.min,
-                                                            children: [
-                                                              Icon(Icons.edit_calendar, size: 14, color: Colors.white),
-                                                              SizedBox(width: 5),
-                                                              Text(
-                                                                'Reprogramar',
-                                                                style: TextStyle(
-                                                                  color: Colors.white,
-                                                                  fontSize: 12,
-                                                                  fontWeight: FontWeight.bold,
-                                                                ),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                    GestureDetector(
-                                                      onTap: () async {
-                                                        try {
-                                                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cancelando cita...')));
-                                                          final resp = await ApiClient.patch('/appointments/${appt["id"]}/cancel', {});
-                                                          if (!context.mounted) return;
-                                                          if (resp.statusCode == 200) {
-                                                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cita cancelada con éxito')));
-                                                            _fetchAppointments();
-                                                          } else {
-                                                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${resp.body}')));
-                                                          }
-                                                        } catch (e) {
-                                                          if (!context.mounted) return;
-                                                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-                                                        }
-                                                      },
-                                                      child: Container(
-                                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                                        decoration: BoxDecoration(
-                                                          color: Colors.redAccent.withValues(alpha: 0.22),
-                                                          borderRadius: BorderRadius.circular(8),
-                                                          border: Border.all(color: Colors.redAccent.withValues(alpha: 0.6)),
-                                                        ),
-                                                        child: const Row(
-                                                          mainAxisSize: MainAxisSize.min,
-                                                          children: [
-                                                            Icon(Icons.cancel_outlined, size: 14, color: Colors.white),
-                                                            SizedBox(width: 4),
-                                                            Text(
-                                                              'Cancelar Cita',
-                                                              style: TextStyle(
-                                                                color: Colors.white,
-                                                                fontSize: 12,
-                                                                fontWeight: FontWeight.bold,
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                )
-                                                                                             : Text(
-                                                   appt['status'] == 'cancelled' ? 'Cancelada' : 'Completada',
-                                                   style: TextStyle(
-                                                       color: appt['status'] == 'cancelled' ? Colors.grey : Colors.white70,
-                                                       fontSize: 16,
-                                                       fontWeight: FontWeight.bold),
-                                                 ),
+                                      Text(
+                                        '${appt["date"]}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 13,
                                         ),
-                                        const SizedBox(width: 8),
-                                      Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.end,
-                                        children: [
-                                          Text('${appt["date"]}',
-                                              style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 14)),
-                                          Text(
-                                              '${appt["time_block"] ?? ""} - Turno #${appt["turn_number"]}',
-                                              style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.bold)),
-                                        ],
+                                      ),
+                                      Text(
+                                        '${appt["time_block"] ?? ""} · Turno #${appt["turn_number"]}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ],
                                   ),
+                                  if (appt['status'] == 'scheduled') ...[
+                                    const SizedBox(height: 12),
+                                    Wrap(
+                                      spacing: 12,
+                                      runSpacing: 8,
+                                      children: [
+                                        if (!_doctorView)
+                                          GestureDetector(
+                                            onTap: () async {
+                                              final success = await showModalBottomSheet<bool>(
+                                                context: context,
+                                                isScrollControlled: true,
+                                                useSafeArea: true,
+                                                backgroundColor: Theme.of(context).colorScheme.surface,
+                                                builder: (_) => RescheduleAppointmentSheet(
+                                                  appointmentId: appt['id'],
+                                                  doctorId: appt['doctor_id'],
+                                                ),
+                                              );
+                                              if (success == true) {
+                                                _fetchAppointments();
+                                              }
+                                            },
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withValues(alpha: 0.18),
+                                                borderRadius: BorderRadius.circular(8),
+                                                border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
+                                              ),
+                                              child: const Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(Icons.edit_calendar, size: 14, color: Colors.white),
+                                                  SizedBox(width: 5),
+                                                  Text(
+                                                    'Reprogramar',
+                                                    style: TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 12,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        GestureDetector(
+                                          onTap: () async {
+                                            final confirm = await showDialog<bool>(
+                                              context: context,
+                                              builder: (ctx) => AlertDialog(
+                                                title: const Text('Cancelar Cita'),
+                                                content: const Text('¿Estás seguro de que deseas cancelar esta cita?'),
+                                                actions: [
+                                                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Volver')),
+                                                  TextButton(
+                                                    onPressed: () => Navigator.pop(ctx, true),
+                                                    child: const Text('Cancelar Cita', style: TextStyle(color: Colors.red)),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                            if (confirm != true) return;
+
+                                            try {
+                                              if (!context.mounted) return;
+                                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cancelando cita...')));
+                                              final resp = await ApiClient.patch('/appointments/${appt["id"]}/cancel', {});
+                                              if (!context.mounted) return;
+                                              if (resp.statusCode == 200) {
+                                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cita cancelada con éxito')));
+                                                _fetchAppointments();
+                                              } else {
+                                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${resp.body}')));
+                                              }
+                                            } catch (e) {
+                                              if (!context.mounted) return;
+                                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                                            }
+                                          },
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                                            decoration: BoxDecoration(
+                                              color: Colors.redAccent.withValues(alpha: 0.25),
+                                              borderRadius: BorderRadius.circular(8),
+                                              border: Border.all(color: Colors.redAccent.withValues(alpha: 0.7)),
+                                            ),
+                                            child: const Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(Icons.cancel_outlined, size: 14, color: Colors.white),
+                                                SizedBox(width: 5),
+                                                Text(
+                                                  'Cancelar Cita',
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ] else ...[
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      appt['status'] == 'cancelled' ? 'Cita Cancelada' : 'Cita Completada',
+                                      style: TextStyle(
+                                        color: appt['status'] == 'cancelled' ? Colors.white60 : Colors.white70,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
                                 ],
                                   ),
                                 ),

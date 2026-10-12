@@ -140,6 +140,8 @@ class _DoctorHeaderState extends State<DoctorHeader> {
                     }
                   } else if (value == 'assistant') {
                     Navigator.push(context, MaterialPageRoute(builder: (context) => const AssistantManagementScreen()));
+                  } else if (value == 'stats') {
+                    _showDoctorStatsDialog(context);
                   }
                 },
                 itemBuilder: (BuildContext context) {
@@ -156,6 +158,16 @@ class _DoctorHeaderState extends State<DoctorHeader> {
                         ),
                       ),
                     const PopupMenuItem(
+                      value: 'stats',
+                      child: Row(
+                        children: [
+                          Icon(Icons.insights, color: Color(0xFF00A896)),
+                          SizedBox(width: 8),
+                          Text('Estadísticas', style: TextStyle(color: Color(0xFF0B2545), fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
                       value: 'logout',
                       child: Row(
                         children: [
@@ -170,6 +182,115 @@ class _DoctorHeaderState extends State<DoctorHeader> {
               ),
             ],
           )
+        ],
+      ),
+    );
+  }
+
+  void _showDoctorStatsDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.insights, color: Color(0xFF00A896), size: 26),
+            SizedBox(width: 8),
+            Text(
+              'Estadísticas de Citas',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0B2545),
+              ),
+            ),
+          ],
+        ),
+        content: FutureBuilder<dynamic>(
+          future: ApiClient.get('/appointments/doctor/stats'),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const SizedBox(
+                height: 140,
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            if (snapshot.hasError || snapshot.data?.statusCode != 200) {
+              return const SizedBox(
+                height: 100,
+                child: Center(
+                  child: Text(
+                    'No se pudieron cargar las estadísticas.',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+              );
+            }
+
+            final data = jsonDecode(snapshot.data.body);
+            final week = data['week_appointments'] ?? 0;
+            final month = data['month_appointments'] ?? 0;
+            final total = data['total_appointments'] ?? 0;
+            final cancelled = data['cancelled_appointments'] ?? 0;
+
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildStatItem('Citas esta semana', '$week', Icons.date_range, const Color(0xFF0056B3)),
+                const SizedBox(height: 10),
+                _buildStatItem('Citas este mes', '$month', Icons.calendar_month, const Color(0xFF00A896)),
+                const SizedBox(height: 10),
+                _buildStatItem('Citas totales', '$total', Icons.assignment, const Color(0xFF0B2545)),
+                const SizedBox(height: 10),
+                _buildStatItem('Citas canceladas', '$cancelled', Icons.cancel_outlined, Colors.redAccent),
+              ],
+            );
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItem(String label, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: color.withValues(alpha: 0.12),
+            radius: 18,
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF334155),
+              ),
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
         ],
       ),
     );

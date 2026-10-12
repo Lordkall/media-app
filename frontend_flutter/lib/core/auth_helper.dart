@@ -52,7 +52,8 @@ class AuthHelper {
         debugPrint('Could not unregister this device token: $error');
       }
     }
-    if (!kIsWeb && preserveBiometricToken && currentToken != null) {
+    final biometricsEnabled = prefs.getBool('biometrics_enabled') ?? false;
+    if (!kIsWeb && preserveBiometricToken && biometricsEnabled && currentToken != null) {
       await prefs.setString('saved_biometric_token', currentToken);
     } else {
       await prefs.remove('saved_biometric_token');

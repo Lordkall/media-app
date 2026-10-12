@@ -603,5 +603,76 @@ async def reschedule_appointment(
     return {"message": "Cita reprogramada correctamente"}
 
 
+@router.get("/doctor/stats")
+async def get_doctor_appointment_stats(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Estadísticas de citas para el doctor o asistente:
+    - citas esta semana
+    - citas este mes
+    - citas totales
+    - citas canceladas
+    """
+    if current_user.role not in (RoleEnum.DOCTOR, RoleEnum.ASSISTANT):
+        raise HTTPException(status_code=403, detail="Acceso denegado: solo doctores o asistentes")
+
+    doctor_id = current_user.linked_doctor_id if current_user.role == RoleEnum.ASSISTANT else None
+    if current_user.role == RoleEnum.DOCTOR:
+        doctor_query = select(Doctor).where(Doctor.user_id == current_user.id)
+        doctor = (await db.execute(doctor_query)).scalar_one_or_none()
+        doctor_id = doctor.id if doctor else None
+
+    if not doctor_id:
+        return {
+            "week_appointments": 0,
+            "month_appointments": 0,
+            "total_appointments": 0,
+            "cancelled_appointments": 0,
+        }
+
+    local_now = datetime.now(ZoneInfo("America/Caracas")).date()
+    # Inicio de la semana (Lunes)
+    start_of_week = local_now - timedelta(days=local_now.weekday())
+    end_of_week = start_of_week + timedelta(days=6)
+
+    # Inicio del mes
+    start_of_month = date_type(local_now.year, local_now.month, 1)
+    if local_now.month == 12:
+        end_of_month = date_type(local_now.year, 12, 31)
+    else:
+        end_of_month = date_type(local_now.year, local_now.month + 1, 1) - timedelta(days=1)
+
+    all_appts = (await db.scalars(
+        select(Appointment).where(Appointment.doctor_id == doctor_id)
+    )).all()
+
+    total_count = len(all_appts)
+    cancelled_count = sum(1 for a in all_appts if a.status == AppointmentStatus.CANCELLED)
+    
+    # Active/scheduled/completed in current week (excluding cancelled)
+    week_count = sum(
+        1 for a in all_appts
+        if start_of_week <= a.appointment_date <= end_of_week
+        and a.status != AppointmentStatus.CANCELLED
+    )
+
+    # Active/scheduled/completed in current month (excluding cancelled)
+    month_count = sum(
+        1 for a in all_appts
+        if start_of_month <= a.appointment_date <= end_of_month
+        and a.status != AppointmentStatus.CANCELLED
+    )
+
+    return {
+        "week_appointments": week_count,
+        "month_appointments": month_count,
+        "total_appointments": total_count,
+        "cancelled_appointments": cancelled_count,
+    }
+
+
+
 
 

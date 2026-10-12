@@ -17,6 +17,8 @@ import '../models/ve_catalogs.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import '../core/local_notification_service.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:local_auth/local_auth.dart';
 import 'clinic_account_screens.dart';
 import 'blocked_account_screen.dart';
 
@@ -42,6 +44,76 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _checkClinicInvite();
       });
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _checkBiometricsPrompt();
+      });
+    }
+  }
+
+  Future<void> _checkBiometricsPrompt() async {
+    if (kIsWeb) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final alreadyPrompted = prefs.getBool('biometrics_prompt_shown') ?? false;
+      if (alreadyPrompted) return;
+
+      // Mark as prompted so it only asks on first access to main screen
+      await prefs.setBool('biometrics_prompt_shown', true);
+
+      final isAlreadyEnabled = prefs.getBool('biometrics_enabled') ?? false;
+      if (isAlreadyEnabled) return;
+
+      final localAuth = LocalAuthentication();
+      final canCheck = await localAuth.canCheckBiometrics;
+      final isSupported = await localAuth.isDeviceSupported();
+      if (!canCheck && !isSupported) return;
+
+      if (!mounted) return;
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.fingerprint, color: Color(0xFF0056B3), size: 28),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text('Acceso Biométrico',
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          content: const Text(
+            '¿Deseas activar el acceso biométrico (huella o reconocimiento facial) para iniciar sesión de manera más rápida y segura?',
+            style: TextStyle(fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child:
+                  const Text('Ahora no', style: TextStyle(color: Colors.grey)),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF0056B3)),
+              child: const Text('Activar'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm == true && mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SecurityPage()),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error en prompt de biometría: $e');
     }
   }
 
@@ -68,6 +140,7 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
           );
           if (confirm == true && mounted) {
             final res = await ApiClient.post('/clinics/invite/$inviteCode/join', {});
+            if (!mounted) return;
             if (res.statusCode == 200) {
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Solicitud enviada a la clínica.')));
             } else {
@@ -77,7 +150,9 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
           }
         } else {
           final d = jsonDecode(infoRes.body);
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(d['detail']?.toString() ?? 'Enlace inválido')));
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(d['detail']?.toString() ?? 'Enlace inválido')));
+          }
         }
       } catch (e) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error al procesar la invitación')));
