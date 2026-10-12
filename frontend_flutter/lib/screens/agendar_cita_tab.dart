@@ -19,6 +19,7 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
   String? _selectedMedico;
   int? _selectedTurnNumber;
   String? _selectedMotivo;
+  final TextEditingController _customMotivoController = TextEditingController();
 
   List<dynamic> _allDoctors = [];
   bool _isLoading = true;
@@ -247,6 +248,12 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
   }
 
   @override
+  void dispose() {
+    _customMotivoController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -334,8 +341,28 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
               hint: 'Motivo de Cita',
               value: _selectedMotivo,
               items: ['Consulta', 'Entrega de examenes', 'Cura', 'Otros'],
-              onChanged: (val) => setState(() => _selectedMotivo = val),
+              onChanged: (val) => setState(() {
+                _selectedMotivo = val;
+                if (val != 'Otros') {
+                  _customMotivoController.clear();
+                }
+              }),
             ),
+            if (_selectedMotivo == 'Otros') ...[
+              const SizedBox(height: 12),
+              TextField(
+                controller: _customMotivoController,
+                decoration: InputDecoration(
+                  hintText: 'Describe el motivo de la cita...',
+                  prefixIcon:
+                      const Icon(Icons.edit_note, color: Color(0xFF0056B3)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  filled: true,
+                  fillColor: Colors.white,
+                ),
+              ),
+            ],
             const SizedBox(height: 32),
             Container(
               padding: const EdgeInsets.all(16),
@@ -479,11 +506,17 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                           content: Text('Por favor selecciona un médico.')));
                       return;
                     }
+                    if (_selectedMotivo == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Por favor selecciona el motivo de la cita.')),
+                      );
+                      return;
+                    }
                     if (_selectedTurnNumber == null) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                            content: Text('Selecciona un turno disponible.')),
-                      );
+                            content: Text('Selecciona un turno disponible.')));
                       return;
                     }
 
@@ -494,10 +527,16 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                         orElse: () => null);
                     if (doc == null || doc['id'] == null) return;
 
+                    final String motivoFinal = (_selectedMotivo == 'Otros' &&
+                            _customMotivoController.text.trim().isNotEmpty)
+                        ? _customMotivoController.text.trim()
+                        : (_selectedMotivo ?? 'Consulta');
+
                     final reqBody = {
                       "doctor_id": doc['id'],
                       "appointment_date": _dateKey(_selectedDate),
                       "turn_number": _selectedTurnNumber,
+                      "appointment_reason": motivoFinal,
                     };
 
                     try {
@@ -512,6 +551,7 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                           _selectedEspecialidad = null;
                           _selectedMedico = null;
                           _selectedMotivo = null;
+                          _customMotivoController.clear();
                           _selectedTurnNumber = null;
                         });
                         if (widget.onCitaAgendada != null) {

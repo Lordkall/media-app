@@ -502,6 +502,7 @@ class BookAppointmentView(ft.Container):
                     doctor_id=doc_id,
                     appointment_date=self.selected_date,
                     turn_number=new_turn,
+                    appointment_reason=self.reason_dropdown.value or "Consulta",
                     status=AppointmentStatus.SCHEDULED
                 )
                 session.add(new_app)

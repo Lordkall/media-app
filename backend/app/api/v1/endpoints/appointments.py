@@ -245,6 +245,8 @@ async def create_appointment(
         if _overlaps(start_of_turn, duration, booked):
             raise HTTPException(status_code=409, detail="Ese horario ya fue reservado")
 
+        selected_reason = (appointment_in.appointment_reason or appointment_in.reason or "Consulta").strip() or "Consulta"
+
         new_appointment = Appointment(
             patient_id=current_patient_id,
             doctor_id=appointment_in.doctor_id,
@@ -252,6 +254,11 @@ async def create_appointment(
             turn_number=requested_turn,
             appointment_start_minutes=start_of_turn,
             appointment_duration_minutes=duration,
+            appointment_reason=selected_reason,
+            patient_first_name=current_user.first_name,
+            patient_last_name=current_user.last_name,
+            patient_phone=current_user.phone,
+            booking_source="online",
             status=AppointmentStatus.SCHEDULED
         )
         
@@ -276,7 +283,7 @@ async def create_appointment(
                 user_id=doctor_user.id,
                 type=NotificationType.APPOINTMENT_CREATED,
                 title="Nueva Cita Agendada",
-                message=f"¡Un paciente ha agendado una nueva cita contigo para el {req_date} (Turno #{requested_turn})!"
+                message=f"¡Un paciente ha agendado una nueva cita contigo para el {req_date} (Turno #{requested_turn}) - Motivo: {selected_reason}!"
             )
             db.add(notif)
             await db.commit()
