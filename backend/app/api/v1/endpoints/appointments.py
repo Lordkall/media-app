@@ -424,8 +424,8 @@ async def get_my_appointments(
                 avatar = pat.user.avatar_url or ""
                 if not avatar and pat.user.avatar_data:
                     avatar = f"data:{pat.user.avatar_content_type or 'image/jpeg'};base64,{pat.user.avatar_data}"
-                phone = pat.contact_phone or ""
-                motivo = pat.medical_history or "Consulta"
+                phone = pat.contact_phone or pat.user.phone or ""
+                motivo = appt.appointment_reason or pat.medical_history or "Consulta"
             else:
                 display_name = "Paciente Desconocido"
                 display_loc = ""
@@ -472,15 +472,22 @@ async def get_my_appointments(
             await db.commit()
             
 
+        patient_full_name = display_name if doctor_view else (f"{pat.user.first_name} {pat.user.last_name}" if pat and pat.user else (f"{appt.patient_first_name or ''} {appt.patient_last_name or ''}".strip() or "Paciente presencial"))
+        doctor_full_name = f"{'Dra.' if doc.user.gender in ['Femenino', 'Femenina'] else 'Dr.'} {doc.user.first_name} {doc.user.last_name}" if doc and doc.user else "Dr(a). Médico"
+
         out.append({
             "id": appt.id,
             "patient_id": appt.patient_id,
             "doctor_id": appt.doctor_id,
             "doctor_name": display_name,
+            "patient_name": patient_full_name,
+            "doctor_full_name": doctor_full_name,
             "doctor_specialty": display_spec,
             "doctor_location": display_loc,
             "doctor_avatar": avatar,
             "patient_phone": phone,
+            "patient_email": pat.user.email if pat and pat.user else "",
+            "patient_cedula": getattr(pat.user, "cedula", "") if pat and pat.user else "",
             "time_block": time_block,
             "status": appt.status.value,
             "date": appt.appointment_date.isoformat(),

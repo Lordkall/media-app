@@ -116,7 +116,7 @@ async def send_appointment_reminders_async():
             # ----------------------------------------------------
             # 2. Recordatorio Push/App de 24 horas (Todos los pacientes)
             # ----------------------------------------------------
-            is_24h_window = (time_24h_min <= appt_datetime <= time_24h_max) or (days_diff == 1 and now.hour >= 8)
+            is_24h_window = (time_24h_min <= appt_datetime <= time_24h_max) or (days_diff == 1 and now.hour >= 8) or (days_diff == 0 and appt_datetime > now)
             if not appt.reminder_24h_sent and is_24h_window:
                 notif = Notification(
                     user_id=patient_user.id,
@@ -129,50 +129,33 @@ async def send_appointment_reminders_async():
                 print(f"[RECORDATORIO] Recordatorio 24h generado para paciente {patient_user.id}, cita #{appt.id}")
 
             # ----------------------------------------------------
-            # 3. Recordatorio WhatsApp (Rango 23-24 horas, una sola vez, SOLO citas de Doctor VIP)
+            # 3. Recordatorio WhatsApp de 24 horas
             # ----------------------------------------------------
-            if not appt.reminder_whatsapp_sent:
-                hours_until_appt = (appt_datetime - now).total_seconds() / 3600.0
+            if not appt.reminder_whatsapp_sent and (is_24h_window or appt.reminder_24h_sent):
+                patient_phone = (
+                    appt.patient_phone or
+                    getattr(appt.patient, "contact_phone", None) or
+                    getattr(patient_user, "phone", None)
+                )
 
-                # Debe estar en el rango de 23 a 24 horas antes de la cita
-                if 23.0 <= hours_until_appt <= 24.5:
-                    # Verificar si el doctor es VIP
-                    is_doctor_vip = False
-                    if doctor:
-                        if getattr(doctor, "is_sponsored", False):
-                            is_doctor_vip = True
-                        elif doctor.subscriptions:
-                            for sub in doctor.subscriptions:
-                                if sub.status == SubscriptionStatus.ACTIVE and sub.plan in [
-                                    SubscriptionPlan.SPONSORED,
-                                    SubscriptionPlan.CLINIC_VIP,
-                                ]:
-                                    is_doctor_vip = True
-                                    break
-
-                    if is_doctor_vip:
-                        patient_phone = (
-                            appt.patient_phone or
-                            getattr(appt.patient, "contact_phone", None) or
-                            getattr(patient_user, "phone", None)
-                        )
-
-                        if patient_phone:
-                            patient_name = f"{patient_user.first_name} {patient_user.last_name}".strip()
-                            print(f"[WHATSAPP VIP] Enviando recordatorio 23-24h a {patient_name} ({patient_phone})...")
-                            sent = send_whatsapp_appointment_reminder(
-                                to_phone=patient_phone,
-                                patient_name=patient_name,
-                                doctor_name=doc_name,
-                                appointment_date_str=date_str,
-                                turn_number=appt.turn_number,
-                                appointment_time_str=time_str
-                            )
-                            if sent:
-                                appt.reminder_whatsapp_sent = True
-                                print(f"[WHATSAPP VIP] Enviado exitosamente para cita #{appt.id}")
-                            else:
-                                print(f"[WHATSAPP VIP] Falló envío para cita #{appt.id}")
+                if patient_phone:
+                    patient_name = f"{patient_user.first_name} {patient_user.last_name}".strip()
+                    print(f"[WHATSAPP RECORDATORIO] Enviando recordatorio 24h a {patient_name} ({patient_phone}) para cita #{appt.id}...")
+                    sent = send_whatsapp_appointment_reminder(
+                        to_phone=patient_phone,
+                        patient_name=patient_name,
+                        doctor_name=doc_name,
+                        appointment_date_str=date_str,
+                        turn_number=appt.turn_number,
+                        appointment_time_str=time_str
+                    )
+                    if sent:
+                        appt.reminder_whatsapp_sent = True
+                        print(f"[WHATSAPP RECORDATORIO] Enviado exitosamente para cita #{appt.id}")
+                    else:
+                        print(f"[WHATSAPP RECORDATORIO] Falló envío para cita #{appt.id}")
+                else:
+                    print(f"[WHATSAPP RECORDATORIO] Paciente {patient_user.id} sin teléfono registrado para cita #{appt.id}")
 
         await session.commit()
 

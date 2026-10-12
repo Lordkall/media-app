@@ -7,6 +7,7 @@ import '../models/ve_catalogs.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'manual_appointment_sheet.dart';
 import 'reschedule_appointment_sheet.dart';
+import '../services/appointment_print_service.dart';
 
 class MisCitasTab extends StatefulWidget {
   const MisCitasTab({super.key, this.initialDate});
@@ -265,11 +266,76 @@ class _MisCitasTabState extends State<MisCitasTab> {
     return upcoming;
   }
 
+  String _doctorName = '';
+
   @override
   void initState() {
     super.initState();
     _loadRole();
+    _loadDoctorProfile();
     _fetchAppointments();
+  }
+
+  Future<void> _loadDoctorProfile() async {
+    try {
+      final res = await ApiClient.get('/users/me');
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        final first = (data['first_name'] ?? '').toString().trim();
+        final last = (data['last_name'] ?? '').toString().trim();
+        final gender = (data['gender'] ?? '').toString().toLowerCase();
+        final prefix = gender.contains('fem') ? 'Dra.' : 'Dr.';
+        if (mounted && (first.isNotEmpty || last.isNotEmpty)) {
+          setState(() {
+            _doctorName = '$prefix $first $last'.trim();
+          });
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _printDailyAppointments() async {
+    final dateStr = _selectedDate.toIso8601String().split('T')[0];
+    final dayAppointments = _appointments
+        .where((a) =>
+            a['date'].toString().startsWith(dateStr) &&
+            a['status'] != 'cancelled')
+        .map((a) => Map<String, dynamic>.from(a as Map))
+        .toList();
+
+    if (dayAppointments.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No hay citas programadas para la fecha seleccionada.'),
+          backgroundColor: Color(0xFF0F4C81),
+        ),
+      );
+      return;
+    }
+
+    String effectiveDoc = _doctorName;
+    if (effectiveDoc.isEmpty && dayAppointments.isNotEmpty) {
+      effectiveDoc = dayAppointments.first['doctor_full_name']?.toString() ??
+          dayAppointments.first['doctor_name']?.toString() ??
+          '';
+    }
+    if (effectiveDoc.isEmpty) {
+      effectiveDoc = 'Consulta Médica';
+    }
+
+    try {
+      await AppointmentPrintService.printDailyAppointments(
+        selectedDate: _selectedDate,
+        doctorName: effectiveDoc,
+        appointments: dayAppointments,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al generar impresión: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _loadRole() async {
@@ -374,10 +440,35 @@ class _MisCitasTabState extends State<MisCitasTab> {
                     ),
                     if (_canManageAppointments) ...[
                       const SizedBox(height: 16),
-                      FilledButton.icon(
-                        onPressed: _newManualAppointment,
-                        icon: const Icon(Icons.add),
-                        label: const Text('Nueva cita manual'),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 10,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          FilledButton.icon(
+                            onPressed: _newManualAppointment,
+                            icon: const Icon(Icons.add),
+                            label: const Text('Nueva cita manual'),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: _printDailyAppointments,
+                            icon: const Icon(Icons.print_outlined,
+                                color: Color(0xFF0F4C81)),
+                            label: const Text('Imprimir citas del día',
+                                style: TextStyle(
+                                    color: Color(0xFF0F4C81),
+                                    fontWeight: FontWeight.bold)),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(
+                                  color: Color(0xFF0F4C81), width: 1.5),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                     const SizedBox(height: 24),
@@ -408,28 +499,42 @@ class _MisCitasTabState extends State<MisCitasTab> {
                           },
                         ),
                         if (_filterMode == 'Fecha')
-                          GestureDetector(
-                            onTap: () => _selectDate(context),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFE2F1F8),
-                                borderRadius: BorderRadius.circular(20),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              GestureDetector(
+                                onTap: () => _selectDate(context),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFE2F1F8),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.calendar_month,
+                                          color: Color(0xFF0056B3), size: 20),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                          '${_selectedDate.day.toString().padLeft(2, '0')}/${_selectedDate.month.toString().padLeft(2, '0')}/${_selectedDate.year}',
+                                          style: const TextStyle(
+                                              color: Color(0xFF0056B3),
+                                              fontWeight: FontWeight.bold)),
+                                    ],
+                                  ),
+                                ),
                               ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.calendar_month,
-                                      color: Color(0xFF0056B3), size: 20),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                      '${_selectedDate.day.toString().padLeft(2, '0')}/${_selectedDate.month.toString().padLeft(2, '0')}/${_selectedDate.year}',
-                                      style: const TextStyle(
-                                          color: Color(0xFF0056B3),
-                                          fontWeight: FontWeight.bold)),
-                                ],
-                              ),
-                            ),
+                              if (_canManageAppointments) ...[
+                                const SizedBox(width: 6),
+                                IconButton(
+                                  tooltip: 'Imprimir citas de este día',
+                                  icon: const Icon(Icons.print,
+                                      color: Color(0xFF0F4C81)),
+                                  onPressed: _printDailyAppointments,
+                                ),
+                              ],
+                            ],
                           ),
                       ],
                     ),

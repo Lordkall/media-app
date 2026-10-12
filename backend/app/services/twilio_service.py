@@ -9,20 +9,22 @@ TWILIO_CONTENT_SID = os.getenv("TWILIO_CONTENT_SID", "HXfe5ab5f00277942d4d420032
 def normalize_whatsapp_phone(phone: str) -> str | None:
     """
     Normaliza el número para WhatsApp asegurando el código de país.
-    Especial para Venezuela: +58 424... / 0424... -> +58424...
+    Especial para Venezuela: +58 424... / 0424... / 424... -> +58424...
     """
     if not phone:
         return None
     cleaned = re.sub(r"[^\d+]", "", phone.strip())
-    
+
+    if cleaned.startswith("+"):
+        cleaned = cleaned[1:]
+
+    # Venezuela standard local formats
     if cleaned.startswith("04"):
         cleaned = "58" + cleaned[1:]
-    elif cleaned.startswith("+5804"):
-        cleaned = "58" + cleaned[4:]
-    elif cleaned.startswith("+584"):
-        cleaned = cleaned[1:]
-    elif cleaned.startswith("+"):
-        cleaned = cleaned[1:]
+    elif cleaned.startswith("5804"):
+        cleaned = "58" + cleaned[3:]
+    elif len(cleaned) == 10 and cleaned.startswith("4"):
+        cleaned = "58" + cleaned
 
     if not cleaned.startswith("+"):
         cleaned = "+" + cleaned
@@ -32,7 +34,6 @@ def normalize_whatsapp_phone(phone: str) -> str | None:
 def send_whatsapp_appointment_reminder(to_phone: str, patient_name: str, doctor_name: str, appointment_date_str: str, turn_number: int, appointment_time_str: str = "") -> bool:
     """
     Envía el recordatorio de cita médica por WhatsApp usando Twilio.
-    Exclusivo para doctores VIP en la ventana de 23-24 horas antes de la cita.
     """
     if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN:
         print("[TWILIO] Credenciales de Twilio no configuradas en variables de entorno")
@@ -50,7 +51,7 @@ def send_whatsapp_appointment_reminder(to_phone: str, patient_name: str, doctor_
         to_whatsapp = f"whatsapp:{normalized_to}"
         from_whatsapp = TWILIO_WHATSAPP_NUMBER if TWILIO_WHATSAPP_NUMBER.startswith("whatsapp:") else f"whatsapp:{TWILIO_WHATSAPP_NUMBER}"
 
-        # 1. Intentar enviar con ContentSid (plantilla aprobada por Meta/Twilio Sandbox)
+        # 1. Intentar enviar con ContentSid si está configurado
         if TWILIO_CONTENT_SID:
             try:
                 message = client.messages.create(
@@ -63,7 +64,7 @@ def send_whatsapp_appointment_reminder(to_phone: str, patient_name: str, doctor_
             except Exception as template_err:
                 print(f"[TWILIO] Falló envío con content_sid, intentando con cuerpo directo: {template_err}")
 
-        # 2. Si no tiene ContentSid o falla, intentar con cuerpo directo
+        # 2. Si no tiene ContentSid o falla, enviar con cuerpo directo
         time_part = f" a las {appointment_time_str}" if appointment_time_str else ""
         body = (
             f"¡Hola {patient_name}! 👋 Te recordamos desde *Salud Now* que tu cita médica con {doctor_name} "

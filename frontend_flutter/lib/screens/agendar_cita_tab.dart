@@ -376,6 +376,7 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                     ),
                     child: TableCalendar(
                       locale: 'es_ES',
+                      availableGestures: AvailableGestures.horizontalSwipe,
                       firstDay: DateTime(caracasNow().year, caracasNow().month,
                           caracasNow().day),
                       lastDay: caracasNow().add(const Duration(days: 365)),

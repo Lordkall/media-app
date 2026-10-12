@@ -204,6 +204,7 @@ class _RescheduleAppointmentSheetState extends State<RescheduleAppointmentSheet>
             const SizedBox(height: 16),
             TableCalendar(
               locale: 'es_ES',
+              availableGestures: AvailableGestures.horizontalSwipe,
               firstDay: DateTime(caracasNow().year, caracasNow().month, caracasNow().day),
               lastDay: caracasNow().add(const Duration(days: 365)),
               focusedDay: _selectedDate,
