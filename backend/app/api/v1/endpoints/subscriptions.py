@@ -101,12 +101,17 @@ async def get_my_subscriptions(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    if current_user.role not in [RoleEnum.DOCTOR, RoleEnum.CLINIC]:
-        raise HTTPException(status_code=403, detail="Solo los doctores y clínicas pueden ver suscripciones")
+    if current_user.role not in [RoleEnum.DOCTOR, RoleEnum.CLINIC, RoleEnum.ASSISTANT]:
+        raise HTTPException(status_code=403, detail="Solo los doctores, asistentes y clínicas pueden ver suscripciones")
 
-    if current_user.role == RoleEnum.DOCTOR:
-        result = await db.execute(select(Doctor).where(Doctor.user_id == current_user.id))
-        doc = result.scalars().first()
+    if current_user.role in [RoleEnum.DOCTOR, RoleEnum.ASSISTANT]:
+        if current_user.role == RoleEnum.ASSISTANT:
+            if not current_user.linked_doctor_id:
+                raise HTTPException(status_code=404, detail="Asistente no vinculado")
+            doc = await db.get(Doctor, current_user.linked_doctor_id)
+        else:
+            result = await db.execute(select(Doctor).where(Doctor.user_id == current_user.id))
+            doc = result.scalars().first()
         if not doc:
             raise HTTPException(status_code=404, detail="Perfil de doctor no encontrado")
         entity_id = doc.id

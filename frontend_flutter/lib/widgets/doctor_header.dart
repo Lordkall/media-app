@@ -17,6 +17,7 @@ class DoctorHeader extends StatefulWidget {
 class _DoctorHeaderState extends State<DoctorHeader> {
   int _unreadCount = 0;
   bool _isVip = false;
+  String? _userRole;
   Timer? _notificationTimer;
 
   @override
@@ -36,6 +37,13 @@ class _DoctorHeaderState extends State<DoctorHeader> {
 
   Future<void> _fetchUnreadCount() async {
     try {
+      final role = await AuthHelper.getRole();
+      if (mounted) {
+        setState(() {
+          _userRole = role;
+        });
+      }
+
       final response = await ApiClient.get('/users/me/notifications');
       if (response.statusCode == 200) {
         final List<dynamic> notifs = jsonDecode(response.body);
@@ -47,12 +55,26 @@ class _DoctorHeaderState extends State<DoctorHeader> {
         }
       }
       
-      final subResponse = await ApiClient.get('/subscriptions/me');
-      if (subResponse.statusCode == 200) {
-        final subData = jsonDecode(subResponse.body);
+      if (role == 'doctor' || role == 'assistant') {
+        final subResponse = await ApiClient.get('/subscriptions/me');
+        if (subResponse.statusCode == 200) {
+          final subData = jsonDecode(subResponse.body);
+          final plan = subData['current']?['plan']?.toString().toLowerCase() ?? '';
+          final isVip = plan == 'sponsored' ||
+              plan == 'vip' ||
+              plan == 'clinic_vip' ||
+              plan.contains('vip') ||
+              plan.contains('patrocinado');
+          if (mounted) {
+            setState(() {
+              _isVip = isVip;
+            });
+          }
+        }
+      } else {
         if (mounted) {
           setState(() {
-            _isVip = subData['current']?['plan'] == 'sponsored';
+            _isVip = false;
           });
         }
       }
@@ -145,8 +167,11 @@ class _DoctorHeaderState extends State<DoctorHeader> {
                   }
                 },
                 itemBuilder: (BuildContext context) {
+                  final isDoctorOrAssistant = _userRole == 'doctor' || _userRole == 'assistant';
+                  final canSeeStats = isDoctorOrAssistant && _isVip;
+
                   return [
-                    if (_isVip)
+                    if (_userRole == 'doctor' && _isVip)
                       const PopupMenuItem(
                         value: 'assistant',
                         child: Row(
@@ -157,16 +182,17 @@ class _DoctorHeaderState extends State<DoctorHeader> {
                           ],
                         ),
                       ),
-                    const PopupMenuItem(
-                      value: 'stats',
-                      child: Row(
-                        children: [
-                          Icon(Icons.insights, color: Color(0xFF00A896)),
-                          SizedBox(width: 8),
-                          Text('Estadísticas', style: TextStyle(color: Color(0xFF0B2545), fontWeight: FontWeight.w600)),
-                        ],
+                    if (canSeeStats)
+                      const PopupMenuItem(
+                        value: 'stats',
+                        child: Row(
+                          children: [
+                            Icon(Icons.insights, color: Color(0xFF00A896)),
+                            SizedBox(width: 8),
+                            Text('Estadísticas', style: TextStyle(color: Color(0xFF0B2545), fontWeight: FontWeight.w600)),
+                          ],
+                        ),
                       ),
-                    ),
                     const PopupMenuItem(
                       value: 'logout',
                       child: Row(

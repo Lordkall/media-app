@@ -616,21 +616,41 @@ async def get_doctor_appointment_stats(
     - citas canceladas
     """
     if current_user.role not in (RoleEnum.DOCTOR, RoleEnum.ASSISTANT):
-        raise HTTPException(status_code=403, detail="Acceso denegado: solo doctores o asistentes")
+        raise HTTPException(status_code=403, detail="Acceso denegado: solo doctores o asistentes VIP")
 
-    doctor_id = current_user.linked_doctor_id if current_user.role == RoleEnum.ASSISTANT else None
-    if current_user.role == RoleEnum.DOCTOR:
+    doctor = None
+    if current_user.role == RoleEnum.ASSISTANT:
+        if current_user.linked_doctor_id:
+            doctor = await db.get(Doctor, current_user.linked_doctor_id)
+    else:
         doctor_query = select(Doctor).where(Doctor.user_id == current_user.id)
         doctor = (await db.execute(doctor_query)).scalar_one_or_none()
-        doctor_id = doctor.id if doctor else None
 
-    if not doctor_id:
-        return {
-            "week_appointments": 0,
-            "month_appointments": 0,
-            "total_appointments": 0,
-            "cancelled_appointments": 0,
-        }
+    if not doctor:
+        raise HTTPException(status_code=404, detail="Perfil de doctor no encontrado")
+
+    is_vip = getattr(doctor, "is_sponsored", False)
+    if not is_vip:
+        from app.models.subscriptions import Subscription, SubscriptionStatus, SubscriptionPlan
+        sub = await db.scalar(
+            select(Subscription).where(
+                Subscription.doctor_id == doctor.id,
+                Subscription.status == SubscriptionStatus.ACTIVE,
+                Subscription.plan == SubscriptionPlan.SPONSORED,
+            )
+        )
+        if sub:
+            is_vip = True
+        elif doctor.clinic_id:
+            from app.core.clinic_access import active_clinic_subscription
+            clinic_sub = await active_clinic_subscription(db, doctor.clinic_id)
+            if clinic_sub and clinic_sub.plan in (SubscriptionPlan.CLINIC_VIP, SubscriptionPlan.SPONSORED):
+                is_vip = True
+
+    if not is_vip:
+        raise HTTPException(status_code=403, detail="Las estadísticas solo están disponibles para doctores VIP")
+
+    doctor_id = doctor.id
 
     local_now = datetime.now(ZoneInfo("America/Caracas")).date()
     # Inicio de la semana (Lunes)
