@@ -177,9 +177,21 @@ async def get_all_doctors(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
+    # Fetch active clinic subscriptions to ensure accurate mapping for clinic doctors
+    clinic_subs_res = await db.execute(
+        select(Subscription).where(
+            Subscription.clinic_id.isnot(None),
+            Subscription.status == SubscriptionStatus.ACTIVE,
+        )
+    )
+    clinic_subs = {s.clinic_id: s for s in clinic_subs_res.scalars().all()}
+
     query = select(Doctor, User, Subscription).join(User, Doctor.user_id == User.id).outerjoin(
         Subscription, 
-        or_((Subscription.doctor_id == Doctor.id) & (Subscription.status == SubscriptionStatus.ACTIVE), (Doctor.clinic_id.isnot(None)) & (Doctor.clinic_join_status == 'approved') & (Subscription.clinic_id == Doctor.clinic_id) & (Subscription.status == SubscriptionStatus.ACTIVE))
+        or_(
+            (Subscription.doctor_id == Doctor.id) & (Subscription.status == SubscriptionStatus.ACTIVE),
+            (Doctor.clinic_id.isnot(None)) & (or_(Doctor.clinic_join_status.is_(None), Doctor.clinic_join_status == 'approved')) & (Subscription.clinic_id == Doctor.clinic_id) & (Subscription.status == SubscriptionStatus.ACTIVE)
+        )
     ).order_by(Doctor.id, Subscription.end_date.desc().nullslast())
     result = await db.execute(query)
     
@@ -189,6 +201,13 @@ async def get_all_doctors(
         if doc.id in seen_doctor_ids:
             continue
         seen_doctor_ids.add(doc.id)
+
+        # Si el doctor pertenece a una clínica con suscripción activa, asociarla
+        if doc.clinic_id and (doc.clinic_join_status is None or doc.clinic_join_status == 'approved'):
+            c_sub = clinic_subs.get(doc.clinic_id)
+            if c_sub:
+                if not sub or c_sub.plan == SubscriptionPlan.CLINIC_VIP:
+                    sub = c_sub
 
         days_remaining = 0
         if sub and sub.end_date:
@@ -203,19 +222,22 @@ async def get_all_doctors(
             Subscription.status == SubscriptionStatus.PENDING_APPROVAL
         ))
 
+        is_vip = (sub is not None and sub.plan in (SubscriptionPlan.SPONSORED, SubscriptionPlan.CLINIC_VIP)) or bool(doc.is_sponsored)
+
         doctors_list.append({
             "id": doc.id,
             "user_id": user.id,
             "first_name": user.first_name,
             "last_name": user.last_name,
             "email": user.email,
+            "phone": user.phone or "",
             "specialties": doc.specialties or [],
             "state": user.state,
             "address": doc.clinic_info or user.address or 'Sin dirección registrada',
             "bio": doc.bio,
             "consultation_fee": doc.consultation_fee or 0.0,
             "avatar_url": user.avatar_url,
-            "is_vip": sub is not None and sub.plan in (SubscriptionPlan.SPONSORED, SubscriptionPlan.CLINIC_VIP),
+            "is_vip": is_vip,
             "plan": sub.plan.value if sub else "Ninguno",
             "subscription_id": sub.id if sub else None,
             "days_remaining": days_remaining,

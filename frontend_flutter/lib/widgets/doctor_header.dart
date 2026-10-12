@@ -55,7 +55,7 @@ class _DoctorHeaderState extends State<DoctorHeader> {
         }
       }
       
-      if (role == 'doctor' || role == 'assistant') {
+      if (role == 'doctor' || role == 'assistant' || role == 'clinic') {
         final subResponse = await ApiClient.get('/subscriptions/me');
         if (subResponse.statusCode == 200) {
           final subData = jsonDecode(subResponse.body);
@@ -64,7 +64,8 @@ class _DoctorHeaderState extends State<DoctorHeader> {
               plan == 'vip' ||
               plan == 'clinic_vip' ||
               plan.contains('vip') ||
-              plan.contains('patrocinado');
+              plan.contains('patrocinado') ||
+              subData['is_vip'] == true;
           if (mounted) {
             setState(() {
               _isVip = isVip;
@@ -168,7 +169,7 @@ class _DoctorHeaderState extends State<DoctorHeader> {
                 },
                 itemBuilder: (BuildContext context) {
                   final isDoctorOrAssistant = _userRole == 'doctor' || _userRole == 'assistant';
-                  final canSeeStats = isDoctorOrAssistant && _isVip;
+                  final canSeeStats = (isDoctorOrAssistant && _isVip) || _userRole == 'clinic';
 
                   return [
                     if (_userRole == 'doctor' && _isVip)
@@ -218,13 +219,13 @@ class _DoctorHeaderState extends State<DoctorHeader> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.insights, color: Color(0xFF00A896), size: 26),
-            SizedBox(width: 8),
+            const Icon(Icons.insights, color: Color(0xFF00A896), size: 26),
+            const SizedBox(width: 8),
             Text(
-              'Estadísticas de Citas',
-              style: TextStyle(
+              _userRole == 'clinic' ? 'Estadísticas de la Clínica' : 'Estadísticas de Citas',
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF0B2545),
@@ -258,10 +259,18 @@ class _DoctorHeaderState extends State<DoctorHeader> {
             final month = data['month_appointments'] ?? 0;
             final total = data['total_appointments'] ?? 0;
             final cancelled = data['cancelled_appointments'] ?? 0;
+            final today = data['today_appointments'] ?? 0;
+            final docCount = data['doctor_count'] ?? 0;
 
             return Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (_userRole == 'clinic') ...[
+                  _buildStatItem('Doctores asociados', '$docCount', Icons.medical_services_outlined, const Color(0xFF0056B3)),
+                  const SizedBox(height: 10),
+                  _buildStatItem('Citas para hoy', '$today', Icons.today, const Color(0xFF00A896)),
+                  const SizedBox(height: 10),
+                ],
                 _buildStatItem('Citas esta semana', '$week', Icons.date_range, const Color(0xFF0056B3)),
                 const SizedBox(height: 10),
                 _buildStatItem('Citas este mes', '$month', Icons.calendar_month, const Color(0xFF00A896)),

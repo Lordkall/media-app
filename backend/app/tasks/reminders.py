@@ -167,6 +167,9 @@ async def appointment_reminders_loop():
     while True:
         try:
             await send_appointment_reminders_async()
+            async with async_session_maker() as session:
+                from app.api.v1.endpoints.appointments import auto_complete_expired_appointments
+                await auto_complete_expired_appointments(session)
         except asyncio.CancelledError:
             break
         except Exception as e:

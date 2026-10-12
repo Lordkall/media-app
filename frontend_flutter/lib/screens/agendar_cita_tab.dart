@@ -333,7 +333,7 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
             _buildDropdown(
               hint: 'Motivo de Cita',
               value: _selectedMotivo,
-              items: ['Consulta', 'Entrega de examenes', 'Otros'],
+              items: ['Consulta', 'Entrega de examenes', 'Cura', 'Otros'],
               onChanged: (val) => setState(() => _selectedMotivo = val),
             ),
             const SizedBox(height: 32),

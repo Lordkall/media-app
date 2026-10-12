@@ -8,7 +8,6 @@ import '../core/api_client.dart';
 import '../widgets/profile_avatar.dart';
 import '../core/profile_image_helper.dart';
 import '../widgets/doctor_header.dart';
-import '../widgets/profile_avatar.dart';
 import 'login_screen.dart';
 import 'support_messages_screen.dart';
 import 'select_plan_screen.dart';
@@ -100,6 +99,7 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
   bool _isSubLoaded = false;
   int? _doctorCount;
   Map<String, dynamic>? _subData;
+  Map<String, dynamic>? _clinicStats;
 
   int _getDaysRemaining() {
     if (_subData == null || _subData!['current'] == null) return 0;
@@ -165,6 +165,12 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
           if (mounted) setState(() => _doctorCount = docs.length);
         }
       }
+
+      final statsRes = await ApiClient.get('/appointments/doctor/stats');
+      if (statsRes.statusCode == 200) {
+        final stats = jsonDecode(statsRes.body);
+        if (mounted) setState(() => _clinicStats = stats);
+      }
     } catch (_) {
       if (mounted) {
         setState(() {
@@ -197,27 +203,149 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.9),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        )
-                      ],
+                  InkWell(
+                    onTap: widget.onCalendar,
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00A896),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          )
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.event_available, color: Colors.white, size: 28),
+                              SizedBox(width: 12),
+                              Text('Citas para hoy',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Text(
+                              '${_clinicStats?['today_appointments'] ?? 0}',
+                              style: const TextStyle(
+                                  color: Color(0xFF00A896),
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    child: Column(
-                      children: [
-                        const Icon(Icons.medical_services, size: 40, color: Color(0xFF0056B3)),
-                        const SizedBox(height: 8),
-                        const Text('Doctores Asociados', style: TextStyle(fontSize: 16, color: Color(0xFF475569))),
-                        const SizedBox(height: 4),
-                        Text(_doctorCount == null ? '...' : '$_doctorCount', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF0B2545))),
-                      ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Estadísticas de Citas',
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0B2545))),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildStatCard(
+                          title: 'Esta semana',
+                          value: '${_clinicStats?['week_appointments'] ?? 0}',
+                          icon: Icons.date_range,
+                          color: const Color(0xFF0056B3),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildStatCard(
+                          title: 'Este mes',
+                          value: '${_clinicStats?['month_appointments'] ?? 0}',
+                          icon: Icons.calendar_month,
+                          color: const Color(0xFF00A896),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildStatCard(
+                          title: 'Citas totales',
+                          value: '${_clinicStats?['total_appointments'] ?? 0}',
+                          icon: Icons.assignment,
+                          color: const Color(0xFF0B2545),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildStatCard(
+                          title: 'Canceladas',
+                          value: '${_clinicStats?['cancelled_appointments'] ?? 0}',
+                          icon: Icons.cancel_outlined,
+                          color: Colors.redAccent,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  InkWell(
+                    onTap: widget.onDoctors,
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          )
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          const CircleAvatar(
+                            backgroundColor: Color(0xFFE2F1F8),
+                            radius: 22,
+                            child: Icon(Icons.medical_services, color: Color(0xFF0056B3), size: 24),
+                          ),
+                          const SizedBox(width: 14),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Doctores Asociados',
+                                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0B2545))),
+                                SizedBox(height: 2),
+                                Text('Gestionar plantel médico',
+                                    style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            _doctorCount == null ? '...' : '$_doctorCount',
+                            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF0B2545)),
+                          ),
+                          const SizedBox(width: 6),
+                          const Icon(Icons.chevron_right, color: Color(0xFF64748B)),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -373,6 +501,56 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
                             overflow: TextOverflow.ellipsis)),
                   ],
                 ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          )
+        ],
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: color.withValues(alpha: 0.12),
+            radius: 18,
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF64748B),
+                        fontWeight: FontWeight.w600)),
+                const SizedBox(height: 2),
+                Text(value,
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: color)),
               ],
             ),
           ),

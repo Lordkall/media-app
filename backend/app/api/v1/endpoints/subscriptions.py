@@ -95,6 +95,7 @@ class DoctorSubscriptionsResponse(BaseModel):
     pending: Optional[SubscriptionDetail] = None
     clinic_access_blocked: bool = False
     is_clinic_member: bool = False
+    is_vip: bool = False
 
 @router.get("/me", response_model=DoctorSubscriptionsResponse)
 async def get_my_subscriptions(
@@ -136,6 +137,7 @@ async def get_my_subscriptions(
                     grace_end_date=clinic_sub.grace_end_date,
                 ),
                 is_clinic_member=True,
+                is_vip=clinic_sub.plan == SubscriptionPlan.CLINIC_VIP,
             )
     else:
         from app.models.clinics import Clinic
@@ -180,7 +182,8 @@ async def get_my_subscriptions(
             start_date=pending_sub.start_date,
             end_date=pending_sub.end_date,
             grace_end_date=pending_sub.grace_end_date
-        ) if pending_sub else None
+        ) if pending_sub else None,
+        is_vip=bool(current_sub and current_sub.plan in (SubscriptionPlan.SPONSORED, SubscriptionPlan.CLINIC_VIP)),
     )
 
 def _require_admin(user: User):

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import IntegrityError
 from app.api.dependencies import get_db, get_current_patient
@@ -371,12 +371,86 @@ async def cancel_appointment(
     return {"message": "Cita cancelada y turnos actualizados."}
 
 
+async def auto_complete_expired_appointments(db: AsyncSession) -> int:
+    """
+    Actualiza el estado de las citas a 'completada' cuando su fecha y hora ya hayan expirado,
+    siempre y cuando no hayan sido canceladas previamente.
+    Retorna la cantidad de citas actualizadas.
+    """
+    from sqlalchemy.orm import selectinload
+
+    now = datetime.now(ZoneInfo("America/Caracas"))
+    today = now.date()
+    current_minutes = now.hour * 60 + now.minute
+
+    query = (
+        select(Appointment)
+        .options(
+            selectinload(Appointment.doctor).selectinload(Doctor.availabilities)
+        )
+        .where(Appointment.status == AppointmentStatus.SCHEDULED)
+    )
+    result = await db.execute(query)
+    scheduled_appts = result.scalars().all()
+
+    updated_count = 0
+    for appt in scheduled_appts:
+        is_expired = False
+        if appt.appointment_date < today:
+            is_expired = True
+        elif appt.appointment_date == today:
+            if appt.appointment_start_minutes is not None:
+                start_minutes = appt.appointment_start_minutes
+            else:
+                doc = appt.doctor
+                avail = next(
+                    (a for a in (doc.availabilities if doc else []) if a.date == appt.appointment_date),
+                    None
+                )
+                if avail and avail.start_time:
+                    try:
+                        sh, sm = map(int, avail.start_time[:5].split(":"))
+                        start_minutes = sh * 60 + sm + (appt.turn_number - 1) * 30
+                    except Exception:
+                        start_minutes = 8 * 60 + (appt.turn_number - 1) * 30
+                else:
+                    start_minutes = 8 * 60 + (appt.turn_number - 1) * 30
+
+            duration = appt.appointment_duration_minutes or 30
+            end_minutes = start_minutes + duration
+
+            if current_minutes >= end_minutes:
+                is_expired = True
+
+        if is_expired:
+            appt.status = AppointmentStatus.COMPLETED
+            db.add(appt)
+            updated_count += 1
+
+    if updated_count > 0:
+        await db.commit()
+
+    return updated_count
+
+
+@router.post("/auto-complete-expired")
+async def trigger_auto_complete_expired(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Endpoint para forzar la actualización de citas expiradas a completadas."""
+    count = await auto_complete_expired_appointments(db)
+    return {"updated_count": count, "message": f"{count} citas actualizadas a completadas"}
+
+
 @router.get("/my")
 async def get_my_appointments(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    # This queries the appointments related to the current user
+    # Actualizar citas expiradas antes de listar
+    await auto_complete_expired_appointments(db)
+
     from sqlalchemy.orm import selectinload
     doctor_view = current_user.role in (RoleEnum.DOCTOR, RoleEnum.ASSISTANT)
     if doctor_view:
@@ -410,13 +484,22 @@ async def get_my_appointments(
     for appt in appointments:
         doc = appt.doctor
         pat = appt.patient
+
+        # Extraer teléfonos tanto del doctor como del paciente
+        doctor_phone = doc.user.phone if (doc and doc.user and doc.user.phone) else ""
+        if appt.patient_id is None:
+            patient_phone = appt.patient_phone or ""
+        elif pat and pat.user:
+            patient_phone = pat.contact_phone or pat.user.phone or ""
+        else:
+            patient_phone = ""
+
         if doctor_view:
             # Show patient info instead of doctor info
             if appt.patient_id is None:
                 display_name = f"{appt.patient_first_name or ''} {appt.patient_last_name or ''}".strip() or "Paciente presencial"
                 display_loc = ""
                 avatar = ""
-                phone = appt.patient_phone or ""
                 motivo = appt.appointment_reason or "Consulta"
             elif pat and pat.user:
                 display_name = f"{pat.user.first_name} {pat.user.last_name}"
@@ -424,13 +507,11 @@ async def get_my_appointments(
                 avatar = pat.user.avatar_url or ""
                 if not avatar and pat.user.avatar_data:
                     avatar = f"data:{pat.user.avatar_content_type or 'image/jpeg'};base64,{pat.user.avatar_data}"
-                phone = pat.contact_phone or pat.user.phone or ""
                 motivo = appt.appointment_reason or pat.medical_history or "Consulta"
             else:
                 display_name = "Paciente Desconocido"
                 display_loc = ""
                 avatar = ""
-                phone = ""
                 motivo = "Consulta"
             display_spec = motivo
         else:
@@ -446,8 +527,7 @@ async def get_my_appointments(
                 avatar = ""
             display_spec = doc.specialties[0] if doc and doc.specialties else "General"
             display_loc = doc.user.address if doc and doc.user and doc.user.address else (doc.user.state if doc and doc.user else "")
-            phone = doc.user.phone if doc and doc.user else ""
-            
+
         availability = next(
             (item for item in (doc.availabilities if doc else [])
              if item.date == appt.appointment_date),
@@ -461,16 +541,6 @@ async def get_my_appointments(
         else:
             slot_minutes = 8 * 60 + (appt.turn_number - 1) * 30
         time_block = (datetime.min + timedelta(minutes=slot_minutes)).strftime("%I:%M %p")
-        
-        local_now = datetime.now(ZoneInfo("America/Caracas"))
-        duration = appt.appointment_duration_minutes or 30
-        appt_end_datetime = datetime.combine(appt.appointment_date, datetime.min.time()).replace(tzinfo=ZoneInfo("America/Caracas")) + timedelta(minutes=slot_minutes + duration)
-        
-        if appt.status == AppointmentStatus.SCHEDULED and local_now > appt_end_datetime:
-            appt.status = AppointmentStatus.COMPLETED
-            db.add(appt)
-            await db.commit()
-            
 
         patient_full_name = display_name if doctor_view else (f"{pat.user.first_name} {pat.user.last_name}" if pat and pat.user else (f"{appt.patient_first_name or ''} {appt.patient_last_name or ''}".strip() or "Paciente presencial"))
         doctor_full_name = f"{'Dra.' if doc.user.gender in ['Femenino', 'Femenina'] else 'Dr.'} {doc.user.first_name} {doc.user.last_name}" if doc and doc.user else "Dr(a). Médico"
@@ -485,7 +555,8 @@ async def get_my_appointments(
             "doctor_specialty": display_spec,
             "doctor_location": display_loc,
             "doctor_avatar": avatar,
-            "patient_phone": phone,
+            "doctor_phone": doctor_phone,
+            "patient_phone": patient_phone,
             "patient_email": pat.user.email if pat and pat.user else "",
             "patient_cedula": getattr(pat.user, "cedula", "") if pat and pat.user else "",
             "time_block": time_block,
@@ -641,48 +712,73 @@ async def get_doctor_appointment_stats(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Estadísticas de citas para el doctor o asistente:
+    Estadísticas de citas para doctor, asistente o clínica:
     - citas esta semana
     - citas este mes
     - citas totales
     - citas canceladas
+    - citas para hoy
+    - cantidad de doctores (para clínicas)
     """
-    if current_user.role not in (RoleEnum.DOCTOR, RoleEnum.ASSISTANT):
-        raise HTTPException(status_code=403, detail="Acceso denegado: solo doctores o asistentes VIP")
+    await auto_complete_expired_appointments(db)
 
-    doctor = None
-    if current_user.role == RoleEnum.ASSISTANT:
-        if current_user.linked_doctor_id:
-            doctor = await db.get(Doctor, current_user.linked_doctor_id)
-    else:
-        doctor_query = select(Doctor).where(Doctor.user_id == current_user.id)
-        doctor = (await db.execute(doctor_query)).scalar_one_or_none()
+    if current_user.role not in (RoleEnum.DOCTOR, RoleEnum.ASSISTANT, RoleEnum.CLINIC):
+        raise HTTPException(status_code=403, detail="Acceso denegado: solo doctores, asistentes o clínicas")
 
-    if not doctor:
-        raise HTTPException(status_code=404, detail="Perfil de doctor no encontrado")
+    from app.models.subscriptions import Subscription, SubscriptionStatus, SubscriptionPlan
+    from app.core.clinic_access import active_clinic_subscription
 
-    is_vip = getattr(doctor, "is_sponsored", False)
-    if not is_vip:
-        from app.models.subscriptions import Subscription, SubscriptionStatus, SubscriptionPlan
-        sub = await db.scalar(
-            select(Subscription).where(
-                Subscription.doctor_id == doctor.id,
-                Subscription.status == SubscriptionStatus.ACTIVE,
-                Subscription.plan == SubscriptionPlan.SPONSORED,
+    is_vip = False
+    doctor_ids = []
+
+    if current_user.role == RoleEnum.CLINIC:
+        from app.models.clinics import Clinic
+        clinic = await db.scalar(select(Clinic).where(Clinic.user_id == current_user.id))
+        if not clinic:
+            raise HTTPException(status_code=404, detail="Perfil de clínica no encontrado")
+        clinic_sub = await active_clinic_subscription(db, clinic.id)
+        if not clinic_sub:
+            raise HTTPException(status_code=403, detail="La clínica no tiene una suscripción activa")
+        is_vip = clinic_sub.plan == SubscriptionPlan.CLINIC_VIP
+        doc_ids_res = await db.scalars(
+            select(Doctor.id).where(
+                Doctor.clinic_id == clinic.id,
+                or_(Doctor.clinic_join_status.is_(None), Doctor.clinic_join_status == "approved")
             )
         )
-        if sub:
-            is_vip = True
-        elif doctor.clinic_id:
-            from app.core.clinic_access import active_clinic_subscription
-            clinic_sub = await active_clinic_subscription(db, doctor.clinic_id)
-            if clinic_sub and clinic_sub.plan in (SubscriptionPlan.CLINIC_VIP, SubscriptionPlan.SPONSORED):
+        doctor_ids = list(doc_ids_res.all())
+    else:
+        doctor = None
+        if current_user.role == RoleEnum.ASSISTANT:
+            if current_user.linked_doctor_id:
+                doctor = await db.get(Doctor, current_user.linked_doctor_id)
+        else:
+            doctor_query = select(Doctor).where(Doctor.user_id == current_user.id)
+            doctor = (await db.execute(doctor_query)).scalar_one_or_none()
+
+        if not doctor:
+            raise HTTPException(status_code=404, detail="Perfil de doctor no encontrado")
+
+        is_vip = getattr(doctor, "is_sponsored", False)
+        if not is_vip:
+            sub = await db.scalar(
+                select(Subscription).where(
+                    Subscription.doctor_id == doctor.id,
+                    Subscription.status == SubscriptionStatus.ACTIVE,
+                    Subscription.plan == SubscriptionPlan.SPONSORED,
+                )
+            )
+            if sub:
                 is_vip = True
+            elif doctor.clinic_id:
+                clinic_sub = await active_clinic_subscription(db, doctor.clinic_id)
+                if clinic_sub and clinic_sub.plan in (SubscriptionPlan.CLINIC_VIP, SubscriptionPlan.SPONSORED):
+                    is_vip = True
 
-    if not is_vip:
-        raise HTTPException(status_code=403, detail="Las estadísticas solo están disponibles para doctores VIP")
+        if not is_vip:
+            raise HTTPException(status_code=403, detail="Las estadísticas solo están disponibles para doctores VIP")
 
-    doctor_id = doctor.id
+        doctor_ids = [doctor.id]
 
     local_now = datetime.now(ZoneInfo("America/Caracas")).date()
     # Inicio de la semana (Lunes)
@@ -696,13 +792,16 @@ async def get_doctor_appointment_stats(
     else:
         end_of_month = date_type(local_now.year, local_now.month + 1, 1) - timedelta(days=1)
 
-    all_appts = (await db.scalars(
-        select(Appointment).where(Appointment.doctor_id == doctor_id)
-    )).all()
+    if doctor_ids:
+        all_appts = (await db.scalars(
+            select(Appointment).where(Appointment.doctor_id.in_(doctor_ids))
+        )).all()
+    else:
+        all_appts = []
 
     total_count = len(all_appts)
     cancelled_count = sum(1 for a in all_appts if a.status == AppointmentStatus.CANCELLED)
-    
+
     # Active/scheduled/completed in current week (excluding cancelled)
     week_count = sum(
         1 for a in all_appts
@@ -717,11 +816,20 @@ async def get_doctor_appointment_stats(
         and a.status != AppointmentStatus.CANCELLED
     )
 
+    today_count = sum(
+        1 for a in all_appts
+        if a.appointment_date == local_now
+        and a.status != AppointmentStatus.CANCELLED
+    )
+
     return {
         "week_appointments": week_count,
         "month_appointments": month_count,
         "total_appointments": total_count,
         "cancelled_appointments": cancelled_count,
+        "today_appointments": today_count,
+        "doctor_count": len(doctor_ids),
+        "is_vip": is_vip,
     }
 
 

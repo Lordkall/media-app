@@ -222,7 +222,7 @@ async def get_my_doctors(
         "clinic_join_status": doctor.clinic_join_status or "approved",
         "bio": doctor.bio,
         "consultation_fee": doctor.consultation_fee,
-        "is_vip": doctor.is_sponsored,
+        "is_vip": bool(doctor.is_sponsored or (subscription is not None and subscription.plan == SubscriptionPlan.CLINIC_VIP)),
     } for doctor, user in rows]
     
     return {
@@ -390,6 +390,10 @@ async def get_clinic_doctors(clinic_id: int, db: AsyncSession = Depends(get_db))
     result = await db.execute(query)
     rows = result.all()
     
+    from app.core.clinic_access import active_clinic_subscription
+    sub = await active_clinic_subscription(db, clinic_id)
+    clinic_is_vip = sub is not None and sub.plan == SubscriptionPlan.CLINIC_VIP
+
     docs = []
     for d, u in rows:
         docs.append({
@@ -400,7 +404,7 @@ async def get_clinic_doctors(clinic_id: int, db: AsyncSession = Depends(get_db))
             "specialties": d.specialties,
             "address": u.address,
             "consultation_fee": d.consultation_fee,
-            "is_vip": d.is_sponsored,
+            "is_vip": bool(d.is_sponsored or clinic_is_vip),
             "avatar_url": u.avatar_url
         })
     return docs

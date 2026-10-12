@@ -244,6 +244,7 @@ class BookAppointmentView(ft.Container):
             options=[
                 ft.dropdown.Option(key="Consulta", text="Consulta"),
                 ft.dropdown.Option(key="Entrega de Examenes", text="Entrega de Exámenes"),
+                ft.dropdown.Option(key="Cura", text="Cura"),
                 ft.dropdown.Option(key="Otros", text="Otros")
             ],
             fill_color=colors.INPUT_BG, filled=True,

@@ -363,7 +363,13 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
       return const SizedBox(
           height: 80, child: Center(child: CircularProgressIndicator()));
     }
-    final bool isVip = _subData?['current']?['plan'] == 'sponsored';
+    final rawPlan = _subData?['current']?['plan']?.toString().toLowerCase() ?? '';
+    final bool isVip = rawPlan == 'sponsored' ||
+        rawPlan == 'clinic_vip' ||
+        rawPlan.contains('vip') ||
+        rawPlan.contains('patrocinado') ||
+        _subData?['is_vip'] == true ||
+        _userData?['is_vip'] == true;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24.0),
       child: Row(

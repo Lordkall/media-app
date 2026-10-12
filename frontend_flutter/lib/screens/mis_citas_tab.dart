@@ -172,9 +172,19 @@ class _MisCitasTabState extends State<MisCitasTab> {
                   const SizedBox(height: 12),
                   _buildDetailRow(Icons.location_on, 'Ubicación / Consultorio', location),
                 ],
-                if (appt['patient_phone'] != null && appt['patient_phone'].toString().trim().isNotEmpty) ...[
+                if (isDoctor && appt['patient_phone'] != null && appt['patient_phone'].toString().trim().isNotEmpty) ...[
                   const SizedBox(height: 12),
                   _buildDetailRow(Icons.phone, 'Teléfono del paciente', appt['patient_phone'].toString()),
+                ],
+                if (!isDoctor && (appt['doctor_phone'] != null || appt['patient_phone'] != null)) ...[
+                  Builder(builder: (_) {
+                    final ph = (appt['doctor_phone'] ?? appt['patient_phone'])?.toString().trim() ?? '';
+                    if (ph.isEmpty) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: _buildDetailRow(Icons.phone, 'Teléfono del doctor', ph),
+                    );
+                  }),
                 ],
                 if (reason.trim().isNotEmpty) ...[
                   const SizedBox(height: 12),
@@ -660,36 +670,43 @@ class _MisCitasTabState extends State<MisCitasTab> {
                                       Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          if (appt['patient_phone'] != null &&
-                                              appt['patient_phone']
-                                                  .toString()
-                                                  .isNotEmpty)
-                                            IconButton(
-                                              icon: const Icon(Icons.message,
-                                                  color: Colors.greenAccent,
-                                                  size: 28),
-                                              tooltip: 'WhatsApp',
-                                              onPressed: () async {
-                                                final phone = appt['patient_phone']
-                                                    .toString()
-                                                    .replaceAll(
-                                                        RegExp(r'[^\d+]'), '');
-                                                final url = Uri.parse(
-                                                    'https://wa.me/$phone');
-                                                try {
-                                                  await launchUrl(url,
-                                                      mode: LaunchMode
-                                                          .externalApplication);
-                                                } catch (e) {
-                                                  if (context.mounted) {
-                                                    ScaffoldMessenger.of(context)
-                                                        .showSnackBar(const SnackBar(
-                                                            content: Text(
-                                                                'No se pudo abrir WhatsApp')));
+                                          Builder(
+                                            builder: (ctx) {
+                                              final rawTarget = (_doctorView
+                                                  ? appt['patient_phone']
+                                                  : (appt['doctor_phone'] ?? appt['patient_phone']))?.toString() ?? '';
+                                              final cleanDigits = rawTarget.replaceAll(RegExp(r'[^\d]'), '');
+                                              if (cleanDigits.isEmpty) return const SizedBox.shrink();
+
+                                              return IconButton(
+                                                icon: Image.asset(
+                                                  'assets/whatsapp_logo.png',
+                                                  width: 28,
+                                                  height: 28,
+                                                  fit: BoxFit.contain,
+                                                ),
+                                                tooltip: 'Contactar por WhatsApp',
+                                                onPressed: () async {
+                                                  var phone = cleanDigits;
+                                                  if (phone.startsWith('0')) {
+                                                    phone = '58${phone.substring(1)}';
+                                                  } else if (!phone.startsWith('58') && phone.length == 10) {
+                                                    phone = '58$phone';
                                                   }
-                                                }
-                                              },
-                                            ),
+                                                  final url = Uri.parse('https://wa.me/$phone');
+                                                  try {
+                                                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                                                  } catch (e) {
+                                                    if (context.mounted) {
+                                                      ScaffoldMessenger.of(context).showSnackBar(
+                                                        const SnackBar(content: Text('No se pudo abrir WhatsApp')),
+                                                      );
+                                                    }
+                                                  }
+                                                },
+                                              );
+                                            },
+                                          ),
                                           if (_filterMode == 'Historial')
                                             IconButton(
                                               icon: const Icon(Icons.delete_outline,

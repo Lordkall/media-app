@@ -19,7 +19,7 @@ class _ManualAppointmentSheetState extends State<ManualAppointmentSheet> {
   final _lastName = TextEditingController();
   final _phone = TextEditingController();
   String? _reason;
-  static const _reasons = ['Consulta', 'Entrega de examenes', 'Otros'];
+  static const _reasons = ['Consulta', 'Entrega de examenes', 'Cura', 'Otros'];
   DateTime? _date;
   List<Map<String, dynamic>> _slots = [];
   int? _turn;

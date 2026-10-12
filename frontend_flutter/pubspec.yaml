@@ -45,6 +45,7 @@ flutter:
     - assets/doctor_patients_bg.jpg
     - assets/allied_doctors_bg.jpg
     - assets/allied_clinics_bg.jpg
+    - assets/whatsapp_logo.png
     - assets/avatars/
 
 flutter_launcher_icons:

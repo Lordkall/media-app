@@ -38,7 +38,13 @@ async def read_doctor_me(
     sub_result = await db.execute(sub_query)
     sub = sub_result.scalars().first()
     
-    doc.is_vip = sub is not None
+    is_vip = sub is not None
+    if not is_vip and doc.clinic_id and (doc.clinic_join_status is None or doc.clinic_join_status == "approved"):
+        from app.core.clinic_access import active_clinic_subscription
+        clinic_sub = await active_clinic_subscription(db, doc.clinic_id)
+        if clinic_sub and clinic_sub.plan == SubscriptionPlan.CLINIC_VIP:
+            is_vip = True
+    doc.is_vip = is_vip
     
     return doc
 
@@ -76,7 +82,13 @@ async def update_doctor_me(
             Subscription.plan == SubscriptionPlan.SPONSORED,
         )
     )
-    doc.is_vip = active_vip is not None
+    is_vip = active_vip is not None
+    if not is_vip and doc.clinic_id and (doc.clinic_join_status is None or doc.clinic_join_status == "approved"):
+        from app.core.clinic_access import active_clinic_subscription
+        clinic_sub = await active_clinic_subscription(db, doc.clinic_id)
+        if clinic_sub and clinic_sub.plan == SubscriptionPlan.CLINIC_VIP:
+            is_vip = True
+    doc.is_vip = is_vip
     return doc
 
 @router.get("/{doctor_id}/availability")

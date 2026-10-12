@@ -198,12 +198,39 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                   ListTile(
                     leading: const Icon(Icons.phone, color: Color(0xFF0056B3)),
                     title: const Text('Teléfono'),
-                    subtitle: const Text('+58 412 000 0000'),
+                    subtitle: Text(
+                      (doctor['phone'] != null && doctor['phone'].toString().trim().isNotEmpty)
+                          ? doctor['phone'].toString()
+                          : 'No registrado',
+                    ),
                     trailing: IconButton(
-                      icon: const Icon(Icons.message, color: Colors.green),
+                      icon: Image.asset(
+                        'assets/whatsapp_logo.png',
+                        width: 28,
+                        height: 28,
+                        fit: BoxFit.contain,
+                      ),
+                      tooltip: 'Contactar por WhatsApp',
                       onPressed: () async {
-                        final url = Uri.parse('https://wa.me/584120000000');
-                        if (!await launchUrl(url) && context.mounted) {
+                        final rawPhone = (doctor['phone'] != null && doctor['phone'].toString().trim().isNotEmpty)
+                            ? doctor['phone'].toString()
+                            : '';
+                        var clean = rawPhone.replaceAll(RegExp(r'[^\d]'), '');
+                        if (clean.isEmpty) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('El doctor no tiene un número telefónico registrado.')),
+                            );
+                          }
+                          return;
+                        }
+                        if (clean.startsWith('0')) {
+                          clean = '58${clean.substring(1)}';
+                        } else if (!clean.startsWith('58') && clean.length == 10) {
+                          clean = '58$clean';
+                        }
+                        final url = Uri.parse('https://wa.me/$clean');
+                        if (!await launchUrl(url, mode: LaunchMode.externalApplication) && context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                   content: Text('No se pudo abrir WhatsApp')));
