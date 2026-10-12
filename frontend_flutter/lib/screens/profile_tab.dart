@@ -682,9 +682,11 @@ class _SecurityPageState extends State<SecurityPage> {
 
   Future<void> _loadSetting() async {
     final prefs = await SharedPreferences.getInstance();
+    final currentToken = prefs.getString('access_token');
+    final userId = AuthHelper.getUserIdFromToken(currentToken) ?? 'default';
     if (mounted) {
       setState(() {
-        _biometricsEnabled = prefs.getBool('biometrics_enabled') ?? false;
+        _biometricsEnabled = prefs.getBool('biometrics_enabled_$userId') ?? false;
         _isLoading = false;
       });
     }
@@ -692,6 +694,8 @@ class _SecurityPageState extends State<SecurityPage> {
 
   Future<void> _toggleBiometrics(bool value) async {
     final prefs = await SharedPreferences.getInstance();
+    final currentToken = prefs.getString('access_token');
+    final userId = AuthHelper.getUserIdFromToken(currentToken) ?? 'default';
     if (kIsWeb) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -723,10 +727,15 @@ class _SecurityPageState extends State<SecurityPage> {
 
         if (!didAuth) return;
 
-        final currentToken = prefs.getString('access_token');
         if (currentToken != null) {
           await prefs.setString('saved_biometric_token', currentToken);
+          await prefs.setString('saved_biometric_user_id', userId);
+          final userEmail = AuthHelper.getEmailFromToken(currentToken);
+          if (userEmail != null) {
+            await prefs.setString('logged_username', userEmail);
+          }
         }
+        await prefs.setBool('biometrics_enabled_$userId', true);
         await prefs.setBool('biometrics_enabled', true);
         if (mounted) {
           setState(() => _biometricsEnabled = true);
@@ -742,8 +751,10 @@ class _SecurityPageState extends State<SecurityPage> {
         }
       }
     } else {
-      await prefs.setBool('biometrics_enabled', false);
+      await prefs.setBool('biometrics_enabled_$userId', false);
       await prefs.remove('saved_biometric_token');
+      await prefs.remove('saved_biometric_user_id');
+      await prefs.setBool('biometrics_enabled', false);
       if (mounted) {
         setState(() => _biometricsEnabled = false);
         ScaffoldMessenger.of(context).showSnackBar(

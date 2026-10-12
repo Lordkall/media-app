@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:app_links/app_links.dart';
 import 'dart:async';
 import '../core/api_client.dart';
+import '../core/auth_helper.dart';
 import '../core/profile_image_helper.dart';
 import 'main_doctor_screen.dart';
 import 'dart:convert';
@@ -96,11 +97,15 @@ class _LoginScreenState extends State<LoginScreen> {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access_token');
     final savedEmail = prefs.getString('logged_username');
-    final biometricsEnabled = prefs.getBool('biometrics_enabled') ?? false;
+    final savedBioUserId = prefs.getString('saved_biometric_user_id');
+    final isBioActive = savedBioUserId != null &&
+        (prefs.getBool('biometrics_enabled_$savedBioUserId') ?? false);
+
     if (kIsWeb) {
       // Web has no biometric sign-in: never render the mobile masked
       // credential placeholders on the browser login form.
       await prefs.remove('saved_biometric_token');
+      await prefs.remove('saved_biometric_user_id');
       await prefs.remove('logged_username');
       if (mounted) {
         setState(() {
@@ -111,7 +116,7 @@ class _LoginScreenState extends State<LoginScreen> {
           _obscurePassword = true;
         });
       }
-    } else if (biometricsEnabled &&
+    } else if (isBioActive &&
         token != null &&
         savedEmail != null &&
         savedEmail.isNotEmpty &&
@@ -126,7 +131,11 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     if (token != null) {
-      if (kIsWeb || !biometricsEnabled) {
+      final currentUserId = AuthHelper.getUserIdFromToken(token);
+      final currentUserBio = currentUserId != null &&
+          (prefs.getBool('biometrics_enabled_$currentUserId') ?? false);
+
+      if (kIsWeb || !currentUserBio) {
         _navigateToHome();
         return;
       }
@@ -166,13 +175,26 @@ class _LoginScreenState extends State<LoginScreen> {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     final savedToken = prefs.getString('saved_biometric_token');
+    final savedUserId = prefs.getString('saved_biometric_user_id');
 
-    if (savedToken == null) {
+    if (savedToken == null || savedUserId == null) {
       _clearBiometricPrefill();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
             content: Text(
                 'Debes iniciar sesión con contraseña al menos una vez para usar huella.')),
+      );
+      return;
+    }
+
+    final isUserBioEnabled =
+        prefs.getBool('biometrics_enabled_$savedUserId') ?? false;
+    if (!isUserBioEnabled) {
+      _clearBiometricPrefill();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text(
+                'El acceso biométrico no está habilitado para esta cuenta.')),
       );
       return;
     }
@@ -192,13 +214,16 @@ class _LoginScreenState extends State<LoginScreen> {
 
         if (didAuthenticate) {
           await prefs.setString('access_token', savedToken);
+          await prefs.setBool('biometrics_enabled', true);
           final accountCheck = await ApiClient.get('/users/me');
           if (accountCheck.statusCode == 401 ||
               accountCheck.statusCode == 403 ||
               accountCheck.statusCode == 404) {
             await prefs.remove('access_token');
             await prefs.remove('saved_biometric_token');
+            await prefs.remove('saved_biometric_user_id');
             await prefs.remove('logged_username');
+            await prefs.setBool('biometrics_enabled', false);
             _clearBiometricPrefill();
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -276,14 +301,22 @@ class _LoginScreenState extends State<LoginScreen> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('access_token', data['access_token']);
-        final biometricsEnabled = prefs.getBool('biometrics_enabled') ?? false;
-        if (!kIsWeb && biometricsEnabled) {
-          await prefs.setString('saved_biometric_token', data['access_token']);
+        final token = data['access_token'] as String;
+        await prefs.setString('access_token', token);
+
+        final userId = AuthHelper.getUserIdFromToken(token) ?? 'default';
+        final isUserBioEnabled = prefs.getBool('biometrics_enabled_$userId') ?? false;
+
+        if (!kIsWeb && isUserBioEnabled) {
+          await prefs.setString('saved_biometric_token', token);
+          await prefs.setString('saved_biometric_user_id', userId);
           await prefs.setString(
               'logged_username', _emailController.text.trim());
+          await prefs.setBool('biometrics_enabled', true);
         } else {
           await prefs.remove('saved_biometric_token');
+          await prefs.remove('saved_biometric_user_id');
+          await prefs.setBool('biometrics_enabled', false);
           if (kIsWeb) {
             await prefs.remove('logged_username');
           }

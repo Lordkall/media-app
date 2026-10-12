@@ -9,13 +9,18 @@ class RoleEnum(str, Enum):
     ASSISTANT = "assistant"
     CLINIC = "clinic"
 
+class RegisterRoleEnum(str, Enum):
+    DOCTOR = "doctor"
+    PATIENT = "patient"
+    CLINIC = "clinic"
+
 class UserCreate(BaseModel):
     email: EmailStr
     first_name: str
     last_name: str
     password: str
     phone: str
-    role: RoleEnum
+    role: RegisterRoleEnum
     state: Optional[str] = None
     address: Optional[str] = None
     gender: Optional[str] = "No Especificado"

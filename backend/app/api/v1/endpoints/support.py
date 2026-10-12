@@ -89,7 +89,13 @@ async def create_ticket(
     return {"message": "Ticket created", "id": new_ticket.id}
 
 @router.get("/debug-tickets")
-async def debug_tickets(db: AsyncSession = Depends(get_db)):
+async def debug_tickets(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    role_str = current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role)
+    if role_str != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized. Admin role required.")
     result = await db.execute(select(SupportTicket))
     tickets = result.scalars().all()
     return [{"id": t.id, "subject": t.subject, "user_id": t.user_id} for t in tickets]

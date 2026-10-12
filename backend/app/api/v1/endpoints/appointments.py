@@ -497,6 +497,34 @@ async def get_my_appointments(
         })
     return out
 
+async def _assert_appointment_access(
+    appointment: Appointment,
+    current_user: User,
+    db: AsyncSession,
+) -> None:
+    role_str = current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role)
+    if role_str == "admin":
+        return
+
+    if role_str == "doctor":
+        doctor = await db.scalar(select(Doctor).where(Doctor.user_id == current_user.id))
+        if doctor and doctor.id == appointment.doctor_id:
+            return
+
+    if role_str == "assistant":
+        if current_user.linked_doctor_id and current_user.linked_doctor_id == appointment.doctor_id:
+            return
+
+    if role_str == "patient" and appointment.patient_id is not None:
+        patient = await db.scalar(select(Patient).where(Patient.user_id == current_user.id))
+        if patient and patient.id == appointment.patient_id:
+            return
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="No tienes permiso para acceder o modificar esta cita",
+    )
+
 @router.delete("/{appointment_id}")
 async def delete_appointment(
     appointment_id: int,
@@ -509,6 +537,8 @@ async def delete_appointment(
     if not appointment:
         raise HTTPException(status_code=404, detail="Appointment not found")
         
+    await _assert_appointment_access(appointment, current_user, db)
+
     await db.delete(appointment)
     await db.commit()
     return {"message": "Cita eliminada correctamente"}
@@ -529,6 +559,8 @@ async def reschedule_appointment(
     
     if not appointment:
         raise HTTPException(status_code=404, detail="Appointment not found")
+        
+    await _assert_appointment_access(appointment, current_user, db)
         
     doctor_id = appointment.doctor_id
     req_date = reschedule_data.appointment_date

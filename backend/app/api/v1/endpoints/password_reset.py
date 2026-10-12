@@ -11,10 +11,11 @@ from app.models.password_reset import PasswordResetToken
 from app.core.security import get_password_hash
 from app.schemas.password_reset import PasswordResetRequest, PasswordResetConfirm
 from app.services.email import send_reset_email
+from app.core.rate_limit import rate_limit_password_reset
 
 router = APIRouter()
 
-@router.post("/request", status_code=status.HTTP_202_ACCEPTED)
+@router.post("/request", status_code=status.HTTP_202_ACCEPTED, dependencies=[Depends(rate_limit_password_reset)])
 async def request_password_reset(
     payload: PasswordResetRequest, 
     db: AsyncSession = Depends(get_db)
@@ -40,7 +41,8 @@ async def request_password_reset(
             import asyncio
             await asyncio.to_thread(send_reset_email, user.email, raw_token)
         except Exception as e:
-            raise HTTPException(status_code=400, detail=str(e))
+            import logging
+            logging.getLogger("uvicorn.error").error(f"Error sending reset email: {e}")
 
     return {"message": "Si el correo está registrado, recibirás un enlace de recuperación pronto."}
 
@@ -73,6 +75,7 @@ async def confirm_password_reset(
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
         
     user.hashed_password = get_password_hash(payload.new_password)
+    user.session_token = secrets.token_urlsafe(32)
     reset_record.is_used = True
     
     await db.commit()

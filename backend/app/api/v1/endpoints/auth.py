@@ -1,5 +1,5 @@
 from datetime import timedelta, datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,11 +8,15 @@ from app.core.database import get_db
 from app.core.security import verify_password, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 from app.models.users import User
 from app.schemas.token import Token
+import logging
+from app.core.rate_limit import rate_limit_login, rate_limit_register, get_client_ip
+
+logger = logging.getLogger("uvicorn.error")
 
 router = APIRouter()
 
-@router.post("/login", response_model=Token)
-async def login_for_access_token(
+@router.post("/login", response_model=Token, dependencies=[Depends(rate_limit_login)])
+async def login_for_access_token(request: Request,
     db: AsyncSession = Depends(get_db),
     form_data: OAuth2PasswordRequestForm = Depends()
 ):
@@ -22,6 +26,8 @@ async def login_for_access_token(
     user = result.scalars().first()
     
     if not user or not verify_password(form_data.password, user.hashed_password):
+        ip = get_client_ip(request)
+        logger.warning(f"[SECURITY AUDIT] Intento fallido de login para '{form_data.username}' desde IP {ip}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Correo o contraseña incorrectos",
@@ -61,16 +67,18 @@ async def login_for_access_token(
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
-from app.schemas.users import UserCreate, UserResponse
+from app.schemas.users import UserCreate, UserResponse, RegisterRoleEnum
 from app.core.security import get_password_hash
 from sqlalchemy.exc import IntegrityError
 from app.models.users import RoleEnum as DatabaseRoleEnum
 
-@router.post("/register", response_model=UserResponse)
+@router.post("/register", response_model=UserResponse, dependencies=[Depends(rate_limit_register)])
 async def register(
     user_in: UserCreate,
     db: AsyncSession = Depends(get_db)
 ):
+    if user_in.role.value not in ["doctor", "patient", "clinic"]:
+        raise HTTPException(status_code=400, detail="Rol de registro no válido")
     try:
         requested_clinic = None
         if user_in.role.value == "doctor" and user_in.clinic_id is not None:

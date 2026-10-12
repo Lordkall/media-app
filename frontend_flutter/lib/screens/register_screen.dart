@@ -173,12 +173,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
             final prefs = await SharedPreferences.getInstance();
             final token = loginData['access_token'] as String;
             await prefs.setString('access_token', token);
-            final biometricsEnabled = prefs.getBool('biometrics_enabled') ?? false;
-            if (!kIsWeb && biometricsEnabled) {
-              await prefs.setString('saved_biometric_token', token);
-              await prefs.setString(
-                  'logged_username', _emailCtrl.text.trim().toLowerCase());
-            }
+            // A newly registered account has not configured biometrics yet
+            await prefs.remove('saved_biometric_token');
+            await prefs.remove('saved_biometric_user_id');
+            await prefs.setBool('biometrics_enabled', false);
             if (!mounted) return;
             Navigator.of(context).pushReplacement(MaterialPageRoute(
               builder: (_) => const SelectPlanScreen(

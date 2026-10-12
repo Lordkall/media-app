@@ -55,13 +55,16 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
     if (kIsWeb) return;
     try {
       final prefs = await SharedPreferences.getInstance();
-      final alreadyPrompted = prefs.getBool('biometrics_prompt_shown') ?? false;
+      final currentToken = prefs.getString('access_token');
+      final userId = AuthHelper.getUserIdFromToken(currentToken) ?? 'default';
+
+      final alreadyPrompted = prefs.getBool('biometrics_prompt_shown_$userId') ?? false;
       if (alreadyPrompted) return;
 
       // Mark as prompted so it only asks on first access to main screen
-      await prefs.setBool('biometrics_prompt_shown', true);
+      await prefs.setBool('biometrics_prompt_shown_$userId', true);
 
-      final isAlreadyEnabled = prefs.getBool('biometrics_enabled') ?? false;
+      final isAlreadyEnabled = prefs.getBool('biometrics_enabled_$userId') ?? false;
       if (isAlreadyEnabled) return;
 
       final localAuth = LocalAuthentication();
@@ -107,10 +110,32 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
       );
 
       if (confirm == true && mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const SecurityPage()),
-        );
+        try {
+          final didAuth = await localAuth.authenticate(
+            localizedReason:
+                'Confirma tu huella o rostro para activar el acceso biométrico',
+            options: const AuthenticationOptions(biometricOnly: true),
+          );
+          if (didAuth) {
+            await prefs.setBool('biometrics_enabled_$userId', true);
+            await prefs.setBool('biometrics_enabled', true);
+            if (currentToken != null) {
+              await prefs.setString('saved_biometric_token', currentToken);
+              await prefs.setString('saved_biometric_user_id', userId);
+              final userEmail = AuthHelper.getEmailFromToken(currentToken);
+              if (userEmail != null) {
+                await prefs.setString('logged_username', userEmail);
+              }
+            }
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Acceso biométrico activado.')),
+              );
+            }
+          }
+        } catch (e) {
+          debugPrint('Error al autenticar biometría desde el prompt: $e');
+        }
       }
     } catch (e) {
       debugPrint('Error en prompt de biometría: $e');

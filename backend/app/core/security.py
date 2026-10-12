@@ -3,9 +3,11 @@ from typing import Optional
 from passlib.context import CryptContext
 from jose import jwt
 
-SECRET_KEY = "a-very-secret-key-change-in-production"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # 7 days for convenience
+import os
+
+SECRET_KEY = os.getenv("SECRET_KEY", "a-very-secret-key-change-in-production")
+ALGORITHM = os.getenv("ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", str(60 * 24 * 7)))
 
 import bcrypt
 

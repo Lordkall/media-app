@@ -183,8 +183,17 @@ async def get_my_subscriptions(
         ) if pending_sub else None
     )
 
+def _require_admin(user: User):
+    role_str = user.role.value if hasattr(user.role, "value") else str(user.role)
+    if role_str != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized. Admin role required.")
+
 @router.get("/test-renew-error")
-async def test_renew_error(db: AsyncSession = Depends(get_db)):
+async def test_renew_error(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    _require_admin(current_user)
     try:
         from app.models.users import User, RoleEnum
         admins_res = await db.execute(select(User))
@@ -224,7 +233,11 @@ async def test_renew_error(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/fix-subscriptions-db")
-async def fix_subscriptions_db(db: AsyncSession = Depends(get_db)):
+async def fix_subscriptions_db(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    _require_admin(current_user)
     from sqlalchemy import text
     results = []
     
@@ -277,7 +290,11 @@ async def fix_subscriptions_db(db: AsyncSession = Depends(get_db)):
     return {"status": "ok", "results": results}
 
 @router.get("/fix-all-db")
-async def fix_all_db(db: AsyncSession = Depends(get_db)):
+async def fix_all_db(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    _require_admin(current_user)
     """Fix all missing columns in doctors and subscriptions tables"""
     from sqlalchemy import text
     results = []
@@ -339,6 +356,17 @@ async def renew_subscription(
     role = str(current_user.role.value) if hasattr(current_user.role, 'value') else str(current_user.role)
     if role not in ["doctor", "clinic"]:
         raise HTTPException(status_code=403, detail="Solo los doctores y clínicas pueden renovar suscripciones")
+
+    if req.reference_number and req.reference_number.strip():
+        clean_ref = req.reference_number.strip()
+        existing_ref = await db.scalar(
+            select(Subscription.id).where(Subscription.reference_number == clean_ref)
+        )
+        if existing_ref:
+            raise HTTPException(
+                status_code=400,
+                detail="El número de referencia ya ha sido registrado previamente."
+            )
 
     if role == "clinic":
         try:
@@ -452,6 +480,17 @@ async def change_subscription_plan(
     role = str(current_user.role.value) if hasattr(current_user.role, 'value') else str(current_user.role)
     if role not in ["doctor", "clinic"]:
         raise HTTPException(status_code=403, detail="Solo los doctores y clínicas pueden cambiar de plan")
+
+    if req.reference_number and req.reference_number.strip():
+        clean_ref = req.reference_number.strip()
+        existing_ref = await db.scalar(
+            select(Subscription.id).where(Subscription.reference_number == clean_ref)
+        )
+        if existing_ref:
+            raise HTTPException(
+                status_code=400,
+                detail="El número de referencia ya ha sido registrado previamente."
+            )
 
     if role == "doctor":
         result = await db.execute(select(Doctor).where(Doctor.user_id == current_user.id))

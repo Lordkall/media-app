@@ -203,9 +203,24 @@ app = FastAPI(title="MedIA Backend", version="1.0.0", lifespan=lifespan)
 from app.core.firebase import init_firebase
 init_firebase()
 
+cors_origins_env = os.getenv("ALLOWED_ORIGINS", "")
+if cors_origins_env.strip():
+    allowed_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()]
+else:
+    allowed_origins = [
+        "https://saludnow.site",
+        "https://www.saludnow.site",
+        "http://localhost",
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "http://localhost:8080",
+        "http://127.0.0.1",
+        "http://127.0.0.1:8000",
+    ]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Permits all origins (including saludnow.site)
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -234,11 +249,13 @@ app.mount("/", StaticFiles(directory="static", html=True), name="flutter_web")
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
-import traceback
+import logging
+logger = logging.getLogger("uvicorn.error")
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    logger.exception(f"Unhandled exception on {request.method} {request.url.path}: {exc}")
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal Server Error", "traceback": traceback.format_exc()}
+        content={"detail": "Internal Server Error"}
     )

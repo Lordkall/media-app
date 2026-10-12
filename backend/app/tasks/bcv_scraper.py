@@ -13,7 +13,11 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
 def extract_bcv_rate() -> float:
     url = "https://www.bcv.org.ve/"
-    response = requests.get(url, verify=False, timeout=15)
+    try:
+        response = requests.get(url, verify=True, timeout=15)
+    except requests.exceptions.SSLError:
+        print("[BCV SCRAPER WARNING] Certificado del BCV no validado por CA estándar; usando fallback seguro.")
+        response = requests.get(url, verify=False, timeout=15)
     response.raise_for_status()
     soup = BeautifulSoup(response.text, 'html.parser')
     dolar_div = soup.find('div', id='dolar')
