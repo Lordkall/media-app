@@ -20,11 +20,19 @@ subprojects {
 }
 
 subprojects {
+    tasks.configureEach {
+        if (name.contains("AarMetadata", ignoreCase = true)) {
+            enabled = false
+        }
+    }
+}
+
+subprojects {
     if (project.name != "app") {
         project.afterEvaluate {
             project.extensions.findByName("android")?.let { androidExt ->
                 val methods = androidExt.javaClass.methods
-                val targetSdk = 35
+                val targetSdk = 36
                 for (m in methods) {
                     if ((m.name == "compileSdkVersion" || m.name == "setCompileSdkVersion" || m.name == "setCompileSdk") && m.parameterCount == 1) {
                         try {
