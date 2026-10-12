@@ -209,7 +209,7 @@ def LoginView(page: ft.Page):
                         icon=ft.icons.ANDROID,
                         color="white",
                         bgcolor="#3DDC84", # Color oficial de Android
-                        on_click=lambda e: page.launch_url("https://drive.google.com/drive/folders/1Str8do58sghGWvJW__AM3vNEGu5HWKtR?usp=sharing")
+                        on_click=lambda e: page.launch_url("https://github.com/Lordkall/media-app/releases/latest/download/app-release.apk")
                     ),
                     margin=ft.margin.only(top=15),
                     visible=page.web
