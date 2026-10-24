@@ -48,7 +48,11 @@ jobs:
             echo "::error::Configure the ANDROID_KEYSTORE_BASE64 repository secret."
             exit 1
           fi
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > frontend_flutter/android/app/upload-keystore.jks
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" \
+            | sed -E 's/-----BEGIN [^-]+-----//g; s/-----END [^-]+-----//g' \
+            | tr -d '[:space:]' \
+            | base64 --decode > frontend_flutter/android/app/upload-keystore.jks
+          test -s frontend_flutter/android/app/upload-keystore.jks
           cat > frontend_flutter/android/key.properties <<EOF
           storeFile=app/upload-keystore.jks
           storePassword=${ANDROID_KEYSTORE_PASSWORD:-android}
