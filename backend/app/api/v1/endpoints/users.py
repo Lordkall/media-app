@@ -344,3 +344,59 @@ async def delete_my_notifications(
     )
     await db.commit()
     return {"status": "ok", "deleted": result.rowcount or 0}
+
+
+@router.post("/me/notifications/test-push")
+async def test_push_notification(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    import firebase_admin
+    from app.core.firebase import send_push_notification
+    from app.models.notifications import Notification, NotificationType
+
+    if not firebase_admin._apps:
+        return {
+            "status": "error",
+            "firebase_initialized": False,
+            "has_token": bool(current_user.fcm_token),
+            "detail": "Firebase Admin SDK no está inicializado en Railway. Verifica que la variable FIREBASE_CREDENTIALS_BASE64 esté configurada correctamente en Railway y que el servicio haya terminado de desplegar.",
+        }
+
+    if not current_user.fcm_token:
+        return {
+            "status": "error",
+            "firebase_initialized": True,
+            "has_token": False,
+            "detail": "Tu usuario no tiene un fcm_token registrado en la base de datos. Abre la app en tu teléfono (APK) e inicia sesión para que el teléfono envíe su token al servidor.",
+        }
+
+    sent = send_push_notification(
+        token=current_user.fcm_token,
+        title="🔔 Notificación de Prueba",
+        body="¡Excelente! Las notificaciones Push de Salud Now están funcionando al 100% en tu teléfono.",
+        data={"action_url": "test"},
+    )
+
+    # También guardamos la notificación en el historial interno
+    notif = Notification(
+        user_id=current_user.id,
+        type=NotificationType.RENEWAL_REMINDER,
+        title="🔔 Notificación de Prueba",
+        message="¡Excelente! Las notificaciones Push de Salud Now están funcionando al 100% en tu teléfono.",
+    )
+    db.add(notif)
+    await db.commit()
+
+    return {
+        "status": "ok" if sent else "failed",
+        "firebase_initialized": True,
+        "has_token": True,
+        "sent": sent,
+        "detail": (
+            "Notificación push enviada con éxito al teléfono."
+            if sent
+            else "Firebase no pudo entregar el mensaje al token del dispositivo (token posiblemente vencido o inválido)."
+        ),
+    }
+

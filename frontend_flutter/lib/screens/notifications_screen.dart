@@ -103,6 +103,43 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
+  bool _isTestingPush = false;
+
+  Future<void> _sendTestPush() async {
+    setState(() => _isTestingPush = true);
+    try {
+      final response = await ApiClient.post('/users/me/notifications/test-push', {});
+      if (!mounted) return;
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final detail = data['detail']?.toString() ?? 'Respuesta del servidor';
+        final isOk = data['status'] == 'ok';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(detail),
+            backgroundColor: isOk ? Colors.green : Colors.orange,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+        _fetchNotifications();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error del servidor (${response.statusCode}): ${response.body}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error de conexión: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => _isTestingPush = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -112,6 +149,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         backgroundColor: const Color(0xFF0056B3),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
+          IconButton(
+            tooltip: 'Enviar notificación Push de prueba al teléfono',
+            onPressed: _isTestingPush ? null : _sendTestPush,
+            icon: _isTestingPush
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white),
+                  )
+                : const Icon(Icons.notifications_active, color: Colors.white),
+          ),
           if (_notifications.isNotEmpty)
             IconButton(
               tooltip: 'Eliminar todas las notificaciones',
