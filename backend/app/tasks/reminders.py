@@ -164,14 +164,11 @@ async def send_appointment_reminders_async():
                 print(f"[RECORDATORIO] Recordatorio 24h generado para paciente {patient_user.id}, cita #{appt.id}")
 
             # ----------------------------------------------------
-            # 3. Recordatorio WhatsApp de 24 horas (Exclusivo Plan VIP Patrocinado)
+            # 3. Recordatorio WhatsApp de 24 horas
             # ----------------------------------------------------
             if not appt.reminder_whatsapp_sent and (is_24h_window or appt.reminder_24h_sent):
-                if not is_doc_vip:
-                    # El doctor tiene plan básico: no incluye recordatorios automáticos por WhatsApp
-                    print(f"[WHATSAPP RECORDATORIO] Cita #{appt.id} no enviada por WhatsApp: doctor ID {doctor.id if doctor else 'N/A'} no tiene Plan VIP Patrocinado.")
-                elif patient_phone:
-                    print(f"[WHATSAPP RECORDATORIO] Enviando recordatorio 24h a {patient_name} ({patient_phone}) para cita #{appt.id} (Doctor VIP ID {doctor.id})...")
+                if patient_phone:
+                    print(f"[WHATSAPP RECORDATORIO] Enviando recordatorio 24h a {patient_name} ({patient_phone}) para cita #{appt.id}...")
                     sent = send_whatsapp_appointment_reminder(
                         to_phone=patient_phone,
                         patient_name=patient_name,

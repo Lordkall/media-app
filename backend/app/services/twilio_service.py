@@ -56,7 +56,7 @@ def send_whatsapp_appointment_reminder(
     account_sid = os.getenv("TWILIO_ACCOUNT_SID")
     auth_token = os.getenv("TWILIO_AUTH_TOKEN")
     from_raw = os.getenv("TWILIO_WHATSAPP_NUMBER", "whatsapp:+17372508034")
-    content_sid = os.getenv("TWILIO_CONTENT_SID")
+    content_sid = os.getenv("TWILIO_CONTENT_SID", "HXfe5ab5f00277942d4d4200328b4d403c")
 
     if not account_sid or not auth_token:
         print("[TWILIO] Error: TWILIO_ACCOUNT_SID o TWILIO_AUTH_TOKEN no configurados en variables de entorno")
@@ -81,14 +81,19 @@ def send_whatsapp_appointment_reminder(
         from twilio.rest import Client
         client = Client(account_sid, auth_token)
 
-        # 1. Si existe un ContentSid configurado explícitamente, intentar usarlo
+        # 1. Enviar con ContentSid (plantilla aprobada para WhatsApp Sandbox / Meta)
         if content_sid:
             try:
+                # La plantilla pre-aprobada de Sandbox espera:
+                # {{1}} = Fecha / Día
+                # {{2}} = Hora
+                # {{3}} = Letra / Opción de Confirmación
+                # {{4}} = Letra / Opción de Reprogramación
                 variables = {
-                    "1": patient_name,
-                    "2": doctor_name,
-                    "3": appointment_date_str,
-                    "4": str(turn_number),
+                    "1": appointment_date_str,
+                    "2": appointment_time_str or "08:00 AM",
+                    "3": "C",
+                    "4": "R",
                 }
                 message = client.messages.create(
                     from_=from_whatsapp,
@@ -99,7 +104,7 @@ def send_whatsapp_appointment_reminder(
                 print(f"[TWILIO] WhatsApp enviado con éxito con ContentSid a {normalized_to}. SID: {message.sid}")
                 return True
             except Exception as template_err:
-                print(f"[TWILIO] Aviso con template ({template_err}), intentando envío de texto directo...")
+                print(f"[TWILIO] Falló envío con template ({template_err}), intentando envío de texto directo...")
 
         # 2. Enviar con cuerpo directo
         message = client.messages.create(
