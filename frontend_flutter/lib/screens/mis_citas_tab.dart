@@ -8,7 +8,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'manual_appointment_sheet.dart';
 import 'reschedule_appointment_sheet.dart';
 import '../services/appointment_print_service.dart';
-import 'select_plan_screen.dart';
 
 class MisCitasTab extends StatefulWidget {
   const MisCitasTab({super.key, this.initialDate});
@@ -278,8 +277,6 @@ class _MisCitasTabState extends State<MisCitasTab> {
   }
 
   String _doctorName = '';
-  Map<String, dynamic>? _userData;
-  bool _isVip = false;
 
   @override
   void initState() {
@@ -294,7 +291,6 @@ class _MisCitasTabState extends State<MisCitasTab> {
       final res = await ApiClient.get('/users/me');
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        _userData = data;
         final first = (data['first_name'] ?? '').toString().trim();
         final last = (data['last_name'] ?? '').toString().trim();
         final gender = (data['gender'] ?? '').toString().toLowerCase();
@@ -305,88 +301,10 @@ class _MisCitasTabState extends State<MisCitasTab> {
           });
         }
       }
-
-      final subRes = await ApiClient.get('/subscriptions/me');
-      if (subRes.statusCode == 200) {
-        final subData = jsonDecode(subRes.body);
-        final plan = subData['current']?['plan']?.toString().toLowerCase() ?? '';
-        final isVip = plan == 'sponsored' ||
-            plan == 'vip' ||
-            plan == 'clinic_vip' ||
-            plan.contains('vip') ||
-            plan.contains('patrocinado') ||
-            subData['is_vip'] == true ||
-            _userData?['is_vip'] == true;
-        if (mounted) {
-          setState(() {
-            _isVip = isVip;
-          });
-        }
-      }
     } catch (_) {}
   }
 
-  void _showVipRequiredDialog({required String featureName}) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Icon(Icons.workspace_premium, color: Colors.amber, size: 28),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Función Exclusiva VIP',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          'La $featureName es un beneficio exclusivo del Plan VIP Patrocinado.\n\nActualiza tu suscripción para desbloquear la impresión de citas, estadísticas avanzadas y recordatorios automáticos por WhatsApp.',
-          style: const TextStyle(fontSize: 14, height: 1.4),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Entendido'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.amber[700],
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            onPressed: () {
-              Navigator.pop(ctx);
-              if (_userData != null) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => SelectPlanScreen(
-                      doctorData: _userData!,
-                      isRenewal: true,
-                    ),
-                  ),
-                );
-              }
-            },
-            child: const Text(
-              'Mejorar a VIP',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _printDailyAppointments() async {
-    if (!_isVip) {
-      _showVipRequiredDialog(featureName: 'impresión de citas del día');
-      return;
-    }
-
     final dateStr = _selectedDate.toIso8601String().split('T')[0];
     final dayAppointments = _appointments
         .where((a) =>
@@ -431,11 +349,6 @@ class _MisCitasTabState extends State<MisCitasTab> {
   }
 
   Future<void> _printUpcomingAppointments() async {
-    if (!_isVip) {
-      _showVipRequiredDialog(featureName: 'impresión de próximas citas');
-      return;
-    }
-
     final now = caracasNow();
     final upcomingAppointments = _appointments
         .where((a) {

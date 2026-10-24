@@ -346,6 +346,7 @@ class SubscribeView(ft.Container):
                 "Presencia médica.",
                 "Citas ilimitadas.",
                 "Gestión de perfil y horarios.",
+                "Impresión de citas por fecha.",
                 "Soporte 24/7."
             ],
             badge=basic_badge,

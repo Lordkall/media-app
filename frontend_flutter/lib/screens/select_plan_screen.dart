@@ -301,7 +301,7 @@ class _SelectPlanScreenState extends State<SelectPlanScreen> {
                             'Plan Básico',
                             basicPrice.toString(),
                             (basicPrice * bcvRate).toStringAsFixed(2),
-                            '• Presencia médica.\n• Citas ilimitadas.\n• Gestión de perfil y horarios.\n• Soporte 24/7.',
+                            '• Presencia médica.\n• Citas ilimitadas.\n• Gestión de perfil y horarios.\n• Impresión de citas por fecha.\n• Soporte 24/7.',
                             'basic'),
                         const SizedBox(height: 16),
                         _buildPlanCard(
