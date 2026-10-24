@@ -44,6 +44,8 @@ flutter:
     - assets/logo_white.png
     - assets/logo_icon.png
     - assets/logo_vertical_white.png
+    - assets/app_icon.png
+    - assets/app_icon_foreground.png
     - assets/doctor_patients_bg.jpg
     - assets/allied_doctors_bg.jpg
     - assets/allied_clinics_bg.jpg
@@ -53,12 +55,13 @@ flutter:
 flutter_launcher_icons:
   android: true
   adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/logo.png"
+  adaptive_icon_foreground: "assets/app_icon_foreground.png"
   ios: true
+  remove_alpha_ios: true
   web:
     generate: true
-    image_path: "assets/logo.png"
+    image_path: "assets/app_icon.png"
     background_color: "#FFFFFF"
     theme_color: "#0F4C81"
-  image_path: "assets/logo.png"
+  image_path: "assets/app_icon.png"
 
