@@ -4,6 +4,7 @@ import '../core/auth_helper.dart';
 import '../screens/login_screen.dart';
 import '../screens/notifications_screen.dart';
 import '../screens/assistant_management_screen.dart';
+import '../screens/select_plan_screen.dart';
 import '../core/api_client.dart';
 import 'dart:convert';
 
@@ -91,22 +92,17 @@ class _DoctorHeaderState extends State<DoctorHeader> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
-              Image.asset(
-                'assets/logo.png',
-                height: 40,
-                errorBuilder: (context, error, stackTrace) => const Icon(Icons.favorite, color: Color(0xFF0056B3)),
-              ),
-              const SizedBox(width: 8),
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Salud Now', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0056B3))),
-                  Text('Plataforma Médica', style: TextStyle(fontSize: 10, color: Color(0xFF38B6FF))),
-                ],
-              ),
-            ],
+          Image.asset(
+            'assets/logo_transparent.png',
+            height: 38,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) => const Row(
+              children: [
+                Icon(Icons.favorite, color: Color(0xFF0056B3)),
+                SizedBox(width: 8),
+                Text('Salud Now', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0056B3))),
+              ],
+            ),
           ),
           Row(
             children: [
@@ -165,6 +161,8 @@ class _DoctorHeaderState extends State<DoctorHeader> {
                     Navigator.push(context, MaterialPageRoute(builder: (context) => const AssistantManagementScreen()));
                   } else if (value == 'stats') {
                     _showDoctorStatsDialog(context);
+                  } else if (value == 'stats_locked') {
+                    _showVipStatsUpgradeDialog(context);
                   }
                 },
                 itemBuilder: (BuildContext context) {
@@ -193,6 +191,17 @@ class _DoctorHeaderState extends State<DoctorHeader> {
                             Text('Estadísticas', style: TextStyle(color: Color(0xFF0B2545), fontWeight: FontWeight.w600)),
                           ],
                         ),
+                      )
+                    else if (isDoctorOrAssistant)
+                      const PopupMenuItem(
+                        value: 'stats_locked',
+                        child: Row(
+                          children: [
+                            Icon(Icons.lock_outline, color: Colors.amber, size: 20),
+                            SizedBox(width: 8),
+                            Text('Estadísticas (VIP)', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600)),
+                          ],
+                        ),
                       ),
                     const PopupMenuItem(
                       value: 'logout',
@@ -209,6 +218,70 @@ class _DoctorHeaderState extends State<DoctorHeader> {
               ),
             ],
           )
+        ],
+      ),
+    );
+  }
+
+  void _showVipStatsUpgradeDialog(BuildContext context) async {
+    Map<String, dynamic>? userData;
+    try {
+      final res = await ApiClient.get('/users/me');
+      if (res.statusCode == 200) {
+        userData = jsonDecode(res.body);
+      }
+    } catch (_) {}
+
+    if (!context.mounted) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.workspace_premium, color: Colors.amber, size: 28),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Función Exclusiva VIP',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'La visualización de estadísticas de citas es un beneficio exclusivo del Plan VIP Patrocinado.\n\nActualiza tu suscripción para acceder a métricas detalladas, impresión de citas y recordatorios automáticos por WhatsApp.',
+          style: TextStyle(fontSize: 14, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Entendido'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.amber[700],
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              if (userData != null && context.mounted) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => SelectPlanScreen(
+                      doctorData: userData!,
+                      isRenewal: true,
+                    ),
+                  ),
+                );
+              }
+            },
+            child: const Text(
+              'Mejorar a VIP',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ),
         ],
       ),
     );

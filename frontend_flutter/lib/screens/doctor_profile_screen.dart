@@ -224,11 +224,11 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                           }
                           return;
                         }
-                        if (clean.startsWith('0')) {
-                          clean = '58${clean.substring(1)}';
-                        } else if (!clean.startsWith('58') && clean.length == 10) {
-                          clean = '58$clean';
+                        if (clean.startsWith('58')) {
+                          clean = clean.substring(2);
                         }
+                        clean = clean.replaceFirst(RegExp(r'^0+'), '');
+                        clean = '58$clean';
                         final url = Uri.parse('https://wa.me/$clean');
                         if (!await launchUrl(url, mode: LaunchMode.externalApplication) && context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(

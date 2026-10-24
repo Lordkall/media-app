@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'manual_appointment_sheet.dart';
 import 'reschedule_appointment_sheet.dart';
 import '../services/appointment_print_service.dart';
+import 'select_plan_screen.dart';
 
 class MisCitasTab extends StatefulWidget {
   const MisCitasTab({super.key, this.initialDate});
@@ -277,6 +278,8 @@ class _MisCitasTabState extends State<MisCitasTab> {
   }
 
   String _doctorName = '';
+  Map<String, dynamic>? _userData;
+  bool _isVip = false;
 
   @override
   void initState() {
@@ -291,6 +294,7 @@ class _MisCitasTabState extends State<MisCitasTab> {
       final res = await ApiClient.get('/users/me');
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
+        _userData = data;
         final first = (data['first_name'] ?? '').toString().trim();
         final last = (data['last_name'] ?? '').toString().trim();
         final gender = (data['gender'] ?? '').toString().toLowerCase();
@@ -301,10 +305,88 @@ class _MisCitasTabState extends State<MisCitasTab> {
           });
         }
       }
+
+      final subRes = await ApiClient.get('/subscriptions/me');
+      if (subRes.statusCode == 200) {
+        final subData = jsonDecode(subRes.body);
+        final plan = subData['current']?['plan']?.toString().toLowerCase() ?? '';
+        final isVip = plan == 'sponsored' ||
+            plan == 'vip' ||
+            plan == 'clinic_vip' ||
+            plan.contains('vip') ||
+            plan.contains('patrocinado') ||
+            subData['is_vip'] == true ||
+            _userData?['is_vip'] == true;
+        if (mounted) {
+          setState(() {
+            _isVip = isVip;
+          });
+        }
+      }
     } catch (_) {}
   }
 
+  void _showVipRequiredDialog({required String featureName}) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.workspace_premium, color: Colors.amber, size: 28),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Función Exclusiva VIP',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'La $featureName es un beneficio exclusivo del Plan VIP Patrocinado.\n\nActualiza tu suscripción para desbloquear la impresión de citas, estadísticas avanzadas y recordatorios automáticos por WhatsApp.',
+          style: const TextStyle(fontSize: 14, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Entendido'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.amber[700],
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              if (_userData != null) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => SelectPlanScreen(
+                      doctorData: _userData!,
+                      isRenewal: true,
+                    ),
+                  ),
+                );
+              }
+            },
+            child: const Text(
+              'Mejorar a VIP',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _printDailyAppointments() async {
+    if (!_isVip) {
+      _showVipRequiredDialog(featureName: 'impresión de citas del día');
+      return;
+    }
+
     final dateStr = _selectedDate.toIso8601String().split('T')[0];
     final dayAppointments = _appointments
         .where((a) =>
@@ -338,6 +420,55 @@ class _MisCitasTabState extends State<MisCitasTab> {
         selectedDate: _selectedDate,
         doctorName: effectiveDoc,
         appointments: dayAppointments,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al generar impresión: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _printUpcomingAppointments() async {
+    if (!_isVip) {
+      _showVipRequiredDialog(featureName: 'impresión de próximas citas');
+      return;
+    }
+
+    final now = caracasNow();
+    final upcomingAppointments = _appointments
+        .where((a) {
+          final aDateTime = _appointmentDateTime(a);
+          return !aDateTime.isBefore(now) && a['status'] == 'scheduled';
+        })
+        .map((a) => Map<String, dynamic>.from(a as Map))
+        .toList();
+
+    if (upcomingAppointments.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No hay próximas citas programadas para imprimir.'),
+          backgroundColor: Color(0xFF0F4C81),
+        ),
+      );
+      return;
+    }
+
+    String effectiveDoc = _doctorName;
+    if (effectiveDoc.isEmpty && upcomingAppointments.isNotEmpty) {
+      effectiveDoc = upcomingAppointments.first['doctor_full_name']?.toString() ??
+          upcomingAppointments.first['doctor_name']?.toString() ??
+          '';
+    }
+    if (effectiveDoc.isEmpty) {
+      effectiveDoc = 'Consulta Médica';
+    }
+
+    try {
+      await AppointmentPrintService.printUpcomingAppointments(
+        doctorName: effectiveDoc,
+        appointments: upcomingAppointments,
       );
     } catch (e) {
       if (mounted) {
@@ -461,11 +592,16 @@ class _MisCitasTabState extends State<MisCitasTab> {
                             label: const Text('Nueva cita manual'),
                           ),
                           OutlinedButton.icon(
-                            onPressed: _printDailyAppointments,
+                            onPressed: _filterMode == 'Más próximas'
+                                ? _printUpcomingAppointments
+                                : _printDailyAppointments,
                             icon: const Icon(Icons.print_outlined,
                                 color: Color(0xFF0F4C81)),
-                            label: const Text('Imprimir citas del día',
-                                style: TextStyle(
+                            label: Text(
+                                _filterMode == 'Más próximas'
+                                    ? 'Imprimir próximas citas'
+                                    : 'Imprimir citas del día',
+                                style: const TextStyle(
                                     color: Color(0xFF0F4C81),
                                     fontWeight: FontWeight.bold)),
                             style: OutlinedButton.styleFrom(
@@ -477,6 +613,40 @@ class _MisCitasTabState extends State<MisCitasTab> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
+                          ),
+                          PopupMenuButton<String>(
+                            tooltip: 'Opciones de impresión',
+                            icon: const Icon(Icons.arrow_drop_down_circle_outlined,
+                                color: Color(0xFF0F4C81)),
+                            onSelected: (val) {
+                              if (val == 'upcoming') {
+                                _printUpcomingAppointments();
+                              } else if (val == 'daily') {
+                                _printDailyAppointments();
+                              }
+                            },
+                            itemBuilder: (ctx) => [
+                              const PopupMenuItem(
+                                value: 'daily',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.today, color: Color(0xFF0F4C81), size: 18),
+                                    SizedBox(width: 8),
+                                    Text('Imprimir citas del día'),
+                                  ],
+                                ),
+                              ),
+                              const PopupMenuItem(
+                                value: 'upcoming',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.upcoming, color: Color(0xFF00A896), size: 18),
+                                    SizedBox(width: 8),
+                                    Text('Imprimir próximas citas'),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -688,11 +858,11 @@ class _MisCitasTabState extends State<MisCitasTab> {
                                                 tooltip: 'Contactar por WhatsApp',
                                                 onPressed: () async {
                                                   var phone = cleanDigits;
-                                                  if (phone.startsWith('0')) {
-                                                    phone = '58${phone.substring(1)}';
-                                                  } else if (!phone.startsWith('58') && phone.length == 10) {
-                                                    phone = '58$phone';
+                                                  if (phone.startsWith('58')) {
+                                                    phone = phone.substring(2);
                                                   }
+                                                  phone = phone.replaceFirst(RegExp(r'^0+'), '');
+                                                  phone = '58$phone';
                                                   final url = Uri.parse('https://wa.me/$phone');
                                                   try {
                                                     await launchUrl(url, mode: LaunchMode.externalApplication);

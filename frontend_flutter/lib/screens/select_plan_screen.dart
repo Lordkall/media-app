@@ -301,14 +301,14 @@ class _SelectPlanScreenState extends State<SelectPlanScreen> {
                             'Plan Básico',
                             basicPrice.toString(),
                             (basicPrice * bcvRate).toStringAsFixed(2),
-                            'Presencia médica y posicionamiento destacado\n• Perfil médico verificado\n• Insignia Doctor Destacado\n• Recepción ilimitada de citas',
+                            '• Presencia médica.\n• Citas ilimitadas.\n• Gestión de perfil y horarios.\n• Soporte 24/7.',
                             'basic'),
                         const SizedBox(height: 16),
                         _buildPlanCard(
                             'Plan VIP Patrocinado',
                             vipPrice.toString(),
                             (vipPrice * bcvRate).toStringAsFixed(2),
-                            'Prioridad absoluta TOP #1\n• Banner destacado\n• Recordatorios automáticos\n• Soporte 24/7',
+                            '• Prioridad destacada en los primeros posicionamientos.\n• Marco y Banner dorados.\n• Citas ilimitadas.\n• Recordatorios automáticos.\n• Gestión de múltiples asistentes.\n• Gestión de perfil y horarios.\n• Impresión de citas por fecha.\n• Estadísticas.\n• Soporte 24/7.',
                             'sponsored',
                             isVip: true),
                       ]
@@ -344,8 +344,19 @@ class _SelectPlanScreenState extends State<SelectPlanScreen> {
                     color: isVip ? Colors.amber[800] : Colors.blue[800])),
             Text('Bs $priceBs (Tasa BCV)',
                 style: const TextStyle(color: Colors.grey)),
-            const SizedBox(height: 16),
-            Text(features, textAlign: TextAlign.center),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: Text(
+                features,
+                textAlign: TextAlign.start,
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  height: 1.45,
+                  color: Color(0xFF334155),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () => _showPaymentDialog(planCode, title, priceBs),

@@ -341,12 +341,12 @@ class SubscribeView(ft.Container):
         plan_basic = self.create_plan_card(
             title="Plan Básico",
             price=basic_price,
-            subtitle="Presencia médica y posicionamiento destacado",
+            subtitle="Presencia médica",
             features=[
-                "Perfil médico verificado",
-                "Insignia 'Doctor Destacado'",
-                "Recepción ilimitada de citas",
-                "Notificaciones en tiempo real"
+                "Presencia médica.",
+                "Citas ilimitadas.",
+                "Gestión de perfil y horarios.",
+                "Soporte 24/7."
             ],
             badge=basic_badge,
             badge_color=ACCENT_COLOR,
@@ -360,13 +360,15 @@ class SubscribeView(ft.Container):
             price=vip_price,
             subtitle="Máxima visibilidad y posicionamiento TOP #1",
             features=[
-                "Prioridad absoluta TOP #1 en búsquedas",
-                "Insignia 'Patrocinado VIP'",
-                "Banner promocional destacado",
-                "Recordatorios automatizados a pacientes",
-                "Cuenta adicional para Asistente Médico",
-                "Estadísticas semanales de pacientes",
-                "Soporte preferencial 24/7"
+                "Prioridad destacada en los primeros posicionamientos.",
+                "Marco y Banner dorados.",
+                "Citas ilimitadas.",
+                "Recordatorios automáticos.",
+                "Gestión de múltiples asistentes.",
+                "Gestión de perfil y horarios.",
+                "Impresión de citas por fecha.",
+                "Estadísticas.",
+                "Soporte 24/7."
             ],
             badge=vip_badge,
             badge_color=PRIMARY_COLOR,

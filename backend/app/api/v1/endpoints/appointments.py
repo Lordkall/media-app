@@ -12,6 +12,7 @@ from datetime import datetime, timedelta, date as date_type
 from zoneinfo import ZoneInfo
 from app.models.doctors import Doctor, Availability
 from app.models.patients import Patient
+from app.services.twilio_service import normalize_whatsapp_phone
 from pydantic import BaseModel, Field, field_validator
 
 router = APIRouter()
@@ -169,7 +170,7 @@ async def create_manual_appointment(
                 appointment_duration_minutes=duration,
                 patient_first_name=payload.patient_first_name,
                 patient_last_name=payload.patient_last_name,
-                patient_phone=payload.patient_phone,
+                patient_phone=normalize_whatsapp_phone(payload.patient_phone) or payload.patient_phone,
                 appointment_reason=payload.appointment_reason,
                 booking_source="manual",
                 status=AppointmentStatus.SCHEDULED,
@@ -257,7 +258,7 @@ async def create_appointment(
             appointment_reason=selected_reason,
             patient_first_name=current_user.first_name,
             patient_last_name=current_user.last_name,
-            patient_phone=current_user.phone,
+            patient_phone=normalize_whatsapp_phone(current_user.phone) or current_user.phone,
             booking_source="online",
             status=AppointmentStatus.SCHEDULED
         )
