@@ -26,7 +26,8 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
       final response = await ApiClient.get('/users/bcv-rate');
       if (response.statusCode != 200) return null;
       final data = jsonDecode(response.body) as Map<String, dynamic>;
-      return (data['rate'] as num?)?.toDouble();
+      final rawRate = data['rate'];
+      return rawRate is num ? rawRate.toDouble() : double.tryParse('$rawRate');
     } catch (_) {
       return null;
     }
@@ -225,12 +226,21 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                       subtitle: FutureBuilder<double?>(
                         future: _bcvRate,
                         builder: (context, snapshot) {
-                          final fee = (doctor['consultation_fee'] as num?)
-                                  ?.toDouble() ??
-                              50.0;
+                          final rawFee = doctor['consultation_fee'];
+                          final fee = rawFee is num
+                              ? rawFee.toDouble()
+                              : double.tryParse('$rawFee') ?? 50.0;
                           final usd = '\$${fee.toStringAsFixed(1)}';
-                          if (doctor['show_fee_in_ves'] != true ||
-                              snapshot.data == null) return Text(usd);
+                          if (doctor['show_fee_in_ves'] != true) {
+                            return Text(usd);
+                          }
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return Text('$usd · Consultando tasa BCV…');
+                          }
+                          if (snapshot.data == null) {
+                            return Text('$usd · Tasa BCV no disponible');
+                          }
                           return Text(
                               '$usd / Bs. ${(fee * snapshot.data!).toStringAsFixed(2)}');
                         },

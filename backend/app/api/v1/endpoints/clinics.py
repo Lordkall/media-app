@@ -424,6 +424,7 @@ async def get_clinic_doctors(clinic_id: int, db: AsyncSession = Depends(get_db))
             "phone": u.phone if u.show_whatsapp else "",
             "bio": redact_phone_numbers(d.bio, u.show_whatsapp),
             "consultation_fee": d.consultation_fee,
+            "show_fee_in_ves": d.show_fee_in_ves,
             "is_vip": bool(d.is_sponsored or clinic_is_vip),
             "avatar_url": u.avatar_url
         })
