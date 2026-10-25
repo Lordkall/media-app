@@ -436,12 +436,23 @@ class _PersonalInfoPageState extends State<_PersonalInfoPage> {
   late final phone =
       TextEditingController(text: widget.user['phone']?.toString());
   bool saving = false;
+  late bool showWhatsapp = widget.user['show_whatsapp'] != false;
   @override
   Widget build(BuildContext context) =>
       _SettingsPage(title: 'Información Personal', children: [
         _field('Nombres', name),
         _field('Apellidos', surname),
         _field('Teléfono de contacto', phone, type: TextInputType.phone),
+        if (widget.user['role']?.toString() == 'doctor')
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Mostrar mi WhatsApp en mi perfil y citas'),
+            subtitle: const Text(
+                'Si lo desactivas, se ocultará tu número y el botón de WhatsApp.'),
+            value: showWhatsapp,
+            onChanged:
+                saving ? null : (value) => setState(() => showWhatsapp = value),
+          ),
         _field('Correo electrónico',
             TextEditingController(text: widget.user['email']?.toString()),
             enabled: false),
@@ -453,7 +464,8 @@ class _PersonalInfoPageState extends State<_PersonalInfoPage> {
                     final response = await ApiClient.put('/users/me', {
                       'first_name': name.text.trim(),
                       'last_name': surname.text.trim(),
-                      'phone': phone.text.trim()
+                      'phone': phone.text.trim(),
+                      'show_whatsapp': showWhatsapp,
                     });
                     if (context.mounted) {
                       setState(() => saving = false);

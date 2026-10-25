@@ -150,7 +150,8 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05), blurRadius: 5)
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 5)
                   ]),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -195,49 +196,58 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                       title: const Text('Precio de Consulta'),
                       subtitle:
                           Text('\$${doctor['consultation_fee'] ?? '40.00'}')),
-                  ListTile(
-                    leading: const Icon(Icons.phone, color: Color(0xFF0056B3)),
-                    title: const Text('Teléfono'),
-                    subtitle: Text(
-                      (doctor['phone'] != null && doctor['phone'].toString().trim().isNotEmpty)
-                          ? doctor['phone'].toString()
-                          : 'No registrado',
-                    ),
-                    trailing: IconButton(
-                      icon: Image.asset(
-                        'assets/whatsapp_logo.png',
-                        width: 28,
-                        height: 28,
-                        fit: BoxFit.contain,
-                      ),
-                      tooltip: 'Contactar por WhatsApp',
-                      onPressed: () async {
-                        final rawPhone = (doctor['phone'] != null && doctor['phone'].toString().trim().isNotEmpty)
+                  if ((doctor['phone']?.toString().trim().isNotEmpty ?? false))
+                    ListTile(
+                      leading:
+                          const Icon(Icons.phone, color: Color(0xFF0056B3)),
+                      title: const Text('Teléfono'),
+                      subtitle: Text(
+                        (doctor['phone'] != null &&
+                                doctor['phone'].toString().trim().isNotEmpty)
                             ? doctor['phone'].toString()
-                            : '';
-                        var clean = rawPhone.replaceAll(RegExp(r'[^\d]'), '');
-                        if (clean.isEmpty) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('El doctor no tiene un número telefónico registrado.')),
-                            );
+                            : 'No registrado',
+                      ),
+                      trailing: IconButton(
+                        icon: Image.asset(
+                          'assets/whatsapp_logo.png',
+                          width: 28,
+                          height: 28,
+                          fit: BoxFit.contain,
+                        ),
+                        tooltip: 'Contactar por WhatsApp',
+                        onPressed: () async {
+                          final rawPhone = (doctor['phone'] != null &&
+                                  doctor['phone'].toString().trim().isNotEmpty)
+                              ? doctor['phone'].toString()
+                              : '';
+                          var clean = rawPhone.replaceAll(RegExp(r'[^\d]'), '');
+                          if (clean.isEmpty) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text(
+                                        'El doctor no tiene un número telefónico registrado.')),
+                              );
+                            }
+                            return;
                           }
-                          return;
-                        }
-                        if (clean.startsWith('58')) {
-                          clean = clean.substring(2);
-                        }
-                        clean = clean.replaceFirst(RegExp(r'^0+'), '');
-                        clean = '58$clean';
-                        final url = Uri.parse('https://wa.me/$clean');
-                        if (!await launchUrl(url, mode: LaunchMode.externalApplication) && context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text('No se pudo abrir WhatsApp')));
-                        }
-                      },
+                          if (clean.startsWith('58')) {
+                            clean = clean.substring(2);
+                          }
+                          clean = clean.replaceFirst(RegExp(r'^0+'), '');
+                          clean = '58$clean';
+                          final url = Uri.parse('https://wa.me/$clean');
+                          if (!await launchUrl(url,
+                                  mode: LaunchMode.externalApplication) &&
+                              context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content:
+                                        Text('No se pudo abrir WhatsApp')));
+                          }
+                        },
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),

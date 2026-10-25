@@ -7,7 +7,6 @@ import '../core/profile_image_helper.dart';
 import '../models/ve_catalogs.dart';
 import '../widgets/profile_avatar.dart';
 import 'select_plan_screen.dart';
-import 'support_messages_screen.dart';
 
 class DoctorHomeTab extends StatefulWidget {
   const DoctorHomeTab({super.key, this.onProfileTap, this.onCitasHoyTap});
@@ -46,20 +45,25 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
 
   Future<void> _resolveInvitation(int clinicId, String action) async {
     try {
-      final response = await ApiClient.post('/doctors/me/clinic-invitations/$clinicId/$action', {});
+      final response = await ApiClient.post(
+          '/doctors/me/clinic-invitations/$clinicId/$action', {});
       if (!mounted) return;
       if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invitación respondida.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Invitación respondida.')));
         _fetchData(); // Refresh UI
       } else {
         var detail = 'Error al procesar invitación';
         try {
           detail = jsonDecode(response.body)['detail']?.toString() ?? detail;
         } catch (_) {}
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(detail)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(detail)));
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (mounted)
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
@@ -186,24 +190,38 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
                     }),
                   const SizedBox(height: 16),
                   if (_invitations.isNotEmpty) ...[
-                    const Text('Invitaciones de Clínica', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0B2545))),
+                    const Text('Invitaciones de Clínica',
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0B2545))),
                     const SizedBox(height: 12),
                     ..._invitations.map((inv) => Card(
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
                           child: ListTile(
-                            leading: ProfileAvatar(imageUrl: inv['avatar_url']?.toString(), size: 40, fallbackRole: 'clinic'),
-                            title: Text(inv['name'] ?? 'Clínica', style: const TextStyle(fontWeight: FontWeight.bold)),
+                            leading: ProfileAvatar(
+                                imageUrl: inv['avatar_url']?.toString(),
+                                size: 40,
+                                fallbackRole: 'clinic'),
+                            title: Text(inv['name'] ?? 'Clínica',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold)),
                             subtitle: const Text('Te ha invitado a unirte'),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 IconButton(
-                                  icon: const Icon(Icons.check, color: Colors.green),
-                                  onPressed: () => _resolveInvitation(inv['clinic_id'], 'accept'),
+                                  icon: const Icon(Icons.check,
+                                      color: Colors.green),
+                                  onPressed: () => _resolveInvitation(
+                                      inv['clinic_id'], 'accept'),
                                 ),
                                 IconButton(
-                                  icon: const Icon(Icons.close, color: Colors.red),
-                                  onPressed: () => _resolveInvitation(inv['clinic_id'], 'reject'),
+                                  icon: const Icon(Icons.close,
+                                      color: Colors.red),
+                                  onPressed: () => _resolveInvitation(
+                                      inv['clinic_id'], 'reject'),
                                 ),
                               ],
                             ),
@@ -320,7 +338,8 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
                                 backgroundColor: const Color(0xFF0056B3),
                                 shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12)),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
                               ),
                               child: const Text('Renovar o Cambiar Plan',
                                   style: TextStyle(
@@ -332,23 +351,6 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  ListTile(
-                    onTap: () {
-                      Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => const SupportMessagesScreen()));
-                    },
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    tileColor: Colors.white.withValues(alpha: 0.5),
-                    leading: const Icon(Icons.forum, color: Color(0xFF0056B3)),
-                    title: const Text('Buzón de Mensajes',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF0B2545))),
-                    trailing: const Icon(Icons.chevron_right,
-                        color: Color(0xFF0B2545)),
-                  ),
-                  const SizedBox(height: 80),
                 ],
               ),
             )
@@ -363,7 +365,8 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
       return const SizedBox(
           height: 80, child: Center(child: CircularProgressIndicator()));
     }
-    final rawPlan = _subData?['current']?['plan']?.toString().toLowerCase() ?? '';
+    final rawPlan =
+        _subData?['current']?['plan']?.toString().toLowerCase() ?? '';
     final bool isVip = rawPlan == 'sponsored' ||
         rawPlan == 'clinic_vip' ||
         rawPlan.contains('vip') ||
@@ -397,6 +400,16 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
                         color: Color(0xFF0B2545))),
+                if (_userData?['role'] == 'assistant' &&
+                    (_userData?['assistant_doctor_name']
+                            ?.toString()
+                            .isNotEmpty ??
+                        false)) ...[
+                  const SizedBox(height: 3),
+                  Text('Asistente de ${_userData!['assistant_doctor_name']}',
+                      style: const TextStyle(
+                          fontSize: 13, color: Color(0xFF475569))),
+                ],
                 const SizedBox(height: 4),
                 Row(
                   children: [

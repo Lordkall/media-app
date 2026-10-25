@@ -65,6 +65,7 @@ class UserUpdate(BaseModel):
     gender: Optional[str] = None
     avatar_url: Optional[str] = None
     fcm_token: Optional[str] = None
+    show_whatsapp: Optional[bool] = None
 
 class PasswordChange(BaseModel):
     current_password: str
@@ -85,11 +86,13 @@ class UserResponse(BaseModel):
     last_name: str
     role: RoleEnum
     phone: Optional[str] = None
+    show_whatsapp: bool = True
     state: Optional[str] = None
     address: Optional[str] = None
     gender: Optional[str] = None
     avatar_url: Optional[str] = None
     linked_doctor_id: Optional[int] = None
+    assistant_doctor_name: Optional[str] = None
     is_blocked: bool = False
     
     class Config:

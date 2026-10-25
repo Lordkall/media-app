@@ -101,8 +101,16 @@ async def get_current_user(request: Request, token: str = Depends(oauth2_scheme)
     return user
 
 @router.get("/me", response_model=UserResponse)
-async def read_users_me(current_user: User = Depends(get_current_user)):
-    return current_user
+async def read_users_me(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    data = UserResponse.model_validate(current_user).model_dump()
+    if current_user.role == DatabaseRoleEnum.ASSISTANT and current_user.linked_doctor_id:
+        from app.models.doctors import Doctor
+        doctor = await db.get(Doctor, current_user.linked_doctor_id)
+        doctor_user = await db.get(User, doctor.user_id) if doctor else None
+        if doctor_user:
+            prefix = "Dra." if doctor_user.gender in ("Femenino", "Femenina") else "Dr."
+            data["assistant_doctor_name"] = f"{prefix} {doctor_user.first_name} {doctor_user.last_name}".strip()
+    return data
 
 @router.get("/{user_id}/avatar")
 async def read_user_avatar(

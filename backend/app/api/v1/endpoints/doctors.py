@@ -293,6 +293,7 @@ async def get_public_doctors(db: AsyncSession = Depends(get_db)):
             "id": doc.id,
             "name": doctor_name,
             "specialty": specialty,
-            "avatar_url": avatar
+            "avatar_url": avatar,
+            "phone": user.phone if user.show_whatsapp else "",
         })
     return out

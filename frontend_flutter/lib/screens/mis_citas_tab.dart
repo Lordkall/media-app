@@ -119,6 +119,7 @@ class _MisCitasTabState extends State<MisCitasTab> {
               'id': data['id'],
               'is_closed': data['is_closed'] ?? false,
               'other_name': name,
+              'other_avatar': appt['doctor_avatar']?.toString(),
             }),
           ),
         );
@@ -141,11 +142,10 @@ class _MisCitasTabState extends State<MisCitasTab> {
   }
 
   Widget _buildAppointmentActions(Map<String, dynamic> appt) {
-    final rawPhone = (_doctorView
-                ? appt['patient_phone']
-                : (appt['doctor_phone'] ?? appt['patient_phone']))
-            ?.toString() ??
-        '';
+    final rawPhone =
+        (_doctorView ? appt['patient_phone'] : appt['doctor_phone'])
+                ?.toString() ??
+            '';
     final digits = rawPhone.replaceAll(RegExp(r'[^\d]'), '');
     return Wrap(
       alignment: WrapAlignment.end,
@@ -173,7 +173,9 @@ class _MisCitasTabState extends State<MisCitasTab> {
               }
             },
           ),
-        if (_role == 'doctor' && appt['patient_id'] != null)
+        if ((_role == 'doctor' ||
+                (_role == 'assistant' && _assistantCanMessage)) &&
+            appt['patient_id'] != null)
           IconButton(
             visualDensity: VisualDensity.compact,
             icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
@@ -331,14 +333,9 @@ class _MisCitasTabState extends State<MisCitasTab> {
                   _buildDetailRow(Icons.phone, 'Teléfono del paciente',
                       appt['patient_phone'].toString()),
                 ],
-                if (!isDoctor &&
-                    (appt['doctor_phone'] != null ||
-                        appt['patient_phone'] != null)) ...[
+                if (!isDoctor && appt['doctor_phone'] != null) ...[
                   Builder(builder: (_) {
-                    final ph = (appt['doctor_phone'] ?? appt['patient_phone'])
-                            ?.toString()
-                            .trim() ??
-                        '';
+                    final ph = appt['doctor_phone']?.toString().trim() ?? '';
                     if (ph.isEmpty) return const SizedBox.shrink();
                     return Padding(
                       padding: const EdgeInsets.only(top: 12),
@@ -402,6 +399,7 @@ class _MisCitasTabState extends State<MisCitasTab> {
   List<dynamic> _appointments = [];
   bool _isLoading = true;
   String? _role;
+  bool _assistantCanMessage = false;
   String _filterMode = 'Fecha';
   bool get _canManageAppointments => _role == 'doctor' || _role == 'assistant';
   bool get _doctorView => _canManageAppointments;
@@ -572,9 +570,23 @@ class _MisCitasTabState extends State<MisCitasTab> {
 
   Future<void> _loadRole() async {
     final role = await AuthHelper.getRole();
+    var canMessage = false;
+    if (role == 'assistant') {
+      try {
+        final response = await ApiClient.get('/subscriptions/me');
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          final plan = data['current']?['plan']?.toString().toLowerCase() ?? '';
+          canMessage = data['is_vip'] == true ||
+              plan == 'sponsored' ||
+              plan == 'clinic_vip';
+        }
+      } catch (_) {}
+    }
     if (mounted) {
       setState(() {
         _role = role;
+        _assistantCanMessage = canMessage;
       });
     }
   }

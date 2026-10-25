@@ -5,7 +5,6 @@ import '../widgets/profile_avatar.dart';
 import '../core/api_client.dart';
 import '../core/profile_image_helper.dart';
 import '../models/ve_catalogs.dart';
-import 'support_messages_screen.dart';
 
 class PatientHomeTab extends StatefulWidget {
   const PatientHomeTab({super.key, this.onProfileTap});
@@ -176,23 +175,6 @@ class _PatientHomeTabState extends State<PatientHomeTab> {
                       );
                     }),
                   const SizedBox(height: 24),
-                  ListTile(
-                    onTap: () {
-                      Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => const SupportMessagesScreen()));
-                    },
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    tileColor: Colors.white.withValues(alpha: 0.5),
-                    leading: const Icon(Icons.forum, color: Color(0xFF0056B3)),
-                    title: const Text('Buzón de Mensajes',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF0B2545))),
-                    trailing: const Icon(Icons.chevron_right,
-                        color: Color(0xFF0B2545)),
-                  ),
-                  const SizedBox(height: 80),
                 ],
               ),
             )

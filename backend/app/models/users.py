@@ -30,6 +30,7 @@ class User(Base):
     avatar_content_type: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     session_token: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     fcm_token: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    show_whatsapp: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     linked_doctor_id: Mapped[Optional[int]] = mapped_column(ForeignKey("doctors.id", ondelete="CASCADE"), nullable=True)
     terms_accepted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     privacy_accepted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)

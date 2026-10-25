@@ -495,7 +495,7 @@ async def get_my_appointments(
         pat = appt.patient
 
         # Extraer teléfonos tanto del doctor como del paciente
-        doctor_phone = doc.user.phone if (doc and doc.user and doc.user.phone) else ""
+        doctor_phone = doc.user.phone if (doc and doc.user and doc.user.phone and doc.user.show_whatsapp) else ""
         if appt.patient_id is None:
             patient_phone = appt.patient_phone or ""
         elif pat and pat.user:

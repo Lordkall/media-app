@@ -6,7 +6,6 @@ import '../widgets/doctor_header.dart';
 import '../core/profile_image_helper.dart';
 import '../core/api_client.dart';
 import '../widgets/profile_avatar.dart';
-import 'support_messages_screen.dart';
 
 class AdminHomeTab extends StatefulWidget {
   const AdminHomeTab({super.key, this.onProfileTap});
@@ -168,23 +167,6 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) =>
-                                const SupportMessagesScreen()),
-                      );
-                    },
-                    child: _buildMenuCard(
-                      context,
-                      title: 'Mensajes de Soporte',
-                      subtitle: 'Gestiona y responde tickets de usuarios',
-                      iconData: Icons.support_agent,
-                    ),
-                  ),
-                  const SizedBox(height: 80), // Para el padding del bottom nav
                 ],
               ),
             )

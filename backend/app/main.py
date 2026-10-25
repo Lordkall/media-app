@@ -41,6 +41,7 @@ async def lifespan(app: FastAPI):
             await conn.run_sync(Base.metadata.create_all)
             await conn.execute(text("ALTER TABLE users ALTER COLUMN avatar_url TYPE TEXT;"))
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS fcm_token VARCHAR;"))
+            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS show_whatsapp BOOLEAN NOT NULL DEFAULT TRUE;"))
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_data TEXT;"))
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_content_type VARCHAR(100);"))
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMP WITH TIME ZONE;"))

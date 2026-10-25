@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/auth_helper.dart';
 import '../screens/login_screen.dart';
 import '../screens/notifications_screen.dart';
-import '../screens/direct_conversations_screen.dart';
+import '../screens/unified_messages_screen.dart';
 import '../screens/assistant_management_screen.dart';
 import '../screens/select_plan_screen.dart';
 import '../core/api_client.dart';
@@ -41,6 +41,7 @@ class _DoctorHeaderState extends State<DoctorHeader> {
   Future<void> _fetchUnreadCount() async {
     try {
       final role = await AuthHelper.getRole();
+      if (mounted) setState(() => _unreadMessages = 0);
       if (mounted) {
         setState(() {
           _userRole = role;
@@ -58,7 +59,7 @@ class _DoctorHeaderState extends State<DoctorHeader> {
         }
       }
 
-      if (role == 'doctor' || role == 'patient') {
+      if (role == 'doctor' || role == 'patient' || role == 'assistant') {
         final messageResponse =
             await ApiClient.get('/conversations/unread-count');
         if (messageResponse.statusCode == 200) {
@@ -68,6 +69,13 @@ class _DoctorHeaderState extends State<DoctorHeader> {
                 () => _unreadMessages = (data['count'] as num?)?.toInt() ?? 0);
           }
         }
+      }
+      final supportResponse = await ApiClient.get('/support/unread-count');
+      if (supportResponse.statusCode == 200) {
+        final data = jsonDecode(supportResponse.body);
+        if (mounted)
+          setState(
+              () => _unreadMessages += (data['count'] as num?)?.toInt() ?? 0);
       }
 
       if (role == 'doctor' || role == 'assistant' || role == 'clinic') {
@@ -170,7 +178,10 @@ class _DoctorHeaderState extends State<DoctorHeader> {
                     ),
                 ],
               ),
-              if (_userRole == 'doctor' || _userRole == 'patient')
+              if (_userRole == 'doctor' ||
+                  _userRole == 'patient' ||
+                  _userRole == 'admin' ||
+                  _userRole == 'assistant')
                 Stack(
                   children: [
                     IconButton(
@@ -181,8 +192,7 @@ class _DoctorHeaderState extends State<DoctorHeader> {
                         await Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (_) =>
-                                  const DirectConversationsScreen()),
+                              builder: (_) => const UnifiedMessagesScreen()),
                         );
                         _fetchUnreadCount();
                       },

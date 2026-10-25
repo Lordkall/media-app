@@ -4,7 +4,8 @@ import 'dart:convert';
 import 'support_chat_screen.dart';
 
 class SupportMessagesScreen extends StatefulWidget {
-  const SupportMessagesScreen({super.key});
+  const SupportMessagesScreen({super.key, this.showAppBar = true});
+  final bool showAppBar;
 
   @override
   State<SupportMessagesScreen> createState() => _SupportMessagesScreenState();
@@ -58,7 +59,8 @@ class _SupportMessagesScreenState extends State<SupportMessagesScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Eliminar chat'),
-        content: const Text('¿Estás seguro de que deseas eliminar este chat de soporte?'),
+        content: const Text(
+            '¿Estás seguro de que deseas eliminar este chat de soporte?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -85,7 +87,8 @@ class _SupportMessagesScreenState extends State<SupportMessagesScreen> {
             .showSnackBar(const SnackBar(content: Text('Chat eliminado.')));
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al eliminar chat (${response.statusCode})')),
+          SnackBar(
+              content: Text('Error al eliminar chat (${response.statusCode})')),
         );
       }
     } catch (e) {
@@ -112,11 +115,13 @@ class _SupportMessagesScreenState extends State<SupportMessagesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mensajes de Soporte'),
-        backgroundColor: const Color(0xFF0056B3),
-        foregroundColor: Colors.white,
-      ),
+      appBar: widget.showAppBar
+          ? AppBar(
+              title: const Text('Mensajes de Soporte'),
+              backgroundColor: const Color(0xFF0056B3),
+              foregroundColor: Colors.white,
+            )
+          : null,
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(

@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 
 import '../core/api_client.dart';
 import '../core/auth_helper.dart';
+import '../widgets/profile_avatar.dart';
 
 class DirectConversationsScreen extends StatefulWidget {
-  const DirectConversationsScreen({super.key});
+  const DirectConversationsScreen({super.key, this.showAppBar = true});
+  final bool showAppBar;
 
   @override
   State<DirectConversationsScreen> createState() =>
@@ -46,7 +48,7 @@ class _DirectConversationsScreenState extends State<DirectConversationsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Mensajes')),
+      appBar: widget.showAppBar ? AppBar(title: const Text('Mensajes')) : null,
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _conversations.isEmpty
@@ -64,19 +66,10 @@ class _DirectConversationsScreenState extends State<DirectConversationsScreen> {
                           (item['unread_count'] as num?)?.toInt() ?? 0;
                       return Card(
                         child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: const Color(0xFFE5F1FF),
-                            child: Text(
-                              (item['other_name']
-                                              ?.toString()
-                                              .trim()
-                                              .isNotEmpty ==
-                                          true
-                                      ? item['other_name'].toString().trim()[0]
-                                      : '?')
-                                  .toUpperCase(),
-                              style: const TextStyle(color: Color(0xFF0056B3)),
-                            ),
+                          leading: ProfileAvatar(
+                            imageUrl: item['other_avatar']?.toString(),
+                            size: 44,
+                            fallbackRole: 'patient',
                           ),
                           title: Text(
                               item['other_name']?.toString() ?? 'Usuario',
@@ -157,7 +150,8 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
 
   Future<void> _initialize() async {
     try {
-      _isDoctor = await AuthHelper.getRole() == 'doctor';
+      final role = await AuthHelper.getRole();
+      _isDoctor = role == 'doctor' || role == 'assistant';
       final response = await ApiClient.get('/users/me');
       if (response.statusCode == 200) {
         _userId = int.tryParse(
@@ -264,11 +258,26 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
         widget.conversation['other_name']?.toString() ?? 'Conversación';
     return Scaffold(
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        title: Row(
           children: [
-            Text(name, style: const TextStyle(fontSize: 18)),
-            if (_closed) const Text('Cerrada', style: TextStyle(fontSize: 12)),
+            ProfileAvatar(
+              imageUrl: widget.conversation['other_avatar']?.toString(),
+              size: 36,
+              fallbackRole: 'patient',
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+                child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name,
+                    style: const TextStyle(fontSize: 18),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
+                if (_closed)
+                  const Text('Cerrada', style: TextStyle(fontSize: 12)),
+              ],
+            )),
           ],
         ),
         actions: [

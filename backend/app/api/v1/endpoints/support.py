@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, update, func
 from sqlalchemy.orm import selectinload
 from app.core.database import get_db
 from app.models.users import User, RoleEnum
@@ -12,6 +12,17 @@ from datetime import timezone
 from zoneinfo import ZoneInfo
 
 router = APIRouter()
+
+@router.get("/unread-count")
+async def unread_count(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    is_admin = current_user.role == RoleEnum.ADMIN or current_user.role == "admin"
+    ticket_ids = select(SupportTicket.id) if is_admin else select(SupportTicket.id).where(SupportTicket.user_id == current_user.id)
+    count = await db.scalar(select(func.count(TicketMessage.id)).where(
+        TicketMessage.ticket_id.in_(ticket_ids),
+        TicketMessage.sender_id != current_user.id,
+        TicketMessage.is_read.is_(False),
+    ))
+    return {"count": count or 0}
 
 class SupportCreate(BaseModel):
     subject: str
@@ -168,6 +179,12 @@ async def get_ticket_messages(
     is_admin = current_user.role == RoleEnum.ADMIN or current_user.role == "admin"
     if not is_admin and ticket.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="No tienes acceso a este chat")
+    await db.execute(update(TicketMessage).where(
+        TicketMessage.ticket_id == ticket_id,
+        TicketMessage.sender_id != current_user.id,
+        TicketMessage.is_read.is_(False),
+    ).values(is_read=True))
+    await db.commit()
     return {
         "status": ticket.status,
         "messages": [

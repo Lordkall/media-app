@@ -1,5 +1,3 @@
-from datetime import datetime, timezone
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select, update, func
@@ -13,6 +11,8 @@ from app.models.direct_conversations import DirectConversation, DirectMessage
 from app.models.doctors import Doctor
 from app.models.patients import Patient
 from app.models.users import RoleEnum, User
+from datetime import datetime, timezone
+from app.models.subscriptions import Subscription, SubscriptionStatus, SubscriptionPlan
 
 router = APIRouter()
 
@@ -30,8 +30,12 @@ async def _conversation_access(conversation_id: int, user: User, db: AsyncSessio
     if not conversation:
         raise HTTPException(status_code=404, detail="No se encontró la conversación")
     role = _role(user)
-    if role == RoleEnum.DOCTOR.value:
+    if role in (RoleEnum.DOCTOR.value, RoleEnum.ASSISTANT.value):
         doctor = await db.scalar(select(Doctor).where(Doctor.user_id == user.id))
+        if role == RoleEnum.ASSISTANT.value:
+            doctor = await db.get(Doctor, user.linked_doctor_id) if user.linked_doctor_id else None
+            if doctor and not await _doctor_is_vip(doctor, db):
+                doctor = None
         if doctor and doctor.id == conversation.doctor_id:
             return conversation
     elif role == RoleEnum.PATIENT.value:
@@ -41,17 +45,41 @@ async def _conversation_access(conversation_id: int, user: User, db: AsyncSessio
     raise HTTPException(status_code=403, detail="No tienes acceso a esta conversación")
 
 
+async def _doctor_is_vip(doctor: Doctor, db: AsyncSession) -> bool:
+    if doctor.is_sponsored:
+        return True
+    now = datetime.now(timezone.utc)
+    subscription = await db.scalar(select(Subscription).where(
+        Subscription.doctor_id == doctor.id,
+        Subscription.status == SubscriptionStatus.ACTIVE,
+        Subscription.plan == SubscriptionPlan.SPONSORED,
+        Subscription.end_date >= now,
+    ))
+    if subscription:
+        return True
+    if doctor.clinic_id and doctor.clinic_join_status in (None, "approved"):
+        from app.core.clinic_access import active_clinic_subscription
+        clinic_sub = await active_clinic_subscription(db, doctor.clinic_id)
+        return bool(clinic_sub and clinic_sub.plan == SubscriptionPlan.CLINIC_VIP)
+    return False
+
+
 @router.post("/appointments/{appointment_id}", status_code=status.HTTP_201_CREATED)
 async def start_for_appointment(
     appointment_id: int,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    if _role(current_user) != RoleEnum.DOCTOR.value:
-        raise HTTPException(status_code=403, detail="Solo el doctor puede iniciar una conversación")
-    doctor = await db.scalar(select(Doctor).where(Doctor.user_id == current_user.id))
+    role = _role(current_user)
+    if role not in (RoleEnum.DOCTOR.value, RoleEnum.ASSISTANT.value):
+        raise HTTPException(status_code=403, detail="Solo el doctor o su asistente VIP pueden iniciar una conversación")
+    doctor = (await db.scalar(select(Doctor).where(Doctor.user_id == current_user.id))
+              if role == RoleEnum.DOCTOR.value else
+              (await db.get(Doctor, current_user.linked_doctor_id) if current_user.linked_doctor_id else None))
     if not doctor:
         raise HTTPException(status_code=404, detail="No se encontró el perfil del doctor")
+    if role == RoleEnum.ASSISTANT.value and not await _doctor_is_vip(doctor, db):
+        raise HTTPException(status_code=403, detail="La mensajería de pacientes es exclusiva para asistentes de doctores VIP")
     appointment = await db.get(Appointment, appointment_id)
     if not appointment or appointment.doctor_id != doctor.id:
         raise HTTPException(status_code=404, detail="No se encontró la cita")
@@ -106,8 +134,12 @@ async def list_conversations(
     db: AsyncSession = Depends(get_db),
 ):
     role = _role(current_user)
-    if role == RoleEnum.DOCTOR.value:
+    if role in (RoleEnum.DOCTOR.value, RoleEnum.ASSISTANT.value):
         doctor = await db.scalar(select(Doctor).where(Doctor.user_id == current_user.id))
+        if role == RoleEnum.ASSISTANT.value:
+            doctor = await db.get(Doctor, current_user.linked_doctor_id) if current_user.linked_doctor_id else None
+            if doctor and not await _doctor_is_vip(doctor, db):
+                doctor = None
         if not doctor:
             return []
         query = select(DirectConversation).where(DirectConversation.doctor_id == doctor.id)
@@ -125,11 +157,12 @@ async def list_conversations(
     conversations = result.unique().all()
     participants: dict[int, User] = {}
     for item in conversations:
-        other_id = item.patient_id if role == RoleEnum.DOCTOR.value else item.doctor_id
+        doctor_side = role in (RoleEnum.DOCTOR.value, RoleEnum.ASSISTANT.value)
+        other_id = item.patient_id if doctor_side else item.doctor_id
         participant_query = select(User).join(
-            Patient if role == RoleEnum.DOCTOR.value else Doctor,
-            Patient.user_id == User.id if role == RoleEnum.DOCTOR.value else Doctor.user_id == User.id,
-        ).where((Patient.id if role == RoleEnum.DOCTOR.value else Doctor.id) == other_id)
+            Patient if doctor_side else Doctor,
+            Patient.user_id == User.id if doctor_side else Doctor.user_id == User.id,
+        ).where((Patient.id if doctor_side else Doctor.id) == other_id)
         other_user = await db.scalar(participant_query)
         if other_user:
             participants[item.id] = other_user
@@ -137,6 +170,9 @@ async def list_conversations(
     output = []
     for item in conversations:
         other = participants.get(item.id)
+        other_avatar = other.avatar_url if other else None
+        if other and not other_avatar and other.avatar_data:
+            other_avatar = f"data:{other.avatar_content_type or 'image/jpeg'};base64,{other.avatar_data}"
         unread = sum(1 for message in item.messages if message.sender_user_id != current_user.id and not message.is_read)
         last_message = item.messages[-1] if item.messages else None
         output.append({
@@ -144,7 +180,7 @@ async def list_conversations(
             "appointment_id": item.appointment_id,
             "other_user_id": other.id if other else None,
             "other_name": f"{other.first_name} {other.last_name}".strip() if other else "Usuario",
-            "other_avatar": other.avatar_url if other else None,
+            "other_avatar": other_avatar,
             "is_closed": item.is_closed,
             "unread_count": unread,
             "last_message": last_message.body if last_message else "",
@@ -160,8 +196,12 @@ async def unread_count(
     db: AsyncSession = Depends(get_db),
 ):
     role = _role(current_user)
-    if role == RoleEnum.DOCTOR.value:
+    if role in (RoleEnum.DOCTOR.value, RoleEnum.ASSISTANT.value):
         doctor = await db.scalar(select(Doctor).where(Doctor.user_id == current_user.id))
+        if role == RoleEnum.ASSISTANT.value:
+            doctor = await db.get(Doctor, current_user.linked_doctor_id) if current_user.linked_doctor_id else None
+            if doctor and not await _doctor_is_vip(doctor, db):
+                doctor = None
         if not doctor:
             return {"count": 0}
         conversation_ids = select(DirectConversation.id).where(DirectConversation.doctor_id == doctor.id)
@@ -228,7 +268,7 @@ async def send_message(
         body=body,
     )
     db.add(message)
-    if _role(current_user) == RoleEnum.DOCTOR.value:
+    if _role(current_user) in (RoleEnum.DOCTOR.value, RoleEnum.ASSISTANT.value):
         patient = await db.get(Patient, conversation.patient_id)
         recipient = await db.get(User, patient.user_id) if patient else None
     else:
@@ -258,8 +298,8 @@ async def close_conversation(
     db: AsyncSession = Depends(get_db),
 ):
     conversation = await _conversation_access(conversation_id, current_user, db)
-    if _role(current_user) != RoleEnum.DOCTOR.value:
-        raise HTTPException(status_code=403, detail="Solo el doctor puede cerrar la conversación")
+    if _role(current_user) not in (RoleEnum.DOCTOR.value, RoleEnum.ASSISTANT.value):
+        raise HTTPException(status_code=403, detail="Solo el doctor o su asistente VIP pueden cerrar la conversación")
     conversation.is_closed = True
     conversation.closed_at = datetime.now(timezone.utc)
     await db.commit()
