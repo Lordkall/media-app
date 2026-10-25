@@ -18,8 +18,32 @@ class DoctorProfileScreen extends StatefulWidget {
 }
 
 class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
+  late Map<String, dynamic> _doctor = Map<String, dynamic>.from(widget.doctor);
   late final Future<Map<String, String>> _schedule = _loadSchedule();
   late final Future<double?> _bcvRate = _loadBcvRate();
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshPublicDoctorData();
+  }
+
+  Future<void> _refreshPublicDoctorData() async {
+    try {
+      final response = await ApiClient.get('/doctors/public');
+      if (response.statusCode != 200) return;
+      final doctors = jsonDecode(response.body) as List<dynamic>;
+      Map<String, dynamic>? current;
+      for (final item in doctors) {
+        if (item is Map &&
+            item['id']?.toString() == widget.doctor['id']?.toString()) {
+          current = Map<String, dynamic>.from(item);
+          break;
+        }
+      }
+      if (current != null && mounted) setState(() => _doctor = current!);
+    } catch (_) {}
+  }
 
   Future<double?> _loadBcvRate() async {
     try {
@@ -90,7 +114,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final doctor = widget.doctor;
+    final doctor = _doctor;
     final name = 'Dr. ${doctor['first_name']} ${doctor['last_name']}';
     final specialties = (doctor['specialties'] as List<dynamic>?)?.join(', ') ??
         'Médico General';
@@ -302,9 +326,17 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => AgendarCitaTab(
-                      initialDoctorId: int.tryParse(doctor['id'].toString())))),
+              onPressed: () {
+                final rootNavigator =
+                    Navigator.of(context, rootNavigator: true);
+                rootNavigator.push(MaterialPageRoute(
+                    builder: (_) => AgendarCitaTab(
+                          initialDoctorId:
+                              int.tryParse(doctor['id'].toString()),
+                          onCitaAgendada: () =>
+                              rootNavigator.popUntil((route) => route.isFirst),
+                        )));
+              },
               icon: const Icon(Icons.calendar_month),
               label: const Text('Agendar Cita', style: TextStyle(fontSize: 16)),
               style: ElevatedButton.styleFrom(

@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'core/local_notification_service.dart';
-import 'core/notification_navigation.dart';
+import 'core/app_navigator.dart';
 import 'screens/login_screen.dart';
 import 'widgets/profile_avatar.dart';
 

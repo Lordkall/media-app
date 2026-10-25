@@ -3,6 +3,8 @@ import '../core/api_client.dart';
 import 'dart:convert';
 import 'package:table_calendar/table_calendar.dart';
 import '../models/ve_catalogs.dart';
+import 'appointment_details_dialog.dart';
+import '../core/app_navigator.dart';
 
 class AgendarCitaTab extends StatefulWidget {
   final VoidCallback? onCitaAgendada;
@@ -728,9 +730,84 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                           await ApiClient.post('/appointments/', reqBody);
                       if (!context.mounted) return;
                       if (response.statusCode == 201) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text('Cita agendada con éxito')));
+                        Map<String, dynamic>? appointmentDetails;
+                        try {
+                          final created =
+                              jsonDecode(response.body) as Map<String, dynamic>;
+                          final createdId = created['id']?.toString();
+                          final listResponse =
+                              await ApiClient.get('/appointments/my');
+                          final decoded = jsonDecode(listResponse.body);
+                          final appointments = decoded is List
+                              ? decoded
+                              : (decoded is Map && decoded['items'] is List
+                                  ? decoded['items'] as List
+                                  : <dynamic>[]);
+                          for (final item in appointments) {
+                            if (item is Map &&
+                                item['id']?.toString() == createdId) {
+                              appointmentDetails =
+                                  Map<String, dynamic>.from(item);
+                              break;
+                            }
+                          }
+                        } catch (_) {}
+                        final showDetails = await showDialog<bool>(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (dialogContext) => AlertDialog(
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24)),
+                            backgroundColor: const Color(0xFFF4F7FC),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 72,
+                                  height: 72,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: const Color(0xFFE1F3E8),
+                                    border: Border.all(
+                                        color: const Color(0xFF43A653),
+                                        width: 2),
+                                  ),
+                                  child: const Icon(Icons.check_rounded,
+                                      color: Color(0xFF329447), size: 44),
+                                ),
+                                const SizedBox(height: 18),
+                                const Text('¡Su cita fue agendada con éxito!',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                        color: Color(0xFF0B2545),
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold)),
+                                const SizedBox(height: 8),
+                                const Text(
+                                    'La cita ya está confirmada. Puedes consultar sus detalles ahora.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                        color: Color(0xFF52657A),
+                                        fontSize: 14)),
+                              ],
+                            ),
+                            actionsAlignment: MainAxisAlignment.center,
+                            actions: [
+                              TextButton(
+                                  onPressed: () =>
+                                      Navigator.pop(dialogContext, false),
+                                  child: const Text('OK')),
+                              FilledButton.icon(
+                                  onPressed: appointmentDetails == null
+                                      ? null
+                                      : () =>
+                                          Navigator.pop(dialogContext, true),
+                                  icon: const Icon(Icons.event_note_outlined),
+                                  label: const Text('Ver cita')),
+                            ],
+                          ),
+                        );
+                        if (!context.mounted) return;
                         setState(() {
                           _selectedEspecialidad = null;
                           _selectedMedico = null;
@@ -745,6 +822,18 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                         });
                         if (widget.onCitaAgendada != null) {
                           widget.onCitaAgendada!();
+                        }
+                        if (showDetails == true && appointmentDetails != null) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            final rootContext = appNavigatorKey.currentContext;
+                            if (rootContext != null && rootContext.mounted) {
+                              showAppointmentDetailsDialog(
+                                rootContext,
+                                appointmentDetails!,
+                                isDoctor: false,
+                              );
+                            }
+                          });
                         }
                       } else {
                         var errorMessage = 'No se pudo agendar la cita.';

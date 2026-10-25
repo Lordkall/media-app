@@ -633,7 +633,7 @@ async def get_my_appointments(
         if patient_birth_date:
             today = datetime.now(ZoneInfo("America/Caracas")).date()
             months = max(0, (today.year - patient_birth_date.year) * 12 + today.month - patient_birth_date.month - (today.day < patient_birth_date.day))
-            age_display = f"{months}M" if months < 24 else str(patient_age)
+            age_display = f"{months}M" if months < 12 else str(patient_age)
         if doctor_view and appt.is_for_dependent and appt.dependent_name:
             display_name = appt.dependent_name
         patient_full_name = (
