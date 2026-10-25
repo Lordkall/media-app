@@ -259,7 +259,8 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
     }
   }
 
-  void _showScreenshotDialog(BuildContext context, String base64Image) {
+  void _showScreenshotDialog(BuildContext context, String base64Image,
+      {String title = 'Comprobante'}) {
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -267,7 +268,7 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
           mainAxisSize: MainAxisSize.min,
           children: [
             AppBar(
-              title: const Text('Comprobante', style: TextStyle(fontSize: 16)),
+              title: Text(title, style: const TextStyle(fontSize: 16)),
               automaticallyImplyLeading: false,
               actions: [
                 IconButton(
@@ -295,6 +296,7 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
       required Color color,
       required Map<String, dynamic> notification}) {
     final paymentDetails = notification['payment_details'];
+    final doctorDetails = notification['doctor_registration_details'];
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -432,6 +434,50 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
                   ),
                 ],
               )
+          ],
+          if (doctorDetails != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.blue.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Doctor: ${doctorDetails['doctor_name'] ?? 'N/A'}',
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text(
+                      'Cédula/RIF: ${doctorDetails['identity_document'] ?? 'N/A'}'),
+                  if ((doctorDetails['medical_license_number'] ?? '')
+                      .toString()
+                      .isNotEmpty)
+                    Text(
+                        'Matrícula sanitaria: ${doctorDetails['medical_license_number']}'),
+                  if ((doctorDetails['certificate_base64'] ?? '')
+                      .toString()
+                      .isNotEmpty)
+                    TextButton.icon(
+                      onPressed: () => _showScreenshotDialog(
+                        context,
+                        doctorDetails['certificate_base64'].toString(),
+                        title: 'Certificado de registro médico',
+                      ),
+                      icon: const Icon(Icons.image, size: 16),
+                      label: const Text('Ver certificado médico'),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 4, horizontal: 8),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ]
         ],
       ),

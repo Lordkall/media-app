@@ -68,6 +68,9 @@ class Doctor(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True)
+    medical_license_number: Mapped[Optional[str]] = mapped_column(String(60), nullable=True)
+    medical_license_certificate_base64: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    medical_license_certificate_mime_type: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     specialties: Mapped[List[str]] = mapped_column(ARRAY(String), nullable=False, default=list)
     bio: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     clinic_info: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'dart:ui';
 import '../core/api_client.dart';
 import '../models/ve_catalogs.dart';
@@ -29,6 +31,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   int? _selectedClinicId;
   List<dynamic> _availableClinics = [];
   bool _loadingClinics = false;
+  String _identityDocumentType = 'V';
+  String? _medicalLicenseCertificateBase64;
+  Uint8List? _medicalLicenseCertificatePreview;
+  String? _medicalLicenseCertificateMimeType;
 
   final _emailCtrl = TextEditingController();
   final _firstNameCtrl = TextEditingController();
@@ -38,6 +44,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordCtrl = TextEditingController();
   final _passwordRepeatCtrl = TextEditingController();
   final _clinicDescriptionCtrl = TextEditingController();
+  final _identityDocumentCtrl = TextEditingController();
+  final _medicalLicenseNumberCtrl = TextEditingController();
 
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -73,6 +81,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  @override
+  void dispose() {
+    _identityDocumentCtrl.dispose();
+    _medicalLicenseNumberCtrl.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadAvailableClinics(String state) async {
     setState(() {
       _loadingClinics = true;
@@ -100,6 +115,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (_role != 'clinic' && _birthDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Selecciona tu fecha de nacimiento.')));
+      return;
+    }
+    if (_role == 'doctor' &&
+        _medicalLicenseCertificateBase64 == null &&
+        _medicalLicenseNumberCtrl.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Indica tu matrícula MPPS-123456 o adjunta el certificado.')));
       return;
     }
 
@@ -148,6 +170,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         "first_name": _firstNameCtrl.text.trim(),
         "last_name": _lastNameCtrl.text.trim(),
         "phone": _phoneCtrl.text.trim(),
+        "identity_document": '$_identityDocumentType${_identityDocumentCtrl.text.trim()}',
         "state": _state,
         "address": _addressCtrl.text.trim(),
         "gender": _gender,
@@ -156,6 +179,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         "password": _passwordCtrl.text,
         "role": _role,
         "specialties": _selectedSpecialties.toList(),
+        if (_role == 'doctor') ...{
+          "medical_license_number": _medicalLicenseNumberCtrl.text.trim().isEmpty
+              ? null
+              : _medicalLicenseNumberCtrl.text.trim().toUpperCase(),
+          "medical_license_certificate_base64": _medicalLicenseCertificateBase64,
+          "medical_license_certificate_mime_type": _medicalLicenseCertificateMimeType,
+        },
         "clinic_description": _clinicDescriptionCtrl.text.trim(),
         if (_role == 'doctor' && _belongsToClinic && _selectedClinicId != null)
           "clinic_id": _selectedClinicId,
@@ -238,6 +268,168 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
     } catch (_) {}
     return 'Verifica los datos o si el correo ya existe.';
+  }
+
+  Future<void> _pickMedicalLicenseCertificate() async {
+    try {
+      final file = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1800,
+        imageQuality: 80,
+      );
+      if (file == null) return;
+      final bytes = await file.readAsBytes();
+      if (bytes.isEmpty) return;
+      if (bytes.length > 4 * 1024 * 1024) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('La imagen debe pesar menos de 4 MB.')));
+        }
+        return;
+      }
+      final extension = file.name.toLowerCase().split('.').last;
+      final mimeType = switch (extension) {
+        'png' => 'image/png',
+        'webp' => 'image/webp',
+        _ => 'image/jpeg',
+      };
+      if (mounted) {
+        setState(() {
+          _medicalLicenseCertificatePreview = bytes;
+          _medicalLicenseCertificateBase64 = base64Encode(bytes);
+          _medicalLicenseCertificateMimeType = mimeType;
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('No se pudo seleccionar la imagen: $error')));
+      }
+    }
+  }
+
+  Widget _buildIdentityDocumentField() {
+    const types = ['V', 'E', 'J', 'G', 'R', 'P'];
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 88,
+            child: DropdownButtonFormField<String>(
+              value: _identityDocumentType,
+              decoration: InputDecoration(
+                labelText: 'Tipo',
+                filled: true,
+                fillColor: const Color(0x20FFFFFF),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0x60FFFFFF)),
+                ),
+              ),
+              items: types.map((type) => DropdownMenuItem(value: type, child: Text(type))).toList(),
+              onChanged: (value) {
+                if (value != null) setState(() => _identityDocumentType = value);
+              },
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextFormField(
+              controller: _identityDocumentCtrl,
+              keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(12),
+              ],
+              maxLength: 12,
+              decoration: InputDecoration(
+                labelText: 'Cédula/RIF',
+                filled: true,
+                fillColor: const Color(0x20FFFFFF),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0x60FFFFFF)),
+                ),
+                labelStyle: const TextStyle(color: Color(0xFF0B2545)),
+              ),
+              validator: (value) {
+                final digits = value?.trim() ?? '';
+                if (digits.isEmpty) return 'Campo requerido';
+                if (!RegExp(r'^\d{1,12}$').hasMatch(digits)) {
+                  return 'Usa solo números (máximo 12 dígitos)';
+                }
+                return null;
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMedicalLicenseCertificateField() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 10, bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextFormField(
+            controller: _medicalLicenseNumberCtrl,
+            textCapitalization: TextCapitalization.characters,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9-]')),
+              LengthLimitingTextInputFormatter(11),
+            ],
+            decoration: InputDecoration(
+              labelText: 'Número de matrícula sanitaria (opcional)',
+              hintText: 'MPPS-123456',
+              filled: true,
+              fillColor: const Color(0x20FFFFFF),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Color(0x60FFFFFF)),
+              ),
+            ),
+            validator: (value) {
+              final number = value?.trim() ?? '';
+              if (number.isEmpty) return null;
+              if (!RegExp(r'^MPPS-[0-9]{6}$', caseSensitive: false)
+                  .hasMatch(number)) {
+                return 'Formato requerido: MPPS-123456';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: _isLoading ? null : _pickMedicalLicenseCertificate,
+            icon: const Icon(Icons.upload_file),
+            label: Text(_medicalLicenseCertificateBase64 == null
+                ? 'Subir certificado de registro médico (opcional)'
+                : 'Cambiar certificado médico'),
+          ),
+          if (_medicalLicenseCertificatePreview != null) ...[
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.memory(_medicalLicenseCertificatePreview!,
+                  height: 150,
+                  fit: BoxFit.contain,
+                  alignment: Alignment.centerLeft),
+            ),
+          ],
+          const Text(
+            'Escribe la matrícula MPPS-123456 o adjunta la foto del certificado. Basta una opción. Imagen JPG, PNG o WEBP de máximo 4 MB.',
+            style: TextStyle(fontSize: 12, color: Color(0xFF475569)),
+          ),
+        ],
+      ),
+    );
   }
 
 
@@ -523,6 +715,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   _buildTextField('Nombres', _firstNameCtrl),
                                   _buildTextField('Apellidos', _lastNameCtrl),
                                 ],
+                                _buildIdentityDocumentField(),
                                 _buildTextField(
                                     'Teléfono de Contacto (ej: 04141234567)',
                                     _phoneCtrl,
@@ -633,6 +826,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       }).toList(),
                                     ),
                                   ],
+                                  _buildMedicalLicenseCertificateField(),
                                 ],
                                 const SizedBox(height: 10),
                                 Padding(

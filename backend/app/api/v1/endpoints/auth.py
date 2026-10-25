@@ -87,6 +87,12 @@ async def register(
     if user_in.role.value not in ["doctor", "patient", "clinic"]:
         raise HTTPException(status_code=400, detail="Rol de registro no válido")
     try:
+        existing_identity = await db.scalar(
+            select(User.id).where(User.identity_document == user_in.identity_document)
+        )
+        if existing_identity is not None:
+            raise HTTPException(status_code=400, detail="La cédula/RIF ya está registrada")
+
         requested_clinic = None
         if user_in.role.value == "doctor" and user_in.clinic_id is not None:
             from app.models.clinics import Clinic
@@ -114,6 +120,7 @@ async def register(
             first_name=user_in.first_name,
             last_name=user_in.last_name,
             phone=user_in.phone,
+            identity_document=user_in.identity_document,
             hashed_password=get_password_hash(user_in.password),
             role=DatabaseRoleEnum(user_in.role.value),
             state=user_in.state,
@@ -133,6 +140,9 @@ async def register(
             new_doc = Doctor(
                 user_id=new_user.id,
                 specialties=user_in.specialties or [],
+                medical_license_number=user_in.medical_license_number,
+                medical_license_certificate_base64=user_in.medical_license_certificate_base64,
+                medical_license_certificate_mime_type=user_in.medical_license_certificate_mime_type,
                 bio="Nuevo especialista en la plataforma.",
                 clinic_info=user_in.address,
                 consultation_fee=50.0,
@@ -153,7 +163,7 @@ async def register(
                     type=NotificationType.DOCTOR_REGISTERED,
                     title="Nuevo Doctor Registrado",
                     message=f"El doctor {new_user.first_name} {new_user.last_name} se ha registrado. A la espera de que realice el pago de suscripción para su validación.",
-                    action_url=None
+                    action_url=f"doctor_registration:{new_user.id}"
                 )
                 db.add(notif)
 
@@ -202,5 +212,5 @@ async def register(
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="El correo ya está registrado"
+            detail="El correo o la cédula/RIF ya están registrados"
         )

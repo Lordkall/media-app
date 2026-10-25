@@ -247,8 +247,9 @@ async def get_my_notifications(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    from app.models.notifications import Notification
+    from app.models.notifications import Notification, NotificationType
     from app.models.subscriptions import Subscription
+    from app.models.doctors import Doctor
     role_str = str(current_user.role.value) if hasattr(current_user.role, 'value') else str(current_user.role)
     query = select(Notification).where(Notification.user_id == current_user.id).order_by(Notification.created_at.desc())
     result = await db.execute(query)
@@ -270,6 +271,30 @@ async def get_my_notifications(
             ).astimezone(ZoneInfo("America/Caracas")).isoformat(),
             "payment_details": None
         }
+
+        if (
+            current_user.role == DatabaseRoleEnum.ADMIN
+            and n.type == NotificationType.DOCTOR_REGISTERED
+            and n.action_url
+            and n.action_url.startswith("doctor_registration:")
+        ):
+            try:
+                registered_user_id = int(n.action_url.split(":", 1)[1])
+            except (ValueError, IndexError):
+                registered_user_id = None
+            if registered_user_id is not None:
+                registered_user = await db.get(User, registered_user_id)
+                registered_doctor = await db.scalar(
+                    select(Doctor).where(Doctor.user_id == registered_user_id)
+                )
+                if registered_user and registered_doctor:
+                    data["doctor_registration_details"] = {
+                        "doctor_name": f"{registered_user.first_name} {registered_user.last_name}".strip(),
+                        "identity_document": registered_user.identity_document,
+                        "medical_license_number": registered_doctor.medical_license_number,
+                        "certificate_base64": registered_doctor.medical_license_certificate_base64,
+                        "certificate_mime_type": registered_doctor.medical_license_certificate_mime_type,
+                    }
         
         if n.action_url and n.action_url.startswith("approve_subscription:"):
             sub_id = int(n.action_url.split(":")[1])
