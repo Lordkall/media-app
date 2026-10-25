@@ -274,6 +274,9 @@ async def get_public_doctors(db: AsyncSession = Depends(get_db)):
     doctors_data = result.all()
     
     out = []
+    from app.core.profile_privacy import redact_phone_numbers
+    from app.core.clinic_access import active_clinic_subscription
+    from app.models.subscriptions import Subscription, SubscriptionStatus, SubscriptionPlan
     for doc, user in doctors_data:
         # Just return basic public info
         prefix = "Dr."
@@ -289,11 +292,26 @@ async def get_public_doctors(db: AsyncSession = Depends(get_db)):
             avatar = f"data:{user.avatar_content_type or 'image/jpeg'};base64,{user.avatar_data}"
             
         doctor_name = f"{prefix} {user.first_name or ''} {user.last_name or ''}".strip()
+        is_vip = bool(doc.is_sponsored)
+        if not is_vip:
+            is_vip = await db.scalar(select(Subscription.id).where(
+                Subscription.doctor_id == doc.id,
+                Subscription.status == SubscriptionStatus.ACTIVE,
+                Subscription.plan == SubscriptionPlan.SPONSORED,
+            )) is not None
+        if not is_vip and doc.clinic_id and doc.clinic_join_status in (None, "approved"):
+            clinic_sub = await active_clinic_subscription(db, doc.clinic_id)
+            is_vip = bool(clinic_sub and clinic_sub.plan == SubscriptionPlan.CLINIC_VIP)
         out.append({
             "id": doc.id,
             "name": doctor_name,
             "specialty": specialty,
             "avatar_url": avatar,
             "phone": user.phone if user.show_whatsapp else "",
+            "bio": redact_phone_numbers(doc.bio, user.show_whatsapp),
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "specialties": doc.specialties or [],
+            "is_vip": is_vip,
         })
     return out

@@ -212,15 +212,16 @@ async def get_my_doctors(
     subscription = await active_clinic_subscription(db, clinic.id)
     max_doc = clinic_doctor_limit(subscription.plan) if subscription else 0
 
+    from app.core.profile_privacy import redact_phone_numbers
     doctors_list = [{
         "id": doctor.id, "user_id": user.id,
         "first_name": user.first_name, "last_name": user.last_name,
-        "email": user.email, "phone": user.phone, "state": user.state,
+        "email": user.email, "phone": user.phone if user.show_whatsapp else "", "state": user.state,
         "address": doctor.clinic_info or user.address,
         "avatar_url": user.avatar_url,
         "specialties": doctor.specialties or [],
         "clinic_join_status": doctor.clinic_join_status or "approved",
-        "bio": doctor.bio,
+        "bio": redact_phone_numbers(doctor.bio, user.show_whatsapp),
         "consultation_fee": doctor.consultation_fee,
         "is_vip": bool(doctor.is_sponsored or (subscription is not None and subscription.plan == SubscriptionPlan.CLINIC_VIP)),
     } for doctor, user in rows]
@@ -395,6 +396,7 @@ async def get_clinic_doctors(clinic_id: int, db: AsyncSession = Depends(get_db))
     clinic_is_vip = sub is not None and sub.plan == SubscriptionPlan.CLINIC_VIP
 
     docs = []
+    from app.core.profile_privacy import redact_phone_numbers
     for d, u in rows:
         docs.append({
             "id": d.id,
@@ -403,6 +405,8 @@ async def get_clinic_doctors(clinic_id: int, db: AsyncSession = Depends(get_db))
             "last_name": u.last_name,
             "specialties": d.specialties,
             "address": u.address,
+            "phone": u.phone if u.show_whatsapp else "",
+            "bio": redact_phone_numbers(d.bio, u.show_whatsapp),
             "consultation_fee": d.consultation_fee,
             "is_vip": bool(d.is_sponsored or clinic_is_vip),
             "avatar_url": u.avatar_url

@@ -36,7 +36,12 @@ async def _conversation_access(conversation_id: int, user: User, db: AsyncSessio
             doctor = await db.get(Doctor, user.linked_doctor_id) if user.linked_doctor_id else None
             if doctor and not await _doctor_is_vip(doctor, db):
                 doctor = None
-        if doctor and doctor.id == conversation.doctor_id:
+        assistant_scope_matches = (
+            conversation.assistant_user_id == user.id
+            if role == RoleEnum.ASSISTANT.value
+            else conversation.assistant_user_id is None
+        )
+        if doctor and doctor.id == conversation.doctor_id and assistant_scope_matches:
             return conversation
     elif role == RoleEnum.PATIENT.value:
         patient = await db.scalar(select(Patient).where(Patient.user_id == user.id))
@@ -92,15 +97,20 @@ async def start_for_appointment(
     if not patient_user:
         raise HTTPException(status_code=400, detail="El paciente no tiene una cuenta para recibir mensajes")
 
+    assistant_scope = (DirectConversation.assistant_user_id == current_user.id
+                       if role == RoleEnum.ASSISTANT.value
+                       else DirectConversation.assistant_user_id.is_(None))
     conversation = await db.scalar(select(DirectConversation).where(
         DirectConversation.appointment_id == appointment.id,
         DirectConversation.is_closed.is_(False),
+        assistant_scope,
     ))
     if not conversation:
         conversation = DirectConversation(
             doctor_id=doctor.id,
             patient_id=patient.id,
             appointment_id=appointment.id,
+            assistant_user_id=current_user.id if role == RoleEnum.ASSISTANT.value else None,
         )
         db.add(conversation)
         await db.commit()
@@ -125,7 +135,13 @@ async def list_conversations(
                 doctor = None
         if not doctor:
             return []
-        query = select(DirectConversation).where(DirectConversation.doctor_id == doctor.id)
+        assistant_scope = (DirectConversation.assistant_user_id == current_user.id
+                           if role == RoleEnum.ASSISTANT.value
+                           else DirectConversation.assistant_user_id.is_(None))
+        query = select(DirectConversation).where(
+            DirectConversation.doctor_id == doctor.id,
+            assistant_scope,
+        )
     elif role == RoleEnum.PATIENT.value:
         patient = await db.scalar(select(Patient).where(Patient.user_id == current_user.id))
         if not patient:
@@ -142,11 +158,14 @@ async def list_conversations(
     for item in conversations:
         doctor_side = role in (RoleEnum.DOCTOR.value, RoleEnum.ASSISTANT.value)
         other_id = item.patient_id if doctor_side else item.doctor_id
-        participant_query = select(User).join(
-            Patient if doctor_side else Doctor,
-            Patient.user_id == User.id if doctor_side else Doctor.user_id == User.id,
-        ).where((Patient.id if doctor_side else Doctor.id) == other_id)
-        other_user = await db.scalar(participant_query)
+        if not doctor_side and item.assistant_user_id:
+            other_user = await db.get(User, item.assistant_user_id)
+        else:
+            participant_query = select(User).join(
+                Patient if doctor_side else Doctor,
+                Patient.user_id == User.id if doctor_side else Doctor.user_id == User.id,
+            ).where((Patient.id if doctor_side else Doctor.id) == other_id)
+            other_user = await db.scalar(participant_query)
         if other_user:
             participants[item.id] = other_user
 
@@ -158,12 +177,16 @@ async def list_conversations(
             other_avatar = f"data:{other.avatar_content_type or 'image/jpeg'};base64,{other.avatar_data}"
         unread = sum(1 for message in item.messages if message.sender_user_id != current_user.id and not message.is_read)
         last_message = item.messages[-1] if item.messages else None
+        doctor = await db.get(Doctor, item.doctor_id) if not doctor_side else None
+        doctor_vip = await _doctor_is_vip(doctor, db) if doctor else False
         output.append({
             "id": item.id,
             "appointment_id": item.appointment_id,
             "other_user_id": other.id if other else None,
             "other_name": f"{other.first_name} {other.last_name}".strip() if other else "Usuario",
             "other_avatar": other_avatar,
+            "other_is_vip": bool(doctor_vip and not doctor_side and item.assistant_user_id is None),
+            "conversation_type": "assistant_patient" if item.assistant_user_id else "doctor_patient",
             "is_closed": item.is_closed,
             "unread_count": unread,
             "last_message": last_message.body if last_message else "",
@@ -187,7 +210,13 @@ async def unread_count(
                 doctor = None
         if not doctor:
             return {"count": 0}
-        conversation_ids = select(DirectConversation.id).where(DirectConversation.doctor_id == doctor.id)
+        assistant_scope = (DirectConversation.assistant_user_id == current_user.id
+                           if role == RoleEnum.ASSISTANT.value
+                           else DirectConversation.assistant_user_id.is_(None))
+        conversation_ids = select(DirectConversation.id).where(
+            DirectConversation.doctor_id == doctor.id,
+            assistant_scope,
+        )
     elif role == RoleEnum.PATIENT.value:
         patient = await db.scalar(select(Patient).where(Patient.user_id == current_user.id))
         if not patient:
@@ -201,6 +230,38 @@ async def unread_count(
         DirectMessage.is_read.is_(False),
     ))
     return {"count": count or 0}
+
+
+@router.post("/read-all")
+async def mark_all_read(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    role = _role(current_user)
+    if role == RoleEnum.PATIENT.value:
+        patient = await db.scalar(select(Patient).where(Patient.user_id == current_user.id))
+        if not patient:
+            return {"updated_count": 0}
+        conversation_ids = select(DirectConversation.id).where(DirectConversation.patient_id == patient.id)
+    elif role in (RoleEnum.DOCTOR.value, RoleEnum.ASSISTANT.value):
+        doctor = (await db.scalar(select(Doctor).where(Doctor.user_id == current_user.id))
+                  if role == RoleEnum.DOCTOR.value else
+                  (await db.get(Doctor, current_user.linked_doctor_id) if current_user.linked_doctor_id else None))
+        if not doctor:
+            return {"updated_count": 0}
+        assistant_scope = (DirectConversation.assistant_user_id == current_user.id
+                           if role == RoleEnum.ASSISTANT.value
+                           else DirectConversation.assistant_user_id.is_(None))
+        conversation_ids = select(DirectConversation.id).where(
+            DirectConversation.doctor_id == doctor.id,
+            assistant_scope,
+        )
+    else:
+        return {"updated_count": 0}
+    result = await db.execute(update(DirectMessage).where(
+        DirectMessage.conversation_id.in_(conversation_ids),
+        DirectMessage.sender_user_id != current_user.id,
+        DirectMessage.is_read.is_(False),
+    ).values(is_read=True))
+    await db.commit()
+    return {"updated_count": result.rowcount or 0}
 
 
 @router.get("/{conversation_id}/messages")
@@ -255,14 +316,22 @@ async def send_message(
         patient = await db.get(Patient, conversation.patient_id)
         recipient = await db.get(User, patient.user_id) if patient else None
     else:
-        doctor = await db.get(Doctor, conversation.doctor_id)
-        recipient = await db.get(User, doctor.user_id) if doctor else None
+        if conversation.assistant_user_id:
+            recipient = await db.get(User, conversation.assistant_user_id)
+        else:
+            doctor = await db.get(Doctor, conversation.doctor_id)
+            recipient = await db.get(User, doctor.user_id) if doctor else None
     await db.commit()
     await db.refresh(message)
     try:
         if recipient and recipient.fcm_token:
             from app.core.firebase import send_push_notification
-            sender_label = "tu doctor" if _role(current_user) == RoleEnum.PATIENT.value else f"Dr. {current_user.first_name}"
+            if _role(current_user) == RoleEnum.PATIENT.value:
+                sender_label = "tu asistente" if conversation.assistant_user_id else "tu doctor"
+            elif _role(current_user) == RoleEnum.ASSISTANT.value:
+                sender_label = f"Asistente {current_user.first_name}"
+            else:
+                sender_label = f"Dr. {current_user.first_name}"
             send_push_notification(
                 recipient.fcm_token,
                 f"Nuevo mensaje de {sender_label}",

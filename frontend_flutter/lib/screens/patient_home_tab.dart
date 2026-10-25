@@ -270,7 +270,15 @@ class _PatientHomeTabState extends State<PatientHomeTab> {
                 Center(
                   child: Column(
                     children: [
-                      ProfileAvatar(imageUrl: avatarUrl, size: 84, fallbackRole: 'doctor'),
+                      ProfileAvatar(
+                        imageUrl: avatarUrl,
+                        size: 84,
+                        fallbackRole: 'doctor',
+                        borderColor: appt['doctor_is_vip'] == true
+                            ? const Color(0xFFFFC107)
+                            : Colors.transparent,
+                        borderWidth: appt['doctor_is_vip'] == true ? 3 : 0,
+                      ),
                       const SizedBox(height: 12),
                       Text(
                         doctor,
@@ -411,7 +419,15 @@ class _PatientHomeTabState extends State<PatientHomeTab> {
           ),
           child: Row(
             children: [
-              ProfileAvatar(imageUrl: avatarUrl, size: 60, fallbackRole: 'doctor'),
+              ProfileAvatar(
+                imageUrl: avatarUrl,
+                size: 60,
+                fallbackRole: 'doctor',
+                borderColor: appt['doctor_is_vip'] == true
+                    ? const Color(0xFFFFC107)
+                    : Colors.transparent,
+                borderWidth: appt['doctor_is_vip'] == true ? 3 : 0,
+              ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(

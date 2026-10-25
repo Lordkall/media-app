@@ -31,6 +31,23 @@ async def bcv_updater_loop():
             print(f"Error en tarea programada de BCV: {e}")
             await asyncio.sleep(3600)  # Retry in an hour if there's an unexpected error
 
+
+async def appointment_history_cleanup_loop():
+    while True:
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(text("""
+                    DELETE FROM appointments
+                    WHERE status IN ('CANCELLED', 'COMPLETED')
+                      AND appointment_date < CURRENT_DATE - INTERVAL '2 months'
+                """))
+            await asyncio.sleep(24 * 60 * 60)
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print(f"Appointment history cleanup failed: {e}")
+            await asyncio.sleep(3600)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Migration on startup
@@ -71,6 +88,9 @@ async def lifespan(app: FastAPI):
             await conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_appointments_active_start ON appointments (doctor_id, appointment_date, appointment_start_minutes) WHERE status <> 'CANCELLED' AND appointment_start_minutes IS NOT NULL;"))
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_blocked BOOLEAN DEFAULT FALSE;"))
             await conn.execute(text("ALTER TABLE appointments ADD COLUMN IF NOT EXISTS reminder_whatsapp_sent BOOLEAN NOT NULL DEFAULT FALSE;"))
+            await conn.execute(text("ALTER TABLE direct_conversations ADD COLUMN IF NOT EXISTS assistant_user_id INTEGER REFERENCES users(id) ON DELETE CASCADE;"))
+            await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_direct_conversations_assistant_user_id ON direct_conversations (assistant_user_id);"))
+            await conn.execute(text("DELETE FROM direct_messages WHERE body = 'Hola, me comunico contigo por tu cita. ¿En qué puedo ayudarte?';"))
     except Exception as e:
         print(f"Migration error (might already be TEXT): {e}")
 
@@ -192,12 +212,14 @@ async def lifespan(app: FastAPI):
     bcv_task = asyncio.create_task(bcv_updater_loop())
     from app.tasks.reminders import appointment_reminders_loop
     reminders_task = asyncio.create_task(appointment_reminders_loop())
+    history_cleanup_task = asyncio.create_task(appointment_history_cleanup_loop())
     
     yield
     
     # Cleanup on shutdown
     bcv_task.cancel()
     reminders_task.cancel()
+    history_cleanup_task.cancel()
 
 app = FastAPI(title="MedIA Backend", version="1.0.0", lifespan=lifespan)
 

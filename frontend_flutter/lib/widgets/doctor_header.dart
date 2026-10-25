@@ -191,8 +191,14 @@ class _DoctorHeaderState extends State<DoctorHeader> {
                       onPressed: () async {
                         await Navigator.push(
                           context,
-                          MaterialPageRoute(
-                              builder: (_) => const UnifiedMessagesScreen()),
+                              MaterialPageRoute(
+                                  builder: (_) => UnifiedMessagesScreen(
+                                        onMarkedRead: () {
+                                          if (mounted) {
+                                            setState(() => _unreadMessages = 0);
+                                          }
+                                        },
+                                      )),
                         );
                         _fetchUnreadCount();
                       },

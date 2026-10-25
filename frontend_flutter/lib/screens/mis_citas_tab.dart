@@ -233,6 +233,11 @@ class _MisCitasTabState extends State<MisCitasTab> {
                         imageUrl: avatarUrl,
                         size: 84,
                         fallbackRole: isDoctor ? 'patient' : 'doctor',
+                        borderColor: !isDoctor && appt['doctor_is_vip'] == true
+                            ? const Color(0xFFFFC107)
+                            : Colors.transparent,
+                        borderWidth:
+                            !isDoctor && appt['doctor_is_vip'] == true ? 3 : 0,
                       ),
                       const SizedBox(height: 12),
                       Text(
@@ -425,7 +430,9 @@ class _MisCitasTabState extends State<MisCitasTab> {
     if (_filterMode == 'Fecha') {
       final date = _selectedDate.toIso8601String().split('T')[0];
       return _appointments
-          .where((a) => a['date'].toString().startsWith(date))
+          .where((a) =>
+              a['date'].toString().startsWith(date) &&
+              (!_doctorView || a['status'] != 'cancelled'))
           .toList();
     }
     final now = caracasNow();
@@ -781,7 +788,8 @@ class _MisCitasTabState extends State<MisCitasTab> {
                             }
                           },
                         ),
-                        if (_role == 'doctor' && _filterMode == 'Historial')
+                        if (_canManageAppointments &&
+                            _filterMode == 'Historial')
                           OutlinedButton.icon(
                             onPressed: _clearHistory,
                             icon: const Icon(Icons.cleaning_services_outlined,
@@ -873,7 +881,17 @@ class _MisCitasTabState extends State<MisCitasTab> {
                                               imageUrl: appt['doctor_avatar']
                                                   ?.toString(),
                                               fallbackRole: 'doctor',
-                                              size: 60),
+                                              size: 60,
+                                              borderColor: !_doctorView &&
+                                                      appt['doctor_is_vip'] ==
+                                                          true
+                                                  ? const Color(0xFFFFC107)
+                                                  : Colors.transparent,
+                                              borderWidth: !_doctorView &&
+                                                      appt['doctor_is_vip'] ==
+                                                          true
+                                                  ? 3
+                                                  : 0),
                                           const SizedBox(width: 12),
                                           Expanded(
                                             child: Column(

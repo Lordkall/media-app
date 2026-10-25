@@ -13,6 +13,23 @@ from zoneinfo import ZoneInfo
 
 router = APIRouter()
 
+
+@router.post("/read-all")
+async def mark_all_read(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    is_admin = current_user.role == RoleEnum.ADMIN or current_user.role == "admin"
+    ticket_ids = (
+        select(SupportTicket.id)
+        if is_admin
+        else select(SupportTicket.id).where(SupportTicket.user_id == current_user.id)
+    )
+    result = await db.execute(update(TicketMessage).where(
+        TicketMessage.ticket_id.in_(ticket_ids),
+        TicketMessage.sender_id != current_user.id,
+        TicketMessage.is_read.is_(False),
+    ).values(is_read=True))
+    await db.commit()
+    return {"updated_count": result.rowcount or 0}
+
 @router.get("/unread-count")
 async def unread_count(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     is_admin = current_user.role == RoleEnum.ADMIN or current_user.role == "admin"
@@ -142,6 +159,8 @@ async def get_tickets(
                 sender_name = f"Paciente {t.user.first_name} {t.user.last_name}"
             elif t.user.role == RoleEnum.DOCTOR:
                 sender_name = f"{'Dra.' if t.user.gender in ['Femenino', 'Femenina'] else 'Dr.'} {t.user.first_name} {t.user.last_name}"
+            elif t.user.role == RoleEnum.ASSISTANT:
+                sender_name = f"Asistente {t.user.first_name} {t.user.last_name}".strip()
             elif t.user.role == RoleEnum.ADMIN:
                 sender_name = f"Admin {t.user.first_name} {t.user.last_name}"
                 
@@ -188,7 +207,15 @@ async def get_ticket_messages(
     return {
         "status": ticket.status,
         "messages": [
-            {"sender_id": item.sender_id, "message": item.message}
+            {
+                "sender_id": item.sender_id,
+                "message": item.message,
+                "created_at": (
+                    (item.created_at.replace(tzinfo=timezone.utc)
+                     if item.created_at.tzinfo is None else item.created_at).isoformat()
+                    if item.created_at else None
+                ),
+            }
             for item in ticket.messages
         ],
     }

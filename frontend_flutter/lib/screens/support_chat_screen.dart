@@ -3,6 +3,7 @@ import 'dart:async';
 import '../core/api_client.dart';
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
+import '../core/chat_time.dart';
 
 class SupportChatScreen extends StatefulWidget {
   final Map<dynamic, dynamic> ticket;
@@ -60,7 +61,7 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
             .map((message) => {
                   'text': message['message']?.toString() ?? '',
                   'isMe': message['sender_id'] == _currentUserId,
-                  'time': '',
+                  'time': formatChatDateTime(message['created_at']),
                 })
             .toList();
         _isClosed = data['status'] == 'Cerrado';

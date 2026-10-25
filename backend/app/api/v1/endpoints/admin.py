@@ -224,17 +224,18 @@ async def get_all_doctors(
 
         is_vip = (sub is not None and sub.plan in (SubscriptionPlan.SPONSORED, SubscriptionPlan.CLINIC_VIP)) or bool(doc.is_sponsored)
 
+        from app.core.profile_privacy import redact_phone_numbers
         doctors_list.append({
             "id": doc.id,
             "user_id": user.id,
             "first_name": user.first_name,
             "last_name": user.last_name,
             "email": user.email,
-            "phone": user.phone or "",
+            "phone": user.phone if user.show_whatsapp else "",
             "specialties": doc.specialties or [],
             "state": user.state,
             "address": doc.clinic_info or user.address or 'Sin dirección registrada',
-            "bio": doc.bio,
+            "bio": redact_phone_numbers(doc.bio, user.show_whatsapp),
             "consultation_fee": doc.consultation_fee or 0.0,
             "avatar_url": user.avatar_url,
             "is_vip": is_vip,

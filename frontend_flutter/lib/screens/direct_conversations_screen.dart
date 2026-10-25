@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../core/api_client.dart';
 import '../core/auth_helper.dart';
+import '../core/chat_time.dart';
 import '../widgets/profile_avatar.dart';
 
 class DirectConversationsScreen extends StatefulWidget {
@@ -70,13 +71,20 @@ class _DirectConversationsScreenState extends State<DirectConversationsScreen> {
                             imageUrl: item['other_avatar']?.toString(),
                             size: 44,
                             fallbackRole: 'patient',
+                            borderColor: item['other_is_vip'] == true
+                                ? const Color(0xFFFFC107)
+                                : Colors.transparent,
+                            borderWidth:
+                                item['other_is_vip'] == true ? 2 : 0,
                           ),
                           title: Text(
                               item['other_name']?.toString() ?? 'Usuario',
                               style:
                                   const TextStyle(fontWeight: FontWeight.bold)),
                           subtitle: Text(
-                            item['is_closed'] == true
+                            item['conversation_type'] == 'assistant_patient'
+                                ? 'Chat con el asistente · ${item['last_message']?.toString().isNotEmpty == true ? item['last_message'] : 'Conversación sobre una cita'}'
+                                : item['is_closed'] == true
                                 ? 'Conversación cerrada'
                                 : (item['last_message']
                                             ?.toString()
@@ -264,6 +272,11 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
               imageUrl: widget.conversation['other_avatar']?.toString(),
               size: 36,
               fallbackRole: 'patient',
+              borderColor: widget.conversation['other_is_vip'] == true
+                  ? const Color(0xFFFFC107)
+                  : Colors.transparent,
+              borderWidth:
+                  widget.conversation['other_is_vip'] == true ? 2 : 0,
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -318,11 +331,24 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
                                 : const Color(0xFFEAF1FA),
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          child: Text(message['body']?.toString() ?? '',
-                              style: TextStyle(
-                                  color: mine
-                                      ? Colors.white
-                                      : const Color(0xFF172B4D))),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(message['body']?.toString() ?? '',
+                                  style: TextStyle(
+                                      color: mine
+                                          ? Colors.white
+                                          : const Color(0xFF172B4D))),
+                              const SizedBox(height: 4),
+                              Text(formatChatDateTime(message['created_at']),
+                                  style: TextStyle(
+                                      fontSize: 10,
+                                      color: mine
+                                          ? Colors.white70
+                                          : Colors.black54)),
+                            ],
+                          ),
                         ),
                       );
                     },

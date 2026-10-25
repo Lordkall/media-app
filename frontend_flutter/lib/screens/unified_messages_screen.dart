@@ -6,7 +6,8 @@ import 'direct_conversations_screen.dart';
 import 'support_messages_screen.dart';
 
 class UnifiedMessagesScreen extends StatefulWidget {
-  const UnifiedMessagesScreen({super.key});
+  const UnifiedMessagesScreen({super.key, this.onMarkedRead});
+  final VoidCallback? onMarkedRead;
 
   @override
   State<UnifiedMessagesScreen> createState() => _UnifiedMessagesScreenState();
@@ -15,6 +16,7 @@ class UnifiedMessagesScreen extends StatefulWidget {
 class _UnifiedMessagesScreenState extends State<UnifiedMessagesScreen> {
   String? _role;
   bool _canDirect = false;
+  int _reloadVersion = 0;
 
   @override
   void initState() {
@@ -44,6 +46,31 @@ class _UnifiedMessagesScreenState extends State<UnifiedMessagesScreen> {
       });
   }
 
+  Future<void> _markEverythingRead() async {
+    try {
+      final responses = await Future.wait([
+        ApiClient.post('/conversations/read-all', {}),
+        ApiClient.post('/support/read-all', {}),
+      ]);
+      if (responses.any((response) => response.statusCode != 200)) {
+        throw Exception('No se pudo marcar todo como leído');
+      }
+      widget.onMarkedRead?.call();
+      if (mounted) {
+        setState(() => _reloadVersion++);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Mensajes marcados como leídos.')),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudieron marcar los mensajes como leídos.')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_role == null) {
@@ -55,20 +82,38 @@ class _UnifiedMessagesScreenState extends State<UnifiedMessagesScreen> {
     if (_canDirect) {
       tabs.add(
           const Tab(text: 'Pacientes', icon: Icon(Icons.chat_bubble_outline)));
-      pages.add(const DirectConversationsScreen(showAppBar: false));
+      pages.add(DirectConversationsScreen(
+          key: ValueKey('direct-$_reloadVersion'), showAppBar: false));
     }
     if (canSupport) {
       tabs.add(const Tab(text: 'Soporte', icon: Icon(Icons.support_agent)));
-      pages.add(const SupportMessagesScreen(showAppBar: false));
+      pages.add(SupportMessagesScreen(
+          key: ValueKey('support-$_reloadVersion'), showAppBar: false));
     }
     if (pages.length == 1)
       return Scaffold(
-          appBar: AppBar(title: const Text('Mensajes')), body: pages.single);
+          appBar: AppBar(
+              title: const Text('Mensajes'),
+              actions: [
+                IconButton(
+                    tooltip: 'Marcar todo como leído',
+                    onPressed: _markEverythingRead,
+                    icon: const Icon(Icons.mark_email_read_outlined)),
+              ]),
+          body: pages.single);
     return DefaultTabController(
       length: tabs.length,
       child: Scaffold(
-        appBar:
-            AppBar(title: const Text('Mensajes'), bottom: TabBar(tabs: tabs)),
+        appBar: AppBar(
+          title: const Text('Mensajes'),
+          actions: [
+            IconButton(
+                tooltip: 'Marcar todo como leído',
+                onPressed: _markEverythingRead,
+                icon: const Icon(Icons.mark_email_read_outlined)),
+          ],
+          bottom: TabBar(tabs: tabs),
+        ),
         body: TabBarView(children: pages),
       ),
     );

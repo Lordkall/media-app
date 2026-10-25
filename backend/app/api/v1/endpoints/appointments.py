@@ -488,6 +488,27 @@ async def get_my_appointments(
         
     result = await db.execute(query)
     appointments = result.scalars().all()
+
+    vip_by_doctor: dict[int, bool] = {}
+    from app.models.subscriptions import Subscription, SubscriptionStatus, SubscriptionPlan
+    from app.core.clinic_access import active_clinic_subscription
+    async def doctor_is_vip(doctor: Doctor | None) -> bool:
+        if not doctor:
+            return False
+        if doctor.id in vip_by_doctor:
+            return vip_by_doctor[doctor.id]
+        is_vip = bool(doctor.is_sponsored)
+        if not is_vip:
+            is_vip = await db.scalar(select(Subscription.id).where(
+                Subscription.doctor_id == doctor.id,
+                Subscription.status == SubscriptionStatus.ACTIVE,
+                Subscription.plan == SubscriptionPlan.SPONSORED,
+            )) is not None
+        if not is_vip and doctor.clinic_id and doctor.clinic_join_status in (None, "approved"):
+            clinic_sub = await active_clinic_subscription(db, doctor.clinic_id)
+            is_vip = bool(clinic_sub and clinic_sub.plan == SubscriptionPlan.CLINIC_VIP)
+        vip_by_doctor[doctor.id] = is_vip
+        return is_vip
     
     out = []
     for appt in appointments:
@@ -565,6 +586,7 @@ async def get_my_appointments(
             "doctor_location": display_loc,
             "doctor_avatar": avatar,
             "doctor_phone": doctor_phone,
+            "doctor_is_vip": await doctor_is_vip(doc),
             "patient_phone": patient_phone,
             "patient_email": pat.user.email if pat and pat.user else "",
             "patient_cedula": getattr(pat.user, "cedula", "") if pat and pat.user else "",
