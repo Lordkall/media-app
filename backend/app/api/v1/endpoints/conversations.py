@@ -103,25 +103,8 @@ async def start_for_appointment(
             appointment_id=appointment.id,
         )
         db.add(conversation)
-        await db.flush()
-        db.add(DirectMessage(
-            conversation_id=conversation.id,
-            sender_user_id=current_user.id,
-            body="Hola, me comunico contigo por tu cita. ¿En qué puedo ayudarte?",
-        ))
         await db.commit()
         await db.refresh(conversation)
-        try:
-            if patient_user.fcm_token:
-                from app.core.firebase import send_push_notification
-                send_push_notification(
-                    patient_user.fcm_token,
-                    f"Mensaje de Dr. {current_user.first_name}",
-                    "Tienes una nueva conversación sobre tu cita en Salud Now.",
-                    {"type": "direct_message", "conversation_id": str(conversation.id)},
-                )
-        except Exception as exc:
-            print(f"[CHAT] Push notification failed ({type(exc).__name__})")
     else:
         await db.commit()
 

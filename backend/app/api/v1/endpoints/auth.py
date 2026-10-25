@@ -41,16 +41,23 @@ async def login_for_access_token(request: Request,
             raise HTTPException(status_code=403, detail="Asistente no vinculado a ningún doctor")
         
         from app.models.subscriptions import Subscription, SubscriptionStatus, SubscriptionPlan
-        import datetime
-        now = datetime.datetime.utcnow()
+        from app.models.doctors import Doctor
+        from app.core.clinic_access import active_clinic_subscription
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc)
         sub = await db.scalar(select(Subscription).where(
             Subscription.doctor_id == user.linked_doctor_id,
             Subscription.status == SubscriptionStatus.ACTIVE,
             Subscription.plan == SubscriptionPlan.SPONSORED,
             Subscription.grace_end_date > now
         ))
-        if not sub:
-            raise HTTPException(status_code=403, detail="Acceso denegado. El doctor ya no cuenta con un plan VIP activo.")
+        has_clinic_vip = False
+        doctor = await db.get(Doctor, user.linked_doctor_id)
+        if doctor and doctor.clinic_id and doctor.clinic_join_status in (None, "approved"):
+            clinic_sub = await active_clinic_subscription(db, doctor.clinic_id)
+            has_clinic_vip = bool(clinic_sub and clinic_sub.plan == SubscriptionPlan.CLINIC_VIP)
+        if not sub and not has_clinic_vip:
+            raise HTTPException(status_code=403, detail="Acceso denegado. El doctor o su clínica deben contar con un plan VIP activo.")
             
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     session_id = secrets.token_urlsafe(32)
