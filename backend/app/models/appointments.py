@@ -1,5 +1,5 @@
 from datetime import datetime, date
-from sqlalchemy import ForeignKey, DateTime, Date, Enum, Integer, String
+from sqlalchemy import ForeignKey, DateTime, Date, Enum, Integer, String, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base
 import enum
@@ -25,6 +25,11 @@ class Appointment(Base):
     patient_last_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     patient_phone: Mapped[str | None] = mapped_column(String(30), nullable=True)
     appointment_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    is_for_dependent: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    dependent_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    dependent_birth_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    dependent_relationship: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    dependent_gender: Mapped[str | None] = mapped_column(String(30), nullable=True)
     booking_source: Mapped[str] = mapped_column(String(20), default="online", nullable=False)
     
     status: Mapped[AppointmentStatus] = mapped_column(Enum(AppointmentStatus), default=AppointmentStatus.SCHEDULED, nullable=False)

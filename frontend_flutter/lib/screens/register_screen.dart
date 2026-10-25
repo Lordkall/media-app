@@ -23,6 +23,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   String _role = 'patient';
   String _gender = 'Prefiero no decirlo';
+  DateTime? _birthDate;
   String? _state;
   bool _belongsToClinic = false;
   int? _selectedClinicId;
@@ -96,6 +97,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
 
+    if (_role != 'clinic' && _birthDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Selecciona tu fecha de nacimiento.')));
+      return;
+    }
+
     if (_state == null) {
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Por favor, selecciona un estado.')));
@@ -144,6 +151,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         "state": _state,
         "address": _addressCtrl.text.trim(),
         "gender": _gender,
+        if (_birthDate != null)
+          "birth_date": _birthDate!.toIso8601String().split('T').first,
         "password": _passwordCtrl.text,
         "role": _role,
         "specialties": _selectedSpecialties.toList(),
@@ -523,6 +532,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       LengthLimitingTextInputFormatter(11),
                                     ],
                                     maxLength: 11),
+                                if (_role != 'clinic') ...[
+                                  const SizedBox(height: 4),
+                                  OutlinedButton.icon(
+                                    onPressed: () async {
+                                      final today = DateTime.now();
+                                      final selected = await showDatePicker(
+                                        context: context,
+                                        initialDate: _birthDate ?? DateTime(today.year - 18, today.month, today.day),
+                                        firstDate: DateTime(1900),
+                                        lastDate: today,
+                                        helpText: 'Selecciona tu fecha de nacimiento',
+                                        cancelText: 'Cancelar',
+                                        confirmText: 'Aceptar',
+                                      );
+                                      if (selected != null) {
+                                        setState(() => _birthDate = selected);
+                                      }
+                                    },
+                                    icon: const Icon(Icons.cake_outlined),
+                                    label: Text(_birthDate == null
+                                        ? 'Fecha de nacimiento'
+                                        : 'Nacimiento: ${_birthDate!.day.toString().padLeft(2, '0')}/${_birthDate!.month.toString().padLeft(2, '0')}/${_birthDate!.year}'),
+                                  ),
+                                ],
                                 if (_role == 'doctor') ...[
                                   const SizedBox(height: 10),
                                   Autocomplete<String>(

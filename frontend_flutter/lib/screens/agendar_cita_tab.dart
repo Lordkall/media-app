@@ -19,6 +19,11 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
   String? _selectedMedico;
   int? _selectedTurnNumber;
   String? _selectedMotivo;
+  bool _bookingForDependent = false;
+  DateTime? _dependentBirthDate;
+  String? _dependentRelationship;
+  String? _dependentGender;
+  final TextEditingController _dependentNameController = TextEditingController();
   final TextEditingController _customMotivoController = TextEditingController();
 
   List<dynamic> _allDoctors = [];
@@ -250,6 +255,7 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
   @override
   void dispose() {
     _customMotivoController.dispose();
+    _dependentNameController.dispose();
     super.dispose();
   }
 
@@ -361,6 +367,80 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                   filled: true,
                   fillColor: Colors.white,
                 ),
+              ),
+            ],
+            const SizedBox(height: 8),
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              title: const Text('La consulta es para un menor o alguien a mi cargo'),
+              value: _bookingForDependent,
+              onChanged: (value) => setState(() {
+                _bookingForDependent = value ?? false;
+                if (!_bookingForDependent) {
+                  _dependentNameController.clear();
+                  _dependentBirthDate = null;
+                  _dependentRelationship = null;
+                  _dependentGender = null;
+                }
+              }),
+            ),
+            if (_bookingForDependent) ...[
+              TextField(
+                controller: _dependentNameController,
+                textCapitalization: TextCapitalization.words,
+                decoration: InputDecoration(
+                  labelText: 'Nombre completo del paciente',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  filled: true,
+                  fillColor: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final today = DateTime.now();
+                  final selected = await showDatePicker(
+                    context: context,
+                    initialDate: _dependentBirthDate ?? DateTime(today.year - 10, today.month, today.day),
+                    firstDate: DateTime(1900),
+                    lastDate: today,
+                    helpText: 'Nacimiento del paciente',
+                  );
+                  if (selected != null) setState(() => _dependentBirthDate = selected);
+                },
+                icon: const Icon(Icons.cake_outlined),
+                label: Text(_dependentBirthDate == null
+                    ? 'Fecha de nacimiento del paciente'
+                    : 'Nacimiento: ${_dependentBirthDate!.day.toString().padLeft(2, '0')}/${_dependentBirthDate!.month.toString().padLeft(2, '0')}/${_dependentBirthDate!.year}'),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: _dependentRelationship,
+                decoration: const InputDecoration(
+                  labelText: 'Parentesco',
+                  border: OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Colors.white,
+                ),
+                items: const ['Hijo', 'Hija', 'Abuelo', 'Abuela', 'Padre', 'Madre', 'Tutor', 'Representante legal']
+                    .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+                    .toList(),
+                onChanged: (value) => setState(() => _dependentRelationship = value),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: _dependentGender,
+                decoration: const InputDecoration(
+                  labelText: 'Género (opcional)',
+                  border: OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Colors.white,
+                ),
+                items: const ['Masculino', 'Femenino', 'Otro / Prefiero no decirlo']
+                    .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+                    .toList(),
+                onChanged: (value) => setState(() => _dependentGender = value),
               ),
             ],
             const SizedBox(height: 32),
@@ -519,6 +599,14 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                             content: Text('Selecciona un turno disponible.')));
                       return;
                     }
+                    if (_bookingForDependent &&
+                        (_dependentNameController.text.trim().isEmpty ||
+                            _dependentBirthDate == null ||
+                            _dependentRelationship == null)) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text('Completa el nombre, nacimiento y parentesco del paciente.')));
+                      return;
+                    }
 
                     final doc = _allDoctors.firstWhere(
                         (d) =>
@@ -537,6 +625,13 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                       "appointment_date": _dateKey(_selectedDate),
                       "turn_number": _selectedTurnNumber,
                       "appointment_reason": motivoFinal,
+                      "is_for_dependent": _bookingForDependent,
+                      if (_bookingForDependent) ...{
+                        "dependent_name": _dependentNameController.text.trim(),
+                        "dependent_birth_date": _dateKey(_dependentBirthDate!),
+                        "dependent_relationship": _dependentRelationship,
+                        "dependent_gender": _dependentGender,
+                      },
                     };
 
                     try {
@@ -552,6 +647,11 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                           _selectedMedico = null;
                           _selectedMotivo = null;
                           _customMotivoController.clear();
+                          _dependentNameController.clear();
+                          _bookingForDependent = false;
+                          _dependentBirthDate = null;
+                          _dependentRelationship = null;
+                          _dependentGender = null;
                           _selectedTurnNumber = null;
                         });
                         if (widget.onCitaAgendada != null) {

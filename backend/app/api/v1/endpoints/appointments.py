@@ -256,6 +256,11 @@ async def create_appointment(
             appointment_start_minutes=start_of_turn,
             appointment_duration_minutes=duration,
             appointment_reason=selected_reason,
+            is_for_dependent=appointment_in.is_for_dependent,
+            dependent_name=appointment_in.dependent_name.strip() if appointment_in.dependent_name else None,
+            dependent_birth_date=appointment_in.dependent_birth_date,
+            dependent_relationship=appointment_in.dependent_relationship,
+            dependent_gender=appointment_in.dependent_gender,
             patient_first_name=current_user.first_name,
             patient_last_name=current_user.last_name,
             patient_phone=normalize_whatsapp_phone(current_user.phone) or current_user.phone,
@@ -280,11 +285,23 @@ async def create_appointment(
         
         if doctor_user:
             from app.models.notifications import Notification, NotificationType
+            booking_actor = f"{current_user.first_name} {current_user.last_name}"
+            if appointment_in.is_for_dependent and appointment_in.dependent_name:
+                booking_message = (
+                    f"{booking_actor} ha agendado una cita para "
+                    f"{appointment_in.dependent_name} el {req_date} "
+                    f"(Turno #{requested_turn}) - Motivo: {selected_reason}."
+                )
+            else:
+                booking_message = (
+                    f"{booking_actor} ha agendado una cita para el {req_date} "
+                    f"(Turno #{requested_turn}) - Motivo: {selected_reason}."
+                )
             notif = Notification(
                 user_id=doctor_user.id,
                 type=NotificationType.APPOINTMENT_CREATED,
                 title="Nueva Cita Agendada",
-                message=f"{current_user.first_name} {current_user.last_name} ha agendado una cita para el {req_date} (Turno #{requested_turn}) - Motivo: {selected_reason}."
+                message=booking_message
             )
             db.add(notif)
             await db.commit()
@@ -343,8 +360,12 @@ async def cancel_appointment(
             recipient_user_id = doctor.user_id
             cancelled_by = "patient"
             if patient and patient.user:
-                patient_name = f"{patient.user.first_name} {patient.user.last_name}".strip()
-                if patient.user.gender in ["Femenino", "Femenina"]:
+                patient_name = (appt.dependent_name if appt.is_for_dependent and appt.dependent_name
+                                else f"{patient.user.first_name} {patient.user.last_name}".strip())
+                if appt.is_for_dependent:
+                    actor_name = f"El representante de {patient_name}"
+                    title = f"Cita cancelada para {patient_name}"
+                elif patient.user.gender in ["Femenino", "Femenina"]:
                     actor_name = f"La paciente {patient_name}"
                     title = f"Cita Cancelada por {patient_name}"
                 else:
@@ -572,7 +593,20 @@ async def get_my_appointments(
             slot_minutes = 8 * 60 + (appt.turn_number - 1) * 30
         time_block = (datetime.min + timedelta(minutes=slot_minutes)).strftime("%I:%M %p")
 
-        patient_full_name = display_name if doctor_view else (f"{pat.user.first_name} {pat.user.last_name}" if pat and pat.user else (f"{appt.patient_first_name or ''} {appt.patient_last_name or ''}".strip() or "Paciente presencial"))
+        from app.core.demographics import calculate_age
+        patient_birth_date = (
+            appt.dependent_birth_date
+            if appt.is_for_dependent and appt.dependent_birth_date
+            else (pat.user.birth_date if pat and pat.user else None)
+        )
+        patient_age = calculate_age(patient_birth_date)
+        if doctor_view and appt.is_for_dependent and appt.dependent_name:
+            display_name = appt.dependent_name
+        patient_full_name = (
+            appt.dependent_name
+            if doctor_view and appt.is_for_dependent and appt.dependent_name
+            else display_name
+        ) if doctor_view else (f"{pat.user.first_name} {pat.user.last_name}" if pat and pat.user else (f"{appt.patient_first_name or ''} {appt.patient_last_name or ''}".strip() or "Paciente presencial"))
         doctor_full_name = f"{'Dra.' if doc.user.gender in ['Femenino', 'Femenina'] else 'Dr.'} {doc.user.first_name} {doc.user.last_name}" if doc and doc.user else "Dr(a). Médico"
 
         out.append({
@@ -581,6 +615,9 @@ async def get_my_appointments(
             "doctor_id": appt.doctor_id,
             "doctor_name": display_name,
             "patient_name": patient_full_name,
+            "patient_age": patient_age,
+            "patient_relationship": appt.dependent_relationship if appt.is_for_dependent else None,
+            "patient_gender": appt.dependent_gender if appt.is_for_dependent else (pat.user.gender if pat and pat.user else None),
             "doctor_full_name": doctor_full_name,
             "doctor_specialty": display_spec,
             "doctor_location": display_loc,
@@ -731,8 +768,10 @@ async def reschedule_appointment(
         patient_query = select(Patient).options(joinedload(Patient.user)).where(Patient.id == appointment.patient_id)
         pat_record = (await db.execute(patient_query)).scalar_one_or_none()
         if pat_record and pat_record.user:
-            patient_name = f"{pat_record.user.first_name} {pat_record.user.last_name}"
-            prefix = "La paciente" if pat_record.user.gender in ["Femenino", "Femenina"] else "El paciente"
+            patient_name = (appointment.dependent_name if appointment.is_for_dependent and appointment.dependent_name
+                            else f"{pat_record.user.first_name} {pat_record.user.last_name}")
+            prefix = ("El representante de" if appointment.is_for_dependent else
+                      ("La paciente" if pat_record.user.gender in ["Femenino", "Femenina"] else "El paciente"))
         else:
             patient_name = ""
             prefix = "Un paciente"
@@ -843,8 +882,15 @@ async def get_doctor_appointment_stats(
         all_appts = (await db.scalars(
             select(Appointment).where(Appointment.doctor_id.in_(doctor_ids))
         )).all()
+        demographic_rows = (await db.execute(
+            select(Appointment, Patient, User)
+            .outerjoin(Patient, Patient.id == Appointment.patient_id)
+            .outerjoin(User, User.id == Patient.user_id)
+            .where(Appointment.doctor_id.in_(doctor_ids))
+        )).all()
     else:
         all_appts = []
+        demographic_rows = []
 
     total_count = len(all_appts)
     cancelled_count = sum(1 for a in all_appts if a.status == AppointmentStatus.CANCELLED)
@@ -869,6 +915,20 @@ async def get_doctor_appointment_stats(
         and a.status != AppointmentStatus.CANCELLED
     )
 
+    from app.core.demographics import calculate_age, age_range, gender_bucket, empty_age_ranges, empty_gender_counts
+    patient_age_ranges, patient_genders = empty_age_ranges(), empty_gender_counts()
+    unique_patients: dict[tuple, tuple[date_type | None, str | None]] = {}
+    for appt, patient, patient_user in demographic_rows:
+        if appt.is_for_dependent and appt.dependent_birth_date:
+            key = ("dependent", patient.id if patient else appt.patient_id,
+                   (appt.dependent_name or "").strip().lower(), appt.dependent_birth_date)
+            unique_patients[key] = (appt.dependent_birth_date, appt.dependent_gender)
+        elif patient_user:
+            unique_patients[("patient", patient.id)] = (patient_user.birth_date, patient_user.gender)
+    for birth_date, gender in unique_patients.values():
+        patient_age_ranges[age_range(calculate_age(birth_date, local_now))] += 1
+        patient_genders[gender_bucket(gender)] += 1
+
     return {
         "week_appointments": week_count,
         "month_appointments": month_count,
@@ -877,6 +937,9 @@ async def get_doctor_appointment_stats(
         "today_appointments": today_count,
         "doctor_count": len(doctor_ids),
         "is_vip": is_vip,
+        "patient_age_ranges": patient_age_ranges,
+        "patient_genders": patient_genders,
+        "unique_patients": len(unique_patients),
     }
 
 

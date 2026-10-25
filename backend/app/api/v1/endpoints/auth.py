@@ -119,6 +119,7 @@ async def register(
             state=user_in.state,
             address=user_in.address,
             gender=user_in.gender,
+            birth_date=user_in.birth_date,
             terms_accepted_at=datetime.now(timezone.utc),
             privacy_accepted_at=datetime.now(timezone.utc),
             terms_version="1.0",

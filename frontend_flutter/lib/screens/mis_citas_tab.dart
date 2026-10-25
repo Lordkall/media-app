@@ -338,6 +338,17 @@ class _MisCitasTabState extends State<MisCitasTab> {
                   _buildDetailRow(Icons.phone, 'Teléfono del paciente',
                       appt['patient_phone'].toString()),
                 ],
+                if (isDoctor && appt['patient_age'] != null) ...[
+                  const SizedBox(height: 12),
+                  _buildDetailRow(Icons.cake_outlined, 'Edad del paciente',
+                      '${appt['patient_age']} años'),
+                ],
+                if (isDoctor &&
+                    appt['patient_relationship']?.toString().isNotEmpty == true) ...[
+                  const SizedBox(height: 12),
+                  _buildDetailRow(Icons.family_restroom, 'Parentesco',
+                      appt['patient_relationship'].toString()),
+                ],
                 if (!isDoctor && appt['doctor_phone'] != null) ...[
                   Builder(builder: (_) {
                     final ph = appt['doctor_phone']?.toString().trim() ?? '';
@@ -968,6 +979,13 @@ class _MisCitasTabState extends State<MisCitasTab> {
                                                         fontSize: 13,
                                                         fontWeight:
                                                             FontWeight.bold)),
+                                                if (_doctorView && appt['patient_age'] != null) ...[
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    'Edad: ${appt['patient_age']} años${appt['patient_relationship'] == null ? '' : ' · ${appt['patient_relationship']}'}',
+                                                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                                                  ),
+                                                ],
                                               ],
                                             ),
                                           ),

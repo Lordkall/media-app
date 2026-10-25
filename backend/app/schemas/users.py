@@ -1,6 +1,9 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional
 from enum import Enum
+from datetime import date
+from app.core.demographics import local_today
+from pydantic import model_validator
 
 class RoleEnum(str, Enum):
     ADMIN = "admin"
@@ -24,11 +27,20 @@ class UserCreate(BaseModel):
     state: Optional[str] = None
     address: Optional[str] = None
     gender: Optional[str] = "No Especificado"
+    birth_date: Optional[date] = None
     specialties: Optional[list[str]] = Field(default=None, max_length=5)
     clinic_description: Optional[str] = None
     clinic_id: Optional[int] = None
     accept_terms: bool
     accept_privacy: bool
+
+    @model_validator(mode="after")
+    def validate_birth_date(self):
+        if self.role in (RegisterRoleEnum.PATIENT, RegisterRoleEnum.DOCTOR) and self.birth_date is None:
+            raise ValueError("La fecha de nacimiento es obligatoria")
+        if self.birth_date and self.birth_date > local_today():
+            raise ValueError("La fecha de nacimiento no puede ser futura")
+        return self
 
     @field_validator("phone")
     @classmethod
@@ -63,9 +75,17 @@ class UserUpdate(BaseModel):
     state: Optional[str] = None
     address: Optional[str] = None
     gender: Optional[str] = None
+    birth_date: Optional[date] = None
     avatar_url: Optional[str] = None
     fcm_token: Optional[str] = None
     show_whatsapp: Optional[bool] = None
+
+    @field_validator("birth_date")
+    @classmethod
+    def validate_updated_birth_date(cls, birth_date: Optional[date]) -> Optional[date]:
+        if birth_date and birth_date > local_today():
+            raise ValueError("La fecha de nacimiento no puede ser futura")
+        return birth_date
 
 class PasswordChange(BaseModel):
     current_password: str
@@ -90,6 +110,7 @@ class UserResponse(BaseModel):
     state: Optional[str] = None
     address: Optional[str] = None
     gender: Optional[str] = None
+    birth_date: Optional[date] = None
     avatar_url: Optional[str] = None
     linked_doctor_id: Optional[int] = None
     assistant_doctor_name: Optional[str] = None

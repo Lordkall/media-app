@@ -429,10 +429,17 @@ class _DoctorHeaderState extends State<DoctorHeader> {
             final cancelled = data['cancelled_appointments'] ?? 0;
             final today = data['today_appointments'] ?? 0;
             final docCount = data['doctor_count'] ?? 0;
+            final ageRanges = Map<String, dynamic>.from(data['patient_age_ranges'] ?? {});
+            final genders = Map<String, dynamic>.from(data['patient_genders'] ?? {});
+            final ageSummary = ['0-12', '13-17', '18-29', '30-44', '45-59', '60+', 'Sin dato']
+                .map((range) => '$range: ${ageRanges[range] ?? 0}')
+                .join(' · ');
+            final genderSummary = 'Masculino: ${genders['masculino'] ?? 0} · Femenino: ${genders['femenino'] ?? 0} · Otro/sin especificar: ${genders['otro_o_sin_especificar'] ?? 0}';
 
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
+            return SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
                 if (_userRole == 'clinic') ...[
                   _buildStatItem('Doctores asociados', '$docCount',
                       Icons.medical_services_outlined, const Color(0xFF0056B3)),
@@ -452,7 +459,15 @@ class _DoctorHeaderState extends State<DoctorHeader> {
                 const SizedBox(height: 10),
                 _buildStatItem('Citas canceladas', '$cancelled',
                     Icons.cancel_outlined, Colors.redAccent),
-              ],
+                const SizedBox(height: 14),
+                Text('Pacientes únicos: ${data['unique_patients'] ?? 0}',
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                Text('Edades de pacientes: $ageSummary'),
+                const SizedBox(height: 4),
+                Text('Género de pacientes: $genderSummary'),
+                ],
+              ),
             );
           },
         ),

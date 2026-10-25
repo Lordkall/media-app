@@ -127,6 +127,23 @@ async def get_admin_stats(
         .select_from(Subscription)
         .where(Subscription.status == SubscriptionStatus.ACTIVE)
     )
+
+    from app.core.demographics import calculate_age, age_range, gender_bucket, empty_age_ranges, empty_gender_counts, local_today
+    today = local_today()
+    patient_demographics = (await db.execute(
+        select(User.birth_date, User.gender).join(Patient, Patient.user_id == User.id)
+    )).all()
+    doctor_demographics = (await db.execute(
+        select(User.birth_date, User.gender).join(Doctor, Doctor.user_id == User.id)
+    )).all()
+    patient_ages, patient_genders = empty_age_ranges(), empty_gender_counts()
+    doctor_ages, doctor_genders = empty_age_ranges(), empty_gender_counts()
+    for birth_date, gender in patient_demographics:
+        patient_ages[age_range(calculate_age(birth_date, today))] += 1
+        patient_genders[gender_bucket(gender)] += 1
+    for birth_date, gender in doctor_demographics:
+        doctor_ages[age_range(calculate_age(birth_date, today))] += 1
+        doctor_genders[gender_bucket(gender)] += 1
     
     # State distribution (from User)
     state_patients = await db.execute(
@@ -169,6 +186,10 @@ async def get_admin_stats(
         "doctors_count": doctors_count or 0,
         "clinics_count": clinics_count or 0,
         "subscribed_doctors": subs_count or 0,
+        "patient_age_ranges": patient_ages,
+        "patient_genders": patient_genders,
+        "doctor_age_ranges": doctor_ages,
+        "doctor_genders": doctor_genders,
         "states": list(states_dict.values())
     }
 

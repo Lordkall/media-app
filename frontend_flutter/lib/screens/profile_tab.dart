@@ -437,12 +437,53 @@ class _PersonalInfoPageState extends State<_PersonalInfoPage> {
       TextEditingController(text: widget.user['phone']?.toString());
   bool saving = false;
   late bool showWhatsapp = widget.user['show_whatsapp'] != false;
+  late DateTime? birthDate = DateTime.tryParse(widget.user['birth_date']?.toString() ?? '');
+
+  int? get _age {
+    final value = birthDate;
+    if (value == null) return null;
+    final today = DateTime.now();
+    final beforeBirthday = today.month < value.month ||
+        (today.month == value.month && today.day < value.day);
+    return today.year - value.year - (beforeBirthday ? 1 : 0);
+  }
   @override
   Widget build(BuildContext context) =>
       _SettingsPage(title: 'Información Personal', children: [
         _field('Nombres', name),
         _field('Apellidos', surname),
         _field('Teléfono de contacto', phone, type: TextInputType.phone),
+        if (widget.user['role']?.toString() == 'patient' ||
+            widget.user['role']?.toString() == 'doctor')
+          OutlinedButton.icon(
+          onPressed: saving
+              ? null
+              : () async {
+                  final today = DateTime.now();
+                  final selected = await showDatePicker(
+                    context: context,
+                    initialDate: birthDate ?? DateTime(today.year - 18, today.month, today.day),
+                    firstDate: DateTime(1900),
+                    lastDate: today,
+                    helpText: 'Fecha de nacimiento',
+                  );
+                  if (selected != null) setState(() => birthDate = selected);
+                },
+          icon: const Icon(Icons.cake_outlined),
+          label: Text(birthDate == null
+              ? 'Fecha de nacimiento'
+              : 'Nacimiento: ${birthDate!.day.toString().padLeft(2, '0')}/${birthDate!.month.toString().padLeft(2, '0')}/${birthDate!.year}'),
+        ),
+        if ((widget.user['role']?.toString() == 'patient' ||
+                widget.user['role']?.toString() == 'doctor') &&
+            _age != null)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Text('Edad actual: $_age años'),
+            ),
+          ),
         if (widget.user['role']?.toString() == 'doctor')
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
@@ -465,6 +506,7 @@ class _PersonalInfoPageState extends State<_PersonalInfoPage> {
                       'first_name': name.text.trim(),
                       'last_name': surname.text.trim(),
                       'phone': phone.text.trim(),
+                      'birth_date': birthDate?.toIso8601String().split('T').first,
                       'show_whatsapp': showWhatsapp,
                     });
                     if (context.mounted) {

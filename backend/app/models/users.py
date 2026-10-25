@@ -1,6 +1,6 @@
 from typing import Optional, List
-from sqlalchemy import String, Enum, ForeignKey, Text, DateTime, Boolean
-from datetime import datetime
+from sqlalchemy import String, Enum, ForeignKey, Text, DateTime, Boolean, Date
+from datetime import date, datetime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base
 import enum
@@ -25,6 +25,7 @@ class User(Base):
     state: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     address: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     gender: Mapped[Optional[str]] = mapped_column(String(20), default="No Especificado")
+    birth_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     avatar_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     avatar_data: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     avatar_content_type: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
