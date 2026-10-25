@@ -23,7 +23,8 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
   DateTime? _dependentBirthDate;
   String? _dependentRelationship;
   String? _dependentGender;
-  final TextEditingController _dependentNameController = TextEditingController();
+  final TextEditingController _dependentNameController =
+      TextEditingController();
   final TextEditingController _customMotivoController = TextEditingController();
 
   List<dynamic> _allDoctors = [];
@@ -92,6 +93,67 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
 
   String _dateKey(DateTime date) =>
       '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+  Future<bool> _confirmSameDayAppointment(int doctorId, String date) async {
+    try {
+      final response = await ApiClient.get('/appointments/my');
+      if (response.statusCode != 200) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content:
+                Text('No se pudieron revisar tus citas. Inténtalo de nuevo.'),
+          ));
+        }
+        return false;
+      }
+      final appointments = jsonDecode(response.body) as List<dynamic>;
+      final sameDay = appointments
+          .where((item) =>
+              item['date']?.toString().startsWith(date) == true &&
+              item['status']?.toString().toLowerCase() == 'scheduled')
+          .toList();
+      final sameDoctorCount = sameDay
+          .where((item) => item['doctor_id']?.toString() == doctorId.toString())
+          .length;
+      if (sameDoctorCount >= 2) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'Ya tienes el máximo de dos citas con este doctor para ese día.'),
+          ));
+        }
+        return false;
+      }
+      if (sameDay.isEmpty || !mounted) return true;
+      return await showDialog<bool>(
+            context: context,
+            builder: (dialogContext) => AlertDialog(
+              title: const Text('Ya tienes una cita ese día'),
+              content: const Text(
+                  'Ya tienes una cita programada para ese día. ¿Deseas agendar otra?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext, false),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(dialogContext, true),
+                  child: const Text('Continuar'),
+                ),
+              ],
+            ),
+          ) ??
+          false;
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content:
+              Text('No se pudieron revisar tus citas. Inténtalo de nuevo.'),
+        ));
+      }
+      return false;
+    }
+  }
 
   Map<String, dynamic>? get _selectedDayAvailability {
     final date = _dateKey(_selectedDate);
@@ -373,7 +435,8 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
             CheckboxListTile(
               contentPadding: EdgeInsets.zero,
               controlAffinity: ListTileControlAffinity.leading,
-              title: const Text('La consulta es para un menor o alguien a mi cargo'),
+              title: const Text(
+                  'La consulta es para un menor o alguien a mi cargo'),
               value: _bookingForDependent,
               onChanged: (value) => setState(() {
                 _bookingForDependent = value ?? false;
@@ -391,7 +454,8 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                 textCapitalization: TextCapitalization.words,
                 decoration: InputDecoration(
                   labelText: 'Nombre completo del paciente',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
                   filled: true,
                   fillColor: Colors.white,
                 ),
@@ -402,12 +466,14 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                   final today = DateTime.now();
                   final selected = await showDatePicker(
                     context: context,
-                    initialDate: _dependentBirthDate ?? DateTime(today.year - 10, today.month, today.day),
+                    initialDate: _dependentBirthDate ??
+                        DateTime(today.year - 10, today.month, today.day),
                     firstDate: DateTime(1900),
                     lastDate: today,
                     helpText: 'Nacimiento del paciente',
                   );
-                  if (selected != null) setState(() => _dependentBirthDate = selected);
+                  if (selected != null)
+                    setState(() => _dependentBirthDate = selected);
                 },
                 icon: const Icon(Icons.cake_outlined),
                 label: Text(_dependentBirthDate == null
@@ -423,10 +489,21 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                   filled: true,
                   fillColor: Colors.white,
                 ),
-                items: const ['Hijo', 'Hija', 'Abuelo', 'Abuela', 'Padre', 'Madre', 'Tutor', 'Representante legal']
-                    .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+                items: const [
+                  'Hijo',
+                  'Hija',
+                  'Abuelo',
+                  'Abuela',
+                  'Padre',
+                  'Madre',
+                  'Tutor',
+                  'Representante legal'
+                ]
+                    .map((item) =>
+                        DropdownMenuItem(value: item, child: Text(item)))
                     .toList(),
-                onChanged: (value) => setState(() => _dependentRelationship = value),
+                onChanged: (value) =>
+                    setState(() => _dependentRelationship = value),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
@@ -437,8 +514,13 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                   filled: true,
                   fillColor: Colors.white,
                 ),
-                items: const ['Masculino', 'Femenino', 'Otro / Prefiero no decirlo']
-                    .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+                items: const [
+                  'Masculino',
+                  'Femenino',
+                  'Otro / Prefiero no decirlo'
+                ]
+                    .map((item) =>
+                        DropdownMenuItem(value: item, child: Text(item)))
                     .toList(),
                 onChanged: (value) => setState(() => _dependentGender = value),
               ),
@@ -589,14 +671,14 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                     if (_selectedMotivo == null) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                            content: Text('Por favor selecciona el motivo de la cita.')),
+                            content: Text(
+                                'Por favor selecciona el motivo de la cita.')),
                       );
                       return;
                     }
                     if (_selectedTurnNumber == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('Selecciona un turno disponible.')));
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text('Selecciona un turno disponible.')));
                       return;
                     }
                     if (_bookingForDependent &&
@@ -604,7 +686,8 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                             _dependentBirthDate == null ||
                             _dependentRelationship == null)) {
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                          content: Text('Completa el nombre, nacimiento y parentesco del paciente.')));
+                          content: Text(
+                              'Completa el nombre, nacimiento y parentesco del paciente.')));
                       return;
                     }
 
@@ -620,9 +703,15 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                         ? _customMotivoController.text.trim()
                         : (_selectedMotivo ?? 'Consulta');
 
+                    final appointmentDate = _dateKey(_selectedDate);
+                    if (!await _confirmSameDayAppointment(
+                        doc['id'] as int, appointmentDate)) {
+                      return;
+                    }
+
                     final reqBody = {
                       "doctor_id": doc['id'],
-                      "appointment_date": _dateKey(_selectedDate),
+                      "appointment_date": appointmentDate,
                       "turn_number": _selectedTurnNumber,
                       "appointment_reason": motivoFinal,
                       "is_for_dependent": _bookingForDependent,
@@ -658,8 +747,14 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                           widget.onCitaAgendada!();
                         }
                       } else {
+                        var errorMessage = 'No se pudo agendar la cita.';
+                        try {
+                          errorMessage =
+                              jsonDecode(response.body)['detail']?.toString() ??
+                                  errorMessage;
+                        } catch (_) {}
                         ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error: ${response.body}')));
+                            SnackBar(content: Text(errorMessage)));
                       }
                     } catch (e) {
                       ScaffoldMessenger.of(context)

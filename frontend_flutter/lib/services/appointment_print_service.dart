@@ -111,10 +111,12 @@ class AppointmentPrintService {
               ),
               pw.SizedBox(height: 8),
               pw.Container(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding:
+                    const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: pw.BoxDecoration(
                   color: lightGrey,
-                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+                  borderRadius:
+                      const pw.BorderRadius.all(pw.Radius.circular(6)),
                   border: pw.Border.all(color: borderGrey, width: 0.5),
                 ),
                 child: pw.Row(
@@ -148,7 +150,8 @@ class AppointmentPrintService {
             margin: const pw.EdgeInsets.only(top: 12),
             padding: const pw.EdgeInsets.only(top: 8),
             decoration: const pw.BoxDecoration(
-              border: pw.Border(top: pw.BorderSide(color: borderGrey, width: 0.5)),
+              border:
+                  pw.Border(top: pw.BorderSide(color: borderGrey, width: 0.5)),
             ),
             child: pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -198,13 +201,14 @@ class AppointmentPrintService {
                 width: 0.6,
               ),
               columnWidths: const {
-                0: pw.FixedColumnWidth(42),  // Turno
-                1: pw.FixedColumnWidth(55),  // Hora
-                2: pw.FlexColumnWidth(3.2),  // Paciente
-                3: pw.FlexColumnWidth(2.0),  // Teléfono
-                4: pw.FlexColumnWidth(3.0),  // Motivo
-                5: pw.FlexColumnWidth(1.6),  // Estado
-                6: pw.FlexColumnWidth(2.2),  // Notas / Firma
+                0: pw.FixedColumnWidth(42), // Turno
+                1: pw.FixedColumnWidth(55), // Hora
+                2: pw.FlexColumnWidth(2.8), // Paciente
+                3: pw.FixedColumnWidth(38), // Edad
+                4: pw.FlexColumnWidth(1.7), // Teléfono
+                5: pw.FlexColumnWidth(2.6), // Motivo
+                6: pw.FlexColumnWidth(1.4), // Estado
+                7: pw.FlexColumnWidth(1.8), // Notas / Firma
               },
               children: [
                 // Header row
@@ -216,6 +220,7 @@ class AppointmentPrintService {
                     _buildHeaderCell('Turno', fontBold),
                     _buildHeaderCell('Hora', fontBold),
                     _buildHeaderCell('Paciente', fontBold),
+                    _buildHeaderCell('Edad', fontBold),
                     _buildHeaderCell('Teléfono', fontBold),
                     _buildHeaderCell('Motivo / Consulta', fontBold),
                     _buildHeaderCell('Estado', fontBold),
@@ -228,22 +233,37 @@ class AppointmentPrintService {
                   final item = entry.value;
 
                   final isEven = idx % 2 == 0;
-                  final rowBg = isEven ? PdfColors.white : const PdfColor.fromInt(0xFFF8FAFC);
+                  final rowBg = isEven
+                      ? PdfColors.white
+                      : const PdfColor.fromInt(0xFFF8FAFC);
 
                   final turn = item['turn_number']?.toString() ?? '-';
                   final time = item['time_block']?.toString() ?? '-';
-                  
-                  final patientName = (item['patient_name'] ?? item['doctor_name'] ?? 'Paciente').toString();
+
+                  final patientName = (item['patient_name'] ??
+                          item['doctor_name'] ??
+                          'Paciente')
+                      .toString();
                   final cedula = item['patient_cedula']?.toString() ?? '';
-                  final patientDisplay = cedula.isNotEmpty ? '$patientName\n(C.I. $cedula)' : patientName;
+                  final patientDisplay = cedula.isNotEmpty
+                      ? '$patientName\n(C.I. $cedula)'
+                      : patientName;
+                  final patientAge = item['patient_age'] == null
+                      ? '-'
+                      : '${item['patient_age']} años';
 
-                  final phone = (item['patient_phone']?.toString().isNotEmpty == true)
-                      ? item['patient_phone'].toString()
-                      : '-';
+                  final phone =
+                      (item['patient_phone']?.toString().isNotEmpty == true)
+                          ? item['patient_phone'].toString()
+                          : '-';
 
-                  final reason = (item['appointment_reason'] ?? item['reason'] ?? 'Consulta Médica').toString();
-                  
-                  final rawStatus = (item['status'] ?? 'scheduled').toString().toLowerCase();
+                  final reason = (item['appointment_reason'] ??
+                          item['reason'] ??
+                          'Consulta Médica')
+                      .toString();
+
+                  final rawStatus =
+                      (item['status'] ?? 'scheduled').toString().toLowerCase();
                   String statusStr = 'PROGRAMADA';
                   if (rawStatus == 'completed') statusStr = 'ATENDIDA';
                   if (rawStatus == 'cancelled') statusStr = 'CANCELADA';
@@ -251,13 +271,19 @@ class AppointmentPrintService {
                   return pw.TableRow(
                     decoration: pw.BoxDecoration(color: rowBg),
                     children: [
-                      _buildDataCell('#$turn', fontBold, align: pw.TextAlign.center),
-                      _buildDataCell(time, fontRegular, align: pw.TextAlign.center),
+                      _buildDataCell('#$turn', fontBold,
+                          align: pw.TextAlign.center),
+                      _buildDataCell(time, fontRegular,
+                          align: pw.TextAlign.center),
                       _buildDataCell(patientDisplay, fontBold),
+                      _buildDataCell(patientAge, fontRegular,
+                          align: pw.TextAlign.center),
                       _buildDataCell(phone, fontRegular),
                       _buildDataCell(reason, fontRegular),
-                      _buildDataCell(statusStr, fontBold, align: pw.TextAlign.center),
-                      _buildDataCell('', fontRegular), // Empty space for signature or checked
+                      _buildDataCell(statusStr, fontBold,
+                          align: pw.TextAlign.center),
+                      _buildDataCell('',
+                          fontRegular), // Empty space for signature or checked
                     ],
                   );
                 }),
@@ -382,10 +408,12 @@ class AppointmentPrintService {
               ),
               pw.SizedBox(height: 8),
               pw.Container(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding:
+                    const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: pw.BoxDecoration(
                   color: lightGrey,
-                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+                  borderRadius:
+                      const pw.BorderRadius.all(pw.Radius.circular(6)),
                   border: pw.Border.all(color: borderGrey, width: 0.5),
                 ),
                 child: pw.Row(
@@ -419,7 +447,8 @@ class AppointmentPrintService {
             margin: const pw.EdgeInsets.only(top: 12),
             padding: const pw.EdgeInsets.only(top: 8),
             decoration: const pw.BoxDecoration(
-              border: pw.Border(top: pw.BorderSide(color: borderGrey, width: 0.5)),
+              border:
+                  pw.Border(top: pw.BorderSide(color: borderGrey, width: 0.5)),
             ),
             child: pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -469,14 +498,15 @@ class AppointmentPrintService {
                 width: 0.6,
               ),
               columnWidths: const {
-                0: pw.FixedColumnWidth(58),
-                1: pw.FixedColumnWidth(34),
-                2: pw.FixedColumnWidth(50),
-                3: pw.FlexColumnWidth(3.0),
-                4: pw.FlexColumnWidth(2.0),
-                5: pw.FlexColumnWidth(2.8),
-                6: pw.FlexColumnWidth(1.6),
-                7: pw.FlexColumnWidth(2.0),
+                0: pw.FixedColumnWidth(48),
+                1: pw.FixedColumnWidth(30),
+                2: pw.FixedColumnWidth(46),
+                3: pw.FlexColumnWidth(2.4),
+                4: pw.FixedColumnWidth(38),
+                5: pw.FlexColumnWidth(1.7),
+                6: pw.FlexColumnWidth(2.5),
+                7: pw.FlexColumnWidth(1.4),
+                8: pw.FlexColumnWidth(1.7),
               },
               children: [
                 pw.TableRow(
@@ -488,6 +518,7 @@ class AppointmentPrintService {
                     _buildHeaderCell('Turno', fontBold),
                     _buildHeaderCell('Hora', fontBold),
                     _buildHeaderCell('Paciente', fontBold),
+                    _buildHeaderCell('Edad', fontBold),
                     _buildHeaderCell('Teléfono', fontBold),
                     _buildHeaderCell('Motivo / Consulta', fontBold),
                     _buildHeaderCell('Estado', fontBold),
@@ -499,29 +530,46 @@ class AppointmentPrintService {
                   final item = entry.value;
 
                   final isEven = idx % 2 == 0;
-                  final rowBg = isEven ? PdfColors.white : const PdfColor.fromInt(0xFFF8FAFC);
+                  final rowBg = isEven
+                      ? PdfColors.white
+                      : const PdfColor.fromInt(0xFFF8FAFC);
 
-                  final rawDate = item['date']?.toString().split('T').first ?? '';
+                  final rawDate =
+                      item['date']?.toString().split('T').first ?? '';
                   String displayDate = rawDate;
                   try {
                     final d = DateTime.parse(rawDate);
-                    displayDate = '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+                    displayDate =
+                        '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
                   } catch (_) {}
 
                   final turn = item['turn_number']?.toString() ?? '-';
                   final time = item['time_block']?.toString() ?? '-';
-                  
-                  final patientName = (item['patient_name'] ?? item['doctor_name'] ?? 'Paciente').toString();
+
+                  final patientName = (item['patient_name'] ??
+                          item['doctor_name'] ??
+                          'Paciente')
+                      .toString();
                   final cedula = item['patient_cedula']?.toString() ?? '';
-                  final patientDisplay = cedula.isNotEmpty ? '$patientName\n(C.I. $cedula)' : patientName;
+                  final patientDisplay = cedula.isNotEmpty
+                      ? '$patientName\n(C.I. $cedula)'
+                      : patientName;
+                  final patientAge = item['patient_age'] == null
+                      ? '-'
+                      : '${item['patient_age']} años';
 
-                  final phone = (item['patient_phone']?.toString().isNotEmpty == true)
-                      ? item['patient_phone'].toString()
-                      : '-';
+                  final phone =
+                      (item['patient_phone']?.toString().isNotEmpty == true)
+                          ? item['patient_phone'].toString()
+                          : '-';
 
-                  final reason = (item['appointment_reason'] ?? item['reason'] ?? 'Consulta Médica').toString();
-                  
-                  final rawStatus = (item['status'] ?? 'scheduled').toString().toLowerCase();
+                  final reason = (item['appointment_reason'] ??
+                          item['reason'] ??
+                          'Consulta Médica')
+                      .toString();
+
+                  final rawStatus =
+                      (item['status'] ?? 'scheduled').toString().toLowerCase();
                   String statusStr = 'PROGRAMADA';
                   if (rawStatus == 'completed') statusStr = 'ATENDIDA';
                   if (rawStatus == 'cancelled') statusStr = 'CANCELADA';
@@ -529,13 +577,19 @@ class AppointmentPrintService {
                   return pw.TableRow(
                     decoration: pw.BoxDecoration(color: rowBg),
                     children: [
-                      _buildDataCell(displayDate, fontBold, align: pw.TextAlign.center),
-                      _buildDataCell('#$turn', fontBold, align: pw.TextAlign.center),
-                      _buildDataCell(time, fontRegular, align: pw.TextAlign.center),
+                      _buildDataCell(displayDate, fontBold,
+                          align: pw.TextAlign.center),
+                      _buildDataCell('#$turn', fontBold,
+                          align: pw.TextAlign.center),
+                      _buildDataCell(time, fontRegular,
+                          align: pw.TextAlign.center),
                       _buildDataCell(patientDisplay, fontBold),
+                      _buildDataCell(patientAge, fontRegular,
+                          align: pw.TextAlign.center),
                       _buildDataCell(phone, fontRegular),
                       _buildDataCell(reason, fontRegular),
-                      _buildDataCell(statusStr, fontBold, align: pw.TextAlign.center),
+                      _buildDataCell(statusStr, fontBold,
+                          align: pw.TextAlign.center),
                       _buildDataCell('', fontRegular),
                     ],
                   );

@@ -64,6 +64,7 @@ async def send_appointment_reminders_async():
                 first = (appt.patient_first_name or "").strip()
                 last = (appt.patient_last_name or "").strip()
                 patient_name = f"{first} {last}".strip() or "Paciente"
+            appointment_patient_name = appt.dependent_name if appt.is_for_dependent and appt.dependent_name else patient_name
 
             # Obtener teléfono del paciente
             patient_phone = (
@@ -137,7 +138,8 @@ async def send_appointment_reminders_async():
                         user_id=patient_user.id,
                         type=NotificationType.RENEWAL_REMINDER,
                         title="Recordatorio de Cita Médica (48h)",
-                        message=f"Recuerda que tienes una cita médica con {doc_name} programada para el {date_str} (Turno #{appt.turn_number})."
+                        message=f"Recuerda que {appointment_patient_name} tiene una cita médica con {doc_name} programada para el {date_str} (Turno #{appt.turn_number}).",
+                        action_url=f"appointment:{appt.id}",
                     )
                     session.add(notif)
                     appt.reminder_48h_sent = True
@@ -157,7 +159,8 @@ async def send_appointment_reminders_async():
                     user_id=patient_user.id,
                     type=NotificationType.RENEWAL_REMINDER,
                     title="Recordatorio de Cita Médica (24h)",
-                    message=f"¡Tu cita es mañana! Tienes cita con {doc_name} el {date_str} a las {time_str} (Turno #{appt.turn_number}). Por favor asiste puntual."
+                    message=f"¡Tu cita es mañana! {appointment_patient_name} tiene cita con {doc_name} el {date_str} a las {time_str} (Turno #{appt.turn_number}). Por favor asiste puntual.",
+                    action_url=f"appointment:{appt.id}",
                 )
                 session.add(notif)
                 appt.reminder_24h_sent = True

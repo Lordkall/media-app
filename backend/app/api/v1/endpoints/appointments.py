@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_, delete
+from sqlalchemy import select, or_, delete, func
 from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import IntegrityError
 from app.api.dependencies import get_db, get_current_patient
@@ -215,6 +215,18 @@ async def create_appointment(
         if not doctor_record:
             raise HTTPException(status_code=404, detail="Doctor not found")
 
+        same_day_count = await db.scalar(select(func.count(Appointment.id)).where(
+            Appointment.doctor_id == doctor_record.id,
+            Appointment.patient_id == current_patient_id,
+            Appointment.appointment_date == req_date,
+            Appointment.status != AppointmentStatus.CANCELLED,
+        )) or 0
+        if same_day_count >= 2:
+            raise HTTPException(
+                status_code=409,
+                detail="Ya alcanzaste el máximo de dos citas con este doctor para ese día.",
+            )
+
         availability_query = select(Availability).where(
             Availability.doctor_id == appointment_in.doctor_id,
             Availability.date == req_date,
@@ -301,7 +313,8 @@ async def create_appointment(
                 user_id=doctor_user.id,
                 type=NotificationType.APPOINTMENT_CREATED,
                 title="Nueva Cita Agendada",
-                message=booking_message
+                message=booking_message,
+                action_url=f"appointment:{new_appointment.id}",
             )
             db.add(notif)
             await db.commit()
@@ -392,6 +405,7 @@ async def cancel_appointment(
             type=NotificationType.APPOINTMENT_CANCELLED,
             title=title,
             message=f"{actor_name} canceló la cita del {appt.appointment_date} (Turno #{appt.turn_number}).",
+            action_url=f"appointment:{appt.id}",
         )
         db.add(notif)
         await db.commit()
@@ -782,7 +796,8 @@ async def reschedule_appointment(
                 user_id=doc_record.user.id,
                 type=NotificationType.APPOINTMENT_CREATED,
                 title="Cita Reprogramada",
-                message=f"{prefix} {patient_name} ha reprogramado su cita para el {req_date} en el turno #{requested_turn}."
+                message=f"{prefix} {patient_name} ha reprogramado su cita para el {req_date} en el turno #{requested_turn}.",
+                action_url=f"appointment:{appointment.id}",
             )
             db.add(notif)
             await db.commit()

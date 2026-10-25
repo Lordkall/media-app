@@ -16,6 +16,7 @@ import '../core/api_client.dart';
 import '../models/ve_catalogs.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import '../core/local_notification_service.dart';
+import '../core/notification_navigation.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:local_auth/local_auth.dart';
@@ -34,6 +35,7 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
   String? _role;
   StreamSubscription<String>? _tokenSubscription;
   StreamSubscription<RemoteMessage>? _messageSubscription;
+  StreamSubscription<RemoteMessage>? _openedMessageSubscription;
 
   @override
   void initState() {
@@ -49,6 +51,20 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
         _checkBiometricsPrompt();
       });
     }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationNavigation.consumePending();
+    });
+    if (!kIsWeb) {
+      _openedMessageSubscription =
+          FirebaseMessaging.onMessageOpenedApp.listen((message) {
+        NotificationNavigation.open(message.data['action_url']?.toString());
+      });
+      FirebaseMessaging.instance.getInitialMessage().then((message) {
+        if (message != null) {
+          NotificationNavigation.open(message.data['action_url']?.toString());
+        }
+      });
+    }
   }
 
   Future<void> _checkBiometricsPrompt() async {
@@ -58,13 +74,15 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
       final currentToken = prefs.getString('access_token');
       final userId = AuthHelper.getUserIdFromToken(currentToken) ?? 'default';
 
-      final alreadyPrompted = prefs.getBool('biometrics_prompt_shown_$userId') ?? false;
+      final alreadyPrompted =
+          prefs.getBool('biometrics_prompt_shown_$userId') ?? false;
       if (alreadyPrompted) return;
 
       // Mark as prompted so it only asks on first access to main screen
       await prefs.setBool('biometrics_prompt_shown_$userId', true);
 
-      final isAlreadyEnabled = prefs.getBool('biometrics_enabled_$userId') ?? false;
+      final isAlreadyEnabled =
+          prefs.getBool('biometrics_enabled_$userId') ?? false;
       if (isAlreadyEnabled) return;
 
       final localAuth = LocalAuthentication();
@@ -158,29 +176,40 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
               title: const Text('Invitación de clínica'),
               content: Text('¿Deseas unirte a la clínica "${info['name']}"?'),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Rechazar')),
-                FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Aceptar')),
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    child: const Text('Rechazar')),
+                FilledButton(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    child: const Text('Aceptar')),
               ],
             ),
           );
           if (confirm == true && mounted) {
-            final res = await ApiClient.post('/clinics/invite/$inviteCode/join', {});
+            final res =
+                await ApiClient.post('/clinics/invite/$inviteCode/join', {});
             if (!mounted) return;
             if (res.statusCode == 200) {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Solicitud enviada a la clínica.')));
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                  content: Text('Solicitud enviada a la clínica.')));
             } else {
               final d = jsonDecode(res.body);
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(d['detail']?.toString() ?? 'Error al enviar solicitud')));
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(
+                      d['detail']?.toString() ?? 'Error al enviar solicitud')));
             }
           }
         } else {
           final d = jsonDecode(infoRes.body);
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(d['detail']?.toString() ?? 'Enlace inválido')));
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(d['detail']?.toString() ?? 'Enlace inválido')));
           }
         }
       } catch (e) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error al procesar la invitación')));
+        if (mounted)
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Error al procesar la invitación')));
       }
     }
   }
@@ -268,6 +297,7 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
   void dispose() {
     _tokenSubscription?.cancel();
     _messageSubscription?.cancel();
+    _openedMessageSubscription?.cancel();
     super.dispose();
   }
 
@@ -347,16 +377,16 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-              heroTag: 'searchFAB',
-              backgroundColor: const Color(0xFF0056B3),
-              shape: const CircleBorder(),
-              onPressed: () {
-                setState(() {
-                  _currentIndex = 2;
-                });
-              },
-              child: const Icon(Icons.search, color: Colors.white, size: 28),
-            ),
+        heroTag: 'searchFAB',
+        backgroundColor: const Color(0xFF0056B3),
+        shape: const CircleBorder(),
+        onPressed: () {
+          setState(() {
+            _currentIndex = 2;
+          });
+        },
+        child: const Icon(Icons.search, color: Colors.white, size: 28),
+      ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:convert';
 import '../core/api_client.dart';
 import 'support_messages_screen.dart';
+import '../core/notification_navigation.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -165,6 +166,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 MaterialPageRoute(
                                     builder: (_) =>
                                         const SupportMessagesScreen()));
+                          } else {
+                            NotificationNavigation.open(
+                                n['action_url']?.toString());
                           }
                         },
                         leading: CircleAvatar(

@@ -60,6 +60,7 @@ async def lifespan(app: FastAPI):
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS fcm_token VARCHAR;"))
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS show_whatsapp BOOLEAN NOT NULL DEFAULT TRUE;"))
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS birth_date DATE;"))
+            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_weekly_schedule_reminder_date DATE;"))
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_data TEXT;"))
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_content_type VARCHAR(100);"))
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMP WITH TIME ZONE;"))
@@ -219,6 +220,8 @@ async def lifespan(app: FastAPI):
     from app.tasks.reminders import appointment_reminders_loop
     reminders_task = asyncio.create_task(appointment_reminders_loop())
     history_cleanup_task = asyncio.create_task(appointment_history_cleanup_loop())
+    from app.tasks.weekly_schedule_reminders import weekly_schedule_reminder_loop
+    weekly_schedule_task = asyncio.create_task(weekly_schedule_reminder_loop())
     
     yield
     
@@ -226,6 +229,7 @@ async def lifespan(app: FastAPI):
     bcv_task.cancel()
     reminders_task.cancel()
     history_cleanup_task.cancel()
+    weekly_schedule_task.cancel()
 
 app = FastAPI(title="MedIA Backend", version="1.0.0", lifespan=lifespan)
 

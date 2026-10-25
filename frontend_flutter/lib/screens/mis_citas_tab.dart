@@ -11,8 +11,9 @@ import '../services/appointment_print_service.dart';
 import 'direct_conversations_screen.dart';
 
 class MisCitasTab extends StatefulWidget {
-  const MisCitasTab({super.key, this.initialDate});
+  const MisCitasTab({super.key, this.initialDate, this.initialAppointmentId});
   final DateTime? initialDate;
+  final int? initialAppointmentId;
 
   @override
   State<MisCitasTab> createState() => _MisCitasTabState();
@@ -344,7 +345,8 @@ class _MisCitasTabState extends State<MisCitasTab> {
                       '${appt['patient_age']} años'),
                 ],
                 if (isDoctor &&
-                    appt['patient_relationship']?.toString().isNotEmpty == true) ...[
+                    appt['patient_relationship']?.toString().isNotEmpty ==
+                        true) ...[
                   const SizedBox(height: 12),
                   _buildDetailRow(Icons.family_restroom, 'Parentesco',
                       appt['patient_relationship'].toString()),
@@ -470,13 +472,13 @@ class _MisCitasTabState extends State<MisCitasTab> {
   }
 
   String _doctorName = '';
+  bool _openedInitialAppointment = false;
 
   @override
   void initState() {
     super.initState();
-    _loadRole();
+    _loadRole().then((_) => _fetchAppointments());
     _loadDoctorProfile();
-    _fetchAppointments();
   }
 
   Future<void> _loadDoctorProfile() async {
@@ -613,10 +615,21 @@ class _MisCitasTabState extends State<MisCitasTab> {
     try {
       final response = await ApiClient.get('/appointments/my');
       if (response.statusCode == 200) {
+        final appointments = jsonDecode(response.body) as List<dynamic>;
         setState(() {
-          _appointments = jsonDecode(response.body) as List<dynamic>;
+          _appointments = appointments;
           _isLoading = false;
         });
+        if (!_openedInitialAppointment && widget.initialAppointmentId != null) {
+          final target = appointments.where((item) =>
+              item['id']?.toString() == widget.initialAppointmentId.toString());
+          if (target.isNotEmpty && mounted) {
+            _openedInitialAppointment = true;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _showAppointmentDetails(target.first);
+            });
+          }
+        }
       } else {
         setState(() => _isLoading = false);
       }
@@ -979,11 +992,15 @@ class _MisCitasTabState extends State<MisCitasTab> {
                                                         fontSize: 13,
                                                         fontWeight:
                                                             FontWeight.bold)),
-                                                if (_doctorView && appt['patient_age'] != null) ...[
+                                                if (_doctorView &&
+                                                    appt['patient_age'] !=
+                                                        null) ...[
                                                   const SizedBox(height: 4),
                                                   Text(
                                                     'Edad: ${appt['patient_age']} años${appt['patient_relationship'] == null ? '' : ' · ${appt['patient_relationship']}'}',
-                                                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                                                    style: const TextStyle(
+                                                        color: Colors.white70,
+                                                        fontSize: 12),
                                                   ),
                                                 ],
                                               ],

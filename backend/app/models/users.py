@@ -26,6 +26,7 @@ class User(Base):
     address: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     gender: Mapped[Optional[str]] = mapped_column(String(20), default="No Especificado")
     birth_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    last_weekly_schedule_reminder_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     avatar_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     avatar_data: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     avatar_content_type: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)

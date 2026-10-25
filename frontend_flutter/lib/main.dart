@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'core/local_notification_service.dart';
+import 'core/notification_navigation.dart';
 import 'screens/login_screen.dart';
 import 'widgets/profile_avatar.dart';
 
@@ -35,6 +36,7 @@ class SaludNowApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: appNavigatorKey,
       title: 'Salud Now',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
