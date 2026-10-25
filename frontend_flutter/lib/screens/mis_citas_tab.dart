@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'manual_appointment_sheet.dart';
 import 'reschedule_appointment_sheet.dart';
 import '../services/appointment_print_service.dart';
+import 'direct_conversations_screen.dart';
 
 class MisCitasTab extends StatefulWidget {
   const MisCitasTab({super.key, this.initialDate});
@@ -38,35 +39,173 @@ class _MisCitasTabState extends State<MisCitasTab> {
     );
     if (confirm == true && mounted) {
       try {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Eliminando cita...')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Eliminando cita...')));
         final resp = await ApiClient.delete('/appointments/${appt["id"]}');
         if (!mounted) return;
         if (resp.statusCode == 200 || resp.statusCode == 204) {
-          ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Cita eliminada')));
+          ScaffoldMessenger.of(context)
+              .showSnackBar(const SnackBar(content: Text('Cita eliminada')));
           _fetchAppointments();
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Error: ${resp.body}')));
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text('Error: ${resp.body}')));
         }
       } catch (e) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
 
-  void _showAppointmentDetails(Map<String, dynamic> appt) {
+  Future<void> _clearHistory() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Limpiar historial'),
+        content: const Text(
+            'Se eliminarán del historial las citas canceladas y completadas. Las citas programadas se conservarán.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Volver')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Limpiar')),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    try {
+      final response = await ApiClient.delete('/appointments/history');
+      if (!mounted) return;
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  'Historial limpiado: ${data['deleted_count'] ?? 0} citas eliminadas.')),
+        );
+        await _fetchAppointments();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  'No se pudo limpiar el historial (${response.statusCode}).')),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo limpiar el historial.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _openAppointmentConversation(Map<String, dynamic> appt) async {
+    try {
+      final response =
+          await ApiClient.post('/conversations/appointments/${appt['id']}', {});
+      if (!mounted) return;
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final name = appt['patient_name']?.toString() ?? 'Paciente';
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DirectChatScreen(conversation: {
+              'id': data['id'],
+              'is_closed': data['is_closed'] ?? false,
+              'other_name': name,
+            }),
+          ),
+        );
+      } else {
+        String message = 'No se pudo iniciar la conversación.';
+        try {
+          final body = jsonDecode(response.body);
+          message = body['detail']?.toString() ?? message;
+        } catch (_) {}
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(message)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo iniciar la conversación.')),
+        );
+      }
+    }
+  }
+
+  Widget _buildAppointmentActions(Map<String, dynamic> appt) {
+    final rawPhone = (_doctorView
+                ? appt['patient_phone']
+                : (appt['doctor_phone'] ?? appt['patient_phone']))
+            ?.toString() ??
+        '';
+    final digits = rawPhone.replaceAll(RegExp(r'[^\d]'), '');
+    return Wrap(
+      alignment: WrapAlignment.end,
+      spacing: 2,
+      children: [
+        if (digits.isNotEmpty)
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            icon: Image.asset('assets/whatsapp_logo.png',
+                width: 26, height: 26, fit: BoxFit.contain),
+            tooltip: 'Contactar por WhatsApp',
+            onPressed: () async {
+              var phone = digits;
+              if (phone.startsWith('58')) phone = phone.substring(2);
+              phone = phone.replaceFirst(RegExp(r'^0+'), '');
+              final url = Uri.parse('https://wa.me/58$phone');
+              try {
+                await launchUrl(url, mode: LaunchMode.externalApplication);
+              } catch (_) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('No se pudo abrir WhatsApp')),
+                  );
+                }
+              }
+            },
+          ),
+        if (_role == 'doctor' && appt['patient_id'] != null)
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
+            tooltip: 'Escribir al paciente',
+            onPressed: () => _openAppointmentConversation(appt),
+          ),
+        if (_filterMode == 'Historial')
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.delete_outline,
+                color: Colors.redAccent, size: 26),
+            tooltip: 'Eliminar del historial',
+            onPressed: () => _deleteAppointment(appt),
+          ),
+      ],
+    );
+  }
+
+  void _showAppointmentDetails(dynamic apptRaw) {
+    final Map<String, dynamic> appt = apptRaw is Map<String, dynamic>
+        ? apptRaw
+        : Map<String, dynamic>.from(apptRaw as Map);
     final isDoctor = _doctorView;
     final otherPersonName = appt['doctor_name'] ?? 'Desconocido';
-    final specialty = appt['doctor_specialty'] ?? (isDoctor ? 'Consulta Médica' : 'General');
+    final specialty =
+        appt['doctor_specialty'] ?? (isDoctor ? 'Consulta Médica' : 'General');
     final date = appt['date']?.toString() ?? '';
     final time = appt['time_block']?.toString() ?? 'Hora pendiente';
     final turn = appt['turn_number']?.toString() ?? '-';
     final location = appt['doctor_location']?.toString() ?? '';
-    final reason = appt['appointment_reason']?.toString() ?? (appt['reason']?.toString() ?? 'Consulta Médica');
+    final reason = appt['appointment_reason']?.toString() ??
+        (appt['reason']?.toString() ?? 'Consulta Médica');
     final status = (appt['status'] ?? 'scheduled').toString().toLowerCase();
     final avatarUrl = appt['doctor_avatar'] as String?;
     final String displayStatus = status == 'scheduled'
@@ -115,11 +254,14 @@ class _MisCitasTabState extends State<MisCitasTab> {
                       ),
                       const SizedBox(height: 10),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
                           color: status == 'scheduled'
                               ? Colors.green.shade600
-                              : (status == 'cancelled' ? Colors.red.shade400 : Colors.blueGrey),
+                              : (status == 'cancelled'
+                                  ? Colors.red.shade400
+                                  : Colors.blueGrey),
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Text(
@@ -144,20 +286,28 @@ class _MisCitasTabState extends State<MisCitasTab> {
                   decoration: BoxDecoration(
                     color: const Color(0xFFE2F1F8),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFF0056B3).withValues(alpha: 0.3)),
+                    border: Border.all(
+                        color: const Color(0xFF0056B3).withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.confirmation_number_outlined, color: Color(0xFF0056B3), size: 28),
+                      const Icon(Icons.confirmation_number_outlined,
+                          color: Color(0xFF0056B3), size: 28),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text('TURNO ASIGNADO',
-                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0056B3))),
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF0056B3))),
                             Text('Turno #$turn',
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0B2545))),
+                                style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF0B2545))),
                           ],
                         ),
                       ),
@@ -167,28 +317,40 @@ class _MisCitasTabState extends State<MisCitasTab> {
                 const SizedBox(height: 16),
                 _buildDetailRow(Icons.calendar_today, 'Fecha', date),
                 const SizedBox(height: 12),
-                _buildDetailRow(Icons.access_time, 'Hora estimada / Bloque', time),
+                _buildDetailRow(
+                    Icons.access_time, 'Hora estimada / Bloque', time),
                 if (location.trim().isNotEmpty) ...[
                   const SizedBox(height: 12),
-                  _buildDetailRow(Icons.location_on, 'Ubicación / Consultorio', location),
+                  _buildDetailRow(
+                      Icons.location_on, 'Ubicación / Consultorio', location),
                 ],
-                if (isDoctor && appt['patient_phone'] != null && appt['patient_phone'].toString().trim().isNotEmpty) ...[
+                if (isDoctor &&
+                    appt['patient_phone'] != null &&
+                    appt['patient_phone'].toString().trim().isNotEmpty) ...[
                   const SizedBox(height: 12),
-                  _buildDetailRow(Icons.phone, 'Teléfono del paciente', appt['patient_phone'].toString()),
+                  _buildDetailRow(Icons.phone, 'Teléfono del paciente',
+                      appt['patient_phone'].toString()),
                 ],
-                if (!isDoctor && (appt['doctor_phone'] != null || appt['patient_phone'] != null)) ...[
+                if (!isDoctor &&
+                    (appt['doctor_phone'] != null ||
+                        appt['patient_phone'] != null)) ...[
                   Builder(builder: (_) {
-                    final ph = (appt['doctor_phone'] ?? appt['patient_phone'])?.toString().trim() ?? '';
+                    final ph = (appt['doctor_phone'] ?? appt['patient_phone'])
+                            ?.toString()
+                            .trim() ??
+                        '';
                     if (ph.isEmpty) return const SizedBox.shrink();
                     return Padding(
                       padding: const EdgeInsets.only(top: 12),
-                      child: _buildDetailRow(Icons.phone, 'Teléfono del doctor', ph),
+                      child: _buildDetailRow(
+                          Icons.phone, 'Teléfono del doctor', ph),
                     );
                   }),
                 ],
                 if (reason.trim().isNotEmpty) ...[
                   const SizedBox(height: 12),
-                  _buildDetailRow(Icons.medical_services_outlined, 'Motivo de consulta', reason),
+                  _buildDetailRow(Icons.medical_services_outlined,
+                      'Motivo de consulta', reason),
                 ],
               ],
             ),
@@ -197,7 +359,11 @@ class _MisCitasTabState extends State<MisCitasTab> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cerrar', style: TextStyle(color: Color(0xFF0056B3), fontWeight: FontWeight.bold, fontSize: 16)),
+            child: const Text('Cerrar',
+                style: TextStyle(
+                    color: Color(0xFF0056B3),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16)),
           ),
         ],
       ),
@@ -214,16 +380,23 @@ class _MisCitasTabState extends State<MisCitasTab> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600)),
+              Text(label,
+                  style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey,
+                      fontWeight: FontWeight.w600)),
               const SizedBox(height: 2),
-              Text(value, style: const TextStyle(fontSize: 14, color: Color(0xFF0B2545), fontWeight: FontWeight.w600)),
+              Text(value,
+                  style: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF0B2545),
+                      fontWeight: FontWeight.w600)),
             ],
           ),
         ),
       ],
     );
   }
-
 
   late DateTime _selectedDate = widget.initialDate ?? caracasNow();
   List<dynamic> _appointments = [];
@@ -261,18 +434,22 @@ class _MisCitasTabState extends State<MisCitasTab> {
     if (_filterMode == 'Historial') {
       final past = _appointments.where((a) {
         final aDateTime = _appointmentDateTime(a);
-        return aDateTime.isBefore(now) || a['status'] == 'completed' || a['status'] == 'cancelled';
+        return aDateTime.isBefore(now) ||
+            a['status'] == 'completed' ||
+            a['status'] == 'cancelled';
       }).toList();
-      past.sort((a, b) => _appointmentDateTime(b).compareTo(_appointmentDateTime(a)));
+      past.sort(
+          (a, b) => _appointmentDateTime(b).compareTo(_appointmentDateTime(a)));
       return past;
     }
-    
+
     // Más próximas
     final upcoming = _appointments.where((a) {
       final aDateTime = _appointmentDateTime(a);
       return !aDateTime.isBefore(now) && a['status'] == 'scheduled';
     }).toList();
-    upcoming.sort((a, b) => _appointmentDateTime(a).compareTo(_appointmentDateTime(b)));
+    upcoming.sort(
+        (a, b) => _appointmentDateTime(a).compareTo(_appointmentDateTime(b)));
     return upcoming;
   }
 
@@ -370,9 +547,10 @@ class _MisCitasTabState extends State<MisCitasTab> {
 
     String effectiveDoc = _doctorName;
     if (effectiveDoc.isEmpty && upcomingAppointments.isNotEmpty) {
-      effectiveDoc = upcomingAppointments.first['doctor_full_name']?.toString() ??
-          upcomingAppointments.first['doctor_name']?.toString() ??
-          '';
+      effectiveDoc =
+          upcomingAppointments.first['doctor_full_name']?.toString() ??
+              upcomingAppointments.first['doctor_name']?.toString() ??
+              '';
     }
     if (effectiveDoc.isEmpty) {
       effectiveDoc = 'Consulta Médica';
@@ -406,9 +584,7 @@ class _MisCitasTabState extends State<MisCitasTab> {
       final response = await ApiClient.get('/appointments/my');
       if (response.statusCode == 200) {
         setState(() {
-          _appointments = (jsonDecode(response.body) as List<dynamic>)
-              .where((appointment) => appointment['status'] != 'cancelled')
-              .toList();
+          _appointments = jsonDecode(response.body) as List<dynamic>;
           _isLoading = false;
         });
       } else {
@@ -529,7 +705,8 @@ class _MisCitasTabState extends State<MisCitasTab> {
                           ),
                           PopupMenuButton<String>(
                             tooltip: 'Opciones de impresión',
-                            icon: const Icon(Icons.arrow_drop_down_circle_outlined,
+                            icon: const Icon(
+                                Icons.arrow_drop_down_circle_outlined,
                                 color: Color(0xFF0F4C81)),
                             onSelected: (val) {
                               if (val == 'upcoming') {
@@ -543,7 +720,8 @@ class _MisCitasTabState extends State<MisCitasTab> {
                                 value: 'daily',
                                 child: Row(
                                   children: [
-                                    Icon(Icons.today, color: Color(0xFF0F4C81), size: 18),
+                                    Icon(Icons.today,
+                                        color: Color(0xFF0F4C81), size: 18),
                                     SizedBox(width: 8),
                                     Text('Imprimir citas del día'),
                                   ],
@@ -553,7 +731,8 @@ class _MisCitasTabState extends State<MisCitasTab> {
                                 value: 'upcoming',
                                 child: Row(
                                   children: [
-                                    Icon(Icons.upcoming, color: Color(0xFF00A896), size: 18),
+                                    Icon(Icons.upcoming,
+                                        color: Color(0xFF00A896), size: 18),
                                     SizedBox(width: 8),
                                     Text('Imprimir próximas citas'),
                                   ],
@@ -582,8 +761,7 @@ class _MisCitasTabState extends State<MisCitasTab> {
                                 value: 'Más próximas',
                                 child: Text('Próximas citas')),
                             DropdownMenuItem(
-                                value: 'Historial',
-                                child: Text('Historial')),
+                                value: 'Historial', child: Text('Historial')),
                           ],
                           onChanged: (value) {
                             if (value != null) {
@@ -591,6 +769,14 @@ class _MisCitasTabState extends State<MisCitasTab> {
                             }
                           },
                         ),
+                        if (_role == 'doctor' && _filterMode == 'Historial')
+                          OutlinedButton.icon(
+                            onPressed: _clearHistory,
+                            icon: const Icon(Icons.cleaning_services_outlined,
+                                color: Colors.redAccent),
+                            label: const Text('Limpiar historial',
+                                style: TextStyle(color: Colors.redAccent)),
+                          ),
                         if (_filterMode == 'Fecha')
                           Row(
                             mainAxisSize: MainAxisSize.min,
@@ -663,287 +849,320 @@ class _MisCitasTabState extends State<MisCitasTab> {
                                           offset: Offset(0, 3))
                                     ],
                                   ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
+                                  child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      ProfileAvatar(
-                                          imageUrl:
-                                              appt['doctor_avatar']?.toString(),
-                                          fallbackRole: 'doctor',
-                                          size: 60),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              appt['doctor_name'] ??
-                                                  'Desconocido',
-                                              style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 18,
-                                                  fontWeight: FontWeight.bold),
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 10,
-                                                      vertical: 4),
-                                              decoration: BoxDecoration(
-                                                color: appt['status'] ==
-                                                        'scheduled'
-                                                    ? Colors.green
-                                                    : Colors.orange,
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
-                                              ),
-                                              child: Text(
-                                                  appt['status'] == 'scheduled'
-                                                      ? 'PROGRAMADA'
-                                                      : (appt['status'] ==
-                                                              'cancelled'
-                                                          ? 'CANCELADA'
-                                                          : appt['status']
-                                                              .toString()
-                                                              .toUpperCase()),
+                                      Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          ProfileAvatar(
+                                              imageUrl: appt['doctor_avatar']
+                                                  ?.toString(),
+                                              fallbackRole: 'doctor',
+                                              size: 60),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  appt['doctor_name'] ??
+                                                      'Desconocido',
                                                   style: const TextStyle(
                                                       color: Colors.white,
-                                                      fontSize: 10,
+                                                      fontSize: 18,
                                                       fontWeight:
-                                                          FontWeight.bold)),
-                                            ),
-                                            const SizedBox(height: 8),
-                                            if (!_doctorView) ...[
-                                              Row(
-                                                children: [
-                                                  const Icon(Icons.location_on,
-                                                      color: Colors.redAccent,
-                                                      size: 14),
-                                                  const SizedBox(width: 4),
-                                                  Expanded(
-                                                      child: Text(
-                                                          appt['doctor_location'] ??
-                                                              '',
-                                                          style:
-                                                              const TextStyle(
+                                                          FontWeight.bold),
+                                                ),
+                                                const SizedBox(height: 8),
+                                                Container(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 10,
+                                                      vertical: 4),
+                                                  decoration: BoxDecoration(
+                                                    color: appt['status'] ==
+                                                            'scheduled'
+                                                        ? Colors.green
+                                                        : Colors.orange,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            12),
+                                                  ),
+                                                  child: Text(
+                                                      appt['status'] ==
+                                                              'scheduled'
+                                                          ? 'PROGRAMADA'
+                                                          : (appt['status'] ==
+                                                                  'cancelled'
+                                                              ? 'CANCELADA'
+                                                              : appt['status']
+                                                                  .toString()
+                                                                  .toUpperCase()),
+                                                      style: const TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 10,
+                                                          fontWeight:
+                                                              FontWeight.bold)),
+                                                ),
+                                                const SizedBox(height: 8),
+                                                if (!_doctorView) ...[
+                                                  Row(
+                                                    children: [
+                                                      const Icon(
+                                                          Icons.location_on,
+                                                          color:
+                                                              Colors.redAccent,
+                                                          size: 14),
+                                                      const SizedBox(width: 4),
+                                                      Expanded(
+                                                          child: Text(
+                                                              appt['doctor_location'] ??
+                                                                  '',
+                                                              style: const TextStyle(
                                                                   color: Colors
                                                                       .white,
                                                                   fontSize:
                                                                       12))),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 4),
-                                            ],
-                                            Text(
-                                                '${_doctorView ? 'Motivo' : 'Especialidad'}: ${appt['doctor_specialty'] ?? ''}',
-                                                style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 13,
-                                                    fontWeight:
-                                                        FontWeight.bold)),
-                                          ],
-                                        ),
-                                      ),
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Builder(
-                                            builder: (ctx) {
-                                              final rawTarget = (_doctorView
-                                                  ? appt['patient_phone']
-                                                  : (appt['doctor_phone'] ?? appt['patient_phone']))?.toString() ?? '';
-                                              final cleanDigits = rawTarget.replaceAll(RegExp(r'[^\d]'), '');
-                                              if (cleanDigits.isEmpty) return const SizedBox.shrink();
-
-                                              return IconButton(
-                                                icon: Image.asset(
-                                                  'assets/whatsapp_logo.png',
-                                                  width: 28,
-                                                  height: 28,
-                                                  fit: BoxFit.contain,
-                                                ),
-                                                tooltip: 'Contactar por WhatsApp',
-                                                onPressed: () async {
-                                                  var phone = cleanDigits;
-                                                  if (phone.startsWith('58')) {
-                                                    phone = phone.substring(2);
-                                                  }
-                                                  phone = phone.replaceFirst(RegExp(r'^0+'), '');
-                                                  phone = '58$phone';
-                                                  final url = Uri.parse('https://wa.me/$phone');
-                                                  try {
-                                                    await launchUrl(url, mode: LaunchMode.externalApplication);
-                                                  } catch (e) {
-                                                    if (context.mounted) {
-                                                      ScaffoldMessenger.of(context).showSnackBar(
-                                                        const SnackBar(content: Text('No se pudo abrir WhatsApp')),
-                                                      );
-                                                    }
-                                                  }
-                                                },
-                                              );
-                                            },
-                                          ),
-                                          if (_filterMode == 'Historial')
-                                            IconButton(
-                                              icon: const Icon(Icons.delete_outline,
-                                                  color: Colors.redAccent,
-                                                  size: 26),
-                                              tooltip: 'Eliminar del historial',
-                                              onPressed: () => _deleteAppointment(appt),
-                                            ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                                                    const SizedBox(height: 16),
-                                  const Divider(color: Colors.white24, height: 1),
-                                  const SizedBox(height: 12),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        '${appt["date"]}',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                      Text(
-                                        '${appt["time_block"] ?? ""} · Turno #${appt["turn_number"]}',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  if (appt['status'] == 'scheduled') ...[
-                                    const SizedBox(height: 12),
-                                    Wrap(
-                                      spacing: 12,
-                                      runSpacing: 8,
-                                      children: [
-                                        if (!_doctorView)
-                                          GestureDetector(
-                                            onTap: () async {
-                                              final success = await showModalBottomSheet<bool>(
-                                                context: context,
-                                                isScrollControlled: true,
-                                                useSafeArea: true,
-                                                backgroundColor: Theme.of(context).colorScheme.surface,
-                                                builder: (_) => RescheduleAppointmentSheet(
-                                                  appointmentId: appt['id'],
-                                                  doctorId: appt['doctor_id'],
-                                                ),
-                                              );
-                                              if (success == true) {
-                                                _fetchAppointments();
-                                              }
-                                            },
-                                            child: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                                              decoration: BoxDecoration(
-                                                color: Colors.white.withValues(alpha: 0.18),
-                                                borderRadius: BorderRadius.circular(8),
-                                                border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
-                                              ),
-                                              child: const Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  Icon(Icons.edit_calendar, size: 14, color: Colors.white),
-                                                  SizedBox(width: 5),
-                                                  Text(
-                                                    'Reprogramar',
-                                                    style: TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 12,
-                                                      fontWeight: FontWeight.bold,
-                                                    ),
+                                                    ],
                                                   ),
+                                                  const SizedBox(height: 4),
                                                 ],
-                                              ),
-                                            ),
-                                          ),
-                                        GestureDetector(
-                                          onTap: () async {
-                                            final confirm = await showDialog<bool>(
-                                              context: context,
-                                              builder: (ctx) => AlertDialog(
-                                                title: const Text('Cancelar Cita'),
-                                                content: const Text('¿Estás seguro de que deseas cancelar esta cita?'),
-                                                actions: [
-                                                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Volver')),
-                                                  TextButton(
-                                                    onPressed: () => Navigator.pop(ctx, true),
-                                                    child: const Text('Cancelar Cita', style: TextStyle(color: Colors.red)),
-                                                  ),
-                                                ],
-                                              ),
-                                            );
-                                            if (confirm != true) return;
-
-                                            try {
-                                              if (!context.mounted) return;
-                                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cancelando cita...')));
-                                              final resp = await ApiClient.patch('/appointments/${appt["id"]}/cancel', {});
-                                              if (!context.mounted) return;
-                                              if (resp.statusCode == 200) {
-                                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cita cancelada con éxito')));
-                                                _fetchAppointments();
-                                              } else {
-                                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${resp.body}')));
-                                              }
-                                            } catch (e) {
-                                              if (!context.mounted) return;
-                                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-                                            }
-                                          },
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                                            decoration: BoxDecoration(
-                                              color: Colors.redAccent.withValues(alpha: 0.25),
-                                              borderRadius: BorderRadius.circular(8),
-                                              border: Border.all(color: Colors.redAccent.withValues(alpha: 0.7)),
-                                            ),
-                                            child: const Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Icon(Icons.cancel_outlined, size: 14, color: Colors.white),
-                                                SizedBox(width: 5),
                                                 Text(
-                                                  'Cancelar Cita',
-                                                  style: TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
+                                                    '${_doctorView ? 'Motivo' : 'Especialidad'}: ${appt['doctor_specialty'] ?? ''}',
+                                                    style: const TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 13,
+                                                        fontWeight:
+                                                            FontWeight.bold)),
                                               ],
                                             ),
                                           ),
+                                        ],
+                                      ),
+                                      Align(
+                                        alignment: Alignment.centerRight,
+                                        child: _buildAppointmentActions(
+                                          Map<String, dynamic>.from(
+                                              appt as Map),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      const Divider(
+                                          color: Colors.white24, height: 1),
+                                      const SizedBox(height: 12),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            '${appt["date"]}',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                          Text(
+                                            '${appt["time_block"] ?? ""} · Turno #${appt["turn_number"]}',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      if (appt['status'] == 'scheduled') ...[
+                                        const SizedBox(height: 12),
+                                        Wrap(
+                                          spacing: 12,
+                                          runSpacing: 8,
+                                          children: [
+                                            if (!_doctorView)
+                                              GestureDetector(
+                                                onTap: () async {
+                                                  final success =
+                                                      await showModalBottomSheet<
+                                                          bool>(
+                                                    context: context,
+                                                    isScrollControlled: true,
+                                                    useSafeArea: true,
+                                                    backgroundColor:
+                                                        Theme.of(context)
+                                                            .colorScheme
+                                                            .surface,
+                                                    builder: (_) =>
+                                                        RescheduleAppointmentSheet(
+                                                      appointmentId: appt['id'],
+                                                      doctorId:
+                                                          appt['doctor_id'],
+                                                    ),
+                                                  );
+                                                  if (success == true) {
+                                                    _fetchAppointments();
+                                                  }
+                                                },
+                                                child: Container(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 7),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.white
+                                                        .withValues(
+                                                            alpha: 0.18),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            8),
+                                                    border: Border.all(
+                                                        color: Colors.white
+                                                            .withValues(
+                                                                alpha: 0.4)),
+                                                  ),
+                                                  child: const Row(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      Icon(Icons.edit_calendar,
+                                                          size: 14,
+                                                          color: Colors.white),
+                                                      SizedBox(width: 5),
+                                                      Text(
+                                                        'Reprogramar',
+                                                        style: TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 12,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            GestureDetector(
+                                              onTap: () async {
+                                                final confirm =
+                                                    await showDialog<bool>(
+                                                  context: context,
+                                                  builder: (ctx) => AlertDialog(
+                                                    title: const Text(
+                                                        'Cancelar Cita'),
+                                                    content: const Text(
+                                                        '¿Estás seguro de que deseas cancelar esta cita?'),
+                                                    actions: [
+                                                      TextButton(
+                                                          onPressed: () =>
+                                                              Navigator.pop(
+                                                                  ctx, false),
+                                                          child: const Text(
+                                                              'Volver')),
+                                                      TextButton(
+                                                        onPressed: () =>
+                                                            Navigator.pop(
+                                                                ctx, true),
+                                                        child: const Text(
+                                                            'Cancelar Cita',
+                                                            style: TextStyle(
+                                                                color: Colors
+                                                                    .red)),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                );
+                                                if (confirm != true) return;
+
+                                                try {
+                                                  if (!context.mounted) return;
+                                                  ScaffoldMessenger.of(context)
+                                                      .showSnackBar(const SnackBar(
+                                                          content: Text(
+                                                              'Cancelando cita...')));
+                                                  final resp =
+                                                      await ApiClient.patch(
+                                                          '/appointments/${appt["id"]}/cancel',
+                                                          {});
+                                                  if (!context.mounted) return;
+                                                  if (resp.statusCode == 200) {
+                                                    ScaffoldMessenger.of(
+                                                            context)
+                                                        .showSnackBar(
+                                                            const SnackBar(
+                                                                content: Text(
+                                                                    'Cita cancelada con éxito')));
+                                                    _fetchAppointments();
+                                                  } else {
+                                                    ScaffoldMessenger.of(
+                                                            context)
+                                                        .showSnackBar(SnackBar(
+                                                            content: Text(
+                                                                'Error: ${resp.body}')));
+                                                  }
+                                                } catch (e) {
+                                                  if (!context.mounted) return;
+                                                  ScaffoldMessenger.of(context)
+                                                      .showSnackBar(SnackBar(
+                                                          content: Text(
+                                                              'Error: $e')));
+                                                }
+                                              },
+                                              child: Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 12,
+                                                        vertical: 7),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.redAccent
+                                                      .withValues(alpha: 0.25),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                  border: Border.all(
+                                                      color: Colors.redAccent
+                                                          .withValues(
+                                                              alpha: 0.7)),
+                                                ),
+                                                child: const Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Icon(Icons.cancel_outlined,
+                                                        size: 14,
+                                                        color: Colors.white),
+                                                    SizedBox(width: 5),
+                                                    Text(
+                                                      'Cancelar Cita',
+                                                      style: TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ] else ...[
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          appt['status'] == 'cancelled'
+                                              ? 'Cita Cancelada'
+                                              : 'Cita Completada',
+                                          style: TextStyle(
+                                            color: appt['status'] == 'cancelled'
+                                                ? Colors.white60
+                                                : Colors.white70,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                         ),
                                       ],
-                                    ),
-                                  ] else ...[
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      appt['status'] == 'cancelled' ? 'Cita Cancelada' : 'Cita Completada',
-                                      style: TextStyle(
-                                        color: appt['status'] == 'cancelled' ? Colors.white60 : Colors.white70,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ],
+                                    ],
                                   ),
                                 ),
                               ),

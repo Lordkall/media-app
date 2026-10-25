@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/auth_helper.dart';
 import '../screens/login_screen.dart';
 import '../screens/notifications_screen.dart';
+import '../screens/direct_conversations_screen.dart';
 import '../screens/assistant_management_screen.dart';
 import '../screens/select_plan_screen.dart';
 import '../core/api_client.dart';
@@ -17,6 +18,7 @@ class DoctorHeader extends StatefulWidget {
 
 class _DoctorHeaderState extends State<DoctorHeader> {
   int _unreadCount = 0;
+  int _unreadMessages = 0;
   bool _isVip = false;
   String? _userRole;
   Timer? _notificationTimer;
@@ -55,12 +57,25 @@ class _DoctorHeaderState extends State<DoctorHeader> {
           });
         }
       }
-      
+
+      if (role == 'doctor' || role == 'patient') {
+        final messageResponse =
+            await ApiClient.get('/conversations/unread-count');
+        if (messageResponse.statusCode == 200) {
+          final data = jsonDecode(messageResponse.body);
+          if (mounted) {
+            setState(
+                () => _unreadMessages = (data['count'] as num?)?.toInt() ?? 0);
+          }
+        }
+      }
+
       if (role == 'doctor' || role == 'assistant' || role == 'clinic') {
         final subResponse = await ApiClient.get('/subscriptions/me');
         if (subResponse.statusCode == 200) {
           final subData = jsonDecode(subResponse.body);
-          final plan = subData['current']?['plan']?.toString().toLowerCase() ?? '';
+          final plan =
+              subData['current']?['plan']?.toString().toLowerCase() ?? '';
           final isVip = plan == 'sponsored' ||
               plan == 'vip' ||
               plan == 'clinic_vip' ||
@@ -100,7 +115,11 @@ class _DoctorHeaderState extends State<DoctorHeader> {
               children: [
                 Icon(Icons.favorite, color: Color(0xFF0056B3)),
                 SizedBox(width: 8),
-                Text('Salud Now', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0056B3))),
+                Text('Salud Now',
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0056B3))),
               ],
             ),
           ),
@@ -109,11 +128,13 @@ class _DoctorHeaderState extends State<DoctorHeader> {
               Stack(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.notifications, color: Color(0xFF0056B3), size: 28),
+                    icon: const Icon(Icons.notifications,
+                        color: Color(0xFF0056B3), size: 28),
                     onPressed: () async {
                       await Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const NotificationsScreen()),
+                        MaterialPageRoute(
+                            builder: (context) => const NotificationsScreen()),
                       );
                       // Mark all as read locally after returning
                       setState(() {
@@ -149,16 +170,58 @@ class _DoctorHeaderState extends State<DoctorHeader> {
                     ),
                 ],
               ),
+              if (_userRole == 'doctor' || _userRole == 'patient')
+                Stack(
+                  children: [
+                    IconButton(
+                      tooltip: 'Mensajes',
+                      icon: const Icon(Icons.chat_bubble_outline,
+                          color: Color(0xFF0056B3), size: 25),
+                      onPressed: () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) =>
+                                  const DirectConversationsScreen()),
+                        );
+                        _fetchUnreadCount();
+                      },
+                    ),
+                    if (_unreadMessages > 0)
+                      Positioned(
+                        right: 10,
+                        top: 9,
+                        child: Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 1.2),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert, color: Color(0xFF0056B3), size: 28),
+                icon: const Icon(Icons.more_vert,
+                    color: Color(0xFF0056B3), size: 28),
                 onSelected: (value) async {
                   if (value == 'logout') {
                     await AuthHelper.logout();
                     if (context.mounted) {
-                      Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const LoginScreen()), (route) => false);
+                      Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const LoginScreen()),
+                          (route) => false);
                     }
                   } else if (value == 'assistant') {
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => const AssistantManagementScreen()));
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) =>
+                                const AssistantManagementScreen()));
                   } else if (value == 'stats') {
                     _showDoctorStatsDialog(context);
                   } else if (value == 'stats_locked') {
@@ -166,8 +229,10 @@ class _DoctorHeaderState extends State<DoctorHeader> {
                   }
                 },
                 itemBuilder: (BuildContext context) {
-                  final isDoctorOrAssistant = _userRole == 'doctor' || _userRole == 'assistant';
-                  final canSeeStats = (isDoctorOrAssistant && _isVip) || _userRole == 'clinic';
+                  final isDoctorOrAssistant =
+                      _userRole == 'doctor' || _userRole == 'assistant';
+                  final canSeeStats =
+                      (isDoctorOrAssistant && _isVip) || _userRole == 'clinic';
 
                   return [
                     if (_userRole == 'doctor' && _isVip)
@@ -177,7 +242,10 @@ class _DoctorHeaderState extends State<DoctorHeader> {
                           children: [
                             Icon(Icons.smart_toy, color: Colors.amber),
                             SizedBox(width: 8),
-                            Text('Configurar Asistente', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
+                            Text('Configurar Asistente',
+                                style: TextStyle(
+                                    color: Colors.amber,
+                                    fontWeight: FontWeight.bold)),
                           ],
                         ),
                       ),
@@ -188,7 +256,10 @@ class _DoctorHeaderState extends State<DoctorHeader> {
                           children: [
                             Icon(Icons.insights, color: Color(0xFF00A896)),
                             SizedBox(width: 8),
-                            Text('Estadísticas', style: TextStyle(color: Color(0xFF0B2545), fontWeight: FontWeight.w600)),
+                            Text('Estadísticas',
+                                style: TextStyle(
+                                    color: Color(0xFF0B2545),
+                                    fontWeight: FontWeight.w600)),
                           ],
                         ),
                       )
@@ -197,9 +268,13 @@ class _DoctorHeaderState extends State<DoctorHeader> {
                         value: 'stats_locked',
                         child: Row(
                           children: [
-                            Icon(Icons.lock_outline, color: Colors.amber, size: 20),
+                            Icon(Icons.lock_outline,
+                                color: Colors.amber, size: 20),
                             SizedBox(width: 8),
-                            Text('Estadísticas (VIP)', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600)),
+                            Text('Estadísticas (VIP)',
+                                style: TextStyle(
+                                    color: Colors.grey,
+                                    fontWeight: FontWeight.w600)),
                           ],
                         ),
                       ),
@@ -261,7 +336,8 @@ class _DoctorHeaderState extends State<DoctorHeader> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.amber[700],
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
             ),
             onPressed: () {
               Navigator.pop(ctx);
@@ -279,7 +355,8 @@ class _DoctorHeaderState extends State<DoctorHeader> {
             },
             child: const Text(
               'Mejorar a VIP',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style:
+                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -297,7 +374,9 @@ class _DoctorHeaderState extends State<DoctorHeader> {
             const Icon(Icons.insights, color: Color(0xFF00A896), size: 26),
             const SizedBox(width: 8),
             Text(
-              _userRole == 'clinic' ? 'Estadísticas de la Clínica' : 'Estadísticas de Citas',
+              _userRole == 'clinic'
+                  ? 'Estadísticas de la Clínica'
+                  : 'Estadísticas de Citas',
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -339,18 +418,24 @@ class _DoctorHeaderState extends State<DoctorHeader> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (_userRole == 'clinic') ...[
-                  _buildStatItem('Doctores asociados', '$docCount', Icons.medical_services_outlined, const Color(0xFF0056B3)),
+                  _buildStatItem('Doctores asociados', '$docCount',
+                      Icons.medical_services_outlined, const Color(0xFF0056B3)),
                   const SizedBox(height: 10),
-                  _buildStatItem('Citas para hoy', '$today', Icons.today, const Color(0xFF00A896)),
+                  _buildStatItem('Citas para hoy', '$today', Icons.today,
+                      const Color(0xFF00A896)),
                   const SizedBox(height: 10),
                 ],
-                _buildStatItem('Citas esta semana', '$week', Icons.date_range, const Color(0xFF0056B3)),
+                _buildStatItem('Citas esta semana', '$week', Icons.date_range,
+                    const Color(0xFF0056B3)),
                 const SizedBox(height: 10),
-                _buildStatItem('Citas este mes', '$month', Icons.calendar_month, const Color(0xFF00A896)),
+                _buildStatItem('Citas este mes', '$month', Icons.calendar_month,
+                    const Color(0xFF00A896)),
                 const SizedBox(height: 10),
-                _buildStatItem('Citas totales', '$total', Icons.assignment, const Color(0xFF0B2545)),
+                _buildStatItem('Citas totales', '$total', Icons.assignment,
+                    const Color(0xFF0B2545)),
                 const SizedBox(height: 10),
-                _buildStatItem('Citas canceladas', '$cancelled', Icons.cancel_outlined, Colors.redAccent),
+                _buildStatItem('Citas canceladas', '$cancelled',
+                    Icons.cancel_outlined, Colors.redAccent),
               ],
             );
           },
@@ -365,7 +450,8 @@ class _DoctorHeaderState extends State<DoctorHeader> {
     );
   }
 
-  Widget _buildStatItem(String label, String value, IconData icon, Color color) {
+  Widget _buildStatItem(
+      String label, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(

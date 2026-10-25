@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, delete
 from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import IntegrityError
 from app.api.dependencies import get_db, get_current_patient
@@ -284,7 +284,7 @@ async def create_appointment(
                 user_id=doctor_user.id,
                 type=NotificationType.APPOINTMENT_CREATED,
                 title="Nueva Cita Agendada",
-                message=f"¡Un paciente ha agendado una nueva cita contigo para el {req_date} (Turno #{requested_turn}) - Motivo: {selected_reason}!"
+                message=f"{current_user.first_name} {current_user.last_name} ha agendado una cita para el {req_date} (Turno #{requested_turn}) - Motivo: {selected_reason}."
             )
             db.add(notif)
             await db.commit()
@@ -329,10 +329,10 @@ async def cancel_appointment(
             if doctor and doctor.user:
                 doc_name = f"{doctor.user.first_name} {doctor.user.last_name}"
                 if doctor.user.gender in ["Femenino", "Femenina"]:
-                    actor_name = f"La Doctora {doc_name}"
+                    actor_name = f"La Dra. {doc_name}"
                     title = f"Cita Cancelada por la Doctora {doc_name}"
                 else:
-                    actor_name = f"El Doctor {doc_name}"
+                    actor_name = f"El Dr. {doc_name}"
                     title = f"Cita Cancelada por el Doctor {doc_name}"
             else:
                 actor_name = "El doctor"
@@ -343,12 +343,13 @@ async def cancel_appointment(
             recipient_user_id = doctor.user_id
             cancelled_by = "patient"
             if patient and patient.user:
+                patient_name = f"{patient.user.first_name} {patient.user.last_name}".strip()
                 if patient.user.gender in ["Femenino", "Femenina"]:
-                    actor_name = "La paciente"
-                    title = "Cita Cancelada por la paciente"
+                    actor_name = f"La paciente {patient_name}"
+                    title = f"Cita Cancelada por {patient_name}"
                 else:
-                    actor_name = "El paciente"
-                    title = "Cita Cancelada por el paciente"
+                    actor_name = f"El paciente {patient_name}"
+                    title = f"Cita Cancelada por {patient_name}"
             else:
                 actor_name = "El paciente"
                 title = "Cita Cancelada por el paciente"
@@ -369,7 +370,7 @@ async def cancel_appointment(
             user_id=recipient_user_id,
             type=NotificationType.APPOINTMENT_CANCELLED,
             title=title,
-            message=f"Se canceló la cita para el día {appt.appointment_date} (Turno #{appt.turn_number}).",
+            message=f"{actor_name} canceló la cita del {appt.appointment_date} (Turno #{appt.turn_number}).",
         )
         db.add(notif)
         await db.commit()
@@ -603,6 +604,22 @@ async def _assert_appointment_access(
         status_code=status.HTTP_403_FORBIDDEN,
         detail="No tienes permiso para acceder o modificar esta cita",
     )
+
+@router.delete("/history")
+async def clear_doctor_appointment_history(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role not in (RoleEnum.DOCTOR, RoleEnum.ASSISTANT):
+        raise HTTPException(status_code=403, detail="Solo el doctor puede limpiar su historial")
+    doctor = await _staff_doctor(current_user, db)
+    result = await db.execute(delete(Appointment).where(
+        Appointment.doctor_id == doctor.id,
+        Appointment.status.in_((AppointmentStatus.CANCELLED, AppointmentStatus.COMPLETED)),
+    ))
+    await db.commit()
+    return {"deleted_count": result.rowcount or 0, "message": "Historial de citas limpiado"}
+
 
 @router.delete("/{appointment_id}")
 async def delete_appointment(

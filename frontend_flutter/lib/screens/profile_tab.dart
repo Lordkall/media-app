@@ -78,7 +78,8 @@ class _ProfileTabState extends State<ProfileTab> {
           final sub = jsonDecode(subResp.body) as Map<String, dynamic>;
           final plan = sub['current']?['plan']?.toString() ?? '';
           if (mounted) {
-            setState(() => _isClinicVip = plan == 'clinic_vip' || plan == 'vip');
+            setState(
+                () => _isClinicVip = plan == 'clinic_vip' || plan == 'vip');
           }
         }
       }
@@ -93,7 +94,13 @@ class _ProfileTabState extends State<ProfileTab> {
           user['avatar_url']?.toString());
       setState(() {
         _userData = user;
-        _isVip = subscription?['current']?['plan'] == 'sponsored';
+        final plan =
+            subscription?['current']?['plan']?.toString().toLowerCase() ?? '';
+        _isVip = plan == 'sponsored' ||
+            plan == 'vip' ||
+            plan.contains('vip') ||
+            plan.contains('patrocinado') ||
+            subscription?['is_vip'] == true;
         _isLoading = false;
       });
     } catch (e) {
@@ -634,8 +641,10 @@ class _ClinicDataPageState extends State<_ClinicDataPage> {
         _field('Descripción', description, lines: 4),
         _field('Ubicación', location, lines: 2),
         _field('Especialidades (separadas por coma)', specialties),
-        _field('Número de contacto', phone, type: TextInputType.phone, maxLength: 11),
-        _field('Segundo número de contacto', phone2, type: TextInputType.phone, maxLength: 11),
+        _field('Número de contacto', phone,
+            type: TextInputType.phone, maxLength: 11),
+        _field('Segundo número de contacto', phone2,
+            type: TextInputType.phone, maxLength: 11),
         FilledButton(
             onPressed: () async {
               final u = await ApiClient.put('/users/me', {
@@ -686,7 +695,8 @@ class _SecurityPageState extends State<SecurityPage> {
     final userId = AuthHelper.getUserIdFromToken(currentToken) ?? 'default';
     if (mounted) {
       setState(() {
-        _biometricsEnabled = prefs.getBool('biometrics_enabled_$userId') ?? false;
+        _biometricsEnabled =
+            prefs.getBool('biometrics_enabled_$userId') ?? false;
         _isLoading = false;
       });
     }
@@ -700,7 +710,8 @@ class _SecurityPageState extends State<SecurityPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('El acceso biométrico no está disponible en la web.')),
+            content:
+                Text('El acceso biométrico no está disponible en la web.')),
       );
       return;
     }
@@ -788,7 +799,8 @@ class _SecurityPageState extends State<SecurityPage> {
               : SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Usar datos biométricos',
-                      style: TextStyle(fontWeight: FontWeight.w500, fontSize: 16)),
+                      style:
+                          TextStyle(fontWeight: FontWeight.w500, fontSize: 16)),
                   subtitle: const Text('Aumenta la seguridad de la app.'),
                   value: _biometricsEnabled,
                   onChanged: _toggleBiometrics,
@@ -813,28 +825,31 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
   bool _obs2 = true;
   bool _obs3 = true;
 
-  Widget _pwdField(String label, TextEditingController c, bool obs, VoidCallback toggle) {
-      return Padding(
+  Widget _pwdField(
+      String label, TextEditingController c, bool obs, VoidCallback toggle) {
+    return Padding(
         padding: const EdgeInsets.only(bottom: 14),
         child: TextField(
             controller: c,
             obscureText: obs,
             decoration: InputDecoration(
-                labelText: label, 
+                labelText: label,
                 border: const OutlineInputBorder(),
                 suffixIcon: IconButton(
-                    icon: Icon(obs ? Icons.visibility_off : Icons.visibility),
-                    onPressed: toggle,
-                )
-            )));
+                  icon: Icon(obs ? Icons.visibility_off : Icons.visibility),
+                  onPressed: toggle,
+                ))));
   }
 
   @override
   Widget build(BuildContext context) =>
       _SettingsPage(title: 'Cambiar contraseña', children: [
-        _pwdField('Contraseña actual', current, _obs1, () => setState(() => _obs1 = !_obs1)),
-        _pwdField('Nueva contraseña', next, _obs2, () => setState(() => _obs2 = !_obs2)),
-        _pwdField('Repetir nueva contraseña', repeat, _obs3, () => setState(() => _obs3 = !_obs3)),
+        _pwdField('Contraseña actual', current, _obs1,
+            () => setState(() => _obs1 = !_obs1)),
+        _pwdField('Nueva contraseña', next, _obs2,
+            () => setState(() => _obs2 = !_obs2)),
+        _pwdField('Repetir nueva contraseña', repeat, _obs3,
+            () => setState(() => _obs3 = !_obs3)),
         const Text(
             'Debe tener al menos 6 caracteres, letras, números y una mayúscula.'),
         FilledButton(
@@ -880,14 +895,10 @@ class _AboutPage extends StatelessWidget {
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))),
         menuRow(
             'Política de Privacidad',
-            () => onOpen(
-                'Política de Privacidad',
-                const PrivacyPolicyScreen())),
+            () =>
+                onOpen('Política de Privacidad', const PrivacyPolicyScreen())),
         menuRow(
-            'Cookies',
-            () => onOpen(
-                'Cookies',
-                const CookiesPolicyScreen())),
+            'Cookies', () => onOpen('Cookies', const CookiesPolicyScreen())),
         const Padding(
             padding: EdgeInsets.all(12),
             child: Text('Información Legal',
@@ -895,8 +906,7 @@ class _AboutPage extends StatelessWidget {
         menuRow(
             'Términos y Condiciones',
             () => onOpen(
-                'Términos y Condiciones',
-                const TermsAndConditionsScreen())),
+                'Términos y Condiciones', const TermsAndConditionsScreen())),
         ListTile(
             leading: const Icon(Icons.delete_outline, color: Colors.red),
             title: const Text('Eliminar Cuenta de Salud Now',
@@ -938,7 +948,6 @@ class _AboutPage extends StatelessWidget {
     }
   }
 }
-
 
 Widget _field(String label, TextEditingController controller,
         {TextInputType? type,
