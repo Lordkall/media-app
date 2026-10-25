@@ -180,9 +180,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
         "role": _role,
         "specialties": _selectedSpecialties.toList(),
         if (_role == 'doctor') ...{
-          "medical_license_number": _medicalLicenseNumberCtrl.text.trim().isEmpty
-              ? null
-              : _medicalLicenseNumberCtrl.text.trim().toUpperCase(),
+          "medical_license_number": RegExp(r'^\d{6}$')
+                  .hasMatch(_medicalLicenseNumberCtrl.text.trim())
+              ? 'MPPS-${_medicalLicenseNumberCtrl.text.trim()}'
+              : null,
           "medical_license_certificate_base64": _medicalLicenseCertificateBase64,
           "medical_license_certificate_mime_type": _medicalLicenseCertificateMimeType,
         },
@@ -379,14 +380,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
         children: [
           TextFormField(
             controller: _medicalLicenseNumberCtrl,
-            textCapitalization: TextCapitalization.characters,
             inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9-]')),
-              LengthLimitingTextInputFormatter(11),
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(6),
             ],
+            maxLength: 6,
             decoration: InputDecoration(
-              labelText: 'Número de matrícula sanitaria (opcional)',
-              hintText: 'MPPS-123456',
+              labelText: 'Número de matrícula sanitaria',
+              prefixText: 'MPPS-',
+              hintText: '123456',
               filled: true,
               fillColor: const Color(0x20FFFFFF),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
@@ -396,13 +398,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
             ),
             validator: (value) {
-              final number = value?.trim() ?? '';
-              if (number.isEmpty) return null;
-              if (!RegExp(r'^MPPS-[0-9]{6}$', caseSensitive: false)
-                  .hasMatch(number)) {
-                return 'Formato requerido: MPPS-123456';
+              final digits = value?.trim() ?? '';
+              if (digits.length == 6 ||
+                  _medicalLicenseCertificateBase64 != null) {
+                return null;
               }
-              return null;
+              return digits.isEmpty
+                  ? 'Ingresa la matrícula o adjunta el certificado'
+                  : 'La matrícula requiere 6 dígitos después de MPPS-';
             },
           ),
           const SizedBox(height: 8),
@@ -410,7 +413,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             onPressed: _isLoading ? null : _pickMedicalLicenseCertificate,
             icon: const Icon(Icons.upload_file),
             label: Text(_medicalLicenseCertificateBase64 == null
-                ? 'Subir certificado de registro médico (opcional)'
+                ? 'Subir certificado de registro médico'
                 : 'Cambiar certificado médico'),
           ),
           if (_medicalLicenseCertificatePreview != null) ...[
@@ -424,7 +427,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
           ],
           const Text(
-            'Escribe la matrícula MPPS-123456 o adjunta la foto del certificado. Basta una opción. Imagen JPG, PNG o WEBP de máximo 4 MB.',
+            'Ingresa seis dígitos después de MPPS- o adjunta la foto del certificado. Completa una de las dos opciones. Imagen JPG, PNG o WEBP de máximo 4 MB.',
             style: TextStyle(fontSize: 12, color: Color(0xFF475569)),
           ),
         ],
@@ -885,7 +888,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   CheckboxListTile(
                                     contentPadding: EdgeInsets.zero,
                                     title: const Text(
-                                      '¿Perteneces a alguna clínica?',
+                                      '¿Perteneces a alguna clínica? (opcional)',
                                       style: TextStyle(
                                           color: Color(0xFF0B2545),
                                           fontWeight: FontWeight.w600),
