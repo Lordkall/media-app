@@ -17,6 +17,60 @@ from app.core.security import SECRET_KEY, ALGORITHM, verify_password, get_passwo
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
+
+async def _recover_legacy_appointment_action(notification, user: User, db: AsyncSession) -> str | None:
+    """Recover an unambiguous appointment link for older notification rows."""
+    import re
+    from datetime import date, datetime
+    from app.models.appointments import Appointment, AppointmentStatus
+    from app.models.notifications import NotificationType
+    from app.models.patients import Patient
+
+    message = notification.message or ""
+    turn_match = re.search(r"turno\s*#\s*(\d+)", message, re.IGNORECASE)
+    date_match = re.search(r"\b(\d{4}-\d{2}-\d{2}|\d{1,2}/\d{1,2}/\d{4})\b", message)
+    if not turn_match or not date_match:
+        return None
+    raw_date = date_match.group(1)
+    try:
+        appt_date = (date.fromisoformat(raw_date) if "-" in raw_date
+                     else datetime.strptime(raw_date, "%d/%m/%Y").date())
+    except ValueError:
+        return None
+
+    query = select(Appointment).where(
+        Appointment.appointment_date == appt_date,
+        Appointment.turn_number == int(turn_match.group(1)),
+    )
+    if user.role in (DatabaseRoleEnum.DOCTOR, DatabaseRoleEnum.ASSISTANT):
+        doctor_id = user.linked_doctor_id
+        if user.role == DatabaseRoleEnum.DOCTOR:
+            from app.models.doctors import Doctor
+            doctor_id = await db.scalar(select(Doctor.id).where(Doctor.user_id == user.id))
+        if not doctor_id:
+            return None
+        query = query.where(Appointment.doctor_id == doctor_id)
+    elif user.role == DatabaseRoleEnum.PATIENT:
+        patient_id = await db.scalar(select(Patient.id).where(Patient.user_id == user.id))
+        if not patient_id:
+            return None
+        query = query.where(Appointment.patient_id == patient_id)
+    else:
+        return None
+
+    if notification.type == NotificationType.APPOINTMENT_CANCELLED:
+        query = query.where(Appointment.status == AppointmentStatus.CANCELLED)
+        matches = list((await db.scalars(query.order_by(Appointment.id.desc()).limit(2))).all())
+    else:
+        active_query = query.where(Appointment.status != AppointmentStatus.CANCELLED)
+        matches = list((await db.scalars(active_query.order_by(Appointment.id.desc()).limit(2))).all())
+        if not matches:
+            cancelled_query = query.where(Appointment.status == AppointmentStatus.CANCELLED)
+            matches = list((await db.scalars(cancelled_query.order_by(Appointment.id.desc()).limit(2))).all())
+    if len(matches) != 1:
+        return None
+    return f"appointment:{matches[0].id}"
+
 async def get_current_user(request: Request, token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -256,7 +310,22 @@ async def get_my_notifications(
     notifications = result.scalars().all()
     
     out = []
+    recovered_legacy_links = False
     for n in notifications:
+        if (
+            not n.action_url
+            and n.type in (
+                NotificationType.APPOINTMENT_CREATED,
+                NotificationType.APPOINTMENT_CANCELLED,
+                NotificationType.RENEWAL_REMINDER,
+            )
+        ):
+            recovered_action = await _recover_legacy_appointment_action(
+                n, current_user, db
+            )
+            if recovered_action:
+                n.action_url = recovered_action
+                recovered_legacy_links = True
         data = {
             "id": n.id,
             "type": n.type.value,
@@ -346,6 +415,9 @@ async def get_my_notifications(
                     "screenshot_base64": sub.screenshot_base64
                 }
         out.append(data)
+
+    if recovered_legacy_links:
+        await db.commit()
         
     return out
 
