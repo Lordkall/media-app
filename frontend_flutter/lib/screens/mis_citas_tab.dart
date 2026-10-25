@@ -476,6 +476,7 @@ class _MisCitasTabState extends State<MisCitasTab> {
 
   String _doctorName = '';
   bool _openedInitialAppointment = false;
+  int _initialAppointmentLookupAttempts = 0;
 
   @override
   void initState() {
@@ -631,6 +632,18 @@ class _MisCitasTabState extends State<MisCitasTab> {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) _showAppointmentDetails(target.first);
             });
+          } else if (_initialAppointmentLookupAttempts < 3 && mounted) {
+            _initialAppointmentLookupAttempts++;
+            Future<void>.delayed(const Duration(milliseconds: 600), () {
+              if (mounted && !_openedInitialAppointment) {
+                _fetchAppointments();
+              }
+            });
+          } else if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text(
+                  'No se encontró la cita de esta notificación. Actualiza la lista e inténtalo de nuevo.'),
+            ));
           }
         }
       } else {

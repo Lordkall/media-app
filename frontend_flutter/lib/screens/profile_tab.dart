@@ -33,6 +33,8 @@ class _ProfileTabState extends State<ProfileTab> {
   bool _isSaving = false;
   bool _isVip = false;
   bool _isClinicVip = false;
+  bool _showFeeInVes = false;
+  String? _medicalLicenseNumber;
 
   bool get _isDoctor => _userData?['role'] == 'doctor';
 
@@ -90,6 +92,8 @@ class _ProfileTabState extends State<ProfileTab> {
       _clinicInfo.text = doctor?['clinic_info']?.toString() ?? '';
       _specialties =
           List<String>.from(doctor?['specialties'] ?? const <String>[]);
+      _showFeeInVes = doctor?['show_fee_in_ves'] == true;
+      _medicalLicenseNumber = doctor?['medical_license_number']?.toString();
       ProfileImageHelper.updateCurrentUserAvatar(
           user['avatar_url']?.toString());
       setState(() {
@@ -287,7 +291,9 @@ class _ProfileTabState extends State<ProfileTab> {
                         'bio': _bio.text,
                         'consultation_fee': _fee.text,
                         'specialties': _specialties,
-                        'clinic_info': _clinicInfo.text
+                        'clinic_info': _clinicInfo.text,
+                        'show_fee_in_ves': _showFeeInVes,
+                        'medical_license_number': _medicalLicenseNumber,
                       }))),
             if (_userData?['role'] == 'clinic')
               _menuRow(
@@ -672,6 +678,11 @@ class _DoctorDataPageState extends State<_DoctorDataPage> {
                 'specialties': specialties
               });
               if (context.mounted) {
+                if (r.statusCode == 200) {
+                  widget.doctor['show_fee_in_ves'] = showFeeInVes;
+                  widget.doctor['consultation_fee'] =
+                      double.tryParse(fee.text.replaceAll(',', '.'));
+                }
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                     content: Text(r.statusCode == 200
                         ? 'Datos laborales guardados.'

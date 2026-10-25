@@ -12,16 +12,19 @@ class NotificationNavigation {
 
   static String? _pendingAction;
 
-  static Future<void> open(String? action) async {
-    if (action == null || action.isEmpty) return;
+  static Future<void> open(String? action, {BuildContext? context}) async {
+    final normalizedAction = action?.trim();
+    if (normalizedAction == null || normalizedAction.isEmpty) return;
     final role = await AuthHelper.getRole();
-    final navigator = appNavigatorKey.currentState;
+    final navigator = context != null && context.mounted
+        ? Navigator.of(context, rootNavigator: true)
+        : appNavigatorKey.currentState;
     if (role == null || navigator == null) {
       _pendingAction = action;
       return;
     }
 
-    if (action == 'weekly_schedule') {
+    if (normalizedAction == 'weekly_schedule') {
       if (role == 'doctor' || role == 'assistant') {
         navigator.push(MaterialPageRoute<void>(
           builder: (_) => const _NotificationDestination(
@@ -40,7 +43,8 @@ class NotificationNavigation {
       return;
     }
 
-    final match = RegExp(r'^appointment:(\d+)$').firstMatch(action);
+    final match = RegExp(r'appointment[:/](\d+)', caseSensitive: false)
+        .firstMatch(normalizedAction);
     if (match == null) return;
     final appointmentId = int.tryParse(match.group(1)!);
     if (appointmentId == null) return;

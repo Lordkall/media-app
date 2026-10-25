@@ -159,16 +159,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           borderRadius: BorderRadius.circular(12)),
                       elevation: 2,
                       child: ListTile(
-                        onTap: () {
+                        onTap: () async {
                           if (type == 'support_message') {
-                            Navigator.push(
+                            await Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                     builder: (_) =>
                                         const SupportMessagesScreen()));
                           } else {
-                            NotificationNavigation.open(
-                                n['action_url']?.toString());
+                            await NotificationNavigation.open(
+                              n['action_url']?.toString(),
+                              context: context,
+                            );
                           }
                         },
                         leading: CircleAvatar(
