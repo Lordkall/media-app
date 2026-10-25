@@ -29,6 +29,15 @@ class ManualAppointmentCreate(BaseModel):
     patient_last_name: str = Field(min_length=1, max_length=100)
     patient_phone: str = Field(min_length=5, max_length=30)
     appointment_reason: str = Field(min_length=1, max_length=500)
+    patient_birth_date: date_type | None = None
+    patient_gender: str | None = Field(default=None, max_length=30)
+
+    @field_validator("patient_birth_date")
+    @classmethod
+    def validate_patient_birth_date(cls, value):
+        if value and value > datetime.now(ZoneInfo("America/Caracas")).date():
+            raise ValueError("La fecha de nacimiento no puede ser futura")
+        return value
 
     @field_validator("patient_first_name", "patient_last_name", "patient_phone", "appointment_reason")
     @classmethod
@@ -93,7 +102,7 @@ async def get_manual_slots(
     end_hour, end_minute = map(int, availability.end_time[:5].split(":"))
     start_minutes = start_hour * 60 + start_minute
     duration = availability.slot_duration_minutes or 30
-    if duration not in (30, 60, 120):
+    if duration not in (30, 60, 90, 120):
         duration = 30
     slot_count = max(0, (end_hour * 60 + end_minute - start_minutes) // duration)
     booked = await _booked_intervals(db, doctor.id, appointment_date, start_minutes)
@@ -141,7 +150,7 @@ async def create_manual_appointment(
             start_minutes = start_hour * 60 + start_minute
             end_minutes = end_hour * 60 + end_minute
             duration = availability.slot_duration_minutes or 30
-            if duration not in (30, 60, 120):
+            if duration not in (30, 60, 90, 120):
                 raise HTTPException(status_code=400, detail="La duración de los turnos configurada no es válida")
             slot_count = max(0, (end_minutes - start_minutes) // duration)
             if payload.turn_number > slot_count:
@@ -171,6 +180,8 @@ async def create_manual_appointment(
                 patient_first_name=payload.patient_first_name,
                 patient_last_name=payload.patient_last_name,
                 patient_phone=normalize_whatsapp_phone(payload.patient_phone) or payload.patient_phone,
+                manual_patient_birth_date=payload.patient_birth_date,
+                manual_patient_gender=payload.patient_gender,
                 appointment_reason=payload.appointment_reason,
                 booking_source="manual",
                 status=AppointmentStatus.SCHEDULED,
@@ -240,7 +251,7 @@ async def create_appointment(
         start_minutes = start_hour * 60 + start_minute
         end_minutes = end_hour * 60 + end_minute
         duration = availability.slot_duration_minutes or 30
-        if duration not in (30, 60, 120):
+        if duration not in (30, 60, 90, 120):
             raise HTTPException(status_code=400, detail="La duración de los turnos configurada no es válida")
         slot_count = max(0, (end_minutes - start_minutes) // duration)
         requested_turn = appointment_in.turn_number
@@ -568,7 +579,7 @@ async def get_my_appointments(
                 motivo = appt.appointment_reason or "Consulta"
             elif pat and pat.user:
                 display_name = f"{pat.user.first_name} {pat.user.last_name}"
-                display_loc = pat.user.state or ""
+                display_loc = ""
                 avatar = pat.user.avatar_url or ""
                 if not avatar and pat.user.avatar_data:
                     avatar = f"data:{pat.user.avatar_content_type or 'image/jpeg'};base64,{pat.user.avatar_data}"
@@ -611,9 +622,18 @@ async def get_my_appointments(
         patient_birth_date = (
             appt.dependent_birth_date
             if appt.is_for_dependent and appt.dependent_birth_date
-            else (pat.user.birth_date if pat and pat.user else None)
+            else (pat.user.birth_date if pat and pat.user else appt.manual_patient_birth_date)
         )
         patient_age = calculate_age(patient_birth_date)
+        patient_gender = (
+            appt.dependent_gender if appt.is_for_dependent else
+            (pat.user.gender if pat and pat.user else appt.manual_patient_gender)
+        )
+        age_display = None
+        if patient_birth_date:
+            today = datetime.now(ZoneInfo("America/Caracas")).date()
+            months = max(0, (today.year - patient_birth_date.year) * 12 + today.month - patient_birth_date.month - (today.day < patient_birth_date.day))
+            age_display = f"{months}M" if months < 24 else str(patient_age)
         if doctor_view and appt.is_for_dependent and appt.dependent_name:
             display_name = appt.dependent_name
         patient_full_name = (
@@ -630,8 +650,9 @@ async def get_my_appointments(
             "doctor_name": display_name,
             "patient_name": patient_full_name,
             "patient_age": patient_age,
+            "patient_age_display": age_display,
             "patient_relationship": appt.dependent_relationship if appt.is_for_dependent else None,
-            "patient_gender": appt.dependent_gender if appt.is_for_dependent else (pat.user.gender if pat and pat.user else None),
+            "patient_gender": patient_gender,
             "doctor_full_name": doctor_full_name,
             "doctor_specialty": display_spec,
             "doctor_location": display_loc,
@@ -640,7 +661,7 @@ async def get_my_appointments(
             "doctor_is_vip": await doctor_is_vip(doc),
             "patient_phone": patient_phone,
             "patient_email": pat.user.email if pat and pat.user else "",
-            "patient_cedula": getattr(pat.user, "cedula", "") if pat and pat.user else "",
+            "patient_cedula": pat.user.identity_document if pat and pat.user else "",
             "time_block": time_block,
             "status": appt.status.value,
             "date": appt.appointment_date.isoformat(),

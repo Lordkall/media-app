@@ -341,8 +341,11 @@ class _MisCitasTabState extends State<MisCitasTab> {
                 ],
                 if (isDoctor && appt['patient_age'] != null) ...[
                   const SizedBox(height: 12),
-                  _buildDetailRow(Icons.cake_outlined, 'Edad del paciente',
-                      '${appt['patient_age']} años'),
+                  _buildDetailRow(
+                      Icons.cake_outlined,
+                      'Edad del paciente',
+                      appt['patient_age_display']?.toString() ??
+                          '${appt['patient_age']}'),
                 ],
                 if (isDoctor &&
                     appt['patient_relationship']?.toString().isNotEmpty ==
@@ -997,7 +1000,7 @@ class _MisCitasTabState extends State<MisCitasTab> {
                                                         null) ...[
                                                   const SizedBox(height: 4),
                                                   Text(
-                                                    'Edad: ${appt['patient_age']} años${appt['patient_relationship'] == null ? '' : ' · ${appt['patient_relationship']}'}',
+                                                    'Edad: ${appt['patient_age_display'] ?? appt['patient_age']}${appt['patient_relationship'] == null ? '' : ' · ${appt['patient_relationship']}'}',
                                                     style: const TextStyle(
                                                         color: Colors.white70,
                                                         fontSize: 12),

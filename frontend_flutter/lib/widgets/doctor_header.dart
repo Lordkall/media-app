@@ -191,14 +191,14 @@ class _DoctorHeaderState extends State<DoctorHeader> {
                       onPressed: () async {
                         await Navigator.push(
                           context,
-                              MaterialPageRoute(
-                                  builder: (_) => UnifiedMessagesScreen(
-                                        onMarkedRead: () {
-                                          if (mounted) {
-                                            setState(() => _unreadMessages = 0);
-                                          }
-                                        },
-                                      )),
+                          MaterialPageRoute(
+                              builder: (_) => UnifiedMessagesScreen(
+                                    onMarkedRead: () {
+                                      if (mounted) {
+                                        setState(() => _unreadMessages = 0);
+                                      }
+                                    },
+                                  )),
                         );
                         _fetchUnreadCount();
                       },
@@ -429,43 +429,57 @@ class _DoctorHeaderState extends State<DoctorHeader> {
             final cancelled = data['cancelled_appointments'] ?? 0;
             final today = data['today_appointments'] ?? 0;
             final docCount = data['doctor_count'] ?? 0;
-            final ageRanges = Map<String, dynamic>.from(data['patient_age_ranges'] ?? {});
-            final genders = Map<String, dynamic>.from(data['patient_genders'] ?? {});
-            final ageSummary = ['0-12', '13-17', '18-29', '30-44', '45-59', '60+', 'Sin dato']
-                .map((range) => '$range: ${ageRanges[range] ?? 0}')
-                .join(' · ');
-            final genderSummary = 'Masculino: ${genders['masculino'] ?? 0} · Femenino: ${genders['femenino'] ?? 0} · Otro/sin especificar: ${genders['otro_o_sin_especificar'] ?? 0}';
-
+            final ageRanges =
+                Map<String, dynamic>.from(data['patient_age_ranges'] ?? {});
+            final genders =
+                Map<String, dynamic>.from(data['patient_genders'] ?? {});
             return SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                if (_userRole == 'clinic') ...[
-                  _buildStatItem('Doctores asociados', '$docCount',
-                      Icons.medical_services_outlined, const Color(0xFF0056B3)),
+                  if (_userRole == 'clinic') ...[
+                    _buildStatItem(
+                        'Doctores asociados',
+                        '$docCount',
+                        Icons.medical_services_outlined,
+                        const Color(0xFF0056B3)),
+                    const SizedBox(height: 10),
+                    _buildStatItem('Citas para hoy', '$today', Icons.today,
+                        const Color(0xFF00A896)),
+                    const SizedBox(height: 10),
+                  ],
+                  _buildStatItem('Citas esta semana', '$week', Icons.date_range,
+                      const Color(0xFF0056B3)),
                   const SizedBox(height: 10),
-                  _buildStatItem('Citas para hoy', '$today', Icons.today,
-                      const Color(0xFF00A896)),
+                  _buildStatItem('Citas este mes', '$month',
+                      Icons.calendar_month, const Color(0xFF00A896)),
                   const SizedBox(height: 10),
-                ],
-                _buildStatItem('Citas esta semana', '$week', Icons.date_range,
-                    const Color(0xFF0056B3)),
-                const SizedBox(height: 10),
-                _buildStatItem('Citas este mes', '$month', Icons.calendar_month,
-                    const Color(0xFF00A896)),
-                const SizedBox(height: 10),
-                _buildStatItem('Citas totales', '$total', Icons.assignment,
-                    const Color(0xFF0B2545)),
-                const SizedBox(height: 10),
-                _buildStatItem('Citas canceladas', '$cancelled',
-                    Icons.cancel_outlined, Colors.redAccent),
-                const SizedBox(height: 14),
-                Text('Pacientes únicos: ${data['unique_patients'] ?? 0}',
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 6),
-                Text('Edades de pacientes: $ageSummary'),
-                const SizedBox(height: 4),
-                Text('Género de pacientes: $genderSummary'),
+                  _buildStatItem('Citas totales', '$total', Icons.assignment,
+                      const Color(0xFF0B2545)),
+                  const SizedBox(height: 10),
+                  _buildStatItem('Citas canceladas', '$cancelled',
+                      Icons.cancel_outlined, Colors.redAccent),
+                  const SizedBox(height: 14),
+                  Text('Pacientes únicos: ${data['unique_patients'] ?? 0}',
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  _buildDistributionChart(
+                      'Edades de pacientes', ageRanges, const [
+                    '0-12',
+                    '13-17',
+                    '18-29',
+                    '30-44',
+                    '45-59',
+                    '60+',
+                    'Sin dato'
+                  ]),
+                  const SizedBox(height: 12),
+                  _buildDistributionChart(
+                      'Género de pacientes', genders, const [
+                    'masculino',
+                    'femenino',
+                    'otro_o_sin_especificar'
+                  ]),
                 ],
               ),
             );
@@ -478,6 +492,59 @@ class _DoctorHeaderState extends State<DoctorHeader> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildDistributionChart(
+      String title, Map<String, dynamic> values, List<String> keys) {
+    final maxValue = keys
+        .map((key) => (values[key] as num?)?.toDouble() ?? 0)
+        .fold<double>(0, (a, b) => a > b ? a : b);
+    final labels = {
+      '0-12': '0–12 años',
+      '13-17': '13–17 años',
+      '18-29': '18–29 años',
+      '30-44': '30–44 años',
+      '45-59': '45–59 años',
+      '60+': '60+ años',
+      'Sin dato': 'Sin dato',
+      'masculino': 'Masculino',
+      'femenino': 'Femenino',
+      'otro_o_sin_especificar': 'Otro / sin especificar'
+    };
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(12)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        ...keys.map((key) {
+          final count = (values[key] as num?)?.toInt() ?? 0;
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 3),
+            child: Row(children: [
+              SizedBox(
+                  width: 100,
+                  child: Text(labels[key] ?? key,
+                      style: const TextStyle(fontSize: 11))),
+              Expanded(
+                  child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: LinearProgressIndicator(
+                          value: maxValue == 0 ? 0 : count / maxValue,
+                          minHeight: 9,
+                          backgroundColor: const Color(0xFFE2E8F0),
+                          color: const Color(0xFF00A896)))),
+              const SizedBox(width: 8),
+              Text('$count',
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+            ]),
+          );
+        }),
+      ]),
     );
   }
 

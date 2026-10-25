@@ -115,7 +115,7 @@ async def get_doctor_availability(
         start_minutes = start_hour * 60 + start_minute
         end_minutes = end_hour * 60 + end_minute
         duration = a.slot_duration_minutes or 30
-        if duration not in (30, 60, 120):
+        if duration not in (30, 60, 90, 120):
             duration = 30
         now = datetime.now(ZoneInfo("America/Caracas"))
         is_today = a.date == now.date()
@@ -311,7 +311,13 @@ async def get_public_doctors(db: AsyncSession = Depends(get_db)):
             "bio": redact_phone_numbers(doc.bio, user.show_whatsapp),
             "first_name": user.first_name,
             "last_name": user.last_name,
+            "address": doc.clinic_info or user.address,
+            "state": user.state,
             "specialties": doc.specialties or [],
+            "identity_document": user.identity_document,
+            "medical_license_number": doc.medical_license_number,
+            "consultation_fee": doc.consultation_fee,
+            "show_fee_in_ves": doc.show_fee_in_ves,
             "is_vip": is_vip,
         })
     return out

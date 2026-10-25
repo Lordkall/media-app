@@ -10,8 +10,8 @@ class AvailabilityItem(BaseModel):
     @field_validator("slot_duration_minutes")
     @classmethod
     def validate_slot_duration(cls, value: int) -> int:
-        if value not in (30, 60, 120):
-            raise ValueError("La duración debe ser de 30, 60 o 120 minutos")
+        if value not in (30, 60, 90, 120):
+            raise ValueError("La duración debe ser de 30, 60, 90 o 120 minutos")
         return value
 
 class AvailabilityUpdate(BaseModel):

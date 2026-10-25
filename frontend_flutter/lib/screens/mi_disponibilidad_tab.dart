@@ -105,14 +105,16 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
             if (availabilityRes.statusCode == 200) {
               final List<dynamic> avails = jsonDecode(availabilityRes.body);
               setState(() {
-                _selectedDates = avails.map((a) => a['date'].toString()).toSet();
+                _selectedDates =
+                    avails.map((a) => a['date'].toString()).toSet();
                 if (avails.isNotEmpty) {
                   _selectedStartTime =
                       avails.first['start_time'].toString().substring(0, 5);
                   _selectedEndTime =
                       avails.first['end_time'].toString().substring(0, 5);
                   _slotDurationMinutes =
-                      (avails.first['slot_duration_minutes'] as num?)?.toInt() ??
+                      (avails.first['slot_duration_minutes'] as num?)
+                              ?.toInt() ??
                           30;
                 }
               });
@@ -214,6 +216,7 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
       context: context,
       initialTime:
           TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1])),
+      initialEntryMode: TimePickerEntryMode.input,
     );
     if (picked == null || !mounted) return;
     final formatted =
@@ -253,175 +256,172 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
           body: _isLoading
               ? const Center(child: CircularProgressIndicator())
               : SingleChildScrollView(
-                      padding: const EdgeInsets.all(24.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _buildSectionTitle('Hora de Inicio Laboral'),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Selecciona la hora en la que inician tus consultas.',
-                            style: TextStyle(
-                                color: Color(0xFF475569), fontSize: 14),
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildSectionTitle('Hora de Inicio Laboral'),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Selecciona la hora en la que inician tus consultas.',
+                        style:
+                            TextStyle(color: Color(0xFF475569), fontSize: 14),
+                      ),
+                      const SizedBox(height: 16),
+                      _timePickerTile('Hora de inicio', _selectedStartTime,
+                          () => _selectTime(isStart: true)),
+                      const SizedBox(height: 32),
+                      _buildSectionTitle('Hora de Fin Laboral'),
+                      const SizedBox(height: 8),
+                      const Text(
+                          'Selecciona la hora en la que finalizan tus consultas.',
+                          style: TextStyle(
+                              color: Color(0xFF475569), fontSize: 14)),
+                      const SizedBox(height: 16),
+                      _timePickerTile('Hora de fin', _selectedEndTime,
+                          () => _selectTime(isStart: false)),
+                      const SizedBox(height: 32),
+                      _buildSectionTitle('Duración de cada cita'),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Este bloque se aplicará a los turnos de los días seleccionados.',
+                        style:
+                            TextStyle(color: Color(0xFF475569), fontSize: 14),
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<int>(
+                        initialValue: _slotDurationMinutes,
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          const SizedBox(height: 16),
-                          _timePickerTile('Hora de inicio', _selectedStartTime,
-                              () => _selectTime(isStart: true)),
-                          const SizedBox(height: 32),
-                          _buildSectionTitle('Hora de Fin Laboral'),
-                          const SizedBox(height: 8),
-                          const Text(
-                              'Selecciona la hora en la que finalizan tus consultas.',
-                              style: TextStyle(
-                                  color: Color(0xFF475569), fontSize: 14)),
-                          const SizedBox(height: 16),
-                          _timePickerTile('Hora de fin', _selectedEndTime,
-                              () => _selectTime(isStart: false)),
-                          const SizedBox(height: 32),
-                          _buildSectionTitle('Duración de cada cita'),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Este bloque se aplicará a los turnos de los días seleccionados.',
-                            style: TextStyle(
-                                color: Color(0xFF475569), fontSize: 14),
-                          ),
-                          const SizedBox(height: 12),
-                          DropdownButtonFormField<int>(
-                            initialValue: _slotDurationMinutes,
-                            decoration: InputDecoration(
-                              filled: true,
-                              fillColor: Colors.white,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              prefixIcon: const Icon(Icons.timelapse,
-                                  color: Color(0xFF0056B3)),
-                            ),
-                            items: const [30, 60, 120]
-                                .map((minutes) => DropdownMenuItem<int>(
-                                      value: minutes,
-                                      child: Text(minutes == 30
-                                          ? '30 minutos'
-                                          : minutes == 60
-                                              ? '1 hora'
+                          prefixIcon: const Icon(Icons.timelapse,
+                              color: Color(0xFF0056B3)),
+                        ),
+                        items: const [30, 60, 90, 120]
+                            .map((minutes) => DropdownMenuItem<int>(
+                                  value: minutes,
+                                  child: Text(minutes == 30
+                                      ? '30 minutos'
+                                      : minutes == 60
+                                          ? '1 hora'
+                                          : minutes == 90
+                                              ? '1 hora y 30 minutos'
                                               : '2 horas'),
-                                    ))
-                                .toList(),
-                            onChanged: (value) {
-                              if (value != null) {
-                                setState(() => _slotDurationMinutes = value);
-                              }
-                            },
-                          ),
-                          const SizedBox(height: 32),
-                          _buildSectionTitle('Días Laborables'),
-                          const SizedBox(height: 16),
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.5),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Column(
-                              children: [
-                                const Text(
-                                    'TOQUE PARA SELECCIONAR DÍAS LABORABLES',
-                                    style: TextStyle(
-                                        color: Color(0xFF475569),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold)),
-                                const SizedBox(height: 16),
-                                FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
+                                ))
+                            .toList(),
+                        onChanged: (value) {
+                          if (value != null) {
+                            setState(() => _slotDurationMinutes = value);
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 32),
+                      _buildSectionTitle('Días Laborables'),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Column(
+                          children: [
+                            const Text('TOQUE PARA SELECCIONAR DÍAS LABORABLES',
+                                style: TextStyle(
+                                    color: Color(0xFF475569),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 16),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('SEMANA ACTUAL',
+                                      style: TextStyle(
+                                          color: Color(0xFF38B6FF),
+                                          fontWeight: FontWeight.bold)),
+                                  const SizedBox(width: 8),
+                                  Row(
                                     children: [
-                                      const Text('SEMANA ACTUAL',
-                                          style: TextStyle(
-                                              color: Color(0xFF38B6FF),
-                                              fontWeight: FontWeight.bold)),
-                                      const SizedBox(width: 8),
-                                      Row(
-                                        children: [
-                                          IconButton(
-                                              icon: const Icon(
-                                                  Icons.chevron_left,
-                                                  color: Color(0xFF0056B3)),
-                                              onPressed: () {
-                                                setState(() => _weekOffset--);
-                                              }),
-                                          Text(
-                                              _formatWeek(caracasNow()
-                                                  .subtract(Duration(
-                                                      days:
-                                                          caracasNow().weekday -
-                                                              1))
-                                                  .add(Duration(
-                                                      days: _weekOffset * 7))),
-                                              style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Color(0xFF0B2545))),
-                                          IconButton(
-                                              icon: const Icon(
-                                                  Icons.chevron_right,
-                                                  color: Color(0xFF0056B3)),
-                                              onPressed: () {
-                                                setState(() => _weekOffset++);
-                                              }),
-                                        ],
-                                      ),
+                                      IconButton(
+                                          icon: const Icon(Icons.chevron_left,
+                                              color: Color(0xFF0056B3)),
+                                          onPressed: () {
+                                            setState(() => _weekOffset--);
+                                          }),
+                                      Text(
+                                          _formatWeek(caracasNow()
+                                              .subtract(Duration(
+                                                  days:
+                                                      caracasNow().weekday - 1))
+                                              .add(Duration(
+                                                  days: _weekOffset * 7))),
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF0B2545))),
+                                      IconButton(
+                                          icon: const Icon(Icons.chevron_right,
+                                              color: Color(0xFF0056B3)),
+                                          onPressed: () {
+                                            setState(() => _weekOffset++);
+                                          }),
                                     ],
                                   ),
-                                ),
-                                const SizedBox(height: 16),
-                                Wrap(
-                                  spacing: 12,
-                                  runSpacing: 12,
-                                  alignment: WrapAlignment.center,
-                                  children: _currentWeekDays
-                                      .map((day) => _buildDayCard(day))
-                                      .toList(),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 32),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: _isLoading ? null : _saveAvailability,
-                              icon: _isLoading
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                          color: Colors.white, strokeWidth: 2))
-                                  : Icon(_isSuccess ? Icons.check : Icons.save,
-                                      color: Colors.white),
-                              label: Text(
-                                  _isSuccess
-                                      ? '¡Guardado!'
-                                      : 'Guardar Disponibilidad',
-                                  style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold)),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _isSuccess
-                                    ? Colors.green
-                                    : const Color(0xFF0056B3),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12)),
+                                ],
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 80),
-                        ],
+                            const SizedBox(height: 16),
+                            Wrap(
+                              spacing: 12,
+                              runSpacing: 12,
+                              alignment: WrapAlignment.center,
+                              children: _currentWeekDays
+                                  .map((day) => _buildDayCard(day))
+                                  .toList(),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 32),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _isLoading ? null : _saveAvailability,
+                          icon: _isLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                      color: Colors.white, strokeWidth: 2))
+                              : Icon(_isSuccess ? Icons.check : Icons.save,
+                                  color: Colors.white),
+                          label: Text(
+                              _isSuccess
+                                  ? '¡Guardado!'
+                                  : 'Guardar Disponibilidad',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _isSuccess
+                                ? Colors.green
+                                : const Color(0xFF0056B3),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 80),
+                    ],
+                  ),
+                ),
         ),
       ),
     );

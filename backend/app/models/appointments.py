@@ -24,6 +24,8 @@ class Appointment(Base):
     patient_first_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     patient_last_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     patient_phone: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    manual_patient_birth_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    manual_patient_gender: Mapped[str | None] = mapped_column(String(30), nullable=True)
     appointment_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
     is_for_dependent: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     dependent_name: Mapped[str | None] = mapped_column(String(200), nullable=True)

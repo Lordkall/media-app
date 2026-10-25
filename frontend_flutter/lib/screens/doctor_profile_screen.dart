@@ -19,6 +19,18 @@ class DoctorProfileScreen extends StatefulWidget {
 
 class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
   late final Future<Map<String, String>> _schedule = _loadSchedule();
+  late final Future<double?> _bcvRate = _loadBcvRate();
+
+  Future<double?> _loadBcvRate() async {
+    try {
+      final response = await ApiClient.get('/users/bcv-rate');
+      if (response.statusCode != 200) return null;
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return (data['rate'] as num?)?.toDouble();
+    } catch (_) {
+      return null;
+    }
+  }
 
   Future<Map<String, String>> _loadSchedule() async {
     final id = widget.doctor['id'];
@@ -128,6 +140,22 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
             Text(specialties,
                 style: const TextStyle(fontSize: 16, color: Color(0xFF475569)),
                 textAlign: TextAlign.center),
+            if ((doctor['identity_document']?.toString().isNotEmpty ?? false) ||
+                (doctor['medical_license_number']?.toString().isNotEmpty ??
+                    false)) ...[
+              const SizedBox(height: 6),
+              if (doctor['identity_document']?.toString().isNotEmpty ?? false)
+                Text(doctor['identity_document'].toString(),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        fontSize: 14, color: Color(0xFF475569))),
+              if (doctor['medical_license_number']?.toString().isNotEmpty ??
+                  false)
+                Text(doctor['medical_license_number'].toString(),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        fontSize: 14, color: Color(0xFF475569))),
+            ],
             const SizedBox(height: 16),
             const Text('Biografía',
                 style: TextStyle(
@@ -194,8 +222,19 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                       leading: const Icon(Icons.attach_money,
                           color: Color(0xFF0056B3)),
                       title: const Text('Precio de Consulta'),
-                      subtitle:
-                          Text('\$${doctor['consultation_fee'] ?? '40.00'}')),
+                      subtitle: FutureBuilder<double?>(
+                        future: _bcvRate,
+                        builder: (context, snapshot) {
+                          final fee = (doctor['consultation_fee'] as num?)
+                                  ?.toDouble() ??
+                              50.0;
+                          final usd = '\$${fee.toStringAsFixed(1)}';
+                          if (doctor['show_fee_in_ves'] != true ||
+                              snapshot.data == null) return Text(usd);
+                          return Text(
+                              '$usd / Bs. ${(fee * snapshot.data!).toStringAsFixed(2)}');
+                        },
+                      )),
                   if ((doctor['phone']?.toString().trim().isNotEmpty ?? false))
                     ListTile(
                       leading:

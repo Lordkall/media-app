@@ -10,8 +10,10 @@ from app.models.notifications import Notification, NotificationType
 from app.models.clinics import Clinic
 from app.api.v1.endpoints.users import get_current_user
 from typing import List, Dict, Any
+import logging
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 def check_admin(user: User):
     if user.role != RoleEnum.ADMIN:
@@ -611,6 +613,9 @@ async def approve_subscription(
     sub.status = SubscriptionStatus.ACTIVE
     sub.start_date = datetime.datetime.utcnow()
     if sub.doctor_id:
+        doctor_to_approve = await db.scalar(select(Doctor).where(Doctor.id == sub.doctor_id))
+        if doctor_to_approve:
+            doctor_to_approve.is_approved = True
         await sync_doctor_plan_flags(db, sub.doctor_id, sub.plan)
     # Set grace end date (5 days after end_date)
     if sub.end_date:
@@ -660,6 +665,19 @@ async def approve_subscription(
         print(f"Error sending approval notification: {e}")
         
     await db.commit()
+    if target_user_id:
+        try:
+            from app.services.email import send_approval_email
+            recipient = await db.get(User, target_user_id)
+            if recipient:
+                await send_approval_email(
+                    recipient.email,
+                    f"{recipient.first_name} {recipient.last_name}".strip(),
+                    "clínica" if sub.clinic_id else "perfil médico",
+                    sub.plan.value,
+                )
+        except Exception as email_error:
+            logger.warning("No se pudo enviar el correo de aprobación: %s", email_error)
     return {"message": "Subscription approved"}
 
 

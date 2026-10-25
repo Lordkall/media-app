@@ -220,6 +220,9 @@ async def get_my_doctors(
         "address": doctor.clinic_info or user.address,
         "avatar_url": user.avatar_url,
         "specialties": doctor.specialties or [],
+        "identity_document": user.identity_document,
+        "medical_license_number": doctor.medical_license_number,
+        "show_fee_in_ves": doctor.show_fee_in_ves,
         "clinic_join_status": doctor.clinic_join_status or "approved",
         "bio": redact_phone_numbers(doctor.bio, user.show_whatsapp),
         "consultation_fee": doctor.consultation_fee,
@@ -276,6 +279,19 @@ async def approve_doctor_request(
         action_url="clinic_join_approved",
     ))
     await db.commit()
+    try:
+        approved_doctor = await db.get(User, doctor.user_id)
+        if approved_doctor:
+            from app.services.email import send_approval_email
+            await send_approval_email(
+                approved_doctor.email,
+                f"{approved_doctor.first_name} {approved_doctor.last_name}".strip(),
+                "afiliación médica",
+                "plan de la clínica",
+            )
+    except Exception as email_error:
+        import logging
+        logging.getLogger(__name__).warning("No se pudo enviar el correo de afiliación aprobada: %s", email_error)
     return {"message": "Doctor aprobado", "clinic_id": clinic.id}
 
 

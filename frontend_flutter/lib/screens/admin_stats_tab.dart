@@ -100,26 +100,54 @@ class _AdminStatsTabState extends State<AdminStatsTab> {
               const SizedBox(height: 24),
               _buildDemographicBreakdown(
                 'Edades de pacientes',
-                _statsData?['patient_age_ranges'] as Map<String, dynamic>? ?? const {},
-                const {'0-12': '0–12', '13-17': '13–17', '18-29': '18–29', '30-44': '30–44', '45-59': '45–59', '60+': '60+', 'Sin dato': 'Sin dato'},
+                _statsData?['patient_age_ranges'] as Map<String, dynamic>? ??
+                    const {},
+                const {
+                  '0-12': '0–12',
+                  '13-17': '13–17',
+                  '18-29': '18–29',
+                  '30-44': '30–44',
+                  '45-59': '45–59',
+                  '60+': '60+',
+                  'Sin dato': 'Sin dato'
+                },
               ),
               const SizedBox(height: 16),
               _buildDemographicBreakdown(
                 'Género de pacientes',
-                _statsData?['patient_genders'] as Map<String, dynamic>? ?? const {},
-                const {'masculino': 'Masculino', 'femenino': 'Femenino', 'otro_o_sin_especificar': 'Otro / sin especificar'},
+                _statsData?['patient_genders'] as Map<String, dynamic>? ??
+                    const {},
+                const {
+                  'masculino': 'Masculino',
+                  'femenino': 'Femenino',
+                  'otro_o_sin_especificar': 'Otro / sin especificar'
+                },
               ),
               const SizedBox(height: 16),
               _buildDemographicBreakdown(
                 'Edades de doctores',
-                _statsData?['doctor_age_ranges'] as Map<String, dynamic>? ?? const {},
-                const {'0-12': '0–12', '13-17': '13–17', '18-29': '18–29', '30-44': '30–44', '45-59': '45–59', '60+': '60+', 'Sin dato': 'Sin dato'},
+                _statsData?['doctor_age_ranges'] as Map<String, dynamic>? ??
+                    const {},
+                const {
+                  '0-12': '0–12',
+                  '13-17': '13–17',
+                  '18-29': '18–29',
+                  '30-44': '30–44',
+                  '45-59': '45–59',
+                  '60+': '60+',
+                  'Sin dato': 'Sin dato'
+                },
               ),
               const SizedBox(height: 16),
               _buildDemographicBreakdown(
                 'Género de doctores',
-                _statsData?['doctor_genders'] as Map<String, dynamic>? ?? const {},
-                const {'masculino': 'Masculino', 'femenino': 'Femenino', 'otro_o_sin_especificar': 'Otro / sin especificar'},
+                _statsData?['doctor_genders'] as Map<String, dynamic>? ??
+                    const {},
+                const {
+                  'masculino': 'Masculino',
+                  'femenino': 'Femenino',
+                  'otro_o_sin_especificar': 'Otro / sin especificar'
+                },
               ),
               const SizedBox(height: 32),
               const Text(
@@ -144,29 +172,61 @@ class _AdminStatsTabState extends State<AdminStatsTab> {
     Map<String, dynamic> values,
     Map<String, String> labels,
   ) {
+    final maxValue = labels.keys
+        .map((key) => (values[key] as num?)?.toDouble() ?? 0)
+        .fold<double>(0, (a, b) => a > b ? a : b);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4)),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0B2545))),
+          Text(title,
+              style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0B2545))),
           const SizedBox(height: 8),
-          ...labels.entries.map((entry) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 3),
-                child: Row(
-                  children: [
-                    Expanded(child: Text(entry.value, style: const TextStyle(color: Color(0xFF475569)))),
-                    Text('${values[entry.key] ?? 0}', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0056B3))),
-                  ],
-                ),
-              )),
+          ...labels.entries.map((entry) {
+            final count = (values[entry.key] as num?)?.toInt() ?? 0;
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 5),
+              child: Row(children: [
+                SizedBox(
+                    width: 120,
+                    child: Text(entry.value,
+                        style: const TextStyle(
+                            color: Color(0xFF475569), fontSize: 12))),
+                Expanded(
+                    child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: LinearProgressIndicator(
+                    value: maxValue == 0 ? 0 : count / maxValue,
+                    minHeight: 11,
+                    backgroundColor: const Color(0xFFE2E8F0),
+                    color: const Color(0xFF00A896),
+                  ),
+                )),
+                const SizedBox(width: 10),
+                SizedBox(
+                    width: 28,
+                    child: Text('$count',
+                        textAlign: TextAlign.end,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0056B3)))),
+              ]),
+            );
+          }),
         ],
       ),
     );

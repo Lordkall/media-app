@@ -437,7 +437,8 @@ class _PersonalInfoPageState extends State<_PersonalInfoPage> {
       TextEditingController(text: widget.user['phone']?.toString());
   bool saving = false;
   late bool showWhatsapp = widget.user['show_whatsapp'] != false;
-  late DateTime? birthDate = DateTime.tryParse(widget.user['birth_date']?.toString() ?? '');
+  late DateTime? birthDate =
+      DateTime.tryParse(widget.user['birth_date']?.toString() ?? '');
 
   int? get _age {
     final value = birthDate;
@@ -447,33 +448,40 @@ class _PersonalInfoPageState extends State<_PersonalInfoPage> {
         (today.month == value.month && today.day < value.day);
     return today.year - value.year - (beforeBirthday ? 1 : 0);
   }
+
   @override
   Widget build(BuildContext context) =>
       _SettingsPage(title: 'Información Personal', children: [
         _field('Nombres', name),
         _field('Apellidos', surname),
+        _field(
+            'Cédula / RIF',
+            TextEditingController(
+                text: widget.user['identity_document']?.toString() ?? ''),
+            enabled: false),
         _field('Teléfono de contacto', phone, type: TextInputType.phone),
         if (widget.user['role']?.toString() == 'patient' ||
             widget.user['role']?.toString() == 'doctor')
           OutlinedButton.icon(
-          onPressed: saving
-              ? null
-              : () async {
-                  final today = DateTime.now();
-                  final selected = await showDatePicker(
-                    context: context,
-                    initialDate: birthDate ?? DateTime(today.year - 18, today.month, today.day),
-                    firstDate: DateTime(1900),
-                    lastDate: today,
-                    helpText: 'Fecha de nacimiento',
-                  );
-                  if (selected != null) setState(() => birthDate = selected);
-                },
-          icon: const Icon(Icons.cake_outlined),
-          label: Text(birthDate == null
-              ? 'Fecha de nacimiento'
-              : 'Nacimiento: ${birthDate!.day.toString().padLeft(2, '0')}/${birthDate!.month.toString().padLeft(2, '0')}/${birthDate!.year}'),
-        ),
+            onPressed: saving
+                ? null
+                : () async {
+                    final today = DateTime.now();
+                    final selected = await showDatePicker(
+                      context: context,
+                      initialDate: birthDate ??
+                          DateTime(today.year - 18, today.month, today.day),
+                      firstDate: DateTime(1900),
+                      lastDate: today,
+                      helpText: 'Fecha de nacimiento',
+                    );
+                    if (selected != null) setState(() => birthDate = selected);
+                  },
+            icon: const Icon(Icons.cake_outlined),
+            label: Text(birthDate == null
+                ? 'Fecha de nacimiento'
+                : 'Nacimiento: ${birthDate!.day.toString().padLeft(2, '0')}/${birthDate!.month.toString().padLeft(2, '0')}/${birthDate!.year}'),
+          ),
         if ((widget.user['role']?.toString() == 'patient' ||
                 widget.user['role']?.toString() == 'doctor') &&
             _age != null)
@@ -506,7 +514,8 @@ class _PersonalInfoPageState extends State<_PersonalInfoPage> {
                       'first_name': name.text.trim(),
                       'last_name': surname.text.trim(),
                       'phone': phone.text.trim(),
-                      'birth_date': birthDate?.toIso8601String().split('T').first,
+                      'birth_date':
+                          birthDate?.toIso8601String().split('T').first,
                       'show_whatsapp': showWhatsapp,
                     });
                     if (context.mounted) {
@@ -579,6 +588,7 @@ class _DoctorDataPageState extends State<_DoctorDataPage> {
       text: widget.doctor['consultation_fee']?.toString());
   late final location =
       TextEditingController(text: widget.doctor['clinic_info']?.toString());
+  late bool showFeeInVes = widget.doctor['show_fee_in_ves'] == true;
   late List<String> specialties =
       (widget.doctor['specialties'] as List? ?? const [])
           .map((value) => value.toString())
@@ -595,6 +605,12 @@ class _DoctorDataPageState extends State<_DoctorDataPage> {
   @override
   Widget build(BuildContext context) =>
       _SettingsPage(title: 'Datos Laborales', children: [
+        _field(
+            'Matrícula sanitaria',
+            TextEditingController(
+                text: widget.doctor['medical_license_number']?.toString() ??
+                    'No registrada'),
+            enabled: false),
         _field('Biografía', bio, lines: 4),
         Autocomplete<String>(
           textEditingController: _specialtySearch,
@@ -636,6 +652,14 @@ class _DoctorDataPageState extends State<_DoctorDataPage> {
         const SizedBox(height: 16),
         _field('Precio de la consulta', fee,
             type: const TextInputType.numberWithOptions(decimal: true)),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Mostrar conversión a bolívares'),
+          subtitle: const Text(
+              'Presentar el precio en USD y su equivalente con la tasa BCV del día.'),
+          value: showFeeInVes,
+          onChanged: (value) => setState(() => showFeeInVes = value),
+        ),
         _field('Ubicación de consultorio', location, lines: 2),
         FilledButton(
             onPressed: () async {
@@ -643,6 +667,7 @@ class _DoctorDataPageState extends State<_DoctorDataPage> {
                 'bio': bio.text.trim(),
                 'consultation_fee':
                     double.tryParse(fee.text.replaceAll(',', '.')),
+                'show_fee_in_ves': showFeeInVes,
                 'clinic_info': location.text.trim(),
                 'specialties': specialties
               });

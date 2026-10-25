@@ -21,6 +21,8 @@ class _ManualAppointmentSheetState extends State<ManualAppointmentSheet> {
   String? _reason;
   static const _reasons = ['Consulta', 'Entrega de examenes', 'Cura', 'Otros'];
   DateTime? _date;
+  DateTime? _patientBirthDate;
+  String? _patientGender;
   List<Map<String, dynamic>> _slots = [];
   int? _turn;
   bool _loadingSlots = false;
@@ -98,6 +100,10 @@ class _ManualAppointmentSheetState extends State<ManualAppointmentSheet> {
         'patient_first_name': _firstName.text.trim(),
         'patient_last_name': _lastName.text.trim(),
         'patient_phone': _phone.text.trim(),
+        'patient_birth_date': _patientBirthDate == null
+            ? null
+            : '${_patientBirthDate!.year}-${_patientBirthDate!.month.toString().padLeft(2, '0')}-${_patientBirthDate!.day.toString().padLeft(2, '0')}',
+        'patient_gender': _patientGender,
         'appointment_reason': _reason!,
       });
       if (response.statusCode == 201) {
@@ -175,6 +181,45 @@ class _ManualAppointmentSheetState extends State<ManualAppointmentSheet> {
                             (value?.trim().length ?? 0) > 11
                         ? 'Ingresa un teléfono válido'
                         : null),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: _saving
+                      ? null
+                      : () async {
+                          final today = DateTime.now();
+                          final value = await showDatePicker(
+                            context: context,
+                            initialDate: _patientBirthDate ??
+                                DateTime(
+                                    today.year - 30, today.month, today.day),
+                            firstDate: DateTime(1900),
+                            lastDate: today,
+                            helpText: 'Fecha de nacimiento del paciente',
+                          );
+                          if (value != null && mounted)
+                            setState(() => _patientBirthDate = value);
+                        },
+                  icon: const Icon(Icons.cake_outlined),
+                  label: Text(_patientBirthDate == null
+                      ? 'Fecha de nacimiento'
+                      : 'Nacimiento: ${_patientBirthDate!.day.toString().padLeft(2, '0')}/${_patientBirthDate!.month.toString().padLeft(2, '0')}/${_patientBirthDate!.year}'),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  initialValue: _patientGender,
+                  decoration: _decoration('Género'),
+                  items: const [
+                    'Masculino',
+                    'Femenino',
+                    'Otro / sin especificar'
+                  ]
+                      .map((value) =>
+                          DropdownMenuItem(value: value, child: Text(value)))
+                      .toList(),
+                  onChanged: _saving
+                      ? null
+                      : (value) => setState(() => _patientGender = value),
+                ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   initialValue: _reason,

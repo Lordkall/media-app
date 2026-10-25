@@ -207,6 +207,15 @@ async def register(
 
         await db.commit()
         await db.refresh(new_user)
+        try:
+            from app.services.email import send_registration_email
+            await send_registration_email(
+                new_user.email,
+                f"{new_user.first_name} {new_user.last_name}".strip(),
+                {"doctor": "doctor", "patient": "paciente", "clinic": "clínica"}[user_in.role.value],
+            )
+        except Exception as email_error:
+            logger.warning("No se pudo enviar el correo de bienvenida a %s: %s", new_user.email, email_error)
         return new_user
     except IntegrityError:
         await db.rollback()

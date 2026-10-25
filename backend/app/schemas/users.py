@@ -155,6 +155,7 @@ class UserResponse(BaseModel):
     last_name: str
     role: RoleEnum
     phone: Optional[str] = None
+    identity_document: Optional[str] = None
     show_whatsapp: bool = True
     state: Optional[str] = None
     address: Optional[str] = None

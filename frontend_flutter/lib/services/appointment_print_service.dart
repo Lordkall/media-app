@@ -250,7 +250,7 @@ class AppointmentPrintService {
                       : patientName;
                   final patientAge = item['patient_age'] == null
                       ? '-'
-                      : '${item['patient_age']} años';
+                      : (item['patient_age_display']?.toString() ?? item['patient_age'].toString());
 
                   final phone =
                       (item['patient_phone']?.toString().isNotEmpty == true)
@@ -556,7 +556,7 @@ class AppointmentPrintService {
                       : patientName;
                   final patientAge = item['patient_age'] == null
                       ? '-'
-                      : '${item['patient_age']} años';
+                      : (item['patient_age_display']?.toString() ?? item['patient_age'].toString());
 
                   final phone =
                       (item['patient_phone']?.toString().isNotEmpty == true)

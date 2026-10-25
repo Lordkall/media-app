@@ -7,6 +7,29 @@ SENDER_EMAIL = os.getenv("SENDER_EMAIL", "onboarding@resend.dev")
 
 logger = logging.getLogger(__name__)
 
+def _branded_notice(title: str, greeting: str, message: str, badge: str) -> str:
+    import html
+    return f"""<!doctype html><html lang=es><meta charset=utf-8><body style='margin:0;background:#eef4fb;font-family:Arial,sans-serif;color:#16324f'>
+    <div style='max-width:600px;margin:32px auto;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 8px 30px #1232'>
+      <div style='background:#0759ad;padding:24px;text-align:center;color:#fff'><div style='font-size:24px;font-weight:bold'>Salud Now</div><div style='font-size:13px;opacity:.9'>Tu salud, a un clic</div></div>
+      <div style='padding:32px'><div style='display:inline-block;background:#e7f4ff;color:#0759ad;padding:8px 13px;border-radius:20px;font-weight:bold'>{html.escape(badge)}</div>
+        <h1 style='font-size:24px;margin:20px 0 12px'>{html.escape(title)}</h1><p style='font-size:16px;line-height:1.6'>Hola {html.escape(greeting)},</p>
+        <p style='font-size:16px;line-height:1.7;color:#475569'>{html.escape(message)}</p><p style='font-size:15px;line-height:1.6'>Ingresa a Salud Now para continuar y consultar el estado de tu cuenta.</p>
+      </div><div style='background:#f7fafc;padding:18px;text-align:center;color:#64748b;font-size:12px'>© 2026 Salud Now · Este correo fue enviado automáticamente.</div>
+    </div></body></html>"""
+
+async def send_registration_email(to_email: str, name: str, role: str):
+    await send_email(to_email, "Bienvenido a Salud Now", _branded_notice(
+        "¡Tu registro está listo!", name,
+        f"Tu cuenta de {role} fue creada correctamente. Ya puedes iniciar sesión. Si tu perfil requiere revisión, te avisaremos cuando se complete.",
+        "BIENVENIDO"))
+
+async def send_approval_email(to_email: str, name: str, entity: str, plan: str):
+    await send_email(to_email, f"Tu {entity} fue aprobado · Salud Now", _branded_notice(
+        f"¡{entity.capitalize()} aprobado!", name,
+        f"La revisión de tu {entity} finalizó correctamente y el plan {plan} está activo. Ya puedes usar las funciones habilitadas para tu cuenta.",
+        "APROBACIÓN"))
+
 html_template = """
 <!DOCTYPE html>
 <html lang="es">

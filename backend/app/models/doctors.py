@@ -85,6 +85,7 @@ class Doctor(Base):
 
     # Métricas
     consultation_fee: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    show_fee_in_ves: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     rating: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     total_reviews: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     max_patients_per_day: Mapped[int] = mapped_column(Integer, default=5, nullable=False)

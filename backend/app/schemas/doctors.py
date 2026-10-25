@@ -6,6 +6,7 @@ class DoctorUpdate(BaseModel):
     bio: Optional[str] = None
     clinic_info: Optional[str] = None
     consultation_fee: Optional[float] = None
+    show_fee_in_ves: Optional[bool] = None
     specialties: Optional[List[str]] = Field(default=None, max_length=5)
     max_patients_per_day: Optional[int] = None
 
@@ -29,6 +30,8 @@ class DoctorResponse(BaseModel):
     is_featured: bool
     is_sponsored: bool
     consultation_fee: Optional[float]
+    show_fee_in_ves: bool = False
+    medical_license_number: Optional[str] = None
     rating: float
     total_reviews: int
     max_patients_per_day: int
