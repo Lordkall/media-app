@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'dart:async';
 import 'dart:convert';
 import '../core/api_client.dart';
@@ -105,82 +103,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
-  bool _isTestingPush = false;
-
-  Future<void> _sendTestPush() async {
-    setState(() => _isTestingPush = true);
-    try {
-      // Refresh the device token immediately before the diagnostic push. This
-      // lets the test recover when startup token registration was interrupted.
-      if (!kIsWeb) {
-        final messaging = FirebaseMessaging.instance;
-        await messaging.setAutoInitEnabled(true);
-        final settings = await messaging.requestPermission(
-          alert: true,
-          badge: true,
-          sound: true,
-        );
-        final permissionGranted =
-            settings.authorizationStatus == AuthorizationStatus.authorized ||
-                settings.authorizationStatus == AuthorizationStatus.provisional;
-        if (!permissionGranted) {
-          throw Exception(
-              'Android no concedió permiso para mostrar notificaciones.');
-        }
-
-        final token = await messaging.getToken();
-        if (token == null || token.isEmpty) {
-          throw Exception(
-              'Firebase no pudo obtener el token de este teléfono. Verifica la configuración de Firebase de la APK.');
-        }
-
-        final tokenResponse = await ApiClient.put(
-          '/users/me',
-          {'fcm_token': token},
-        );
-        if (tokenResponse.statusCode != 200) {
-          String detail = tokenResponse.body;
-          try {
-            final payload = jsonDecode(tokenResponse.body);
-            detail = payload['detail']?.toString() ?? detail;
-          } catch (_) {}
-          throw Exception(
-              'El servidor rechazó el registro del teléfono (${tokenResponse.statusCode}): $detail');
-        }
-      }
-
-      final response = await ApiClient.post('/users/me/notifications/test-push', {});
-      if (!mounted) return;
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final detail = data['detail']?.toString() ?? 'Respuesta del servidor';
-        final isOk = data['status'] == 'ok';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(detail),
-            backgroundColor: isOk ? Colors.green : Colors.orange,
-            duration: const Duration(seconds: 4),
-          ),
-        );
-        _fetchNotifications();
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error del servidor (${response.statusCode}): ${response.body}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')), backgroundColor: Colors.red),
-      );
-    } finally {
-      if (mounted) setState(() => _isTestingPush = false);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -190,18 +112,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         backgroundColor: const Color(0xFF0056B3),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
-          IconButton(
-            tooltip: 'Enviar notificación Push de prueba al teléfono',
-            onPressed: _isTestingPush ? null : _sendTestPush,
-            icon: _isTestingPush
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white),
-                  )
-                : const Icon(Icons.notifications_active, color: Colors.white),
-          ),
           if (_notifications.isNotEmpty)
             IconButton(
               tooltip: 'Eliminar todas las notificaciones',
