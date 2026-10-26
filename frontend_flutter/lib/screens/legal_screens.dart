@@ -6,7 +6,7 @@ import '../core/api_client.dart';
 import '../widgets/web_footer.dart';
 
 const String _privacyMarkdown = """
-**Grupo MedIA**, desarrollador de Salud Now, es el responsable del tratamiento de los datos personales recogidos mediante la aplicación y el sitio web. Para consultas sobre privacidad o ejercicio de derechos: **saludnowsite@gmail.com**.
+**Lorenzo Avila**, quien opera Salud Now bajo el nombre comercial **Grupo MedIA**, es el responsable del tratamiento de los datos personales recogidos mediante la aplicación y el sitio web. Para consultas sobre privacidad o ejercicio de derechos: **saludnowsite@gmail.com**.
 
 ### Datos que recogemos
 Para crear y gestionar una cuenta y facilitar el contacto entre pacientes y profesionales, recogemos datos de identificación y contacto (por ejemplo, nombre, correo electrónico y teléfono). Al solicitar una cita, también se recoge el motivo de consulta y los datos necesarios para identificar y organizar esa cita. En los perfiles profesionales se pueden recoger especialidades y datos o documentos de acreditación; algunos formularios también solicitan fecha de nacimiento, género y cédula/RIF. No afirmamos que la plataforma recoja únicamente datos de contacto y motivo de consulta: estos datos adicionales se solicitan según el tipo de cuenta y la función utilizada.
@@ -18,7 +18,7 @@ Usamos los datos para prestar las funciones de Salud Now, gestionar cuentas y ci
 - **Usuario**: Cualquier persona registrada (Paciente, Profesional o Clínica).
 
 ### 2. Descargo de Responsabilidad Médico y Naturaleza del Servicio
-La aplicación **SaludNow**, operada por la entidad mercantil **SaludNow, C.A.**, funciona exclusivamente como una herramienta tecnológica e intermediaria para la gestión de citas y conexión entre usuarios y prestadores de salud. Se establece de forma explícita e inequívoca que la aplicación **no es un dispositivo médico, no emite diagnósticos, no indica tratamientos** y su uso **no sustituye bajo ninguna circunstancia el criterio, la evaluación o el consejo de un profesional de la salud certificado**. Ante cualquier sospecha clínica, duda médica o emergencia, el usuario debe consultar a un médico calificado o acudir a los servicios locales de urgencia.
+La aplicación **Salud Now**, operada por **Lorenzo Avila bajo el nombre comercial Grupo MedIA**, funciona exclusivamente como una herramienta tecnológica e intermediaria para la gestión de citas y conexión entre usuarios y prestadores de salud. Se establece de forma explícita e inequívoca que la aplicación **no es un dispositivo médico, no emite diagnósticos, no indica tratamientos** y su uso **no sustituye bajo ninguna circunstancia el criterio, la evaluación o el consejo de un profesional de la salud certificado**. Ante cualquier sospecha clínica, duda médica o emergencia, el usuario debe consultar a un médico calificado o acudir a los servicios locales de urgencia.
 
 ### 3. Registro, veracidad y seguridad
 Todo usuario debe registrarse con información veraz. Es su responsabilidad custodiar sus credenciales. Los Doctores y Clínicas deben proveer documentación comprobatoria de sus licencias. El acceso a los datos de una cita se limita a las funciones necesarias para gestionarla.
@@ -56,7 +56,7 @@ Para consultas: **saludnowsite@gmail.com**
 
 const String _cookiesMarkdown = """
 ### 1. Introducción y alcance
-En **Salud Now** operada por **Salud Now C.A**, valoramos tu privacidad. Esta política explica cómo usamos cookies, Local Storage, SDKs móviles y tokens en nuestra plataforma.
+En **Salud Now**, operada por **Lorenzo Avila bajo el nombre comercial Grupo MedIA**, valoramos tu privacidad. Esta política explica cómo usamos cookies, Local Storage, SDKs móviles y tokens en nuestra plataforma.
 
 ### 2. ¿Qué son estas tecnologías?
 Son pequeños archivos de datos o identificadores almacenados en tu navegador o dispositivo móvil que permiten recordar tus preferencias, mantener tu sesión activa de forma segura y analizar el rendimiento general.
@@ -91,7 +91,7 @@ Dudas de privacidad: **saludnowsite@gmail.com**
 
 const String _termsMarkdown = """
 ### 1. Aceptación de los Términos y Registro
-Al registrarte en **Salud Now** de **Salud Now C.A**, aceptas estos términos. Debes ser mayor de edad o contar con representación legal para agendar.
+Al registrarte en **Salud Now**, operada por **Lorenzo Avila bajo el nombre comercial Grupo MedIA**, aceptas estos términos. Debes ser mayor de edad o contar con representación legal para agendar.
 
 ### 2. Glosario y Definiciones
 - **Paciente**: Quien busca agendar servicios.
@@ -100,7 +100,7 @@ Al registrarte en **Salud Now** de **Salud Now C.A**, aceptas estos términos. D
 - **No-Show**: Inasistencia sin aviso previo.
 
 ### 3. Descargo de Responsabilidad Médico
-La aplicación móvil y plataforma web **SaludNow**, operada por la entidad mercantil **SaludNow, C.A.**, funciona exclusivamente como una herramienta tecnológica e intermediaria de conexión y gestión de citas entre usuarios y profesionales o entidades de salud independientes. 
+La aplicación móvil y plataforma web **Salud Now**, operada por **Lorenzo Avila bajo el nombre comercial Grupo MedIA**, funciona exclusivamente como una herramienta tecnológica e intermediaria de conexión y gestión de citas entre usuarios y profesionales o entidades de salud independientes.
 
 Se establece de forma explícita e inequívoca que la aplicación **SaludNow no es un dispositivo médico ni software como dispositivo médico (SaMD)**, no emite diagnósticos clínicos, no prescribe ni indica tratamientos terapéuticos o farmacológicos, y no efectúa actos de medicina directa. Su uso **no sustituye bajo ninguna circunstancia el criterio, la evaluación presencial, el juicio diagnóstico o el consejo de un profesional de la salud certificado** y habilitado para el ejercicio de la medicina. 
 

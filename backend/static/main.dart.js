@@ -139788,7 +139788,7 @@ i=k.a(i==null?f:i.h(0,"doctor_age_ranges"))
 i=g.GT("Edades de doctores",i==null?B.fj:i,B.a1S)
 h=g.e
 k=k.a(h==null?f:h.h(0,"doctor_genders"))
-return A.aq(f,A.fw(!0,A.ed(A.al(A.b([B.bBv,B.bA,n,B.af,m,B.bA,l,B.af,j,B.af,i,B.af,g.GT("G\xe9nero de doctores",k==null?B.fj:k,B.a2v),B.eA,B.bD3,B.af,g.ar_(),B.m6],s),B.bz,B.x,B.D,0,B.K),f,B.a1,B.ci,f,f,B.aL),B.ai,!0),B.H,f,f,B.GX,f,f,f,f,f,f,f)},
+return A.aq(f,A.fw(!0,A.ed(A.al(A.b([B.bBu,B.bA,n,B.af,m,B.bA,l,B.af,j,B.af,i,B.af,g.GT("G\xe9nero de doctores",k==null?B.fj:k,B.a2v),B.eA,B.bD3,B.af,g.ar_(),B.m6],s),B.bz,B.x,B.D,0,B.K),f,B.a1,B.ci,f,f,B.aL),B.ai,!0),B.H,f,f,B.GX,f,f,f,f,f,f,f)},
 GT(a,b,c){var s,r,q=null,p=c.gdV(),o=t.i,n=p.i3(p,new A.aN_(b),o).kM(0,0,new A.aN0(),o)
 o=A.a6(16)
 p=A.b([new A.bS(0,B.aJ,B.a_.dc(0.05),B.fm,10)],t.V)
@@ -140082,14 +140082,14 @@ o=A.b([A.aP(A.b([r,B.yK,q,B.bm,A.al(o,B.hd,B.x,B.D,0,B.K)],s),B.ag,B.x,B.D,0,j,j
 if(p){r=a4==null?j:a4.toUpperCase()
 B.k.L(o,A.b([B.bb,A.lq(B.K3,A.v("\u2714 Aprobar Pago "+(r==null?"":r),j,j,j,j,B.oz,j,j,j),new A.aNb(k,a6),A.eV(j,j,B.cj,j,j,j,j,j,j,j,j,B.bqR,j,j,new A.bL(A.a6(20),B.U),j,j,j,j,j)),A.lq(B.an4,B.bDS,new A.aNc(k,a6),A.eV(j,j,B.mS,j,j,j,j,j,j,j,j,B.bqS,j,j,new A.bL(A.a6(20),B.U),j,j,j,j,j))],s))}o.push(B.bb)
 o.push(B.eK)
-o.push(B.bDl)
+o.push(B.bDk)
 o.push(B.ca)
-r=A.b([A.b2(A.lq(B.amK,B.bD9,new A.aNd(k,a),A.eV(j,j,B.O,j,j,j,j,j,j,j,j,j,j,j,j,j,j,j,j,j)),1)],s)
+r=A.b([A.b2(A.lq(B.amK,B.bD8,new A.aNd(k,a),A.eV(j,j,B.O,j,j,j,j,j,j,j,j,j,j,j,j,j,j,j,j,j)),1)],s)
 if(k.w==="Cl\xednicas")B.k.L(r,A.b([B.bm,A.b2(A.lq(B.Kd,B.a98,new A.aNe(k,a),A.eV(j,j,B.AQ,j,j,j,j,j,j,j,j,j,j,j,j,j,j,j,j,j)),1)],s))
 else B.k.L(r,A.b([B.bm,A.b2(A.lq(B.Kd,B.a98,new A.aNf(k,a),A.eV(j,j,B.AQ,j,j,j,j,j,j,j,j,j,j,j,j,j,j,j,j,j)),1)],s))
 o.push(A.aP(r,B.J,B.x,B.D,0,j,j))
 o.push(B.bb)
-o.push(A.lq(B.ank,B.bDr,new A.aNg(k,a),A.eV(j,j,B.O,j,j,j,j,j,j,j,j,B.a7W,j,j,new A.bL(A.a6(20),B.U),j,j,j,j,j)))
+o.push(A.lq(B.ank,B.bDq,new A.aNg(k,a),A.eV(j,j,B.O,j,j,j,j,j,j,j,j,B.a7W,j,j,new A.bL(A.a6(20),B.U),j,j,j,j,j)))
 o.push(B.bb)
 o.push(A.k0(B.am8,B.bCI,new A.aNh(k,a),A.xh(j,j,j,j,j,j,j,j,j,j,j,B.a7W,j,j,new A.bL(A.a6(20),B.U),B.GM,j,j,j,j)))
 return A.aq(j,A.al(o,B.ag,B.x,B.D,0,B.K),B.H,j,j,new A.ay(i,j,g,h,j,j,B.a4),j,j,j,B.ch,j,j,j)}}
@@ -140170,7 +140170,7 @@ return null},
 $S:0}
 A.aNm.prototype={
 $1(a){var s=null,r=A.v("Eliminar "+this.a.a,s,s,s,s,s,s,s,s),q=A.v("\xbfEliminar permanentemente a "+this.b+" y sus datos de la base de datos?\nEsta acci\xf3n no se puede deshacer.",s,s,s,s,s,s,s,s)
-return A.eR(A.b([A.d8(B.eY,new A.aNk(a),s),A.d8(B.bDe,new A.aNl(a),A.k9(s,s,s,s,s,s,s,s,s,B.bd,s,s,s,s,s,s,s,s,s,s))],t.p),s,s,q,s,s,r)},
+return A.eR(A.b([A.d8(B.eY,new A.aNk(a),s),A.d8(B.bDd,new A.aNl(a),A.k9(s,s,s,s,s,s,s,s,s,B.bd,s,s,s,s,s,s,s,s,s,s))],t.p),s,s,q,s,s,r)},
 $S:18}
 A.aNk.prototype={
 $0(){A.aG(this.a,!1).cE(!1)
@@ -140950,7 +140950,7 @@ return A.z($async$$0,r)},
 $S:3}
 A.aO9.prototype={
 $1(a){var s=null,r=A.a6(24),q=t.p,p=A.al(A.b([A.aq(s,B.anq,B.H,s,s,new A.ay(B.agz,s,A.cS(B.afW,2),s,s,s,B.bB),s,72,s,s,s,s,72),B.yN,B.bBE,B.bb,B.bBV],q),B.J,B.x,B.aC,0,B.K),o=A.d8(B.bAp,new A.aO4(a),s)
-return A.eR(A.b([o,A.asZ(B.amc,B.bBx,this.a.a==null?s:new A.aO5(a))],q),B.d3,B.afK,p,s,new A.bL(r,B.U),s)},
+return A.eR(A.b([o,A.asZ(B.amc,B.bBw,this.a.a==null?s:new A.aO5(a))],q),B.d3,B.afK,p,s,new A.bL(r,B.U),s)},
 $S:18}
 A.aO4.prototype={
 $0(){A.aG(this.a,!1).cE(!1)
@@ -141088,8 +141088,8 @@ break
 case 6:case 1:return A.y(q,r)
 case 2:return A.x(o.at(-1),r)}})
 return A.z($async$IP,r)},
-H(a){var s=this,r=null,q=A.hz(r,!0,B.f5,r,r,0,r,B.alT,B.bDh,r),p=J.f4(s.d)?s.gaJg():r
-p=A.b([B.bDu,B.bA,A.lq(B.amI,B.bAB,p,A.eV(r,r,B.O,r,r,r,r,r,r,r,r,r,B.Bh,r,new A.bL(A.a6(24),B.U),r,r,r,r,r))],t.p)
+H(a){var s=this,r=null,q=A.hz(r,!0,B.f5,r,r,0,r,B.alT,B.bDg,r),p=J.f4(s.d)?s.gaJg():r
+p=A.b([B.bDt,B.bA,A.lq(B.amI,B.bAB,p,A.eV(r,r,B.O,r,r,r,r,r,r,r,r,r,B.Bh,r,new A.bL(A.a6(24),B.U),r,r,r,r,r))],t.p)
 if(J.fn(s.d))p.push(B.bkj)
 p.push(B.eA)
 p.push(A.b2(s.e?B.bV:A.t0(r,new A.aPB(s),J.bh(s.d),r,!1),1))
@@ -141123,7 +141123,7 @@ p=s.a
 o=A.a6(12)
 n=t.p
 p=A.ed(A.al(A.b([i,B.an,g,B.an,e,B.an,c,B.an,r,B.an,A.ek(l,B.bt,!1,l,!0,B.E,l,A.ez(),q,l,l,l,l,l,2,A.dl(l,new A.c9(4,o,B.bS),l,l,l,l,l,l,!0,l,l,l,l,l,l,l,l,l,l,l,l,l,l,l,l,l,l,l,l,l,l,l,l,l,l,l,l,l,l,l,"Contrase\xf1a Temporal",!0,!0,!1,l,l,l,l,l,l,l,l,A.cX(l,l,l,A.dD(p?B.qf:B.qg,l,l,l),l,l,new A.aPv(s,b),l,l,l,l,l),l,l,l,l,l),B.a1,!0,l,!0,l,!1,l,B.bn,l,l,l,l,l,l,l,l,1,l,l,p,"\u2022",l,l,l,l,l,!1,l,l,!1,l,!0,l,B.bs,l,l,l,l,l,l,l,l,l,l,l,l,!0,B.aA,l,B.bq,l,l,l,l)],n),B.J,B.x,B.aC,0,B.K),l,B.a1,l,l,l,B.aL)
-return A.eR(A.b([A.d8(B.bBq,new A.aPw(a),l),A.jN(B.bCp,new A.aPx(s,m.b,q,j,h,f,d,a),A.eV(l,l,B.O,l,l,l,l,l,l,l,l,l,B.n3,l,new A.bL(A.a6(20),B.U),l,l,l,l,l))],n),l,l,p,l,new A.bL(k,B.U),B.bzl)},
+return A.eR(A.b([A.d8(B.bBp,new A.aPw(a),l),A.jN(B.bCp,new A.aPx(s,m.b,q,j,h,f,d,a),A.eV(l,l,B.O,l,l,l,l,l,l,l,l,l,B.n3,l,new A.bL(A.a6(20),B.U),l,l,l,l,l))],n),l,l,p,l,new A.bL(k,B.U),B.bzl)},
 $S:97}
 A.aPt.prototype={
 $1(a){var s=null
@@ -141223,7 +141223,7 @@ s=this.c
 s.toString
 A.en(r,r,!1,r,new A.aQk(q,this,new A.bT(new A.cD("Apelaci\xf3n de cuenta bloqueada",B.cI,B.bu),p),new A.bT(B.aE,p)),s,r,!0,t.z)},
 H(a){var s=this,r=null,q=A.hz(r,!1,B.O,r,!0,0,r,r,A.rL("assets/logo_white.png",new A.aQo(),r,48,r),64),p=A.a6(20),o=A.aq(r,B.amS,B.H,r,r,new A.ay(B.agx,r,A.cS(B.afF,2),r,r,r,B.bB),r,r,r,B.bs,r,r,r),n=A.a6(12),m=t.p
-n=A.b([o,B.bA,B.bDi,B.an,B.bDg,B.af,A.aq(r,B.bog,B.H,r,r,new A.ay(B.ahc,r,A.cS(B.ahf,1),n,r,r,B.a4),r,r,r,B.n2,r,r,r),B.a83,A.cw(A.lq(B.an3,B.bAj,s.gaEF(),A.eV(r,r,B.O,r,r,r,2,r,r,r,r,r,r,r,new A.bL(A.a6(12),B.U),r,r,r,r,r)),48,1/0),B.an,A.cw(A.k0(B.alV,B.bzN,s.gayE(),A.xh(r,r,r,r,r,r,r,r,r,r,r,r,r,r,new A.bL(A.a6(12),B.U),B.abr,r,r,r,r)),48,1/0)],m)
+n=A.b([o,B.bA,B.bDh,B.an,B.bDf,B.af,A.aq(r,B.bog,B.H,r,r,new A.ay(B.ahc,r,A.cS(B.ahf,1),n,r,r,B.a4),r,r,r,B.n2,r,r,r),B.a83,A.cw(A.lq(B.an3,B.bAj,s.gaEF(),A.eV(r,r,B.O,r,r,r,2,r,r,r,r,r,r,r,new A.bL(A.a6(12),B.U),r,r,r,r,r)),48,1/0),B.an,A.cw(A.k0(B.alV,B.bzN,s.gayE(),A.xh(r,r,r,r,r,r,r,r,r,r,r,r,r,r,new A.bL(A.a6(12),B.U),B.abr,r,r,r,r)),48,1/0)],m)
 if(J.fn(s.d)){o=A.b([B.bA,B.eK,B.an,B.aaB,B.bb],m)
 B.k.L(o,J.hx(s.d,new A.aQp(s,a),t.l7))
 B.k.L(n,o)}return A.bo6(!1,A.ej(q,B.Il,A.cM(A.ed(new A.dz(B.GW,A.i9(new A.ad(B.ajP,A.al(n,B.J,B.x,B.aC,0,B.K),r),B.y,4,r,B.Av,new A.bL(p,B.U)),r),r,B.a1,B.ajI,r,r,B.aL),r,r),r,!1,r,r),r,t.z)}}
@@ -142601,7 +142601,7 @@ $0(){return this.a.w=!1},
 $S:0}
 A.aVe.prototype={
 $1(a){var s=null
-return A.eR(A.b([A.d8(B.FI,new A.aVc(a),s),A.jf(B.a96,new A.aVd(a),s)],t.p),s,s,B.bDN,s,s,B.bBu)},
+return A.eR(A.b([A.d8(B.FI,new A.aVc(a),s),A.jf(B.a96,new A.aVd(a),s)],t.p),s,s,B.bDN,s,s,B.bBt)},
 $S:18}
 A.aVc.prototype={
 $0(){A.aG(this.a,!1).cE(!1)
@@ -143054,7 +143054,7 @@ m=A.a6(12)
 k=A.b([new A.bS(0,B.aJ,B.a_.dc(0.05),B.L,5)],t.V)
 j=b.h(0,"address")
 r=j==null?b.h(0,"state"):j
-r=A.dG(!1,f,f,f,!0,f,f,f,!0,f,B.amk,f,f,f,f,f,!1,f,f,f,f,A.v(r==null?"Ubicaci\xf3n pendiente":r,f,f,f,f,f,f,f,f),f,B.bDb,f,f,f)
+r=A.dG(!1,f,f,f,!0,f,f,f,!0,f,B.amk,f,f,f,f,f,!1,f,f,f,f,A.v(r==null?"Ubicaci\xf3n pendiente":r,f,f,f,f,f,f,f,f),f,B.bDa,f,f,f)
 i=g.e
 if(i===$){h=g.Ij()
 g.e!==$&&A.av()
@@ -143067,7 +143067,7 @@ g.f=h
 i=h}r=A.b([B.bB8,B.an,r,j,A.dG(!1,f,f,f,!0,f,f,f,!0,f,B.am7,f,f,f,f,f,!1,f,f,f,f,A.bfO(new A.aWC(b),i,t.PM),f,B.bCC,f,f,f)],l)
 l=b.h(0,c)
 l=l==null?f:B.o.aT(J.M(l)).length!==0
-if(l===!0)r.push(A.dG(!1,f,f,f,!0,f,f,f,!0,f,B.am1,f,f,f,f,f,!1,f,f,f,f,A.v(b.h(0,c)!=null&&B.o.aT(J.M(b.h(0,c))).length!==0?J.M(b.h(0,c)):"No registrado",f,f,f,f,f,f,f,f),f,B.bBp,f,A.cX(f,f,f,A.rL("assets/whatsapp_logo.png",f,B.kr,28,28),f,f,new A.aWD(b,a),f,f,f,"Contactar por WhatsApp",f),f))
+if(l===!0)r.push(A.dG(!1,f,f,f,!0,f,f,f,!0,f,B.am1,f,f,f,f,f,!1,f,f,f,f,A.v(b.h(0,c)!=null&&B.o.aT(J.M(b.h(0,c))).length!==0?J.M(b.h(0,c)):"No registrado",f,f,f,f,f,f,f,f),f,B.bBo,f,A.cX(f,f,f,A.rL("assets/whatsapp_logo.png",f,B.kr,28,28),f,f,new A.aWD(b,a),f,f,f,"Contactar por WhatsApp",f),f))
 s.push(A.aq(f,A.al(r,B.ag,B.x,B.D,0,B.K),B.H,f,f,new A.ay(B.y,f,f,m,k,f,B.a4),f,f,f,B.ch,f,f,f))
 s.push(B.bA)
 s.push(A.lq(B.JZ,B.bCQ,new A.aWE(a,b),A.eV(f,f,B.O,f,f,f,f,f,f,B.y,f,B.bqT,f,f,f,f,f,f,f,f)))
@@ -143485,9 +143485,9 @@ A.aQ8.prototype={
 $0(){},
 $S:0}
 A.CL.prototype={
-H(a){return B.bIl}}
-A.AI.prototype={
 H(a){return B.bIj}}
+A.AI.prototype={
+H(a){return B.bIl}}
 A.DP.prototype={
 H(a){return B.bIk}}
 A.v_.prototype={
@@ -143835,12 +143835,12 @@ k=j.r
 m=A.ek(i,B.bt,!1,i,!0,B.E,i,A.ez(),j.e,i,i,i,i,i,2,A.dl(i,new A.c9(4,m,B.cD),i,i,i,i,i,i,!0,new A.c9(4,l,B.cD),i,i,i,i,i,B.ep,!0,i,i,i,i,i,i,i,i,i,i,i,i,i,i,i,i,i,i,i,i,i,i,B.ek,"Contrase\xf1a",!0,!0,!1,i,B.amz,i,i,i,i,i,i,A.cX(i,i,i,A.dD(k?B.qg:B.qf,B.pp,i,i),i,i,new A.b_3(j),i,i,i,i,i),i,i,i,i,i),B.a1,!0,i,!0,i,!1,i,B.bn,i,i,i,i,i,i,i,i,1,i,i,k,"\u2022",i,i,i,new A.b_4(j),new A.b_5(j),!1,i,i,!1,i,!0,i,B.bs,i,i,i,i,i,i,i,i,i,i,i,B.ek,!0,B.aA,i,B.bq,i,B.yT,i,i)
 l=j.f?i:j.gaCH()
 k=A.eV(i,i,B.O,i,i,i,0,i,i,i,i,i,B.i1,i,new A.bL(A.a6(8),B.U),i,i,i,i,i)
-o=A.b([o,B.af,B.bDk,B.ca,B.bzX,B.eA,n,B.af,m,B.bA,A.jN(j.f?B.bor:B.bBt,l,k)],g)
+o=A.b([o,B.af,B.bDj,B.ca,B.bzX,B.eA,n,B.af,m,B.bA,A.jN(j.f?B.bor:B.bBs,l,k)],g)
 B.k.L(o,A.b([B.an,A.lq(B.anx,B.bzd,j.gaEJ(),A.eV(i,i,B.ah5,i,i,i,0,i,i,B.y,i,i,B.pP,i,new A.bL(A.a6(8),B.U),i,i,i,i,i))],g))
 o.push(B.af)
 o.push(B.bA)
 n=A.a6(8)
-o.push(A.aq(i,A.al(A.b([A.hM(B.mf,A.b([B.bBl,A.eX(i,B.bzW,B.a1,!1,i,i,i,i,i,i,i,i,i,i,i,i,i,i,i,i,new A.b_6(a),i,i,i,i,i,i)],g),B.dZ,0,0),B.bb,A.hM(B.mf,A.b([B.bzL,A.eX(i,B.bAL,B.a1,!1,i,i,i,i,i,i,i,i,i,i,i,i,i,i,i,i,new A.b_7(a),i,i,i,i,i,i)],g),B.dZ,0,0)],g),B.J,B.x,B.D,0,B.K),B.H,i,i,new A.ay(B.ep,i,i,n,i,i,B.a4),i,i,i,B.n3,i,i,i))
+o.push(A.aq(i,A.al(A.b([A.hM(B.mf,A.b([B.bBk,A.eX(i,B.bzW,B.a1,!1,i,i,i,i,i,i,i,i,i,i,i,i,i,i,i,i,new A.b_6(a),i,i,i,i,i,i)],g),B.dZ,0,0),B.bb,A.hM(B.mf,A.b([B.bzL,A.eX(i,B.bAL,B.a1,!1,i,i,i,i,i,i,i,i,i,i,i,i,i,i,i,i,new A.b_7(a),i,i,i,i,i,i)],g),B.dZ,0,0)],g),B.J,B.x,B.D,0,B.K),B.H,i,i,new A.ay(B.ep,i,i,n,i,i,B.a4),i,i,i,B.n3,i,i,i))
 f.push(A.b2(A.aq(i,A.fw(!0,A.cM(new A.ad(B.ci,A.nv(s,A.ang(A.aq(i,A.al(o,B.bz,B.d3,B.D,0,B.K),B.H,i,i,new A.ay(B.AR,i,p,q,i,i,B.a4),i,i,i,B.ci,i,i,i),r),B.cv),i),i,i),B.ai,!0),B.H,i,i,B.A6,i,i,i,i,i,i,i),1))
 f.push(B.j3)
 return A.ej(i,B.y,A.ed(new A.dz(new A.ag(0,1/0,h.a.b,1/0),new A.a0M(A.al(f,B.J,B.x,B.D,0,B.K),i),i),i,B.a1,i,i,i,B.aL),i,!1,i,i)}}
@@ -144557,7 +144557,7 @@ f=A.aP(A.b([B.bzb,B.bm,A.aP(A.b([j,A.v(g+" "+A.b7(i)+" - "+f+A.b7(h),c,c,c,c,B.m
 i=d.gat_()
 g=A.a3(i).i("a0<1,d>")
 j=A.Q(new A.a0(i,new A.b0H(d),g),g.i("am.E"))
-l=A.aq(c,A.al(A.b([B.bDo,B.af,new A.a_a(B.p7,f,c),B.af,A.hM(B.mf,j,B.dZ,12,12)],e),B.J,B.x,B.D,0,B.K),B.H,c,c,new A.ay(l,c,c,k,c,c,B.a4),c,c,c,B.ch,c,c,c)
+l=A.aq(c,A.al(A.b([B.bDn,B.af,new A.a_a(B.p7,f,c),B.af,A.hM(B.mf,j,B.dZ,12,12)],e),B.J,B.x,B.D,0,B.K),B.H,c,c,new A.ay(l,c,c,k,c,c,B.a4),c,c,c,B.ch,c,c,c)
 k=d.z
 j=k?c:d.gaI3()
 if(k)k=B.yM
@@ -145103,7 +145103,7 @@ return null},
 $S:0}
 A.b0P.prototype={
 $1(a){var s=null
-return A.eR(A.b([A.d8(B.FI,new A.b0N(a),s),A.jf(B.bBR,new A.b0O(a),s)],t.p),s,s,B.bDa,s,s,B.bzn)},
+return A.eR(A.b([A.d8(B.FI,new A.b0N(a),s),A.jf(B.bBR,new A.b0O(a),s)],t.p),s,s,B.bD9,s,s,B.bzn)},
 $S:18}
 A.b0N.prototype={
 $0(){A.aG(this.a,!1).cE(!1)
@@ -145372,7 +145372,7 @@ return A.z($async$$0,r)},
 $S:3}
 A.b1f.prototype={
 $1(a){var s=null
-return A.eR(A.b([A.d8(B.FI,new A.b1d(a),s),A.d8(B.bDn,new A.b1e(a),s)],t.p),s,s,B.bBn,s,s,B.bCv)},
+return A.eR(A.b([A.d8(B.FI,new A.b1d(a),s),A.d8(B.bDm,new A.b1e(a),s)],t.p),s,s,B.bBm,s,s,B.bCv)},
 $S:18}
 A.b1d.prototype={
 $0(){A.aG(this.a,!1).cE(!1)
@@ -145621,7 +145621,7 @@ r=A.ek(m,B.bt,!1,m,!0,B.E,m,A.ez(),n.f,m,m,m,m,m,2,A.dl(m,new A.c9(4,A.a6(8),B.c
 q=n.r?m:n.gaHF()
 p=A.eV(m,m,B.O,m,m,m,0,m,m,m,m,m,B.i1,m,new A.bL(A.a6(8),B.U),m,m,m,m,m)
 o=t.p
-return A.ej(m,m,A.aq(m,A.fw(!0,A.al(A.b([new A.dg(B.f1,m,m,l,m),A.b2(A.cM(A.ed(A.nv(k,A.ang(A.aq(m,A.al(A.b([B.alW,B.af,B.bDp,B.bb,B.bBc,B.bA,g,B.af,f,B.an,e,B.bkp,B.bzi,B.af,s,B.af,r,B.bA,A.jN(n.r?B.Aj:B.bDT,q,p)],o),B.bz,B.d3,B.D,0,B.K),B.H,m,m,new A.ay(B.AR,m,h,i,m,m,B.a4),m,m,m,B.ci,m,m,m),j),B.cv),m,B.a1,B.ci,m,m,B.aL),m,m),1)],o),B.J,B.x,B.D,0,B.K),B.ai,!0),B.H,m,m,B.A6,m,m,m,m,m,m,m),m,!1,m,m)}}
+return A.ej(m,m,A.aq(m,A.fw(!0,A.al(A.b([new A.dg(B.f1,m,m,l,m),A.b2(A.cM(A.ed(A.nv(k,A.ang(A.aq(m,A.al(A.b([B.alW,B.af,B.bDo,B.bb,B.bBc,B.bA,g,B.af,f,B.an,e,B.bkp,B.bzi,B.af,s,B.af,r,B.bA,A.jN(n.r?B.Aj:B.bDT,q,p)],o),B.bz,B.d3,B.D,0,B.K),B.H,m,m,new A.ay(B.AR,m,h,i,m,m,B.a4),m,m,m,B.ci,m,m,m),j),B.cv),m,B.a1,B.ci,m,m,B.aL),m,m),1)],o),B.J,B.x,B.D,0,B.K),B.ai,!0),B.H,m,m,B.A6,m,m,m,m,m,m,m),m,!1,m,m)}}
 A.b2d.prototype={
 $0(){return this.a.r=!0},
 $S:0}
@@ -146391,7 +146391,7 @@ r=A.a3(s).i("a0<1,ri>")
 s=A.Q(new A.a0(s,new A.aVH(q),r),r.i("am.E"))
 o.push(A.hM(B.b9,s,B.dZ,0,8))}o.push(B.af)
 o.push(A.kj("Precio de la consulta",q.gacF(),!0,1,p,B.a8H))
-o.push(A.bp4(B.ai,new A.aVI(q),B.bDs,B.bBk,q.gOe()))
+o.push(A.bp4(B.ai,new A.aVI(q),B.bDr,B.bBj,q.gOe()))
 o.push(A.kj("Ubicaci\xf3n de consultorio",q.gEv(),!0,2,p,p))
 o.push(A.jf(B.z2,new A.aVJ(q,a),p))
 return new A.ng("Datos Laborales",o,p)}}
@@ -146620,7 +146620,7 @@ $0(){return this.a.r=!1},
 $S:0}
 A.aag.prototype={
 H(a){var s=this,r=null,q=s.d
-return new A.ng("Acerca de Salud Now",A.b([B.bkh,q.$2("Pol\xedtica de Privacidad",new A.aMu(s)),q.$2("Cookies",new A.aMv(s)),B.bkd,q.$2("T\xe9rminos y Condiciones",new A.aMw(s)),A.dG(!1,r,r,r,!0,r,r,r,!0,r,B.amG,r,r,r,r,new A.aMx(s,a),!1,r,r,r,r,r,r,B.bDv,r,r,r)],t.p),r)},
+return new A.ng("Acerca de Salud Now",A.b([B.bkh,q.$2("Pol\xedtica de Privacidad",new A.aMu(s)),q.$2("Cookies",new A.aMv(s)),B.bkd,q.$2("T\xe9rminos y Condiciones",new A.aMw(s)),A.dG(!1,r,r,r,!0,r,r,r,!0,r,B.amG,r,r,r,r,new A.aMx(s,a),!1,r,r,r,r,r,r,B.bDu,r,r,r)],t.p),r)},
 x4(a){return this.asw(a)},
 asw(a){var s=0,r=A.A(t.H),q,p
 var $async$x4=A.w(function(b,c){if(b===1)return A.x(c,r)
@@ -146653,7 +146653,7 @@ $0(){return this.a.x4(this.b)},
 $S:0}
 A.aMr.prototype={
 $1(a){var s=null
-return A.eR(A.b([A.d8(B.eY,new A.aMp(a),s),A.d8(B.a9a,new A.aMq(a),s)],t.p),s,s,B.bD8,s,s,B.bDx)},
+return A.eR(A.b([A.d8(B.eY,new A.aMp(a),s),A.d8(B.a9a,new A.aMq(a),s)],t.p),s,s,B.bDy,s,s,B.bDw)},
 $S:18}
 A.aMp.prototype={
 $0(){A.aG(this.a,!1).cE(!1)
@@ -146929,7 +146929,7 @@ a0H(a,b,c,d,e){return this.GY(a,b,null,c,null,null,d,e)},
 Pa(a){var s=null
 return A.aP(A.b([new A.CR(a,B.O,s,t.KS),A.v(a,s,s,s,s,B.bvt,s,s,s)],t.p),B.J,B.x,B.aC,0,s,s)},
 H(a){var s,r,q,p,o,n=this,m=null,l=A.cX(m,m,m,B.K7,m,m,new A.b57(a),m,m,m,m,m),k=A.a6(25),j=A.avI(20,20),i=A.a6(25),h=A.cS(B.jp,1),g=t.p,f=A.b([A.rL("assets/logo.png",new A.b58(),m,100,m),B.cO,B.bzO,B.yP,B.bzJ,B.iQ],g)
-if(n.y)B.k.L(f,A.b([B.bBs],g))
+if(n.y)B.k.L(f,A.b([B.bBr],g))
 else B.k.L(f,A.b([B.bCA,B.cO,A.al(A.b([A.aP(A.b([n.Pd("Soy Paciente",B.Cg,"patient"),B.m5,n.Pd("Soy Doctor",B.nc,"doctor")],g),B.J,B.x,B.D,0,m,m),B.cO,A.aP(A.b([n.Pd("Soy una Cl\xednica",B.Ce,"clinic")],g),B.J,B.x,B.D,0,m,m)],g),B.J,B.x,B.D,0,B.K)],g))
 f.push(B.iQ)
 if(n.f!=="clinic")B.k.L(f,A.b([B.bBM,B.cO,new A.qi(A.P(a).aP0(B.bi),new A.CS(n.r,new A.b59(n),A.al(A.b([A.aP(A.b([n.Pa("Masculino"),B.fo,n.Pa("Femenino")],g),B.J,B.d3,B.D,0,m,m),B.bb,A.aP(A.b([n.Pa("Prefiero no decirlo")],g),B.J,B.d3,B.D,0,m,m)],g),B.J,B.x,B.D,0,B.K),m,t.eY),m)],g))
@@ -146964,7 +146964,7 @@ f.push(n.a0H("Contrase\xf1a",n.dy,!0,n.k1,new A.b5e(n)))
 f.push(n.a0H("Repetir contrase\xf1a",n.fr,!0,n.k2,new A.b5f(n)))
 f.push(B.cO)
 s=n.d
-f.push(A.bf2(B.O,B.ai,B.qp,new A.b5g(n),A.hM(B.b9,A.b([B.bBh,A.ds(!1,m,!0,B.bC8,m,!0,m,m,m,m,m,m,m,m,m,m,m,new A.b5h(a),m,m,m,m,m,m,m),B.bDc,A.ds(!1,m,!0,B.bCX,m,!0,m,m,m,m,m,m,m,m,m,m,m,new A.b5i(a),m,m,m,m,m,m,m),B.bB_,A.ds(!1,m,!0,B.byQ,m,!0,m,m,m,m,m,m,m,m,m,m,m,new A.b5j(a),m,m,m,m,m,m,m)],g),B.kj,0,0),s))
+f.push(A.bf2(B.O,B.ai,B.qp,new A.b5g(n),A.hM(B.b9,A.b([B.bBh,A.ds(!1,m,!0,B.bC8,m,!0,m,m,m,m,m,m,m,m,m,m,m,new A.b5h(a),m,m,m,m,m,m,m),B.bDb,A.ds(!1,m,!0,B.bCX,m,!0,m,m,m,m,m,m,m,m,m,m,m,new A.b5i(a),m,m,m,m,m,m,m),B.bB_,A.ds(!1,m,!0,B.byQ,m,!0,m,m,m,m,m,m,m,m,m,m,m,new A.b5j(a),m,m,m,m,m,m,m)],g),B.kj,0,0),s))
 f.push(B.iQ)
 s=n.id?m:n.gaHj()
 r=A.eV(m,m,B.O,m,m,m,0,m,m,m,m,m,B.i1,m,new A.bL(A.a6(8),B.U),m,m,m,m,m)
@@ -147545,7 +147545,7 @@ else r=j?250:40
 i=t.p
 q=A.hz(A.b([A.cX(l,l,l,B.JY,l,l,m.gaCI(),l,l,l,"Cerrar sesi\xf3n",l)],i),!0,B.bi,l,l,l,B.y,B.jD,B.bCz,l)
 if(m.e)i=B.bV
-else{p=A.b([B.bDf,B.af,A.aP(A.b([B.bCg,A.bp3(l,l,l,l,!1,B.a1,l,l,l,l,l,l,new A.b7M(m),l,l,l,l,l,l,l,l,m.d),B.bA8],i),B.J,B.d3,B.D,0,l,l),B.af],i)
+else{p=A.b([B.bDe,B.af,A.aP(A.b([B.bCg,A.bp3(l,l,l,l,!1,B.a1,l,l,l,l,l,l,new A.b7M(m),l,l,l,l,l,l,l,l,m.d),B.bA8],i),B.J,B.d3,B.D,0,l,l),B.af],i)
 o=s*k
 n=r*k
 if(j)B.k.L(p,A.b([m.a0E("Cl\xednica B\xe1sico",B.i.j(s),B.n.aF(o,2),"Registro de cl\xednica en la plataforma\n\u2022 M\xe1ximo 10 doctores asociados\n\u2022 Recepci\xf3n de citas\n\u2022 Soporte est\xe1ndar","clinic_basic"),B.af,m.P9("VIP",B.i.j(r),B.n.aF(n,2),"Todos los beneficios VIP de cl\xednica\n\u2022 M\xe1ximo 15 doctores asociados\n\u2022 Posicionamiento VIP\n\u2022 Soporte prioritario y reportes","clinic_vip",!0)],i))
@@ -148066,7 +148066,7 @@ else{r=l.h(m,"message")
 if(r==null)r=""}r=A.v(r,2,B.b8,o,o,B.ka,o,o,o)
 q=l.h(m,"date")
 q=A.v(q==null?"":q,o,o,o,o,B.Fy,o,o,o)
-n=!J.c(l.h(m,p),"Cerrado")?A.aP(A.b([A.tZ(B.Kf,B.bD_,new A.b8M(n,m),o),A.tZ(B.amH,B.bBw,new A.b8N(n,m),o)],i),B.J,B.x,B.aC,0,o,o):A.aP(A.b([A.tZ(B.Cl,B.bCs,new A.b8O(n,m),o),A.tZ(B.amZ,B.bBf,new A.b8P(n,m),o)],i),B.J,B.x,B.aC,0,o,o)
+n=!J.c(l.h(m,p),"Cerrado")?A.aP(A.b([A.tZ(B.Kf,B.bD_,new A.b8M(n,m),o),A.tZ(B.amH,B.bBv,new A.b8N(n,m),o)],i),B.J,B.x,B.aC,0,o,o):A.aP(A.b([A.tZ(B.Cl,B.bCs,new A.b8O(n,m),o),A.tZ(B.amZ,B.bBf,new A.b8P(n,m),o)],i),B.J,B.x,B.aC,0,o,o)
 return A.i9(new A.ad(B.ch,A.al(A.b([h,B.bb,s,B.bb,r,B.bb,new A.dg(B.je,o,o,q,o),B.eK,new A.dg(B.je,o,o,n,o)],i),B.ag,B.x,B.D,0,B.K),o),o,4,B.Bg,o,new A.bL(j,B.U))},
 $S:82}
 A.b8M.prototype={
@@ -148724,7 +148724,7 @@ return A.aq(B.ar,A.dD(B.Cg,B.O,s,this.a*0.58),B.H,B.kB,s,s,s,s,s,s,s,s,s)},
 $S:819}
 A.a8f.prototype={
 H(a){var s=null,r=t.p
-return A.aq(s,A.hM(B.G4,A.b([B.bBj,A.hM(B.b9,A.b([A.ds(!1,s,!0,B.bAM,s,!0,s,s,s,s,s,s,s,s,s,s,s,new A.aLJ(a),s,s,s,s,s,s,s),A.ds(!1,s,!0,B.bzB,s,!0,s,s,s,s,s,s,s,s,s,s,s,new A.aLK(a),s,s,s,s,s,s,s),A.ds(!1,s,!0,B.bBy,s,!0,s,s,s,s,s,s,s,s,s,s,s,new A.aLL(a),s,s,s,s,s,s,s),A.ds(!1,s,!0,B.bCY,s,!0,s,s,s,s,s,s,s,s,s,s,s,new A.aLM(a),s,s,s,s,s,s,s)],r),B.dZ,8,24)],r),B.kj,16,0),B.H,B.O,s,s,s,s,s,B.J0,s,s,1/0)}}
+return A.aq(s,A.hM(B.G4,A.b([B.bBy,A.hM(B.b9,A.b([A.ds(!1,s,!0,B.bAM,s,!0,s,s,s,s,s,s,s,s,s,s,s,new A.aLJ(a),s,s,s,s,s,s,s),A.ds(!1,s,!0,B.bzB,s,!0,s,s,s,s,s,s,s,s,s,s,s,new A.aLK(a),s,s,s,s,s,s,s),A.ds(!1,s,!0,B.bBx,s,!0,s,s,s,s,s,s,s,s,s,s,s,new A.aLL(a),s,s,s,s,s,s,s),A.ds(!1,s,!0,B.bCY,s,!0,s,s,s,s,s,s,s,s,s,s,s,new A.aLM(a),s,s,s,s,s,s,s)],r),B.dZ,8,24)],r),B.kj,16,0),B.H,B.O,s,s,s,s,s,B.J0,s,s,1/0)}}
 A.aLJ.prototype={
 $0(){return A.aBn(this.a,"/politicas",t.X)},
 $S:0}
@@ -154246,14 +154246,14 @@ B.aev=new A.fp(B.ar,null,null,B.bzp,null)
 B.bV=new A.fp(B.ar,null,null,B.Hz,null)
 B.bzx=new A.B("No se encontraron doctores.",null,null,null,null,null,null,null,null,null,null)
 B.aew=new A.fp(B.ar,null,null,B.bzx,null)
-B.bDy=new A.B("Selecciona un estado para ver los doctores disponibles.",null,null,null,null,null,null,null,null,null,null)
-B.aey=new A.fp(B.ar,null,null,B.bDy,null)
+B.bDx=new A.B("Selecciona un estado para ver los doctores disponibles.",null,null,null,null,null,null,null,null,null,null)
+B.aey=new A.fp(B.ar,null,null,B.bDx,null)
 B.bC6=new A.B("A\xfan no hay doctores afiliados.",null,null,null,null,null,null,null,null,null,null)
 B.aeA=new A.fp(B.ar,null,null,B.bC6,null)
 B.bzU=new A.B("No hay doctores disponibles por el momento.",null,null,null,null,null,null,null,null,null,null)
 B.aeB=new A.fp(B.ar,null,null,B.bzU,null)
-B.bDd=new A.B("No hay solicitudes pendientes.",null,null,null,null,null,null,null,null,null,null)
-B.aeC=new A.fp(B.ar,null,null,B.bDd,null)
+B.bDc=new A.B("No hay solicitudes pendientes.",null,null,null,null,null,null,null,null,null,null)
+B.aeC=new A.fp(B.ar,null,null,B.bDc,null)
 B.bze=new A.B("A\xfan no tienes conversaciones.",null,null,null,null,null,null,null,null,null,null)
 B.aeD=new A.fp(B.ar,null,null,B.bze,null)
 B.bzc=new A.B("No hay mensajes.",null,null,null,null,null,null,null,null,null,null)
@@ -161831,11 +161831,11 @@ B.a2V=new A.a3R(1,"end")
 B.bk9=new A.a3S(0,"nearestOverlay")
 B.bka=new A.a3S(1,"rootOverlay")
 B.FD=new A.r(!0,B.bi,null,null,null,null,22,B.ao,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null)
-B.bBo=new A.B("Gesti\xf3n y Administraci\xf3n",null,B.FD,null,null,null,null,null,null,null,null)
+B.bBn=new A.B("Gesti\xf3n y Administraci\xf3n",null,B.FD,null,null,null,null,null,null,null,null)
 B.ca=new A.c1(null,4,null,null)
 B.ka=new A.r(!0,B.cV,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null)
 B.bAN=new A.B("Administra doctores, cl\xednicas, pacientes y bloqueos",null,B.ka,null,null,null,null,null,null,null,null)
-B.bdt=s([B.bBo,B.ca,B.bAN],t.p)
+B.bdt=s([B.bBn,B.ca,B.bAN],t.p)
 B.ahy=new A.nx(B.aL,B.x,B.D,B.ag,null,B.K,null,0,B.bdt,null)
 B.bkb=new A.ad(B.ch,B.ahy,null)
 B.hJ=new A.r(!0,B.bd,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null)
@@ -162118,16 +162118,16 @@ B.bBS=new A.B("Agenda Completa",null,B.iY,null,null,null,null,null,null,null,nul
 B.bdV=s([B.anr,B.fp,B.bza,B.fo,B.amg,B.fp,B.bBS],t.p)
 B.a72=new A.eJ(B.b6,B.x,B.D,B.J,null,B.K,null,0,B.bdV,null)
 B.by4=new A.r(!0,B.bi,null,null,null,null,18,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null)
-B.bDm=new A.B("Soporte T\xe9cnico",null,B.by4,null,null,null,null,null,null,null,null)
-B.b9V=s([B.Cm,B.bm,B.bDm],t.p)
+B.bDl=new A.B("Soporte T\xe9cnico",null,B.by4,null,null,null,null,null,null,null,null)
+B.b9V=s([B.Cm,B.bm,B.bDl],t.p)
 B.bof=new A.eJ(B.b6,B.x,B.D,B.J,null,B.K,null,0,B.b9V,null)
 B.alf=new A.aI(58173,"MaterialIcons",!1)
 B.amo=new A.as(B.alf,20,B.HU,null,null)
 B.fZ=new A.c1(10,null,null,null)
 B.agA=new A.u(1,0.6,0.10588235294117647,0.10588235294117647,B.u)
 B.buH=new A.r(!0,B.agA,null,null,null,null,13,null,null,null,null,null,1.4,null,null,null,null,null,null,null,null,null,null,null,null,null)
-B.bBr=new A.B("No tienes acceso al men\xfa principal ni a los servicios de agendamiento. Si consideras que se trata de un error, puedes remitir una apelaci\xf3n a soporte t\xe9cnico.",null,B.buH,null,null,null,null,null,null,null,null)
-B.ak3=new A.kE(1,B.f9,B.bBr,null)
+B.bBq=new A.B("No tienes acceso al men\xfa principal ni a los servicios de agendamiento. Si consideras que se trata de un error, puedes remitir una apelaci\xf3n a soporte t\xe9cnico.",null,B.buH,null,null,null,null,null,null,null,null)
+B.ak3=new A.kE(1,B.f9,B.bBq,null)
 B.bc6=s([B.amo,B.fZ,B.ak3],t.p)
 B.bog=new A.eJ(B.b6,B.x,B.D,B.ag,null,B.K,null,0,B.bc6,null)
 B.alO=new A.aI(984309,"MaterialIcons",!1)
@@ -162562,8 +162562,8 @@ B.bDQ=new A.B("No se pudo abrir la p\xe1gina de descarga.",null,null,null,null,n
 B.brE=new A.bO(B.bDQ,null,null,null,null,null,null,null,null,null,null,null,null,B.T,!1,null,null,null,B.E,null)
 B.bCj=new A.B("Error al restablecer la contrase\xf1a.",null,null,null,null,null,null,null,null,null,null)
 B.brF=new A.bO(B.bCj,null,null,null,null,null,null,null,null,null,null,null,null,B.T,!1,null,null,null,B.E,null)
-B.bDq=new A.B("Por favor completa todos los campos.",null,null,null,null,null,null,null,null,null,null)
-B.brG=new A.bO(B.bDq,null,null,null,null,null,null,null,null,null,null,null,null,B.T,!1,null,null,null,B.E,null)
+B.bDp=new A.B("Por favor completa todos los campos.",null,null,null,null,null,null,null,null,null,null)
+B.brG=new A.bO(B.bDp,null,null,null,null,null,null,null,null,null,null,null,null,B.T,!1,null,null,null,B.E,null)
 B.bBZ=new A.B("La nueva contrase\xf1a no cumple los requisitos o no coincide.",null,null,null,null,null,null,null,null,null,null)
 B.brH=new A.bO(B.bBZ,null,null,null,null,null,null,null,null,null,null,null,null,B.T,!1,null,null,null,B.E,null)
 B.bzF=new A.B("Por favor, selecciona un estado.",null,null,null,null,null,null,null,null,null,null)
@@ -162624,8 +162624,8 @@ B.bCB=new A.B("No hay citas programadas para la fecha seleccionada.",null,null,n
 B.bs5=new A.bO(B.bCB,B.hc,null,null,null,null,null,null,null,null,null,null,null,B.T,!1,null,null,null,B.E,null)
 B.bAW=new A.B("No se pudo iniciar la conversaci\xf3n.",null,null,null,null,null,null,null,null,null,null)
 B.bs6=new A.bO(B.bAW,null,null,null,null,null,null,null,null,null,null,null,null,B.T,!1,null,null,null,B.E,null)
-B.bDw=new A.B("Ya tienes el m\xe1ximo de dos citas con este doctor para ese d\xeda.",null,null,null,null,null,null,null,null,null,null)
-B.bs7=new A.bO(B.bDw,null,null,null,null,null,null,null,null,null,null,null,null,B.T,!1,null,null,null,B.E,null)
+B.bDv=new A.B("Ya tienes el m\xe1ximo de dos citas con este doctor para ese d\xeda.",null,null,null,null,null,null,null,null,null,null)
+B.bs7=new A.bO(B.bDv,null,null,null,null,null,null,null,null,null,null,null,null,B.T,!1,null,null,null,B.E,null)
 B.bA4=new A.B("Cita cancelada con \xe9xito",null,null,null,null,null,null,null,null,null,null)
 B.bs8=new A.bO(B.bA4,null,null,null,null,null,null,null,null,null,null,null,null,B.T,!1,null,null,null,B.E,null)
 B.bAO=new A.B("Error al buscar doctores.",null,null,null,null,null,null,null,null,null,null)
@@ -162634,12 +162634,12 @@ B.bzr=new A.B("Invitaci\xf3n respondida.",null,null,null,null,null,null,null,nul
 B.bsa=new A.bO(B.bzr,null,null,null,null,null,null,null,null,null,null,null,null,B.T,!1,null,null,null,B.E,null)
 B.bzw=new A.B("Selecciona la fecha y un turno disponible.",null,null,null,null,null,null,null,null,null,null)
 B.bsb=new A.bO(B.bzw,null,null,null,null,null,null,null,null,null,null,null,null,B.T,!1,null,null,null,B.E,null)
-B.bBm=new A.B("Selecciona una cl\xednica para enviar la solicitud.",null,null,null,null,null,null,null,null,null,null)
-B.bsc=new A.bO(B.bBm,null,null,null,null,null,null,null,null,null,null,null,null,B.T,!1,null,null,null,B.E,null)
-B.bDj=new A.B("Eliminando cita...",null,null,null,null,null,null,null,null,null,null)
-B.bsd=new A.bO(B.bDj,null,null,null,null,null,null,null,null,null,null,null,null,B.T,!1,null,null,null,B.E,null)
-B.bDt=new A.B("El doctor no tiene un n\xfamero telef\xf3nico registrado.",null,null,null,null,null,null,null,null,null,null)
-B.bse=new A.bO(B.bDt,null,null,null,null,null,null,null,null,null,null,null,null,B.T,!1,null,null,null,B.E,null)
+B.bBl=new A.B("Selecciona una cl\xednica para enviar la solicitud.",null,null,null,null,null,null,null,null,null,null)
+B.bsc=new A.bO(B.bBl,null,null,null,null,null,null,null,null,null,null,null,null,B.T,!1,null,null,null,B.E,null)
+B.bDi=new A.B("Eliminando cita...",null,null,null,null,null,null,null,null,null,null)
+B.bsd=new A.bO(B.bDi,null,null,null,null,null,null,null,null,null,null,null,null,B.T,!1,null,null,null,B.E,null)
+B.bDs=new A.B("El doctor no tiene un n\xfamero telef\xf3nico registrado.",null,null,null,null,null,null,null,null,null,null)
+B.bse=new A.bO(B.bDs,null,null,null,null,null,null,null,null,null,null,null,null,B.T,!1,null,null,null,B.E,null)
 B.bD0=new A.B("No hay pr\xf3ximas citas programadas para imprimir.",null,null,null,null,null,null,null,null,null,null)
 B.bsf=new A.bO(B.bD0,B.hc,null,null,null,null,null,null,null,null,null,null,null,B.T,!1,null,null,null,B.E,null)
 B.bCR=new A.B("La cl\xednica se cre\xf3, pero no se pudo iniciar sesi\xf3n autom\xe1ticamente. Vuelve al login para entrar.",null,null,null,null,null,null,null,null,null,null)
@@ -163245,23 +163245,23 @@ B.bBe=new A.B("Doctores Aliados",null,B.dm,null,null,null,null,null,null,null,nu
 B.bBf=new A.B("Ver Historial",null,B.iZ,null,null,null,null,null,null,null,null)
 B.bBg=new A.B("Ya tienes una cita programada para ese d\xeda. \xbfDeseas agendar otra?",null,null,null,null,null,null,null,null,null,null)
 B.bBh=new A.B("Acepto los ",null,B.h1,null,null,null,null,null,null,null,null)
-B.bBj=new A.B("Copyright \xa9 2026 Salud Now. RIF J-501934070, Salud Now C.A.",null,B.oy,null,null,null,null,null,null,null,null)
-B.bBk=new A.B("Mostrar conversi\xf3n a bol\xedvares",null,null,null,null,null,null,null,null,null,null)
-B.bBl=new A.B("\xbfA\xfan no te has registrado? ",null,B.iY,null,null,null,null,null,null,null,null)
-B.bBn=new A.B("\xbfEst\xe1s seguro de que deseas cancelar esta cita?",null,null,null,null,null,null,null,null,null,null)
-B.bBp=new A.B("Tel\xe9fono",null,null,null,null,null,null,null,null,null,null)
+B.bBj=new A.B("Mostrar conversi\xf3n a bol\xedvares",null,null,null,null,null,null,null,null,null,null)
+B.bBk=new A.B("\xbfA\xfan no te has registrado? ",null,B.iY,null,null,null,null,null,null,null,null)
+B.bBm=new A.B("\xbfEst\xe1s seguro de que deseas cancelar esta cita?",null,null,null,null,null,null,null,null,null,null)
+B.bBo=new A.B("Tel\xe9fono",null,null,null,null,null,null,null,null,null,null)
 B.buK=new A.r(!0,B.O,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null)
-B.bBq=new A.B("Cancelar",null,B.buK,null,null,null,null,null,null,null,null)
+B.bBp=new A.B("Cancelar",null,B.buK,null,null,null,null,null,null,null,null)
 B.a98=new A.B("B\xe1sico",null,B.yZ,null,null,null,null,null,null,null,null)
 B.btw=new A.r(!0,B.O,null,null,null,null,14,B.ao,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null)
-B.bBs=new A.B("Te est\xe1s registrando como Doctor por invitaci\xf3n de una cl\xednica.",null,B.btw,B.az,null,null,null,null,null,null,null)
-B.bBt=new A.B("Ingresar",null,B.h0,null,null,null,null,null,null,null,null)
-B.bBu=new A.B("Cerrar conversaci\xf3n",null,null,null,null,null,null,null,null,null,null)
-B.bBv=new A.B("Estad\xedsticas Globales",null,B.yY,null,null,null,null,null,null,null,null)
-B.bBw=new A.B("Abrir Chat",null,B.a8U,null,null,null,null,null,null,null,null)
+B.bBr=new A.B("Te est\xe1s registrando como Doctor por invitaci\xf3n de una cl\xednica.",null,B.btw,B.az,null,null,null,null,null,null,null)
+B.bBs=new A.B("Ingresar",null,B.h0,null,null,null,null,null,null,null,null)
+B.bBt=new A.B("Cerrar conversaci\xf3n",null,null,null,null,null,null,null,null,null,null)
+B.bBu=new A.B("Estad\xedsticas Globales",null,B.yY,null,null,null,null,null,null,null,null)
+B.bBv=new A.B("Abrir Chat",null,B.a8U,null,null,null,null,null,null,null,null)
 B.FI=new A.B("Volver",null,null,null,null,null,null,null,null,null,null)
-B.bBx=new A.B("Ver cita",null,null,null,null,null,null,null,null,null,null)
-B.bBy=new A.B("Privacidad",null,B.oy,null,null,null,null,null,null,null,null)
+B.bBw=new A.B("Ver cita",null,null,null,null,null,null,null,null,null,null)
+B.bBx=new A.B("Privacidad",null,B.oy,null,null,null,null,null,null,null,null)
+B.bBy=new A.B("Copyright \xa9 2026 Grupo MedIA \xb7 Salud Now",null,B.oy,null,null,null,null,null,null,null,null)
 B.bBz=new A.B("Enviar",null,B.ej,null,null,null,null,null,null,null,null)
 B.bBA=new A.B("Expulsar",null,null,null,null,null,null,null,null,null,null)
 B.bBC=new A.B("Nueva cita manual",null,B.ma,null,null,null,null,null,null,null,null)
@@ -163335,33 +163335,33 @@ B.bD4=new A.B("Para Usuarios",null,B.dm,null,null,null,null,null,null,null,null)
 B.bwM=new A.r(!0,null,null,null,null,null,16,null,null,null,null,null,1.5,null,null,null,null,null,null,null,null,null,null,null,null,null)
 B.bD6=new A.B("Indica el correo registrado. Grupo MedIA verificar\xe1 que eres titular y te contactar\xe1 para completar la solicitud. Los datos que deban conservarse por obligaciones legales quedar\xe1n restringidos.",null,B.bwM,null,null,null,null,null,null,null,null)
 B.bD7=new A.B("Agenda tu cita con nuestros aliados",null,B.a90,B.az,null,null,null,null,null,null,null)
-B.bD8=new A.B("Se eliminar\xe1n tus datos personales, tus chats de soporte y todas tus citas agendadas. \xbfContinuar?",null,null,null,null,null,null,null,null,null,null)
-B.bD9=new A.B("VIP",null,B.yZ,null,null,null,null,null,null,null,null)
-B.bDa=new A.B("Se eliminar\xe1n del historial las citas canceladas y completadas. Las citas programadas se conservar\xe1n.",null,null,null,null,null,null,null,null,null,null)
-B.bDb=new A.B("Direcci\xf3n de consultorio",null,null,null,null,null,null,null,null,null,null)
-B.bDc=new A.B(", la ",null,B.h1,null,null,null,null,null,null,null,null)
+B.bD8=new A.B("VIP",null,B.yZ,null,null,null,null,null,null,null,null)
+B.bD9=new A.B("Se eliminar\xe1n del historial las citas canceladas y completadas. Las citas programadas se conservar\xe1n.",null,null,null,null,null,null,null,null,null,null)
+B.bDa=new A.B("Direcci\xf3n de consultorio",null,null,null,null,null,null,null,null,null,null)
+B.bDb=new A.B(", la ",null,B.h1,null,null,null,null,null,null,null,null)
 B.z4=new A.B("Notificaciones Recientes",null,B.iX,null,null,null,null,null,null,null,null)
-B.bDe=new A.B("Eliminar permanentemente",null,null,null,null,null,null,null,null,null,null)
-B.bDf=new A.B("Elige tu nivel de suscripci\xf3n",null,B.FD,B.az,null,null,null,null,null,null,null)
+B.bDd=new A.B("Eliminar permanentemente",null,null,null,null,null,null,null,null,null,null)
+B.bDe=new A.B("Elige tu nivel de suscripci\xf3n",null,B.FD,B.az,null,null,null,null,null,null,null)
 B.byk=new A.r(!0,B.cV,null,null,null,null,15,null,null,null,null,null,1.5,null,null,null,null,null,null,null,null,null,null,null,null,null)
-B.bDg=new A.B("Tu cuenta ha sido bloqueada por incumplimiento de las normas y t\xe9rminos de uso de la comunidad SaludNow.",null,B.byk,B.az,null,null,null,null,null,null,null)
-B.bDh=new A.B("Gesti\xf3n de Asistentes",null,B.m8,null,null,null,null,null,null,null,null)
+B.bDf=new A.B("Tu cuenta ha sido bloqueada por incumplimiento de las normas y t\xe9rminos de uso de la comunidad SaludNow.",null,B.byk,B.az,null,null,null,null,null,null,null)
+B.bDg=new A.B("Gesti\xf3n de Asistentes",null,B.m8,null,null,null,null,null,null,null,null)
 B.btF=new A.r(!0,B.Ig,null,null,null,null,24,B.kT,null,-0.5,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null)
-B.bDi=new A.B("Cuenta Bloqueada",null,B.btF,B.az,null,null,null,null,null,null,null)
+B.bDh=new A.B("Cuenta Bloqueada",null,B.btF,B.az,null,null,null,null,null,null,null)
 B.byv=new A.r(!0,B.O,null,null,null,null,22,B.n9,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null)
-B.bDk=new A.B("Inicie sesi\xf3n",null,B.byv,B.az,null,null,null,null,null,null,null)
-B.bDl=new A.B("Asignar manualmente:",null,B.Fy,null,null,null,null,null,null,null,null)
+B.bDj=new A.B("Inicie sesi\xf3n",null,B.byv,B.az,null,null,null,null,null,null,null)
+B.bDk=new A.B("Asignar manualmente:",null,B.Fy,null,null,null,null,null,null,null,null)
 B.a9a=new A.B("Eliminar",null,null,null,null,null,null,null,null,null,null)
-B.bDn=new A.B("Cancelar Cita",null,B.hJ,null,null,null,null,null,null,null,null)
+B.bDm=new A.B("Cancelar Cita",null,B.hJ,null,null,null,null,null,null,null,null)
 B.bvb=new A.r(!0,B.cV,null,null,null,null,12,B.ao,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null)
-B.bDo=new A.B("TOQUE PARA SELECCIONAR D\xcdAS LABORABLES",null,B.bvb,null,null,null,null,null,null,null,null)
+B.bDn=new A.B("TOQUE PARA SELECCIONAR D\xcdAS LABORABLES",null,B.bvb,null,null,null,null,null,null,null,null)
 B.bur=new A.r(!0,B.O,null,null,null,null,24,B.ao,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null)
-B.bDp=new A.B("Recuperar Contrase\xf1a",null,B.bur,B.az,null,null,null,null,null,null,null)
-B.bDr=new A.B("Renovar Suscripci\xf3n",null,B.ej,null,null,null,null,null,null,null,null)
-B.bDs=new A.B("Presentar el precio en USD y su equivalente con la tasa BCV del d\xeda.",null,null,null,null,null,null,null,null,null,null)
-B.bDu=new A.B("Tus asistentes registrados podr\xe1n gestionar tu agenda de citas. Si tu plan VIP vence, perder\xe1n el acceso.",null,B.hI,null,null,null,null,null,null,null,null)
-B.bDv=new A.B("Eliminar Cuenta de Salud Now",null,B.hJ,null,null,null,null,null,null,null,null)
-B.bDx=new A.B("Eliminar cuenta",null,null,null,null,null,null,null,null,null,null)
+B.bDo=new A.B("Recuperar Contrase\xf1a",null,B.bur,B.az,null,null,null,null,null,null,null)
+B.bDq=new A.B("Renovar Suscripci\xf3n",null,B.ej,null,null,null,null,null,null,null,null)
+B.bDr=new A.B("Presentar el precio en USD y su equivalente con la tasa BCV del d\xeda.",null,null,null,null,null,null,null,null,null,null)
+B.bDt=new A.B("Tus asistentes registrados podr\xe1n gestionar tu agenda de citas. Si tu plan VIP vence, perder\xe1n el acceso.",null,B.hI,null,null,null,null,null,null,null,null)
+B.bDu=new A.B("Eliminar Cuenta de Salud Now",null,B.hJ,null,null,null,null,null,null,null,null)
+B.bDw=new A.B("Eliminar cuenta",null,null,null,null,null,null,null,null,null,null)
+B.bDy=new A.B("Se eliminar\xe1n permanentemente tu cuenta y los datos asociados, incluidos tu perfil, citas, chats, suscripciones y datos de acceso. Esta acci\xf3n no se puede deshacer. \xbfContinuar?",null,null,null,null,null,null,null,null,null,null)
 B.bDA=new A.B("Cerrar Chat",null,B.ej,null,null,null,null,null,null,null,null)
 B.bDD=new A.B("Validar pago",null,B.h1,null,null,null,null,null,null,null,null)
 B.bwO=new A.r(!0,B.y,null,null,null,null,48,B.ao,null,null,null,null,1.1,null,null,null,null,null,null,null,null,null,null,null,null,null)
@@ -163701,9 +163701,9 @@ B.bIi=new A.ON(1,"end")
 B.kj=new A.ON(2,"center")
 B.cB=new A.Er(0,"forward")
 B.zo=new A.Er(1,"reverse")
-B.bIj=new A.Ew("Pol\xedtica de\nCookies","Conoce la Pol\xedtica de Cookies\nde Salud Now.","### 1. Introducci\xf3n y alcance\nEn **Salud Now** operada por **Salud Now C.A**, valoramos tu privacidad. Esta pol\xedtica explica c\xf3mo usamos cookies, Local Storage, SDKs m\xf3viles y tokens en nuestra plataforma.\n\n### 2. \xbfQu\xe9 son estas tecnolog\xedas?\nSon peque\xf1os archivos de datos o identificadores almacenados en tu navegador o dispositivo m\xf3vil que permiten recordar tus preferencias, mantener tu sesi\xf3n activa de forma segura y analizar el rendimiento general.\n\n### 3. Tipos de tecnolog\xedas que utilizamos\n| Categor\xeda | Prop\xf3sito |\n|---|---|\n| **T\xe9cnicas / Necesarias** | Mantener sesiones (paciente/doctor), prevenir ataques CSRF y seguridad. |\n| **Preferencias** | Recordar idioma, zona horaria y filtros de b\xfasqueda. |\n| **Anal\xedticas** | M\xe9tricas agregadas an\xf3nimas sobre fallos de la app y fluidez de uso. |\n| **Funcionales** | Tokens push para enviar recordatorios de citas. |\n\n### 4. Garant\xeda especial sobre datos de salud\n**NO** utilizamos cookies de rastreo publicitario de terceros (como Meta Pixel o Google Ads) en pantallas donde se procese informaci\xf3n m\xe9dica sensible, diagn\xf3sticos, recetas o historiales cl\xednicos.\n\n### 5. Cookies propias vs. de terceros\nUtilizamos proveedores estrictamente necesarios como pasarelas de pago cifradas y mapas interactivos. No vendemos datos a corredores de datos.\n\n### 6. \xbfC\xf3mo gestionar o desactivar las cookies?\n- **Web**: Puedes gestionar esto desde Configuraci\xf3n > Privacidad en Chrome, Safari o Firefox.\n- **M\xf3vil**: Puedes restringir identificadores desde los Ajustes del sistema (iOS/Android).\n*Aviso*: Deshabilitar cookies t\xe9cnicas impedir\xe1 iniciar sesi\xf3n o agendar citas.\n\n### 7. Periodo de conservaci\xf3n\nLas cookies de sesi\xf3n se eliminan al cerrar el navegador. Las persistentes (ej. preferencias) tienen una duraci\xf3n m\xe1xima de 12 meses.\n\n### 8. Actualizaciones\nCualquier cambio sustancial ser\xe1 notificado v\xeda notificaci\xf3n push o correo.\n\nDudas de privacidad: **saludnowsite@gmail.com**\n",null)
-B.bIk=new A.Ew("T\xe9rminos y\nCondiciones","Conoce los t\xe9rminos y condiciones del\nuso de Salud Now.","### 1. Aceptaci\xf3n de los T\xe9rminos y Registro\nAl registrarte en **Salud Now** de **Salud Now C.A**, aceptas estos t\xe9rminos. Debes ser mayor de edad o contar con representaci\xf3n legal para agendar.\n\n### 2. Glosario y Definiciones\n- **Paciente**: Quien busca agendar servicios.\n- **M\xe9dico/Especialista**: Profesional independiente.\n- **Cl\xednica/Aliado**: Centro con m\xfaltiples consultorios.\n- **No-Show**: Inasistencia sin aviso previo.\n\n### 3. Descargo de Responsabilidad M\xe9dico\nLa aplicaci\xf3n m\xf3vil y plataforma web **SaludNow**, operada por la entidad mercantil **SaludNow, C.A.**, funciona exclusivamente como una herramienta tecnol\xf3gica e intermediaria de conexi\xf3n y gesti\xf3n de citas entre usuarios y profesionales o entidades de salud independientes. \n\nSe establece de forma expl\xedcita e inequ\xedvoca que la aplicaci\xf3n **SaludNow no es un dispositivo m\xe9dico ni software como dispositivo m\xe9dico (SaMD)**, no emite diagn\xf3sticos cl\xednicos, no prescribe ni indica tratamientos terap\xe9uticos o farmacol\xf3gicos, y no efect\xfaa actos de medicina directa. Su uso **no sustituye bajo ninguna circunstancia el criterio, la evaluaci\xf3n presencial, el juicio diagn\xf3stico o el consejo de un profesional de la salud certificado** y habilitado para el ejercicio de la medicina. \n\nAnte cualquier duda sobre un cuadro de salud, sospecha de enfermedad o situaci\xf3n que implique riesgo para la salud o la vida, el usuario debe consultar inmediatamente a un m\xe9dico calificado o dirigirse a un centro de urgencias m\xe9dicas local. **SaludNow no es un servicio de atenci\xf3n de emergencias ni urgencias m\xe9dicas**.\n\n### 4. Condiciones Espec\xedficas para Pacientes\n- La informaci\xf3n suministrada debe ser veraz.\n- Penalizaciones o restricciones aplicar\xe1n ante casos repetitivos de *No-Show*.\n\n### 5. Condiciones para M\xe9dicos y Especialistas\n- Obligaci\xf3n legal de mantener licencias m\xe9dicas activas.\n- Responsabilidad civil, penal y administrativa exclusiva sobre cualquier acto m\xe9dico realizado.\n\n### 6. Condiciones para Cl\xednicas\n- Responsabilidad y solidaridad institucional sobre los doctores vinculados a su cuenta.\n- Obligaci\xf3n de mantener la agenda de sus profesionales actualizada.\n\n### 7. Pagos y Reembolsos\nLas tarifas por servicio tecnol\xf3gico se cobran al realizar reservas seg\xfan corresponda. Los reembolsos se eval\xfaan de acuerdo con la pol\xedtica de cancelaci\xf3n de cada profesional.\n\n### 8. Protecci\xf3n de Datos y Secreto M\xe9dico\nEl expediente cl\xednico pertenece al paciente y es custodiado bajo altos est\xe1ndares criptogr\xe1ficos, obligando a los doctores al secreto profesional.\n\n### 9. Conducta Prohibida\nSe proh\xedbe la suplantaci\xf3n, lenguaje abusivo o el uso de software automatizado para alterar la plataforma.\n\n### 10. Suspensi\xf3n de Cuentas\nNos reservamos el derecho de bloquear cuentas inmediatamente por ejercicio ilegal de la medicina, fraude o comportamiento abusivo.\n\n### 11. Modificaciones\nSe notificar\xe1n por la app o correo. El uso continuar\xe1 implicando aceptaci\xf3n.\n\n### 12. Resoluci\xf3n de Conflictos\nSe aplicar\xe1n las leyes de **Venezuela**. Se privilegiar\xe1 la mediaci\xf3n como paso previo obligatorio a cualquier v\xeda judicial.\n\nContacto legal: **saludnowsite@gmail.com**\n",null)
-B.bIl=new A.Ew("Pol\xedtica de\nPrivacidad","Conoce la Pol\xedtica de Privacidad\nde Salud Now.",'**Grupo MedIA**, desarrollador de Salud Now, es el responsable del tratamiento de los datos personales recogidos mediante la aplicaci\xf3n y el sitio web. Para consultas sobre privacidad o ejercicio de derechos: **saludnowsite@gmail.com**.\n\n### Datos que recogemos\nPara crear y gestionar una cuenta y facilitar el contacto entre pacientes y profesionales, recogemos datos de identificaci\xf3n y contacto (por ejemplo, nombre, correo electr\xf3nico y tel\xe9fono). Al solicitar una cita, tambi\xe9n se recoge el motivo de consulta y los datos necesarios para identificar y organizar esa cita. En los perfiles profesionales se pueden recoger especialidades y datos o documentos de acreditaci\xf3n; algunos formularios tambi\xe9n solicitan fecha de nacimiento, g\xe9nero y c\xe9dula/RIF. No afirmamos que la plataforma recoja \xfanicamente datos de contacto y motivo de consulta: estos datos adicionales se solicitan seg\xfan el tipo de cuenta y la funci\xf3n utilizada.\n\nUsamos los datos para prestar las funciones de Salud Now, gestionar cuentas y citas, proteger la plataforma, atender solicitudes y cumplir obligaciones legales. No vendemos datos personales.\n\n### 1. Definiciones previas\n- **Plataforma**: La aplicaci\xf3n web y m\xf3vil de agendamiento.\n- **Usuario**: Cualquier persona registrada (Paciente, Profesional o Cl\xednica).\n\n### 2. Descargo de Responsabilidad M\xe9dico y Naturaleza del Servicio\nLa aplicaci\xf3n **SaludNow**, operada por la entidad mercantil **SaludNow, C.A.**, funciona exclusivamente como una herramienta tecnol\xf3gica e intermediaria para la gesti\xf3n de citas y conexi\xf3n entre usuarios y prestadores de salud. Se establece de forma expl\xedcita e inequ\xedvoca que la aplicaci\xf3n **no es un dispositivo m\xe9dico, no emite diagn\xf3sticos, no indica tratamientos** y su uso **no sustituye bajo ninguna circunstancia el criterio, la evaluaci\xf3n o el consejo de un profesional de la salud certificado**. Ante cualquier sospecha cl\xednica, duda m\xe9dica o emergencia, el usuario debe consultar a un m\xe9dico calificado o acudir a los servicios locales de urgencia.\n\n### 3. Registro, veracidad y seguridad\nTodo usuario debe registrarse con informaci\xf3n veraz. Es su responsabilidad custodiar sus credenciales. Los Doctores y Cl\xednicas deben proveer documentaci\xf3n comprobatoria de sus licencias. El acceso a los datos de una cita se limita a las funciones necesarias para gestionarla.\n\n### 4. Agendamiento y Cancelaciones\n- **Pacientes**: Deben notificar cancelaciones con el tiempo estipulado. Inasistencias recurrentes ("no-show") podr\xe1n generar sanciones.\n- **Profesionales**: Deben cumplir con su disponibilidad. Las cancelaciones deben hacerse de forma excepcional.\n\n### 5. Pagos y Tarifas\nLa Plataforma facilita pagos y retiene comisiones por el uso del software seg\xfan los planes adquiridos.\n\n### 6. Deslinde de responsabilidad m\xe9dica\nLa responsabilidad sobre el acto m\xe9dico, diagn\xf3sticos y tratamientos recae **exclusivamente** sobre el profesional de la salud.\n\n### 7. Privacidad, consentimiento y datos sensibles\nTratamos los historiales y notas m\xe9dicas con los m\xe1s altos est\xe1ndares de seguridad y cifrado. Todos los profesionales adscritos asumen el deber de secreto profesional.\n\n### 8. Uso indebido\nQueda estrictamente prohibida la ingenier\xeda inversa, scraping, o cualquier uso fraudulento de la plataforma.\n\n### 9. Suspensi\xf3n de cuentas\nNos reservamos el derecho de suspender cuentas por fraude, mala praxis administrativa o quejas recurrentes.\n\n### 10. Modificaciones\nNotificaremos cambios a esta pol\xedtica por correo. El uso continuado implica aceptaci\xf3n.\n\n### Solicitar eliminaci\xf3n de cuenta y datos\nPuedes iniciar la eliminaci\xf3n desde la app en **Perfil > Acerca de Salud Now > Eliminar Cuenta**. Tambi\xe9n puedes enviar una solicitud desde [saludnow.site/eliminar-cuenta](https://saludnow.site/eliminar-cuenta). Verificaremos que la solicitud corresponde al titular antes de procesarla. Eliminaremos o anonimizaremos los datos asociados, salvo los que debamos conservar durante el plazo exigido por ley o para resolver obligaciones pendientes. Los datos conservados quedar\xe1n restringidos a esos fines.\n\n### 11. Ley aplicable\nCualquier controversia ser\xe1 resuelta bajo las leyes de **Venezuela**.\n\nPara consultas: **saludnowsite@gmail.com**\n',null)
+B.bIj=new A.Ew("Pol\xedtica de\nPrivacidad","Conoce la Pol\xedtica de Privacidad\nde Salud Now.",'**Lorenzo Avila**, quien opera Salud Now bajo el nombre comercial **Grupo MedIA**, es el responsable del tratamiento de los datos personales recogidos mediante la aplicaci\xf3n y el sitio web. Para consultas sobre privacidad o ejercicio de derechos: **saludnowsite@gmail.com**.\n\n### Datos que recogemos\nPara crear y gestionar una cuenta y facilitar el contacto entre pacientes y profesionales, recogemos datos de identificaci\xf3n y contacto (por ejemplo, nombre, correo electr\xf3nico y tel\xe9fono). Al solicitar una cita, tambi\xe9n se recoge el motivo de consulta y los datos necesarios para identificar y organizar esa cita. En los perfiles profesionales se pueden recoger especialidades y datos o documentos de acreditaci\xf3n; algunos formularios tambi\xe9n solicitan fecha de nacimiento, g\xe9nero y c\xe9dula/RIF. No afirmamos que la plataforma recoja \xfanicamente datos de contacto y motivo de consulta: estos datos adicionales se solicitan seg\xfan el tipo de cuenta y la funci\xf3n utilizada.\n\nUsamos los datos para prestar las funciones de Salud Now, gestionar cuentas y citas, proteger la plataforma, atender solicitudes y cumplir obligaciones legales. No vendemos datos personales.\n\n### 1. Definiciones previas\n- **Plataforma**: La aplicaci\xf3n web y m\xf3vil de agendamiento.\n- **Usuario**: Cualquier persona registrada (Paciente, Profesional o Cl\xednica).\n\n### 2. Descargo de Responsabilidad M\xe9dico y Naturaleza del Servicio\nLa aplicaci\xf3n **Salud Now**, operada por **Lorenzo Avila bajo el nombre comercial Grupo MedIA**, funciona exclusivamente como una herramienta tecnol\xf3gica e intermediaria para la gesti\xf3n de citas y conexi\xf3n entre usuarios y prestadores de salud. Se establece de forma expl\xedcita e inequ\xedvoca que la aplicaci\xf3n **no es un dispositivo m\xe9dico, no emite diagn\xf3sticos, no indica tratamientos** y su uso **no sustituye bajo ninguna circunstancia el criterio, la evaluaci\xf3n o el consejo de un profesional de la salud certificado**. Ante cualquier sospecha cl\xednica, duda m\xe9dica o emergencia, el usuario debe consultar a un m\xe9dico calificado o acudir a los servicios locales de urgencia.\n\n### 3. Registro, veracidad y seguridad\nTodo usuario debe registrarse con informaci\xf3n veraz. Es su responsabilidad custodiar sus credenciales. Los Doctores y Cl\xednicas deben proveer documentaci\xf3n comprobatoria de sus licencias. El acceso a los datos de una cita se limita a las funciones necesarias para gestionarla.\n\n### 4. Agendamiento y Cancelaciones\n- **Pacientes**: Deben notificar cancelaciones con el tiempo estipulado. Inasistencias recurrentes ("no-show") podr\xe1n generar sanciones.\n- **Profesionales**: Deben cumplir con su disponibilidad. Las cancelaciones deben hacerse de forma excepcional.\n\n### 5. Pagos y Tarifas\nLa Plataforma facilita pagos y retiene comisiones por el uso del software seg\xfan los planes adquiridos.\n\n### 6. Deslinde de responsabilidad m\xe9dica\nLa responsabilidad sobre el acto m\xe9dico, diagn\xf3sticos y tratamientos recae **exclusivamente** sobre el profesional de la salud.\n\n### 7. Privacidad, consentimiento y datos sensibles\nTratamos los historiales y notas m\xe9dicas con los m\xe1s altos est\xe1ndares de seguridad y cifrado. Todos los profesionales adscritos asumen el deber de secreto profesional.\n\n### 8. Uso indebido\nQueda estrictamente prohibida la ingenier\xeda inversa, scraping, o cualquier uso fraudulento de la plataforma.\n\n### 9. Suspensi\xf3n de cuentas\nNos reservamos el derecho de suspender cuentas por fraude, mala praxis administrativa o quejas recurrentes.\n\n### 10. Modificaciones\nNotificaremos cambios a esta pol\xedtica por correo. El uso continuado implica aceptaci\xf3n.\n\n### Solicitar eliminaci\xf3n de cuenta y datos\nPuedes iniciar la eliminaci\xf3n desde la app en **Perfil > Acerca de Salud Now > Eliminar Cuenta**. Tambi\xe9n puedes enviar una solicitud desde [saludnow.site/eliminar-cuenta](https://saludnow.site/eliminar-cuenta). Verificaremos que la solicitud corresponde al titular antes de procesarla. Eliminaremos o anonimizaremos los datos asociados, salvo los que debamos conservar durante el plazo exigido por ley o para resolver obligaciones pendientes. Los datos conservados quedar\xe1n restringidos a esos fines.\n\n### 11. Ley aplicable\nCualquier controversia ser\xe1 resuelta bajo las leyes de **Venezuela**.\n\nPara consultas: **saludnowsite@gmail.com**\n',null)
+B.bIk=new A.Ew("T\xe9rminos y\nCondiciones","Conoce los t\xe9rminos y condiciones del\nuso de Salud Now.","### 1. Aceptaci\xf3n de los T\xe9rminos y Registro\nAl registrarte en **Salud Now**, operada por **Lorenzo Avila bajo el nombre comercial Grupo MedIA**, aceptas estos t\xe9rminos. Debes ser mayor de edad o contar con representaci\xf3n legal para agendar.\n\n### 2. Glosario y Definiciones\n- **Paciente**: Quien busca agendar servicios.\n- **M\xe9dico/Especialista**: Profesional independiente.\n- **Cl\xednica/Aliado**: Centro con m\xfaltiples consultorios.\n- **No-Show**: Inasistencia sin aviso previo.\n\n### 3. Descargo de Responsabilidad M\xe9dico\nLa aplicaci\xf3n m\xf3vil y plataforma web **Salud Now**, operada por **Lorenzo Avila bajo el nombre comercial Grupo MedIA**, funciona exclusivamente como una herramienta tecnol\xf3gica e intermediaria de conexi\xf3n y gesti\xf3n de citas entre usuarios y profesionales o entidades de salud independientes.\n\nSe establece de forma expl\xedcita e inequ\xedvoca que la aplicaci\xf3n **SaludNow no es un dispositivo m\xe9dico ni software como dispositivo m\xe9dico (SaMD)**, no emite diagn\xf3sticos cl\xednicos, no prescribe ni indica tratamientos terap\xe9uticos o farmacol\xf3gicos, y no efect\xfaa actos de medicina directa. Su uso **no sustituye bajo ninguna circunstancia el criterio, la evaluaci\xf3n presencial, el juicio diagn\xf3stico o el consejo de un profesional de la salud certificado** y habilitado para el ejercicio de la medicina. \n\nAnte cualquier duda sobre un cuadro de salud, sospecha de enfermedad o situaci\xf3n que implique riesgo para la salud o la vida, el usuario debe consultar inmediatamente a un m\xe9dico calificado o dirigirse a un centro de urgencias m\xe9dicas local. **SaludNow no es un servicio de atenci\xf3n de emergencias ni urgencias m\xe9dicas**.\n\n### 4. Condiciones Espec\xedficas para Pacientes\n- La informaci\xf3n suministrada debe ser veraz.\n- Penalizaciones o restricciones aplicar\xe1n ante casos repetitivos de *No-Show*.\n\n### 5. Condiciones para M\xe9dicos y Especialistas\n- Obligaci\xf3n legal de mantener licencias m\xe9dicas activas.\n- Responsabilidad civil, penal y administrativa exclusiva sobre cualquier acto m\xe9dico realizado.\n\n### 6. Condiciones para Cl\xednicas\n- Responsabilidad y solidaridad institucional sobre los doctores vinculados a su cuenta.\n- Obligaci\xf3n de mantener la agenda de sus profesionales actualizada.\n\n### 7. Pagos y Reembolsos\nLas tarifas por servicio tecnol\xf3gico se cobran al realizar reservas seg\xfan corresponda. Los reembolsos se eval\xfaan de acuerdo con la pol\xedtica de cancelaci\xf3n de cada profesional.\n\n### 8. Protecci\xf3n de Datos y Secreto M\xe9dico\nEl expediente cl\xednico pertenece al paciente y es custodiado bajo altos est\xe1ndares criptogr\xe1ficos, obligando a los doctores al secreto profesional.\n\n### 9. Conducta Prohibida\nSe proh\xedbe la suplantaci\xf3n, lenguaje abusivo o el uso de software automatizado para alterar la plataforma.\n\n### 10. Suspensi\xf3n de Cuentas\nNos reservamos el derecho de bloquear cuentas inmediatamente por ejercicio ilegal de la medicina, fraude o comportamiento abusivo.\n\n### 11. Modificaciones\nSe notificar\xe1n por la app o correo. El uso continuar\xe1 implicando aceptaci\xf3n.\n\n### 12. Resoluci\xf3n de Conflictos\nSe aplicar\xe1n las leyes de **Venezuela**. Se privilegiar\xe1 la mediaci\xf3n como paso previo obligatorio a cualquier v\xeda judicial.\n\nContacto legal: **saludnowsite@gmail.com**\n",null)
+B.bIl=new A.Ew("Pol\xedtica de\nCookies","Conoce la Pol\xedtica de Cookies\nde Salud Now.","### 1. Introducci\xf3n y alcance\nEn **Salud Now**, operada por **Lorenzo Avila bajo el nombre comercial Grupo MedIA**, valoramos tu privacidad. Esta pol\xedtica explica c\xf3mo usamos cookies, Local Storage, SDKs m\xf3viles y tokens en nuestra plataforma.\n\n### 2. \xbfQu\xe9 son estas tecnolog\xedas?\nSon peque\xf1os archivos de datos o identificadores almacenados en tu navegador o dispositivo m\xf3vil que permiten recordar tus preferencias, mantener tu sesi\xf3n activa de forma segura y analizar el rendimiento general.\n\n### 3. Tipos de tecnolog\xedas que utilizamos\n| Categor\xeda | Prop\xf3sito |\n|---|---|\n| **T\xe9cnicas / Necesarias** | Mantener sesiones (paciente/doctor), prevenir ataques CSRF y seguridad. |\n| **Preferencias** | Recordar idioma, zona horaria y filtros de b\xfasqueda. |\n| **Anal\xedticas** | M\xe9tricas agregadas an\xf3nimas sobre fallos de la app y fluidez de uso. |\n| **Funcionales** | Tokens push para enviar recordatorios de citas. |\n\n### 4. Garant\xeda especial sobre datos de salud\n**NO** utilizamos cookies de rastreo publicitario de terceros (como Meta Pixel o Google Ads) en pantallas donde se procese informaci\xf3n m\xe9dica sensible, diagn\xf3sticos, recetas o historiales cl\xednicos.\n\n### 5. Cookies propias vs. de terceros\nUtilizamos proveedores estrictamente necesarios como pasarelas de pago cifradas y mapas interactivos. No vendemos datos a corredores de datos.\n\n### 6. \xbfC\xf3mo gestionar o desactivar las cookies?\n- **Web**: Puedes gestionar esto desde Configuraci\xf3n > Privacidad en Chrome, Safari o Firefox.\n- **M\xf3vil**: Puedes restringir identificadores desde los Ajustes del sistema (iOS/Android).\n*Aviso*: Deshabilitar cookies t\xe9cnicas impedir\xe1 iniciar sesi\xf3n o agendar citas.\n\n### 7. Periodo de conservaci\xf3n\nLas cookies de sesi\xf3n se eliminan al cerrar el navegador. Las persistentes (ej. preferencias) tienen una duraci\xf3n m\xe1xima de 12 meses.\n\n### 8. Actualizaciones\nCualquier cambio sustancial ser\xe1 notificado v\xeda notificaci\xf3n push o correo.\n\nDudas de privacidad: **saludnowsite@gmail.com**\n",null)
 B.j5=new A.ck(0)
 B.bL4=new A.aRQ(0,"elevated")
 B.bIM=new A.yQ(null)

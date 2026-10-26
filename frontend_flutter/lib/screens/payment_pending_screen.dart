@@ -68,7 +68,7 @@ class PaymentPendingScreen extends StatelessWidget {
                     const SizedBox(height: 12),
                     Text(
                       isGooglePlayBuild
-                          ? 'Tu registro está en espera de revisión. Te pedimos esperar la aprobación del administrador. Para consultar información sobre la afiliación profesional, visita saludnow.site. Esta app no procesa pagos. Cuando tu cuenta sea aprobada, inicia sesión nuevamente para acceder.'
+                          ? 'Tu registro está en espera de revisión. Te pedimos esperar la aprobación del administrador. Para consultar información sobre la afiliación profesional, visita saludnow.site. Cuando tu cuenta sea aprobada, inicia sesión nuevamente para acceder.'
                           : isClinic
                               ? 'La cuenta de la clínica y sus funciones estarán disponibles cuando el administrador verifique el pago.'
                               : 'Pronto su cuenta será activada una vez que el administrador verifique su pago.',

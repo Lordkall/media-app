@@ -1010,7 +1010,7 @@ class _AboutPage extends StatelessWidget {
         builder: (c) => AlertDialog(
                 title: const Text('Eliminar cuenta'),
                 content: const Text(
-                    'Se eliminarán tus datos personales, tus chats de soporte y todas tus citas agendadas. ¿Continuar?'),
+                    'Se eliminarán permanentemente tu cuenta y los datos asociados, incluidos tu perfil, citas, chats, suscripciones y datos de acceso. Esta acción no se puede deshacer. ¿Continuar?'),
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.pop(c, false),

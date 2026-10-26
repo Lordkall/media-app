@@ -15,7 +15,7 @@ class WebFooter extends StatelessWidget {
         runSpacing: 16,
         children: [
           const Text(
-            'Copyright © 2026 Salud Now. RIF J-501934070, Salud Now C.A.',
+            'Copyright © 2026 Grupo MedIA · Salud Now',
             style: TextStyle(color: Colors.white70, fontSize: 13),
           ),
           Wrap(

@@ -3,7 +3,7 @@ from datetime import timezone
 from zoneinfo import ZoneInfo
 import base64
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, or_, select, update
 from app.core.database import get_db
 from app.models.users import User, RoleEnum as DatabaseRoleEnum
 from app.schemas.users import UserResponse, UserUpdate, PasswordChange
@@ -281,55 +281,134 @@ async def delete_my_account(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # Anonymize the account and invalidate tokens previously issued to it.
-    import secrets
-    current_user.email = f"deleted-{current_user.id}-{secrets.token_hex(8)}@invalid.saludnow"
-    current_user.first_name = "Cuenta"
-    current_user.last_name = "eliminada"
-    current_user.phone = ""
-    current_user.state = None
-    current_user.address = None
-    current_user.gender = None
-    current_user.avatar_url = None
-    current_user.avatar_data = None
-    current_user.avatar_content_type = None
-    current_user.session_token = secrets.token_urlsafe(32)
-    current_user.fcm_token = None
-    current_user.hashed_password = get_password_hash(secrets.token_urlsafe(40))
-    current_user.terms_accepted_at = None
-    current_user.privacy_accepted_at = None
-    current_user.terms_version = None
-    current_user.privacy_version = None
-    from app.models.patients import Patient
-    from app.models.doctors import Doctor
+    """Permanently remove the account and its user-owned records."""
+    from app.models.appointments import Appointment
     from app.models.clinics import Clinic
-    patient = await db.scalar(select(Patient).where(Patient.user_id == current_user.id))
-    if patient:
-        from app.models.appointments import Appointment
-        await db.execute(delete(Appointment).where(Appointment.patient_id == patient.id))
-        patient.contact_phone = ""
-
-    from app.models.support import SupportTicket, TicketMessage
-    ticket_ids = list((await db.scalars(
-        select(SupportTicket.id).where(SupportTicket.user_id == current_user.id)
-    )).all())
-    if ticket_ids:
-        await db.execute(delete(TicketMessage).where(TicketMessage.ticket_id.in_(ticket_ids)))
-        await db.execute(delete(SupportTicket).where(SupportTicket.id.in_(ticket_ids)))
+    from app.models.direct_conversations import DirectConversation, DirectMessage
+    from app.models.doctors import Availability, Doctor
     from app.models.notifications import Notification
-    await db.execute(delete(Notification).where(Notification.user_id == current_user.id))
-    doctor = await db.scalar(select(Doctor).where(Doctor.user_id == current_user.id))
-    if doctor:
-        doctor.bio = None
-        doctor.clinic_info = None
-        doctor.specialties = []
-    clinic = await db.scalar(select(Clinic).where(Clinic.user_id == current_user.id))
-    if clinic:
-        clinic.description = None
-        clinic.specialties = []
-        clinic.contact_phone_2 = None
-    await db.commit()
-    return {"message": "Cuenta eliminada"}
+    from app.models.password_reset import PasswordResetToken
+    from app.models.patients import Patient
+    from app.models.subscriptions import Subscription
+    from app.models.support import SupportTicket, TicketMessage
+
+    user_id = current_user.id
+    try:
+        patient = await db.scalar(select(Patient).where(Patient.user_id == user_id))
+        doctor = await db.scalar(select(Doctor).where(Doctor.user_id == user_id))
+        clinic = await db.scalar(select(Clinic).where(Clinic.user_id == user_id))
+
+        # Remove appointment and conversation data tied to this patient's profile.
+        if patient:
+            patient_conversations = select(DirectConversation.id).where(
+                DirectConversation.patient_id == patient.id
+            )
+            await db.execute(
+                delete(DirectMessage).where(
+                    DirectMessage.conversation_id.in_(patient_conversations)
+                )
+            )
+            await db.execute(
+                delete(DirectConversation).where(
+                    DirectConversation.patient_id == patient.id
+                )
+            )
+            await db.execute(
+                delete(Appointment).where(Appointment.patient_id == patient.id)
+            )
+            await db.delete(patient)
+
+        # Remove the doctor's schedule, appointments, subscription proofs and chats.
+        if doctor:
+            doctor_conversations = select(DirectConversation.id).where(
+                DirectConversation.doctor_id == doctor.id
+            )
+            await db.execute(
+                delete(DirectMessage).where(
+                    DirectMessage.conversation_id.in_(doctor_conversations)
+                )
+            )
+            await db.execute(
+                delete(DirectConversation).where(
+                    DirectConversation.doctor_id == doctor.id
+                )
+            )
+            await db.execute(
+                delete(Appointment).where(Appointment.doctor_id == doctor.id)
+            )
+            await db.execute(
+                delete(Availability).where(Availability.doctor_id == doctor.id)
+            )
+            await db.execute(
+                delete(Subscription).where(Subscription.doctor_id == doctor.id)
+            )
+            # Assistant accounts belong to their own users; detach them instead
+            # of deleting those accounts when their doctor leaves.
+            await db.execute(
+                update(User)
+                .where(User.linked_doctor_id == doctor.id)
+                .values(linked_doctor_id=None)
+            )
+            await db.delete(doctor)
+
+        if clinic:
+            # Doctors keep their accounts but lose their links to the deleted clinic.
+            await db.execute(
+                update(Doctor)
+                .where(
+                    or_(
+                        Doctor.clinic_id == clinic.id,
+                        Doctor.requested_clinic_id == clinic.id,
+                    )
+                )
+                .values(
+                    clinic_id=None,
+                    requested_clinic_id=None,
+                    clinic_join_status=None,
+                )
+            )
+            await db.execute(
+                delete(Subscription).where(Subscription.clinic_id == clinic.id)
+            )
+            await db.delete(clinic)
+
+        # Remove messages authored by this account, including in shared threads,
+        # and retain other users' conversations where possible.
+        await db.execute(
+            delete(DirectMessage).where(DirectMessage.sender_user_id == user_id)
+        )
+        await db.execute(
+            update(DirectConversation)
+            .where(DirectConversation.assistant_user_id == user_id)
+            .values(assistant_user_id=None)
+        )
+
+        owned_ticket_ids = select(SupportTicket.id).where(
+            SupportTicket.user_id == user_id
+        )
+        await db.execute(
+            delete(TicketMessage).where(
+                or_(
+                    TicketMessage.sender_id == user_id,
+                    TicketMessage.ticket_id.in_(owned_ticket_ids),
+                )
+            )
+        )
+        await db.execute(
+            delete(SupportTicket).where(SupportTicket.user_id == user_id)
+        )
+        await db.execute(delete(Notification).where(Notification.user_id == user_id))
+        await db.execute(
+            delete(PasswordResetToken).where(PasswordResetToken.user_id == user_id)
+        )
+
+        await db.delete(current_user)
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+
+    return {"message": "Cuenta y datos asociados eliminados"}
 
 @router.get("/bcv-rate")
 async def get_bcv_rate(db: AsyncSession = Depends(get_db)):
