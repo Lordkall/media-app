@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:convert';
 import '../widgets/doctor_header.dart';
 import '../core/api_client.dart';
+import '../core/distribution_config.dart';
 import '../core/profile_image_helper.dart';
 import '../models/ve_catalogs.dart';
 import '../widgets/profile_avatar.dart';
@@ -344,7 +345,8 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
                               style: const TextStyle(
                                   fontSize: 16, color: Color(0xFF475569))),
                         const SizedBox(height: 24),
-                        if (_subData?['is_clinic_member'] != true)
+                        if (!isGooglePlayBuild &&
+                            _subData?['is_clinic_member'] != true)
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(

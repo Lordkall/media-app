@@ -6,6 +6,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'core/local_notification_service.dart';
 import 'core/app_navigator.dart';
+import 'screens/legal_screens.dart';
 import 'screens/login_screen.dart';
 import 'widgets/profile_avatar.dart';
 
@@ -35,6 +36,18 @@ class SaludNowApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const legalRoutes = {
+      '/privacidad',
+      '/cookies',
+      '/politicas',
+      '/terminos',
+      '/terminos-y-condiciones',
+      '/eliminar-cuenta',
+    };
+    final initialPath = kIsWeb && legalRoutes.contains(Uri.base.path)
+        ? Uri.base.path
+        : '/';
+
     return MaterialApp(
       navigatorKey: appNavigatorKey,
       title: 'Salud Now',
@@ -51,7 +64,16 @@ class SaludNowApp extends StatelessWidget {
           behavior: SnackBarBehavior.floating,
         ),
       ),
-      home: const LoginScreen(),
+      initialRoute: initialPath,
+      routes: {
+        '/': (_) => const LoginScreen(),
+        '/privacidad': (_) => const PrivacyPolicyScreen(),
+        '/cookies': (_) => const CookiesPolicyScreen(),
+        '/politicas': (_) => const TermsAndConditionsScreen(),
+        '/terminos': (_) => const TermsAndConditionsScreen(),
+        '/terminos-y-condiciones': (_) => const TermsAndConditionsScreen(),
+        '/eliminar-cuenta': (_) => const AccountDeletionRequestScreen(),
+      },
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,

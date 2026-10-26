@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/api_client.dart';
+import '../core/distribution_config.dart';
 import '../widgets/profile_avatar.dart';
 import '../core/profile_image_helper.dart';
 import '../widgets/doctor_header.dart';
@@ -369,29 +370,30 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        if (_userData != null) {
-                          Navigator.of(context).push(MaterialPageRoute(
-                              builder: (_) => SelectPlanScreen(
-                                  doctorData: _userData!, isRenewal: true)));
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0056B3),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                  if (!isGooglePlayBuild)
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          if (_userData != null) {
+                            Navigator.of(context).push(MaterialPageRoute(
+                                builder: (_) => SelectPlanScreen(
+                                    doctorData: _userData!, isRenewal: true)));
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0056B3),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: Text(
+                            'Renovar o Cambiar Plan (Quedan ${_getDaysRemaining()} días)',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold)),
                       ),
-                      child: Text(
-                          'Renovar o Cambiar Plan (Quedan ${_getDaysRemaining()} días)',
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold)),
                     ),
-                  ),
                   const SizedBox(height: 16),
                   const SizedBox(height: 80),
                 ],

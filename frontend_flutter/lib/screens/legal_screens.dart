@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'dart:convert';
+import '../core/api_client.dart';
 import '../widgets/web_footer.dart';
 
 const String _privacyMarkdown = """
-En **Salud Now**, operando en **Venezuela**, actuamos como intermediarios tecnológicos a través de nuestra plataforma digital. Nuestro compromiso es garantizar la máxima privacidad y el cumplimiento de las normativas de protección de datos aplicables.
+**Grupo MedIA**, desarrollador de Salud Now, es el responsable del tratamiento de los datos personales recogidos mediante la aplicación y el sitio web. Para consultas sobre privacidad o ejercicio de derechos: **saludnowsite@gmail.com**.
+
+### Datos que recogemos
+Para crear y gestionar una cuenta y facilitar el contacto entre pacientes y profesionales, recogemos datos de identificación y contacto (por ejemplo, nombre, correo electrónico y teléfono). Al solicitar una cita, también se recoge el motivo de consulta y los datos necesarios para identificar y organizar esa cita. En los perfiles profesionales se pueden recoger especialidades y datos o documentos de acreditación; algunos formularios también solicitan fecha de nacimiento, género y cédula/RIF. No afirmamos que la plataforma recoja únicamente datos de contacto y motivo de consulta: estos datos adicionales se solicitan según el tipo de cuenta y la función utilizada.
+
+Usamos los datos para prestar las funciones de Salud Now, gestionar cuentas y citas, proteger la plataforma, atender solicitudes y cumplir obligaciones legales. No vendemos datos personales.
 
 ### 1. Definiciones previas
 - **Plataforma**: La aplicación web y móvil de agendamiento.
@@ -14,7 +21,7 @@ En **Salud Now**, operando en **Venezuela**, actuamos como intermediarios tecnol
 La aplicación **SaludNow**, operada por la entidad mercantil **SaludNow, C.A.**, funciona exclusivamente como una herramienta tecnológica e intermediaria para la gestión de citas y conexión entre usuarios y prestadores de salud. Se establece de forma explícita e inequívoca que la aplicación **no es un dispositivo médico, no emite diagnósticos, no indica tratamientos** y su uso **no sustituye bajo ninguna circunstancia el criterio, la evaluación o el consejo de un profesional de la salud certificado**. Ante cualquier sospecha clínica, duda médica o emergencia, el usuario debe consultar a un médico calificado o acudir a los servicios locales de urgencia.
 
 ### 3. Registro, veracidad y seguridad
-Todo usuario debe registrarse con información veraz. Es su responsabilidad custodiar sus credenciales. Los Doctores y Clínicas deben proveer documentación comprobatoria de sus licencias.
+Todo usuario debe registrarse con información veraz. Es su responsabilidad custodiar sus credenciales. Los Doctores y Clínicas deben proveer documentación comprobatoria de sus licencias. El acceso a los datos de una cita se limita a las funciones necesarias para gestionarla.
 
 ### 4. Agendamiento y Cancelaciones
 - **Pacientes**: Deben notificar cancelaciones con el tiempo estipulado. Inasistencias recurrentes ("no-show") podrán generar sanciones.
@@ -37,6 +44,9 @@ Nos reservamos el derecho de suspender cuentas por fraude, mala praxis administr
 
 ### 10. Modificaciones
 Notificaremos cambios a esta política por correo. El uso continuado implica aceptación.
+
+### Solicitar eliminación de cuenta y datos
+Puedes iniciar la eliminación desde la app en **Perfil > Acerca de Salud Now > Eliminar Cuenta**. También puedes enviar una solicitud desde [saludnow.site/eliminar-cuenta](https://saludnow.site/eliminar-cuenta). Verificaremos que la solicitud corresponde al titular antes de procesarla. Eliminaremos o anonimizaremos los datos asociados, salvo los que debamos conservar durante el plazo exigido por ley o para resolver obligaciones pendientes. Los datos conservados quedarán restringidos a esos fines.
 
 ### 11. Ley aplicable
 Cualquier controversia será resuelta bajo las leyes de **Venezuela**.
@@ -251,4 +261,127 @@ class TermsAndConditionsScreen extends StatelessWidget {
       markdownData: _termsMarkdown,
     );
   }
+}
+
+class AccountDeletionRequestScreen extends StatefulWidget {
+  const AccountDeletionRequestScreen({super.key});
+
+  @override
+  State<AccountDeletionRequestScreen> createState() =>
+      _AccountDeletionRequestScreenState();
+}
+
+class _AccountDeletionRequestScreenState
+    extends State<AccountDeletionRequestScreen> {
+  final _emailController = TextEditingController();
+  bool _sending = false;
+  String? _result;
+  bool _success = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final email = _emailController.text.trim();
+    if (!email.contains('@') || email.endsWith('@')) {
+      setState(() => _result = 'Escribe el correo asociado a tu cuenta.');
+      return;
+    }
+    setState(() {
+      _sending = true;
+      _result = null;
+    });
+    try {
+      final response = await ApiClient.post(
+        '/users/account-deletion-request',
+        {'email': email},
+      );
+      final body = jsonDecode(response.body);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        setState(() {
+          _success = true;
+          _result = 'Recibimos tu solicitud. Te contactaremos para verificarla.';
+        });
+      } else {
+        setState(() => _result = body is Map && body['detail'] != null
+            ? body['detail'].toString()
+            : 'No se pudo enviar la solicitud. Inténtalo más tarde.');
+      }
+    } catch (_) {
+      setState(() => _result =
+          'No se pudo conectar. Inténtalo más tarde o escribe a saludnowsite@gmail.com.');
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        backgroundColor: const Color(0xFFF9FAFB),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF0056B3),
+          iconTheme: const IconThemeData(color: Colors.white),
+          title: const Text('Eliminar cuenta',
+              style: TextStyle(color: Colors.white)),
+        ),
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 680),
+            child: ListView(
+              padding: const EdgeInsets.all(24),
+              children: [
+                const Icon(Icons.delete_outline,
+                    color: Color(0xFF0056B3), size: 56),
+                const SizedBox(height: 16),
+                const Text(
+                  'Solicita la eliminación de tu cuenta y datos de Salud Now.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF16324F)),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Indica el correo registrado. Grupo MedIA verificará que eres titular y te contactará para completar la solicitud. Los datos que deban conservarse por obligaciones legales quedarán restringidos.',
+                  style: TextStyle(fontSize: 16, height: 1.5),
+                ),
+                const SizedBox(height: 24),
+                TextField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  autofillHints: const [AutofillHints.email],
+                  decoration: const InputDecoration(
+                    labelText: 'Correo asociado a tu cuenta',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: _sending || _success ? null : _submit,
+                  child: _sending
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Text('Enviar solicitud'),
+                ),
+                if (_result != null) ...[
+                  const SizedBox(height: 16),
+                  Text(_result!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          color: _success ? Colors.green.shade800 : Colors.red,
+                          fontWeight: FontWeight.w600)),
+                ],
+                const SizedBox(height: 28),
+                if (kIsWeb) const WebFooter(),
+              ],
+            ),
+          ),
+        ),
+      );
 }

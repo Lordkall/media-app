@@ -403,7 +403,7 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
                 const SizedBox(width: 48),
                 _buildNavItem(Icons.groups, 'Doctores', 3),
               ] else if (_role == 'admin') ...[
-                _buildNavItem(Icons.card_membership, 'Suscripción', 1),
+                _buildNavItem(Icons.people_outline, 'Usuarios', 1),
                 const SizedBox(width: 48),
                 _buildNavItem(Icons.bar_chart, 'Estadísticas', 3),
               ] else if (_role == 'patient') ...[

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../core/auth_helper.dart';
+import '../core/distribution_config.dart';
 import '../screens/login_screen.dart';
 import '../screens/notifications_screen.dart';
 import '../screens/unified_messages_screen.dart';
@@ -350,32 +351,33 @@ class _DoctorHeaderState extends State<DoctorHeader> {
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Entendido'),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.amber[700],
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-            ),
-            onPressed: () {
-              Navigator.pop(ctx);
-              if (userData != null && context.mounted) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => SelectPlanScreen(
-                      doctorData: userData!,
-                      isRenewal: true,
+          if (!isGooglePlayBuild)
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber[700],
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () {
+                Navigator.pop(ctx);
+                if (userData != null && context.mounted) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => SelectPlanScreen(
+                        doctorData: userData!,
+                        isRenewal: true,
+                      ),
                     ),
-                  ),
-                );
-              }
-            },
-            child: const Text(
-              'Mejorar a VIP',
-              style:
-                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  );
+                }
+              },
+              child: const Text(
+                'Mejorar a VIP',
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold),
+              ),
             ),
-          ),
         ],
       ),
     );

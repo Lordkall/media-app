@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 
 import 'package:salud_now/screens/payment_pending_screen.dart';
 import 'login_screen.dart';
+import '../core/distribution_config.dart';
 
 class SelectPlanScreen extends StatefulWidget {
   final Map<String, dynamic> doctorData;
@@ -232,6 +233,12 @@ class _SelectPlanScreenState extends State<SelectPlanScreen> {
     final double bcvRate = _bcvRate;
 
     final isClinic = widget.doctorData['role'] == 'clinic';
+
+    // Google Play distribution is consumption-only: keep the account in the
+    // review/waiting flow and never expose the Pago Móvil purchase form.
+    if (isGooglePlayBuild) {
+      return PaymentPendingScreen(isClinic: isClinic);
+    }
 
     final basicPrice =
         _isAnual ? (isClinic ? 1500 : 200) : (isClinic ? 150 : 20);

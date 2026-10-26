@@ -390,6 +390,13 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
                                         ?.join(', ') ??
                                     'Médico General';
                             final plan = item['plan'];
+                            final phone = (item['phone'] ?? '').toString().trim();
+                            final doctorDetails = [
+                              specialties,
+                              item['email']?.toString() ?? '',
+                              if (_searchType == 'Doctores' && phone.isNotEmpty)
+                                'Tel: $phone',
+                            ].where((value) => value.isNotEmpty).join(' | ');
 
                             Color planColor = Colors.grey;
                             if (plan == 'sponsored' || plan == 'clinic_vip') {
@@ -407,7 +414,7 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
                               userId,
                               name,
                               _searchType == 'Doctores'
-                                  ? '$specialties | ${item['email']}'
+                                  ? doctorDetails
                                   : '${item['email']}',
                               plan == 'Ninguno' ? 'Sin plan' : plan,
                               planColor,

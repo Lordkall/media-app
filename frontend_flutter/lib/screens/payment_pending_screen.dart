@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:salud_now/screens/login_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../core/distribution_config.dart';
 
 class PaymentPendingScreen extends StatelessWidget {
   const PaymentPendingScreen({super.key, this.isClinic = false});
@@ -21,9 +22,11 @@ class PaymentPendingScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-            isClinic
-                ? 'Plan de clínica en verificación'
-                : 'Cuenta en Verificación',
+            isGooglePlayBuild
+                ? 'Cuenta en espera'
+                : isClinic
+                    ? 'Plan de clínica en verificación'
+                    : 'Cuenta en Verificación',
             style: const TextStyle(color: Colors.white)),
         backgroundColor: const Color(0xFF0B2545),
       ),
@@ -51,18 +54,24 @@ class PaymentPendingScreen extends StatelessWidget {
                         size: 64, color: Colors.blue),
                     const SizedBox(height: 16),
                     Text(
-                      isClinic
-                          ? 'El pago de la clínica está siendo procesado'
-                          : 'Su pago está siendo procesado',
+                      isGooglePlayBuild
+                          ? isClinic
+                              ? 'Registro de clínica recibido'
+                              : 'Registro profesional recibido'
+                          : isClinic
+                              ? 'El pago de la clínica está siendo procesado'
+                              : 'Su pago está siendo procesado',
                       style: const TextStyle(
                           fontSize: 20, fontWeight: FontWeight.bold),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      isClinic
-                          ? 'La cuenta de la clínica y sus funciones estarán disponibles cuando el administrador verifique el pago.'
-                          : 'Pronto su cuenta será activada una vez que el administrador verifique su pago.',
+                      isGooglePlayBuild
+                          ? 'Tu registro está en espera de revisión. Te pedimos esperar la aprobación del administrador. Para consultar información sobre la afiliación profesional, visita saludnow.site. Esta app no procesa pagos. Cuando tu cuenta sea aprobada, inicia sesión nuevamente para acceder.'
+                          : isClinic
+                              ? 'La cuenta de la clínica y sus funciones estarán disponibles cuando el administrador verifique el pago.'
+                              : 'Pronto su cuenta será activada una vez que el administrador verifique su pago.',
                       style:
                           const TextStyle(fontSize: 16, color: Colors.black87),
                       textAlign: TextAlign.center,

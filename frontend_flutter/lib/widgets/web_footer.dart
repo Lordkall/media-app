@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../screens/legal_screens.dart';
 
 class WebFooter extends StatelessWidget {
   const WebFooter({super.key});
@@ -24,16 +23,20 @@ class WebFooter extends StatelessWidget {
             runSpacing: 8,
             children: [
               InkWell(
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TermsAndConditionsScreen())),
+                onTap: () => Navigator.pushNamed(context, '/politicas'),
                 child: const Text('Términos y Condiciones', style: TextStyle(color: Colors.white70, fontSize: 13)),
               ),
               InkWell(
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CookiesPolicyScreen())),
+                onTap: () => Navigator.pushNamed(context, '/cookies'),
                 child: const Text('Cookies', style: TextStyle(color: Colors.white70, fontSize: 13)),
               ),
               InkWell(
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen())),
+                onTap: () => Navigator.pushNamed(context, '/privacidad'),
                 child: const Text('Privacidad', style: TextStyle(color: Colors.white70, fontSize: 13)),
+              ),
+              InkWell(
+                onTap: () => Navigator.pushNamed(context, '/eliminar-cuenta'),
+                child: const Text('Eliminar cuenta', style: TextStyle(color: Colors.white70, fontSize: 13)),
               ),
             ],
           ),

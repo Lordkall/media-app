@@ -3,12 +3,14 @@ Servicio de suscripciones: toda la logica de negocio para crear, verificar,
 renovar y revocar suscripciones de doctores.
 """
 from datetime import datetime, timedelta, timezone
+import math
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.users import User, RoleEnum
 from app.models.doctors import Doctor
+from app.models.clinics import Clinic
 from app.models.subscriptions import Subscription, SubscriptionPlan, SubscriptionStatus
 from app.models.notifications import Notification, NotificationType
 
@@ -24,7 +26,7 @@ PLAN_LABELS = {
 }
 
 SUBSCRIPTION_DAYS = 30
-REMINDER_DAYS_BEFORE = 3
+REMINDER_DAYS_BEFORE = 7
 GRACE_PERIOD_DAYS = 3
 
 
@@ -118,48 +120,67 @@ async def create_subscription(session: AsyncSession, doctor_id: int, plan: Subsc
 
 async def check_expiring_subscriptions(session: AsyncSession) -> int:
     """
-    Busca suscripciones ACTIVAS que vencen en los proximos REMINDER_DAYS_BEFORE dias.
-    Crea notificacion de recordatorio al doctor.
-    Retorna cantidad de recordatorios creados.
+    Envía un recordatorio push/in-app cada 24 horas durante los últimos siete
+    días de una suscripción activa, tanto para doctores como para clínicas.
     """
     now = _now()
     reminder_threshold = now + timedelta(days=REMINDER_DAYS_BEFORE)
 
     query = (
         select(Subscription)
-        .options(joinedload(Subscription.doctor).joinedload(Doctor.user))
+        .options(
+            joinedload(Subscription.doctor).joinedload(Doctor.user),
+            joinedload(Subscription.clinic).joinedload(Clinic.user),
+        )
         .where(
             Subscription.status == SubscriptionStatus.ACTIVE,
             Subscription.end_date <= reminder_threshold,
             Subscription.end_date > now,
         )
+        .with_for_update(of=Subscription, skip_locked=True)
     )
     result = await session.execute(query)
     subs = result.scalars().unique().all()
 
     count = 0
     for sub in subs:
-        # Verificar que no exista ya un recordatorio reciente (ultimas 24h)
-        existing = await session.execute(
-            select(Notification).where(
-                Notification.user_id == sub.doctor.user.id,
-                Notification.type == NotificationType.RENEWAL_REMINDER,
-                Notification.created_at >= now - timedelta(hours=24),
-            )
+        recipient = (
+            sub.doctor.user if sub.doctor and sub.doctor.user
+            else sub.clinic.user if sub.clinic and sub.clinic.user
+            else None
         )
-        if existing.scalars().first():
+        if recipient is None:
             continue
 
-        days_left = (sub.end_date - now).days
-        plan_label = PLAN_LABELS[sub.plan]
+        reminder_key = f"subscription_expiry:{sub.id}"
+        # Los recordatorios de citas y horarios no deben silenciar este aviso.
+        existing = await session.execute(
+            select(Notification.id).where(
+                Notification.user_id == recipient.id,
+                Notification.type == NotificationType.RENEWAL_REMINDER,
+                Notification.action_url == reminder_key,
+                Notification.created_at >= now - timedelta(hours=24),
+            ).limit(1)
+        )
+        if existing.scalar_one_or_none() is not None:
+            continue
+
+        end_date = sub.end_date
+        if end_date.tzinfo is None:
+            end_date = end_date.replace(tzinfo=timezone.utc)
+        days_left = max(1, math.ceil((end_date - now).total_seconds() / 86400))
+        plan_label = PLAN_LABELS.get(sub.plan)
+        if plan_label is None:
+            plan_value = getattr(sub.plan, "value", str(sub.plan))
+            plan_label = plan_value.replace('_', ' ').title()
 
         notif = Notification(
-            user_id=sub.doctor.user.id,
+            user_id=recipient.id,
             type=NotificationType.RENEWAL_REMINDER,
-            title="Renovar suscripcion",
-            message=f"Tu plan {plan_label} vence en {days_left} dia(s). Renueva ahora para mantener tu visibilidad.",
+            title="No olvides renovar tu plan",
+            message=f"Tu plan {plan_label} vence en {days_left} día(s). Renueva a tiempo para mantener activos tus servicios profesionales.",
             is_read=False,
-            action_url="/subscribe",
+            action_url=reminder_key,
             created_at=now,
         )
         session.add(notif)

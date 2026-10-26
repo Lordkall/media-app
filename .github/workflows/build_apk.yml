@@ -60,6 +60,18 @@ jobs:
           keyPassword=${ANDROID_KEY_PASSWORD:-android}
           EOF
 
+      - name: Build Google Play App Bundle (consumption-only)
+        run: |
+          cd frontend_flutter
+          flutter build appbundle --release --dart-define=PLAY_STORE_BUILD=true
+
+      - name: Upload Google Play App Bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: SaludNow-GooglePlay-AAB
+          path: frontend_flutter/build/app/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+
       - name: Build APK
         run: |
           cd frontend_flutter

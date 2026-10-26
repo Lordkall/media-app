@@ -200,6 +200,7 @@ async def get_all_doctors(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
+    check_admin(current_user)
     # Fetch active clinic subscriptions to ensure accurate mapping for clinic doctors
     clinic_subs_res = await db.execute(
         select(Subscription).where(
@@ -254,7 +255,9 @@ async def get_all_doctors(
             "first_name": user.first_name,
             "last_name": user.last_name,
             "email": user.email,
-            "phone": user.phone if user.show_whatsapp else "",
+            # Admins need the registered contact number even when the doctor
+            # hides WhatsApp from public profiles.
+            "phone": user.phone or "",
             "specialties": doc.specialties or [],
             "state": user.state,
             "address": doc.clinic_info or user.address or 'Sin dirección registrada',

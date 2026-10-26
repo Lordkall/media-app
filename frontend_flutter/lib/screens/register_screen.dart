@@ -9,6 +9,8 @@ import 'dart:ui';
 import '../core/api_client.dart';
 import '../models/ve_catalogs.dart';
 import 'select_plan_screen.dart';
+import 'payment_pending_screen.dart';
+import '../core/distribution_config.dart';
 import 'legal_screens.dart';
 import '../widgets/web_footer.dart';
 
@@ -219,9 +221,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
             await prefs.setBool('biometrics_enabled', false);
             if (!mounted) return;
             Navigator.of(context).pushReplacement(MaterialPageRoute(
-              builder: (_) => const SelectPlanScreen(
-                doctorData: {'role': 'clinic'},
-              ),
+              builder: (_) => isGooglePlayBuild
+                  ? const PaymentPendingScreen(isClinic: true)
+                  : const SelectPlanScreen(
+                      doctorData: {'role': 'clinic'},
+                    ),
             ));
             return;
           }
@@ -234,12 +238,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
           Navigator.pop(context);
           return;
         }
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('¡Cuenta creada exitosamente!'),
-              backgroundColor: Colors.green),
-        );
-        Navigator.pop(context);
+        if (_role == 'doctor' && isGooglePlayBuild) {
+          Navigator.of(context).pushReplacement(MaterialPageRoute(
+              builder: (_) => const PaymentPendingScreen()));
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('¡Cuenta creada exitosamente!'),
+                backgroundColor: Colors.green),
+          );
+          Navigator.pop(context);
+        }
       } else {
         final detail = _registrationError(response.body);
         ScaffoldMessenger.of(context).showSnackBar(

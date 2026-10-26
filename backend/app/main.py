@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from app.api.v1.router import api_router
 import os
 
@@ -248,6 +249,8 @@ async def lifespan(app: FastAPI):
     history_cleanup_task = asyncio.create_task(appointment_history_cleanup_loop())
     from app.tasks.weekly_schedule_reminders import weekly_schedule_reminder_loop
     weekly_schedule_task = asyncio.create_task(weekly_schedule_reminder_loop())
+    from app.tasks.subscription_reminders import subscription_renewal_reminder_loop
+    subscription_reminders_task = asyncio.create_task(subscription_renewal_reminder_loop())
     
     yield
     
@@ -256,6 +259,7 @@ async def lifespan(app: FastAPI):
     reminders_task.cancel()
     history_cleanup_task.cancel()
     weekly_schedule_task.cancel()
+    subscription_reminders_task.cancel()
 
 app = FastAPI(title="MedIA Backend", version="1.0.0", lifespan=lifespan)
 
@@ -289,6 +293,17 @@ app.include_router(api_router, prefix="/api/v1")
 
 os.makedirs("uploads/avatars", exist_ok=True)
 app.mount("/api/v1/uploads", StaticFiles(directory="uploads"), name="uploads")
+
+# Serve the Flutter shell for public legal URLs so they work when opened
+# directly (for example from Google Play) as well as through in-app links.
+@app.get("/privacidad", include_in_schema=False)
+@app.get("/cookies", include_in_schema=False)
+@app.get("/politicas", include_in_schema=False)
+@app.get("/terminos", include_in_schema=False)
+@app.get("/terminos-y-condiciones", include_in_schema=False)
+@app.get("/eliminar-cuenta", include_in_schema=False)
+async def legal_page():
+    return FileResponse("static/index.html")
 
 # No-cache middleware for Flutter JS files to prevent stale browser cache
 NO_CACHE_FILES = {"main.dart.js", "flutter_bootstrap.js", "flutter_service_worker.js", "index.html", "manifest.json"}

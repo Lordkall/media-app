@@ -12,10 +12,52 @@ from app.schemas.users import UserResponse, UserUpdate, PasswordChange
 from app.api.v1.endpoints.auth import router as auth_router # just to import something if needed, but we'll use Depends
 from jose import jwt, JWTError
 from fastapi.security import OAuth2PasswordBearer
+from pydantic import BaseModel, EmailStr
+import html
+import os
 from app.core.security import SECRET_KEY, ALGORITHM, verify_password, get_password_hash
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+
+
+class AccountDeletionRequest(BaseModel):
+    email: EmailStr
+
+
+@router.post("/account-deletion-request")
+async def request_account_deletion(payload: AccountDeletionRequest):
+    """Accept a public account deletion request without revealing account status."""
+    if not os.getenv("RESEND_API_KEY"):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="El formulario no está disponible temporalmente. Escribe a saludnowsite@gmail.com.",
+        )
+
+    safe_email = html.escape(str(payload.email).strip())
+    message = f"""<p>Se recibió una solicitud externa de eliminación de cuenta.</p>
+    <p><strong>Correo indicado:</strong> {safe_email}</p>
+    <p>Verifica la identidad del titular antes de tramitar la eliminación o anonimización de sus datos.</p>"""
+    try:
+        from app.services.email import send_email
+        await send_email(
+            "saludnowsite@gmail.com",
+            "Solicitud de eliminación de cuenta · Salud Now",
+            message,
+        )
+    except Exception:
+        import logging
+        logging.getLogger("uvicorn.error").exception(
+            "No se pudo enviar la solicitud de eliminación de cuenta"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="No se pudo enviar la solicitud. Inténtalo más tarde o escribe a saludnowsite@gmail.com.",
+        )
+
+    return {
+        "message": "Solicitud recibida. Te contactaremos para verificarla.",
+    }
 
 
 async def _recover_legacy_appointment_action(notification, user: User, db: AsyncSession) -> str | None:

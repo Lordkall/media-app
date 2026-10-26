@@ -16,7 +16,7 @@ async def run_subscription_check():
     """Ejecuta una ronda de verificación de suscripciones."""
     async with async_session_maker() as db:
         print(f"[{datetime.now()}] Ejecutando verificación de suscripciones...")
-        # 1. Notificar vencimiento a 3 días
+        # 1. Notificar diariamente durante los últimos 7 días antes del vencimiento
         notified = await SubscriptionService.check_expiring_subscriptions(db)
         print(f"  - Doctores notificados por vencer en 3 días: {notified}")
         

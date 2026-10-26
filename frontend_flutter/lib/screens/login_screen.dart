@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../core/distribution_config.dart';
 import 'package:app_links/app_links.dart';
 import 'dart:async';
 import '../core/api_client.dart';
@@ -414,8 +415,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   // Grace period over!
                   if (!mounted) return;
                   Navigator.of(context).pushReplacement(MaterialPageRoute(
-                      builder: (_) => SelectPlanScreen(
-                          doctorData: docData, isRenewal: true)));
+                      builder: (_) => isGooglePlayBuild
+                          ? const PaymentPendingScreen()
+                          : SelectPlanScreen(
+                              doctorData: docData, isRenewal: true)));
                   return;
                 }
                 // Active subscription (within grace period), proceed to home
@@ -429,8 +432,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 // No subscription at all
                 if (!mounted) return;
                 Navigator.of(context).pushReplacement(MaterialPageRoute(
-                    builder: (_) => SelectPlanScreen(
-                        doctorData: docData, isRenewal: false)));
+                    builder: (_) => isGooglePlayBuild
+                        ? const PaymentPendingScreen()
+                        : SelectPlanScreen(
+                            doctorData: docData, isRenewal: false)));
                 return;
               }
             } else {
@@ -463,15 +468,19 @@ class _LoginScreenState extends State<LoginScreen> {
           }
           if (subData['current'] == null) {
             Navigator.of(context).pushReplacement(MaterialPageRoute(
-                builder: (_) => SelectPlanScreen(doctorData: clinicData)));
+                builder: (_) => isGooglePlayBuild
+                    ? const PaymentPendingScreen(isClinic: true)
+                    : SelectPlanScreen(doctorData: clinicData)));
             return;
           }
           final graceEnd = DateTime.tryParse(
               subData['current']['grace_end_date']?.toString() ?? '');
           if (graceEnd == null || DateTime.now().isAfter(graceEnd)) {
             Navigator.of(context).pushReplacement(MaterialPageRoute(
-                builder: (_) =>
-                    SelectPlanScreen(doctorData: clinicData, isRenewal: true)));
+                builder: (_) => isGooglePlayBuild
+                    ? const PaymentPendingScreen(isClinic: true)
+                    : SelectPlanScreen(
+                        doctorData: clinicData, isRenewal: true)));
             return;
           }
         }
