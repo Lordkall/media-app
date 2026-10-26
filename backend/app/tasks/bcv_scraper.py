@@ -81,6 +81,64 @@ def extract_bcv_rate() -> PublishedRate:
     return PublishedRate(value=value, effective_date=effective_date)
 
 
+async def activate_due_rate(today: date | None = None):
+    today = today or datetime.now(CARACAS).date()
+    if today.weekday() >= 5:
+        return None
+
+    try:
+        async with async_session_maker() as session:
+            result = await session.execute(
+                select(ExchangeRate)
+                .where(
+                    ExchangeRate.moneda_origen == "USD",
+                    ExchangeRate.moneda_destino == "VES",
+                )
+                .with_for_update()
+            )
+            rate_entry = result.scalar_one_or_none()
+            if not rate_entry:
+                return None
+
+            # Older deployments stored a future-valid rate as the active rate.
+            # Keep its value but reclassify it as pending until its valid date.
+            if (
+                rate_entry.fecha_vigencia is not None
+                and rate_entry.fecha_vigencia > today
+                and rate_entry.fecha_vigencia_pendiente is None
+            ):
+                rate_entry.tasa_pendiente = rate_entry.tasa
+                rate_entry.fecha_vigencia_pendiente = rate_entry.fecha_vigencia
+                rate_entry.fecha_vigencia = None
+                await session.commit()
+                print(
+                    "BCV: tasa con vigencia futura migrada a pendiente "
+                    f"({rate_entry.fecha_vigencia_pendiente.isoformat()})."
+                )
+
+            if (
+                rate_entry.tasa_pendiente is None
+                or rate_entry.fecha_vigencia_pendiente is None
+                or rate_entry.fecha_vigencia_pendiente > today
+            ):
+                return None
+
+            effective_date = rate_entry.fecha_vigencia_pendiente
+            rate_entry.tasa = rate_entry.tasa_pendiente
+            rate_entry.fecha_vigencia = effective_date
+            rate_entry.tasa_pendiente = None
+            rate_entry.fecha_vigencia_pendiente = None
+            await session.commit()
+            print(
+                f"BCV: tasa pendiente activada a las 00:00, "
+                f"vigente desde {effective_date.isoformat()}."
+            )
+            return float(rate_entry.tasa)
+    except Exception as exc:
+        print(f"Error activando la tasa BCV pendiente: {exc}")
+        raise
+
+
 async def update_db_with_rate():
     today = datetime.now(CARACAS).date()
     if today.weekday() >= 5:
@@ -104,26 +162,66 @@ async def update_db_with_rate():
                 )
             )
             rate_entry = result.scalar_one_or_none()
-            if rate_entry and rate_entry.fecha_vigencia is not None:
-                if published.effective_date <= rate_entry.fecha_vigencia:
-                    print("BCV: sin una vigencia más reciente; se conserva la tasa guardada.")
-                    return float(rate_entry.tasa)
-
+            is_new_entry = rate_entry is None
             if not rate_entry:
+                # Bootstrap an empty table; there is no prior active rate to retain.
                 rate_entry = ExchangeRate(
                     moneda_origen="USD",
                     moneda_destino="VES",
                     tasa=published.value,
-                    fecha_vigencia=published.effective_date,
+                    fecha_vigencia=(
+                        published.effective_date
+                        if published.effective_date <= today
+                        else today
+                    ),
                 )
                 session.add(rate_entry)
-            else:
+
+            # Reclassify a future active date left behind by the previous
+            # implementation before comparing this official publication.
+            if (
+                rate_entry.fecha_vigencia is not None
+                and rate_entry.fecha_vigencia > today
+                and rate_entry.fecha_vigencia_pendiente is None
+            ):
+                rate_entry.tasa_pendiente = rate_entry.tasa
+                rate_entry.fecha_vigencia_pendiente = rate_entry.fecha_vigencia
+                rate_entry.fecha_vigencia = None
+
+            if (
+                not is_new_entry
+                and rate_entry.fecha_vigencia is not None
+                and published.effective_date <= rate_entry.fecha_vigencia
+            ):
+                return float(rate_entry.tasa)
+
+            if published.effective_date <= today:
+                # This publication is already in force (for example after a
+                # late service restart); activate only on a business date.
                 rate_entry.tasa = published.value
                 rate_entry.fecha_vigencia = published.effective_date
+                if (
+                    rate_entry.fecha_vigencia_pendiente is not None
+                    and rate_entry.fecha_vigencia_pendiente <= published.effective_date
+                ):
+                    rate_entry.tasa_pendiente = None
+                    rate_entry.fecha_vigencia_pendiente = None
+            elif (
+                rate_entry.fecha_vigencia_pendiente is None
+                or published.effective_date >= rate_entry.fecha_vigencia_pendiente
+            ):
+                rate_entry.tasa_pendiente = published.value
+                rate_entry.fecha_vigencia_pendiente = published.effective_date
             await session.commit()
 
+        if published.effective_date > today:
+            print(
+                f"Tasa BCV guardada como pendiente: {published.value} VES/USD, "
+                f"se activará el {published.effective_date.isoformat()} a las 00:00."
+            )
+            return None
         print(
-            f"Tasa BCV actualizada: {published.value} VES/USD, "
+            f"Tasa BCV activada: {published.value} VES/USD, "
             f"vigente desde {published.effective_date.isoformat()}."
         )
         return published.value

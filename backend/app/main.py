@@ -18,26 +18,33 @@ async def bcv_updater_loop():
     while True:
         try:
             now = datetime.now(CARACAS)
-            if now.weekday() < 5 and 8 <= now.hour < 22:
-                from app.tasks.bcv_scraper import update_db_with_rate
-                await update_db_with_rate()
-                await asyncio.sleep(60 * 60)
-                continue
+            from app.tasks.bcv_scraper import activate_due_rate, update_db_with_rate
+            await activate_due_rate(now.date())
 
-            # Poll from 8:00 a.m. on business days. Friday's official
-            # publication can carry a Monday or Tuesday Fecha Valor, which
-            # the scraper stores as soon as BCV publishes it.
-            next_check = now.replace(hour=8, minute=0, second=0, microsecond=0)
-            if now.hour >= 8:
-                next_check += timedelta(days=1)
-            while next_check.weekday() >= 5:
-                next_check += timedelta(days=1)
+            if now.weekday() < 5 and 8 <= now.hour < 22:
+                await update_db_with_rate()
+
+            # Wake at midnight to activate a due publication, even after a
+            # weekend or holiday. Scraping itself remains limited to weekdays.
+            next_midnight = (now + timedelta(days=1)).replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            next_poll = now.replace(hour=8, minute=0, second=0, microsecond=0)
+            if now.weekday() < 5 and now.hour < 8:
+                pass
+            elif now.weekday() < 5 and 8 <= now.hour < 22:
+                next_poll = now + timedelta(hours=1)
+            else:
+                next_poll += timedelta(days=1)
+                while next_poll.weekday() >= 5:
+                    next_poll += timedelta(days=1)
+            next_check = min(next_midnight, next_poll)
             await asyncio.sleep(max(1, (next_check - now).total_seconds()))
         except asyncio.CancelledError:
             break
         except Exception as e:
             print(f"Error en tarea programada de BCV: {e}")
-            await asyncio.sleep(3600)  # Retry in an hour if there's an unexpected error
+            await asyncio.sleep(300)  # Retry in five minutes to avoid missing midnight activation
 
 
 async def appointment_history_cleanup_loop():
@@ -65,6 +72,8 @@ async def lifespan(app: FastAPI):
             from app.models.base import Base
             await conn.run_sync(Base.metadata.create_all)
             await conn.execute(text("ALTER TABLE tasas_de_cambio ADD COLUMN IF NOT EXISTS fecha_vigencia DATE;"))
+            await conn.execute(text("ALTER TABLE tasas_de_cambio ADD COLUMN IF NOT EXISTS tasa_pendiente NUMERIC(10, 4);"))
+            await conn.execute(text("ALTER TABLE tasas_de_cambio ADD COLUMN IF NOT EXISTS fecha_vigencia_pendiente DATE;"))
             await conn.execute(text("ALTER TABLE users ALTER COLUMN avatar_url TYPE TEXT;"))
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS fcm_token VARCHAR;"))
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS show_whatsapp BOOLEAN NOT NULL DEFAULT TRUE;"))

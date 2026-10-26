@@ -11,3 +11,5 @@ class ExchangeRate(Base):
     tasa = Column(Numeric(10, 4), nullable=False)
     ultima_actualizacion = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     fecha_vigencia = Column(Date, nullable=True)
+    tasa_pendiente = Column(Numeric(10, 4), nullable=True)
+    fecha_vigencia_pendiente = Column(Date, nullable=True)

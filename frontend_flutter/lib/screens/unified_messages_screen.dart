@@ -65,7 +65,8 @@ class _UnifiedMessagesScreenState extends State<UnifiedMessagesScreen> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No se pudieron marcar los mensajes como leídos.')),
+          const SnackBar(
+              content: Text('No se pudieron marcar los mensajes como leídos.')),
         );
       }
     }
@@ -80,8 +81,9 @@ class _UnifiedMessagesScreenState extends State<UnifiedMessagesScreen> {
     final tabs = <Tab>[];
     final pages = <Widget>[];
     if (_canDirect) {
-      tabs.add(
-          const Tab(text: 'Pacientes', icon: Icon(Icons.chat_bubble_outline)));
+      final directTabLabel = _role == 'patient' ? 'Doctores' : 'Pacientes';
+      tabs.add(Tab(
+          text: directTabLabel, icon: const Icon(Icons.chat_bubble_outline)));
       pages.add(DirectConversationsScreen(
           key: ValueKey('direct-$_reloadVersion'), showAppBar: false));
     }
@@ -92,14 +94,12 @@ class _UnifiedMessagesScreenState extends State<UnifiedMessagesScreen> {
     }
     if (pages.length == 1)
       return Scaffold(
-          appBar: AppBar(
-              title: const Text('Mensajes'),
-              actions: [
-                IconButton(
-                    tooltip: 'Marcar todo como leído',
-                    onPressed: _markEverythingRead,
-                    icon: const Icon(Icons.mark_email_read_outlined)),
-              ]),
+          appBar: AppBar(title: const Text('Mensajes'), actions: [
+            IconButton(
+                tooltip: 'Marcar todo como leído',
+                onPressed: _markEverythingRead,
+                icon: const Icon(Icons.mark_email_read_outlined)),
+          ]),
           body: pages.single);
     return DefaultTabController(
       length: tabs.length,
