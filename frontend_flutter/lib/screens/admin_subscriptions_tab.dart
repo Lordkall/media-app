@@ -937,7 +937,7 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
           ElevatedButton.icon(
             onPressed: () => _updateSub(targetId, 'renew'),
             icon: const Icon(Icons.autorenew, color: Colors.white),
-            label: const Text('Renovar Suscripción',
+            label: const Text('Renovar plan',
                 style: TextStyle(color: Colors.white)),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0056B3),
@@ -950,7 +950,7 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
           OutlinedButton.icon(
             onPressed: () => _updateSub(targetId, 'deactivate'),
             icon: const Icon(Icons.block, color: Colors.red),
-            label: const Text('Desactivar Suscripción',
+            label: const Text('Desactivar plan',
                 style: TextStyle(color: Colors.red)),
             style: OutlinedButton.styleFrom(
               side: const BorderSide(color: Colors.red),
