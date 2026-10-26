@@ -18,6 +18,7 @@ class AdminHomeTab extends StatefulWidget {
 
 class _AdminHomeTabState extends State<AdminHomeTab> {
   Map<String, dynamic>? _userData;
+  bool _isLoadingProfile = true;
   List<dynamic> _notifications = [];
   bool _isLoadingNotifications = true;
   bool _isFetchingNotifications = false;
@@ -71,7 +72,11 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
             user['avatar_url']?.toString());
         setState(() => _userData = user);
       }
-    } catch (_) {}
+    } catch (_) {
+      // Keep the dashboard usable with its safe fallback if the profile is unavailable.
+    } finally {
+      if (mounted) setState(() => _isLoadingProfile = false);
+    }
   }
 
   @override
@@ -178,6 +183,12 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
   }
 
   Widget _buildProfileSection() {
+    if (_isLoadingProfile) {
+      return const SizedBox(
+        height: 96,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24.0),
       child: Row(

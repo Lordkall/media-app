@@ -9,7 +9,6 @@ import '../widgets/profile_avatar.dart';
 import '../core/profile_image_helper.dart';
 import '../widgets/doctor_header.dart';
 import 'login_screen.dart';
-import 'support_messages_screen.dart';
 import 'select_plan_screen.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'doctor_profile_screen.dart';
@@ -394,22 +393,6 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  ListTile(
-                    onTap: () {
-                      Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => const SupportMessagesScreen()));
-                    },
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    tileColor: Colors.white.withValues(alpha: 0.5),
-                    leading: const Icon(Icons.forum, color: Color(0xFF0056B3)),
-                    title: const Text('Buzón de Mensajes',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF0B2545))),
-                    trailing: const Icon(Icons.chevron_right,
-                        color: Color(0xFF0B2545)),
-                  ),
                   const SizedBox(height: 80),
                 ],
               ),
