@@ -735,7 +735,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       final today = DateTime.now();
                                       final selected = await showDatePicker(
                                         context: context,
-                                        initialDate: _birthDate ?? DateTime(today.year - 18, today.month, today.day),
+                                        initialDate: today,
                                         firstDate: DateTime(1900),
                                         lastDate: today,
                                         helpText: 'Selecciona tu fecha de nacimiento',

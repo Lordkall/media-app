@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/api_client.dart';
+import '../core/auth_helper.dart';
+import '../widgets/profile_avatar.dart';
 import 'dart:convert';
 import 'support_chat_screen.dart';
 
@@ -14,10 +16,14 @@ class SupportMessagesScreen extends StatefulWidget {
 class _SupportMessagesScreenState extends State<SupportMessagesScreen> {
   List<dynamic> _messages = [];
   bool _isLoading = true;
+  String? _role;
 
   @override
   void initState() {
     super.initState();
+    AuthHelper.getRole().then((role) {
+      if (mounted) setState(() => _role = role);
+    });
     _fetchMessages();
   }
 
@@ -153,6 +159,25 @@ class _SupportMessagesScreenState extends State<SupportMessagesScreen> {
                             children: [
                               Row(
                                 children: [
+                                  if (_role == 'admin') ...[
+                                    ProfileAvatar(
+                                      imageUrl:
+                                          msg['sender_avatar']?.toString(),
+                                      size: 42,
+                                      fallbackRole:
+                                          msg['sender_role']?.toString() ??
+                                              'doctor',
+                                    ),
+                                    const SizedBox(width: 10),
+                                  ] else ...[
+                                    const CircleAvatar(
+                                      radius: 21,
+                                      backgroundColor: Color(0xFFE0EAFC),
+                                      child: Icon(Icons.support_agent,
+                                          color: Color(0xFF0056B3)),
+                                    ),
+                                    const SizedBox(width: 10),
+                                  ],
                                   Expanded(
                                     child: Text(
                                       msg['sender'] ?? 'Usuario',

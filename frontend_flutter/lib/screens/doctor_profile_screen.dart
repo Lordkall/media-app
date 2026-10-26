@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/api_client.dart';
+import '../core/identity_document.dart';
 import '../models/ve_catalogs.dart';
 import '../widgets/profile_avatar.dart';
 import 'agendar_cita_tab.dart';
@@ -170,7 +171,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                     false)) ...[
               const SizedBox(height: 6),
               if (doctor['identity_document']?.toString().isNotEmpty ?? false)
-                Text(doctor['identity_document'].toString(),
+                Text(formatIdentityDocument(doctor['identity_document']),
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                         fontSize: 14, color: Color(0xFF475569))),

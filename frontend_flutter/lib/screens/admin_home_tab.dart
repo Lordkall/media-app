@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:convert';
 import '../widgets/doctor_header.dart';
 import '../core/profile_image_helper.dart';
+import '../core/identity_document.dart';
 import '../core/api_client.dart';
 import '../widgets/profile_avatar.dart';
 
@@ -451,7 +452,7 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
                   Text('Doctor: ${doctorDetails['doctor_name'] ?? 'N/A'}',
                       style: const TextStyle(fontWeight: FontWeight.bold)),
                   Text(
-                      'Cédula/RIF: ${doctorDetails['identity_document'] ?? 'N/A'}'),
+                      'Cédula/RIF: ${formatIdentityDocument(doctorDetails['identity_document']).isEmpty ? 'N/A' : formatIdentityDocument(doctorDetails['identity_document'])}'),
                   if ((doctorDetails['medical_license_number'] ?? '')
                       .toString()
                       .isNotEmpty)

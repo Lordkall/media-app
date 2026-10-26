@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:local_auth/local_auth.dart';
 import '../core/api_client.dart';
 import '../core/auth_helper.dart';
+import '../core/identity_document.dart';
 import '../core/profile_image_helper.dart';
 import '../models/avatar_catalog.dart';
 import '../models/ve_catalogs.dart';
@@ -463,7 +464,7 @@ class _PersonalInfoPageState extends State<_PersonalInfoPage> {
         _field(
             'Cédula / RIF',
             TextEditingController(
-                text: widget.user['identity_document']?.toString() ?? ''),
+                text: formatIdentityDocument(widget.user['identity_document'])),
             enabled: false),
         _field('Teléfono de contacto', phone, type: TextInputType.phone),
         if (widget.user['role']?.toString() == 'patient' ||

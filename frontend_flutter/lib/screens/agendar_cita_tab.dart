@@ -18,7 +18,8 @@ class AgendarCitaTab extends StatefulWidget {
 class _AgendarCitaTabState extends State<AgendarCitaTab> {
   String? _selectedEstado;
   String? _selectedEspecialidad;
-  String? _selectedMedico;
+  bool _allSpecialtiesSelected = false;
+  int? _selectedDoctorId;
   int? _selectedTurnNumber;
   String? _selectedMotivo;
   bool _bookingForDependent = false;
@@ -70,8 +71,7 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                     .toList();
                 _selectedEspecialidad =
                     specialties.isEmpty ? null : specialties.first;
-                _selectedMedico =
-                    'Dr. ${doctor['first_name']} ${doctor['last_name']}';
+                _selectedDoctorId = widget.initialDoctorId;
               }
             }
             _isLoading = false;
@@ -190,8 +190,8 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
     return specs;
   }
 
-  List<String> get _availableDoctors {
-    Set<String> docs = {};
+  List<Map<String, dynamic>> get _availableDoctors {
+    final docs = <Map<String, dynamic>>[];
     for (var doc in _allDoctors) {
       if (_selectedEstado != null &&
           doc['state']?.toString() != _selectedEstado) {
@@ -210,17 +210,28 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
 
       if (_selectedEspecialidad != null && !hasSpec) continue;
 
-      final name = 'Dr. ${doc['first_name']} ${doc['last_name']}';
-      docs.add(name);
+      docs.add(Map<String, dynamic>.from(doc));
     }
-    List<String> sortedDocs = docs.toList()..sort();
-    return sortedDocs;
+    docs.sort((a, b) => _doctorDisplayName(a).compareTo(_doctorDisplayName(b)));
+    return docs;
+  }
+
+  String _doctorDisplayName(Map<String, dynamic> doctor) {
+    final name = 'Dr. ${doctor['first_name']} ${doctor['last_name']}'.trim();
+    final location =
+        (doctor['clinic_info'] ?? doctor['address'])?.toString().trim();
+    final state = doctor['state']?.toString().trim();
+    final details = [
+      if (location != null && location.isNotEmpty) location,
+      if (state != null && state.isNotEmpty) state,
+    ].join(' · ');
+    return details.isEmpty ? name : '$name · $details';
   }
 
   Map<String, dynamic>? _findDoctor(int? id) {
     if (id == null) return null;
     for (final doctor in _allDoctors) {
-      if (doctor is Map && doctor['id'] == id) {
+      if (doctor is Map && int.tryParse(doctor['id'].toString()) == id) {
         return Map<String, dynamic>.from(doctor);
       }
     }
@@ -287,6 +298,10 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                   ),
                   ListTile(
                     title: const Text('Todas las especialidades'),
+                    selected: _allSpecialtiesSelected,
+                    trailing: _allSpecialtiesSelected
+                        ? const Icon(Icons.check, color: Color(0xFF0056B3))
+                        : null,
                     onTap: () => Navigator.pop(dialogContext, ''),
                   ),
                   Expanded(
@@ -311,7 +326,8 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
     if (!mounted || selected == null) return;
     setState(() {
       _selectedEspecialidad = selected.isEmpty ? null : selected;
-      _selectedMedico = null;
+      _allSpecialtiesSelected = selected.isEmpty;
+      _selectedDoctorId = null;
       _selectedTurnNumber = null;
     });
   }
@@ -359,7 +375,8 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                 setState(() {
                   _selectedEstado = val;
                   _selectedEspecialidad = null;
-                  _selectedMedico = null;
+                  _allSpecialtiesSelected = false;
+                  _selectedDoctorId = null;
                   _selectedTurnNumber = null;
                 });
               },
@@ -370,7 +387,10 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
               icon: const Icon(Icons.search),
               label: Align(
                 alignment: Alignment.centerLeft,
-                child: Text(_selectedEspecialidad ?? 'Buscar especialidad'),
+                child: Text(_selectedEspecialidad ??
+                    (_allSpecialtiesSelected
+                        ? 'Todas las especialidades'
+                        : 'Buscar especialidad')),
               ),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 52),
@@ -383,26 +403,37 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
               ),
             ),
             const SizedBox(height: 16),
-            _buildDropdown(
-              hint: 'Selecciona Médico',
-              value: _selectedMedico,
-              items: _availableDoctors,
+            DropdownButtonFormField<int>(
+              initialValue: _availableDoctors.any((doctor) =>
+                      int.tryParse(doctor['id'].toString()) ==
+                      _selectedDoctorId)
+                  ? _selectedDoctorId
+                  : null,
+              decoration: InputDecoration(
+                labelText: 'Selecciona Médico',
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                filled: true,
+                fillColor: Colors.white.withValues(alpha: 0.5),
+              ),
+              items: _availableDoctors
+                  .map((doctor) {
+                    final id = int.tryParse(doctor['id'].toString());
+                    return DropdownMenuItem<int>(
+                      value: id,
+                      child: Text(_doctorDisplayName(doctor),
+                          overflow: TextOverflow.ellipsis),
+                    );
+                  })
+                  .where((item) => item.value != null)
+                  .toList(),
               onChanged: (val) async {
                 setState(() {
-                  _selectedMedico = val;
+                  _selectedDoctorId = val;
                   _doctorAvailabilityInfo = [];
                   _selectedTurnNumber = null;
                 });
-                Map<String, dynamic>? doctor;
-                if (val != null) {
-                  for (final item in _allDoctors) {
-                    if ('Dr. ${item['first_name']} ${item['last_name']}' ==
-                        val) {
-                      doctor = Map<String, dynamic>.from(item);
-                      break;
-                    }
-                  }
-                }
+                final doctor = _findDoctor(val);
                 if (doctor != null) await _loadDoctorAvailability(doctor);
               },
             ),
@@ -588,7 +619,7 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                             DateTime(today.year, today.month, today.day);
                         if (isAvailable &&
                             !isFull &&
-                            _selectedMedico != null &&
+                            _selectedDoctorId != null &&
                             !selectedDateOnly.isBefore(todayOnly)) {
                           setState(() {
                             _selectedDate = selectedDay;
@@ -632,7 +663,7 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF0B2545))),
             const SizedBox(height: 10),
-            if (_selectedMedico == null)
+            if (_selectedDoctorId == null)
               const Text('Selecciona un médico para ver sus horarios.')
             else if (_availableSlots.isEmpty)
               const Text('No hay turnos disponibles para esta fecha.')
@@ -665,7 +696,7 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () async {
-                    if (_selectedMedico == null) {
+                    if (_selectedDoctorId == null) {
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                           content: Text('Por favor selecciona un médico.')));
                       return;
@@ -693,11 +724,7 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                       return;
                     }
 
-                    final doc = _allDoctors.firstWhere(
-                        (d) =>
-                            'Dr. ${d['first_name']} ${d['last_name']}' ==
-                            _selectedMedico,
-                        orElse: () => null);
+                    final doc = _findDoctor(_selectedDoctorId);
                     if (doc == null || doc['id'] == null) return;
 
                     final String motivoFinal = (_selectedMotivo == 'Otros' &&
@@ -810,7 +837,8 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                         if (!context.mounted) return;
                         setState(() {
                           _selectedEspecialidad = null;
-                          _selectedMedico = null;
+                          _allSpecialtiesSelected = false;
+                          _selectedDoctorId = null;
                           _selectedMotivo = null;
                           _customMotivoController.clear();
                           _dependentNameController.clear();
@@ -908,7 +936,7 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
       {bool isSelected = false,
       bool isDisabled = false,
       bool isToday = false}) {
-    if (_selectedMedico == null) {
+    if (_selectedDoctorId == null) {
       Color c = isDisabled
           ? Colors.grey
           : (isToday ? const Color(0xFF0056B3) : Colors.black);

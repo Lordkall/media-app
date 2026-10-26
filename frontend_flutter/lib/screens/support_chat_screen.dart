@@ -4,6 +4,8 @@ import '../core/api_client.dart';
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import '../core/chat_time.dart';
+import '../core/auth_helper.dart';
+import '../widgets/profile_avatar.dart';
 
 class SupportChatScreen extends StatefulWidget {
   final Map<dynamic, dynamic> ticket;
@@ -21,11 +23,15 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
   bool _isClosed = false;
   bool _isLoadingMessages = false;
   int? _currentUserId;
+  bool _isAdmin = false;
   Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
+    AuthHelper.getRole().then((role) {
+      if (mounted) setState(() => _isAdmin = role == 'admin');
+    });
     _isClosed = widget.ticket['status'] == 'Cerrado';
     _loadMessages();
     _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
@@ -103,8 +109,9 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
   bool _isSending = false;
 
   Future<void> _sendMessage() async {
-    if (_messageController.text.trim().isEmpty || _isClosed || _isSending) return;
-    
+    if (_messageController.text.trim().isEmpty || _isClosed || _isSending)
+      return;
+
     setState(() {
       _isSending = true;
     });
@@ -139,14 +146,23 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
       appBar: AppBar(
         title: Row(
           children: [
-            const CircleAvatar(
-              backgroundColor: Colors.white,
-              child: Icon(Icons.person, color: Color(0xFF0056B3)),
-            ),
+            _isAdmin
+                ? ProfileAvatar(
+                    imageUrl: widget.ticket['sender_avatar']?.toString(),
+                    size: 40,
+                    fallbackRole:
+                        widget.ticket['sender_role']?.toString() ?? 'doctor',
+                  )
+                : const CircleAvatar(
+                    backgroundColor: Colors.white,
+                    child: Icon(Icons.support_agent, color: Color(0xFF0056B3)),
+                  ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                widget.ticket['sender'] ?? 'Usuario',
+                _isAdmin
+                    ? (widget.ticket['sender'] ?? 'Usuario')
+                    : 'Soporte Técnico',
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -243,7 +259,6 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
     );
   }
 
-  
   Future<void> _pickAndSendImage() async {
     if (_isClosed || _isSending) return;
     try {
@@ -253,17 +268,17 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
         imageQuality: 70,
       );
       if (image == null) return;
-      
+
       setState(() {
         _isSending = true;
       });
-      
+
       final bytes = await image.readAsBytes();
       final base64Image = base64Encode(bytes);
       final extension = image.name.split('.').last.toLowerCase();
       final mimeType = extension == 'png' ? 'image/png' : 'image/jpeg';
       final dataUri = 'data:$mimeType;base64,$base64Image';
-      
+
       final response = await ApiClient.post(
           '/support/${widget.ticket['id']}/reply', {'message': dataUri});
       if (response.statusCode != 200) {
@@ -386,7 +401,8 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
                           color: Colors.white, strokeWidth: 2),
                     )
                   : IconButton(
-                      icon: const Icon(Icons.send, color: Colors.white, size: 20),
+                      icon:
+                          const Icon(Icons.send, color: Colors.white, size: 20),
                       onPressed: _isClosed ? null : _sendMessage,
                     ),
             ),

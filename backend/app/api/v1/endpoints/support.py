@@ -152,6 +152,7 @@ async def get_tickets(
     tickets = result.scalars().all()
     
     output = []
+    is_admin = current_user.role == RoleEnum.ADMIN or current_user.role == "admin"
     for t in tickets:
         sender_name = t.user.email if t.user else "Unknown"
         if t.user:
@@ -163,11 +164,20 @@ async def get_tickets(
                 sender_name = f"Asistente {t.user.first_name} {t.user.last_name}".strip()
             elif t.user.role == RoleEnum.ADMIN:
                 sender_name = f"Admin {t.user.first_name} {t.user.last_name}"
+
+        sender_avatar = t.user.avatar_url if t.user else None
+        if t.user and not sender_avatar and t.user.avatar_data:
+            sender_avatar = f"data:{t.user.avatar_content_type or 'image/jpeg'};base64,{t.user.avatar_data}"
+        sender_role = None
+        if t.user:
+            sender_role = t.user.role.value if hasattr(t.user.role, "value") else str(t.user.role)
                 
         last_msg = t.messages[-1].message if t.messages else ""
         output.append({
             "id": t.id,
-            "sender": sender_name,
+            "sender": sender_name if is_admin else "Soporte Técnico",
+            "sender_avatar": sender_avatar if is_admin else None,
+            "sender_role": sender_role,
             "subject": t.subject,
             "message": last_msg,
             "all_messages": [{"sender_id": m.sender_id, "message": m.message} for m in t.messages],

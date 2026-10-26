@@ -22,6 +22,7 @@ class _SelectPlanScreenState extends State<SelectPlanScreen> {
   bool _isAnual = false;
   bool _isLoading = true;
   double _bcvRate = 42.5; // fallback
+  String? _activePlan;
   final TextEditingController _referenceController = TextEditingController();
   String? _screenshotBase64;
 
@@ -42,18 +43,21 @@ class _SelectPlanScreenState extends State<SelectPlanScreen> {
 
   Future<void> _fetchBcvRate() async {
     try {
-      final response = await ApiClient.get('/users/bcv-rate');
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        setState(() {
-          _bcvRate = (data['rate'] as num).toDouble();
-          _isLoading = false;
-        });
-      } else {
-        setState(() => _isLoading = false);
+      final responses = await Future.wait([
+        ApiClient.get('/users/bcv-rate'),
+        ApiClient.get('/subscriptions/me'),
+      ]);
+      if (responses[0].statusCode == 200) {
+        final data = jsonDecode(responses[0].body);
+        _bcvRate = (data['rate'] as num).toDouble();
       }
+      if (responses[1].statusCode == 200) {
+        final data = jsonDecode(responses[1].body);
+        _activePlan = data['current']?['plan']?.toString().toLowerCase();
+      }
+      if (mounted) setState(() => _isLoading = false);
     } catch (e) {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -323,6 +327,13 @@ class _SelectPlanScreenState extends State<SelectPlanScreen> {
   Widget _buildPlanCard(String title, String priceUsd, String priceBs,
       String features, String planCode,
       {bool isVip = false}) {
+    final activePlanMatches = _activePlan == planCode ||
+        (planCode == 'basic' && _activePlan == 'featured');
+    final actionLabel = activePlanMatches
+        ? 'Renovar Plan'
+        : widget.isRenewal
+            ? 'Cambiar a este plan'
+            : 'Seleccionar y Pagar';
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(
@@ -363,8 +374,7 @@ class _SelectPlanScreenState extends State<SelectPlanScreen> {
               style: ElevatedButton.styleFrom(
                   backgroundColor:
                       isVip ? Colors.amber[700] : Colors.blue[700]),
-              child: const Text('Seleccionar y Pagar',
-                  style: TextStyle(color: Colors.white)),
+              child: Text(actionLabel, style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
