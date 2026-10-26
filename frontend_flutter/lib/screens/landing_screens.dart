@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'dart:math';
 import '../core/api_client.dart';
+import '../core/distribution_config.dart';
 import '../widgets/web_header.dart';
 import '../widgets/web_footer.dart';
 import '../widgets/profile_avatar.dart';
@@ -1152,7 +1153,22 @@ class _FaqScreenState extends State<FaqScreen> {
   Widget _buildFaqGrid(BuildContext context) {
     final bool isDesktop = MediaQuery.of(context).size.width > 800;
     final String currentKey = _selectedTab == 'Médicos' ? 'Doctores' : _selectedTab;
-    final List<Map<String, dynamic>> faqs = _faqData[currentKey] ?? _faqData['Pacientes']!;
+    final List<Map<String, dynamic>> faqs =
+        (_faqData[currentKey] ?? _faqData['Pacientes']!).where((faq) {
+      if (!isGooglePlayBuild) return true;
+      // The Play Store build must not promote plans or external payment flows.
+      return !{'d4', 'c3'}.contains(faq['id']);
+    }).map((faq) {
+      if (isGooglePlayBuild && faq['id'] == 'c4') {
+        return {
+          ...faq,
+          'desc': 'Resuelve dudas sobre el uso o la configuración institucional.',
+          'answer':
+              'Puedes contactar al equipo de soporte técnico desde la sección "Soporte" de la aplicación para recibir ayuda con la configuración y el uso de las herramientas institucionales.',
+        };
+      }
+      return faq;
+    }).toList();
 
     Widget buildFaqCard(Map<String, dynamic> faq) {
       final faqId = faq['id'] as String;
