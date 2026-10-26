@@ -49,6 +49,10 @@ class _DoctorHeaderState extends State<DoctorHeader> {
         });
       }
 
+      // Load subscription access before the notification counters so the menu
+      // doesn't briefly treat clinic VIP doctors as non-VIP.
+      await _refreshVipStatus(role);
+
       final response = await ApiClient.get('/users/me/notifications');
       if (response.statusCode == 200) {
         final List<dynamic> notifs = jsonDecode(response.body);
@@ -79,33 +83,33 @@ class _DoctorHeaderState extends State<DoctorHeader> {
               () => _unreadMessages += (data['count'] as num?)?.toInt() ?? 0);
       }
 
-      if (role == 'doctor' || role == 'assistant' || role == 'clinic') {
-        final subResponse = await ApiClient.get('/subscriptions/me');
-        if (subResponse.statusCode == 200) {
-          final subData = jsonDecode(subResponse.body);
-          final plan =
-              subData['current']?['plan']?.toString().toLowerCase() ?? '';
-          final isVip = plan == 'sponsored' ||
-              plan == 'vip' ||
-              plan == 'clinic_vip' ||
-              plan.contains('vip') ||
-              plan.contains('patrocinado') ||
-              subData['is_vip'] == true;
-          if (mounted) {
-            setState(() {
-              _isVip = isVip;
-            });
-          }
-        }
-      } else {
-        if (mounted) {
-          setState(() {
-            _isVip = false;
-          });
-        }
-      }
     } catch (e) {
       // Ignorar en caso de error
+    }
+  }
+
+  Future<bool> _refreshVipStatus(String? role) async {
+    if (role != 'doctor' && role != 'assistant' && role != 'clinic') {
+      if (mounted) setState(() => _isVip = false);
+      return false;
+    }
+
+    try {
+      final response = await ApiClient.get('/subscriptions/me');
+      if (response.statusCode != 200) return false;
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final plan = data['current']?['plan']?.toString().toLowerCase() ?? '';
+      final isVip = data['is_vip'] == true ||
+          plan == 'sponsored' ||
+          plan == 'clinic_vip' ||
+          plan == 'vip' ||
+          plan.contains('vip') ||
+          plan.contains('patrocinado');
+      if (mounted) setState(() => _isVip = isVip);
+      return isVip;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -243,7 +247,13 @@ class _DoctorHeaderState extends State<DoctorHeader> {
                   } else if (value == 'stats') {
                     _showDoctorStatsDialog(context);
                   } else if (value == 'stats_locked') {
-                    _showVipStatsUpgradeDialog(context);
+                    final isVip = await _refreshVipStatus(_userRole);
+                    if (!context.mounted) return;
+                    if (isVip) {
+                      _showDoctorStatsDialog(context);
+                    } else {
+                      _showVipStatsUpgradeDialog(context);
+                    }
                   }
                 },
                 itemBuilder: (BuildContext context) {
