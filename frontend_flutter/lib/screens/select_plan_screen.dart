@@ -242,6 +242,8 @@ class _SelectPlanScreenState extends State<SelectPlanScreen> {
         title: const Text('Selecciona tu Plan',
             style: TextStyle(color: Colors.white)),
         backgroundColor: const Color(0xFF0B2545),
+        iconTheme: const IconThemeData(color: Colors.white),
+        foregroundColor: Colors.white,
         actions: [
           IconButton(
             onPressed: _logout,

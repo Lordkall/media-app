@@ -404,6 +404,7 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<int>(
+              isExpanded: true,
               initialValue: _availableDoctors.any((doctor) =>
                       int.tryParse(doctor['id'].toString()) ==
                       _selectedDoctorId)

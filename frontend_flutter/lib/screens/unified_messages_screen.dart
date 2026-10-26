@@ -77,7 +77,7 @@ class _UnifiedMessagesScreenState extends State<UnifiedMessagesScreen> {
     if (_role == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    final canSupport = _role != 'clinic';
+    const canSupport = true;
     final tabs = <Tab>[];
     final pages = <Widget>[];
     if (_canDirect) {

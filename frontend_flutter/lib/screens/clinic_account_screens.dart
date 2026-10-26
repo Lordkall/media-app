@@ -81,7 +81,11 @@ class _ClinicStatusScreen extends StatelessWidget {
 
 class ClinicHomeTab extends StatefulWidget {
   const ClinicHomeTab(
-      {super.key, required this.onCalendar, required this.onDoctors, this.onSearch, this.onProfileTap});
+      {super.key,
+      required this.onCalendar,
+      required this.onDoctors,
+      this.onSearch,
+      this.onProfileTap});
   final VoidCallback onCalendar;
   final VoidCallback onDoctors;
   final VoidCallback? onSearch;
@@ -125,7 +129,8 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
       final userResponse = await ApiClient.get('/users/me');
       if (userResponse.statusCode == 200) {
         final user = Map<String, dynamic>.from(jsonDecode(userResponse.body));
-        ProfileImageHelper.updateCurrentUserAvatar(user['avatar_url']?.toString());
+        ProfileImageHelper.updateCurrentUserAvatar(
+            user['avatar_url']?.toString());
         if (mounted) setState(() => _userData = user);
       }
 
@@ -159,7 +164,8 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
       final meClinicRes = await ApiClient.get('/clinics/me');
       if (meClinicRes.statusCode == 200) {
         final meClinic = jsonDecode(meClinicRes.body);
-        final docRes = await ApiClient.get('/clinics/${meClinic['id']}/doctors');
+        final docRes =
+            await ApiClient.get('/clinics/${meClinic['id']}/doctors');
         if (docRes.statusCode == 200) {
           final docs = jsonDecode(docRes.body) as List;
           if (mounted) setState(() => _doctorCount = docs.length);
@@ -207,7 +213,8 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
                     onTap: widget.onCalendar,
                     borderRadius: BorderRadius.circular(16),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 16),
                       decoration: BoxDecoration(
                         color: const Color(0xFF00A896),
                         borderRadius: BorderRadius.circular(16),
@@ -224,7 +231,8 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
                         children: [
                           const Row(
                             children: [
-                              Icon(Icons.event_available, color: Colors.white, size: 28),
+                              Icon(Icons.event_available,
+                                  color: Colors.white, size: 28),
                               SizedBox(width: 12),
                               Text('Citas para hoy',
                                   style: TextStyle(
@@ -252,6 +260,8 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
                     ),
                   ),
                   const SizedBox(height: 16),
+                  ..._buildRecentNotifications(),
+                  const SizedBox(height: 8),
                   const Text('Estadísticas de Citas',
                       style: TextStyle(
                           fontSize: 16,
@@ -294,7 +304,8 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
                       Expanded(
                         child: _buildStatCard(
                           title: 'Canceladas',
-                          value: '${_clinicStats?['cancelled_appointments'] ?? 0}',
+                          value:
+                              '${_clinicStats?['cancelled_appointments'] ?? 0}',
                           icon: Icons.cancel_outlined,
                           color: Colors.redAccent,
                         ),
@@ -323,7 +334,8 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
                           const CircleAvatar(
                             backgroundColor: Color(0xFFE2F1F8),
                             radius: 22,
-                            child: Icon(Icons.medical_services, color: Color(0xFF0056B3), size: 24),
+                            child: Icon(Icons.medical_services,
+                                color: Color(0xFF0056B3), size: 24),
                           ),
                           const SizedBox(width: 14),
                           const Expanded(
@@ -331,56 +343,32 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text('Doctores Asociados',
-                                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0B2545))),
+                                    style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF0B2545))),
                                 SizedBox(height: 2),
                                 Text('Gestionar plantel médico',
-                                    style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        color: Color(0xFF64748B))),
                               ],
                             ),
                           ),
                           Text(
                             _doctorCount == null ? '...' : '$_doctorCount',
-                            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF0B2545)),
+                            style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0B2545)),
                           ),
                           const SizedBox(width: 6),
-                          const Icon(Icons.chevron_right, color: Color(0xFF64748B)),
+                          const Icon(Icons.chevron_right,
+                              color: Color(0xFF64748B)),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  const Text('Notificaciones Recientes',
-                      style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF0B2545))),
-                  const SizedBox(height: 12),
-                  if (_isLoadingNotifications)
-                    const Center(child: CircularProgressIndicator())
-                  else if (_notifications.isEmpty)
-                    const Text('No hay notificaciones recientes.',
-                        style: TextStyle(color: Colors.grey))
-                  else
-                    ..._notifications.take(5).map((n) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 8.0),
-                        child: Card(
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                          child: ListTile(
-                            leading: const CircleAvatar(
-                                backgroundColor: Color(0xFFE2F1F8),
-                                child: Icon(Icons.notifications,
-                                    color: Color(0xFF0056B3))),
-                            title: Text(n['title'] ?? 'Notificación',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold, fontSize: 14)),
-                            subtitle: Text(n['message'] ?? '',
-                                style: const TextStyle(fontSize: 12)),
-                          ),
-                        ),
-                      );
-                    }),
                   const SizedBox(height: 24),
                   SizedBox(
                     width: double.infinity,
@@ -389,8 +377,7 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
                         if (_userData != null) {
                           Navigator.of(context).push(MaterialPageRoute(
                               builder: (_) => SelectPlanScreen(
-                                  doctorData: _userData!,
-                                  isRenewal: true)));
+                                  doctorData: _userData!, isRenewal: true)));
                         }
                       },
                       style: ElevatedButton.styleFrom(
@@ -399,7 +386,8 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
                             borderRadius: BorderRadius.circular(12)),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-                      child: Text('Renovar o Cambiar Plan (Quedan ${_getDaysRemaining()} días)',
+                      child: Text(
+                          'Renovar o Cambiar Plan (Quedan ${_getDaysRemaining()} días)',
                           style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold)),
@@ -432,13 +420,48 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
     );
   }
 
+  List<Widget> _buildRecentNotifications() => [
+        const Text('Notificaciones Recientes',
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0B2545))),
+        const SizedBox(height: 12),
+        if (_isLoadingNotifications)
+          const Center(child: CircularProgressIndicator())
+        else if (_notifications.isEmpty)
+          const Text('No hay notificaciones recientes.',
+              style: TextStyle(color: Colors.grey))
+        else
+          ..._notifications.take(5).map((n) => Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Card(
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  child: ListTile(
+                    leading: const CircleAvatar(
+                        backgroundColor: Color(0xFFE2F1F8),
+                        child: Icon(Icons.notifications,
+                            color: Color(0xFF0056B3))),
+                    title: Text(n['title'] ?? 'Notificación',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 14)),
+                    subtitle: Text(n['message'] ?? '',
+                        style: const TextStyle(fontSize: 12)),
+                  ),
+                ),
+              )),
+        const SizedBox(height: 16),
+      ];
+
   Widget _buildProfileSection() {
     if (_userData == null || !_isSubLoaded) {
       return const SizedBox(height: 80);
     }
-    final name = (_userData?['first_name']?.toString().trim().isNotEmpty ?? false)
-        ? _userData!['first_name']
-        : 'Clínica';
+    final name =
+        (_userData?['first_name']?.toString().trim().isNotEmpty ?? false)
+            ? _userData!['first_name']
+            : 'Clínica';
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24.0),
       child: Row(
@@ -450,7 +473,8 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
               currentUser: true,
               fallbackRole: 'clinic',
               size: 80,
-              borderColor: _isVip ? const Color(0xFFD7AF48) : const Color(0xFF0056B3),
+              borderColor:
+                  _isVip ? const Color(0xFFD7AF48) : const Color(0xFF0056B3),
               borderWidth: _isVip ? 4 : 3,
             ),
           ),
@@ -479,10 +503,16 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (!_isSubLoaded)
-                            const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            const SizedBox(
+                                width: 12,
+                                height: 12,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white))
                           else ...[
-                            if (_isVip) ...
-                              const [Icon(Icons.star, size: 12, color: Colors.white), SizedBox(width: 4)],
+                            if (_isVip) ...const [
+                              Icon(Icons.star, size: 12, color: Colors.white),
+                              SizedBox(width: 4)
+                            ],
                             Text(_isVip ? 'VIP' : 'Clínica',
                                 style: const TextStyle(
                                     color: Colors.white,
@@ -494,8 +524,7 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                        child: Text(
-                            _userData?['email'] ?? '',
+                        child: Text(_userData?['email'] ?? '',
                             style: const TextStyle(
                                 color: Color(0xFF475569), fontSize: 13),
                             overflow: TextOverflow.ellipsis)),
@@ -621,15 +650,16 @@ class _ClinicCalendarTabState extends State<ClinicCalendarTab> {
     return ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 110),
         children: [
-          Text('Calendario', 
+          Text('Calendario',
               style: const TextStyle(
-                  fontSize: 26, 
-                  fontWeight: FontWeight.bold, 
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
                   color: Color(0xFF0B2545),
                   letterSpacing: 0.5)),
           const SizedBox(height: 12),
           Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             child: Padding(
               padding: const EdgeInsets.all(8.0),
               child: TableCalendar(
@@ -639,8 +669,9 @@ class _ClinicCalendarTabState extends State<ClinicCalendarTab> {
                 currentDay: DateTime.now(),
                 selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
                 onDaySelected: (selectedDay, focusedDay) {
-                  final changedMonth = selectedDay.year != _displayedMonth.year ||
-                      selectedDay.month != _displayedMonth.month;
+                  final changedMonth =
+                      selectedDay.year != _displayedMonth.year ||
+                          selectedDay.month != _displayedMonth.month;
                   setState(() {
                     _selectedDay = selectedDay;
                     _displayedMonth = focusedDay;
@@ -655,7 +686,8 @@ class _ClinicCalendarTabState extends State<ClinicCalendarTab> {
                 headerStyle: const HeaderStyle(
                   titleCentered: true,
                   formatButtonVisible: false,
-                  titleTextStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  titleTextStyle:
+                      TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 calendarStyle: CalendarStyle(
                   selectedDecoration: const BoxDecoration(
@@ -670,27 +702,41 @@ class _ClinicCalendarTabState extends State<ClinicCalendarTab> {
                 daysOfWeekStyle: DaysOfWeekStyle(
                   dowTextFormatter: (date, locale) {
                     switch (date.weekday) {
-                      case 1: return 'L';
-                      case 2: return 'M';
-                      case 3: return 'X';
-                      case 4: return 'J';
-                      case 5: return 'V';
-                      case 6: return 'S';
-                      case 7: return 'D';
-                      default: return '';
+                      case 1:
+                        return 'L';
+                      case 2:
+                        return 'M';
+                      case 3:
+                        return 'X';
+                      case 4:
+                        return 'J';
+                      case 5:
+                        return 'V';
+                      case 6:
+                        return 'S';
+                      case 7:
+                        return 'D';
+                      default:
+                        return '';
                     }
                   },
                 ),
                 calendarBuilders: CalendarBuilders(
                   dowBuilder: (context, day) {
-                    final text = ['D', 'L', 'M', 'X', 'J', 'V', 'S'][day.weekday % 7];
+                    final text =
+                        ['D', 'L', 'M', 'X', 'J', 'V', 'S'][day.weekday % 7];
                     return Container(
                       margin: const EdgeInsets.symmetric(horizontal: 8),
                       decoration: const BoxDecoration(
-                        border: Border(bottom: BorderSide(color: Color(0xFF0056B3), width: 2)),
+                        border: Border(
+                            bottom:
+                                BorderSide(color: Color(0xFF0056B3), width: 2)),
                       ),
                       child: Center(
-                        child: Text(text, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0B2545))),
+                        child: Text(text,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0B2545))),
                       ),
                     );
                   },
@@ -811,9 +857,12 @@ class _ClinicDoctorsTabState extends State<ClinicDoctorsTab>
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Expulsar doctor'),
-        content: Text('¿Estás seguro de que deseas expulsar al Dr. $name de tu clínica?'),
+        content: Text(
+            '¿Estás seguro de que deseas expulsar al Dr. $name de tu clínica?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar')),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
@@ -834,11 +883,13 @@ class _ClinicDoctorsTabState extends State<ClinicDoctorsTab>
         try {
           detail = jsonDecode(res.body)['detail']?.toString() ?? detail;
         } catch (_) {}
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(detail)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(detail)));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
@@ -880,7 +931,8 @@ class _ClinicDoctorsTabState extends State<ClinicDoctorsTab>
                     Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (context) => const ClinicInviteDoctorScreen()));
+                            builder: (context) =>
+                                const ClinicInviteDoctorScreen()));
                   },
                   tooltip: 'Buscar e invitar doctor',
                   icon: const Icon(Icons.person_add_alt_1)),
@@ -897,7 +949,9 @@ class _ClinicDoctorsTabState extends State<ClinicDoctorsTab>
             ),
           TabBar(controller: _controller, tabs: [
             Tab(text: 'Solicitudes (${_requests.length})'),
-            Tab(text: 'Activos (${_doctors.length}${_maxDoctors != null ? '/$_maxDoctors' : ''})'),
+            Tab(
+                text:
+                    'Activos (${_doctors.length}${_maxDoctors != null ? '/$_maxDoctors' : ''})'),
           ]),
           Expanded(
             child: _loading
@@ -947,8 +1001,11 @@ class _ClinicDoctorsTabState extends State<ClinicDoctorsTab>
                                         'Dr. ${item['first_name'] ?? ''} ${item['last_name'] ?? ''}'),
                                     subtitle: Text(specialties.join(', ')),
                                     trailing: IconButton(
-                                      icon: const Icon(Icons.delete, color: Colors.red),
-                                      onPressed: () => _removeDoctor(item['id'] as int, '${item['first_name']} ${item['last_name']}'),
+                                      icon: const Icon(Icons.delete,
+                                          color: Colors.red),
+                                      onPressed: () => _removeDoctor(
+                                          item['id'] as int,
+                                          '${item['first_name']} ${item['last_name']}'),
                                     ),
                                   ),
                                 );

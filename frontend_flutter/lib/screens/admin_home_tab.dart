@@ -187,7 +187,7 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
             customBorder: const CircleBorder(),
             child: ProfileAvatar(
               imageUrl: _userData?['avatar_url']?.toString(),
-              currentUser: true,
+              currentUser: false,
               fallbackRole: 'patient',
               size: 80,
               borderColor: const Color(0xFF0056B3),

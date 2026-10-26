@@ -181,7 +181,8 @@ class _DoctorHeaderState extends State<DoctorHeader> {
               if (_userRole == 'doctor' ||
                   _userRole == 'patient' ||
                   _userRole == 'admin' ||
-                  _userRole == 'assistant')
+                  _userRole == 'assistant' ||
+                  _userRole == 'clinic')
                 Stack(
                   children: [
                     IconButton(

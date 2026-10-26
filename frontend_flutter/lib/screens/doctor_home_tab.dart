@@ -122,6 +122,18 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
     }
   }
 
+  int _getDaysRemaining() {
+    final endDate =
+        DateTime.tryParse(_subData?['current']?['end_date']?.toString() ?? '');
+    if (endDate == null) return 0;
+    final today = caracasNow();
+    final end = endDate.toLocal();
+    final days = DateTime(end.year, end.month, end.day)
+        .difference(DateTime(today.year, today.month, today.day))
+        .inDays;
+    return days > 0 ? days : 0;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -311,16 +323,26 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
                                   ? 'Básico'
                                   : rawPlan == 'featured'
                                       ? 'Destacado'
-                                      : rawPlan;
-                          return Text('Plan Actual: $displayPlan',
+                                      : rawPlan == 'clinic_vip'
+                                          ? 'VIP de Clínica'
+                                          : rawPlan == 'clinic_basic'
+                                              ? 'Básico de Clínica'
+                                              : rawPlan;
+                          final isClinicMember =
+                              _subData?['is_clinic_member'] == true;
+                          return Text(
+                              isClinicMember
+                                  ? 'Plan activo: $displayPlan · ${_getDaysRemaining()} días restantes'
+                                  : 'Plan Actual: $displayPlan',
                               style: const TextStyle(
                                   fontSize: 16, color: Color(0xFF475569)));
                         }),
                         const SizedBox(height: 8),
-                        Text(
-                            'Vence: ${_subData?['current']?['end_date']?.toString().split('T')[0] ?? '--'}',
-                            style: const TextStyle(
-                                fontSize: 16, color: Color(0xFF475569))),
+                        if (_subData?['is_clinic_member'] != true)
+                          Text(
+                              'Vence: ${_subData?['current']?['end_date']?.toString().split('T')[0] ?? '--'}',
+                              style: const TextStyle(
+                                  fontSize: 16, color: Color(0xFF475569))),
                         const SizedBox(height: 24),
                         if (_subData?['is_clinic_member'] != true)
                           SizedBox(
@@ -341,7 +363,8 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
                                 padding:
                                     const EdgeInsets.symmetric(vertical: 14),
                               ),
-                              child: const Text('Renovar o Cambiar Plan',
+                              child: Text(
+                                  'Renovar o Cambiar Plan (Quedan ${_getDaysRemaining()} días)',
                                   style: TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold)),
