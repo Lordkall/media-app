@@ -200,6 +200,11 @@ async def get_all_doctors(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
+    # Older Flutter clients still request this endpoint for patient browsing.
+    # Keep that client path working with the public projection only.
+    if current_user.role == RoleEnum.PATIENT:
+        from app.api.v1.endpoints.doctors import get_public_doctors
+        return await get_public_doctors(db)
     check_admin(current_user)
     # Fetch active clinic subscriptions to ensure accurate mapping for clinic doctors
     clinic_subs_res = await db.execute(
