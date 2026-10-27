@@ -147,7 +147,7 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
 
   Future<void> _fetchDoctors() async {
     try {
-      final response = await ApiClient.get('/admin/doctors');
+      final response = await ApiClient.get('/doctors/public');
       final clinicResponse = await ApiClient.get('/clinics/');
       final userResponse = await ApiClient.get('/users/me');
 
@@ -170,8 +170,8 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
           _selectedState = userState;
         }
         _doctors = allDocs
-            .where(
-                (doc) => doc['plan'] != 'Ninguno' || doc['clinic_id'] != null)
+            .where((doc) =>
+                doc['plan'] != 'Ninguno' || doc['clinic_id'] != null)
             .toList();
         _clinics = allClinics;
         _isLoading = false;

@@ -44,7 +44,7 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
   Future<void> _fetchDoctors() async {
     try {
       final responses = await Future.wait([
-        ApiClient.get('/admin/doctors'),
+        ApiClient.get('/doctors/public'),
         ApiClient.get('/users/me'),
       ]);
       final response = responses[0];

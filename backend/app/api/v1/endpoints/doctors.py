@@ -293,15 +293,18 @@ async def get_public_doctors(db: AsyncSession = Depends(get_db)):
             
         doctor_name = f"{prefix} {user.first_name or ''} {user.last_name or ''}".strip()
         is_vip = bool(doc.is_sponsored)
+        active_subscription = await db.scalar(select(Subscription).where(
+            Subscription.doctor_id == doc.id,
+            Subscription.status == SubscriptionStatus.ACTIVE,
+        ))
         if not is_vip:
-            is_vip = await db.scalar(select(Subscription.id).where(
-                Subscription.doctor_id == doc.id,
-                Subscription.status == SubscriptionStatus.ACTIVE,
-                Subscription.plan == SubscriptionPlan.SPONSORED,
-            )) is not None
+            is_vip = bool(active_subscription and active_subscription.plan == SubscriptionPlan.SPONSORED)
         if not is_vip and doc.clinic_id and doc.clinic_join_status in (None, "approved"):
             clinic_sub = await active_clinic_subscription(db, doc.clinic_id)
             is_vip = bool(clinic_sub and clinic_sub.plan == SubscriptionPlan.CLINIC_VIP)
+        has_active_plan = active_subscription is not None
+        if not has_active_plan and doc.clinic_id and doc.clinic_join_status in (None, "approved"):
+            has_active_plan = await active_clinic_subscription(db, doc.clinic_id) is not None
         out.append({
             "id": doc.id,
             "name": doctor_name,
@@ -312,6 +315,9 @@ async def get_public_doctors(db: AsyncSession = Depends(get_db)):
             "first_name": user.first_name,
             "last_name": user.last_name,
             "address": doc.clinic_info or user.address,
+            "clinic_info": doc.clinic_info,
+            "clinic_id": doc.clinic_id,
+            "plan": "Activo" if has_active_plan else "Ninguno",
             "state": user.state,
             "specialties": doc.specialties or [],
             "identity_document": user.identity_document,
