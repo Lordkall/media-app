@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from datetime import date
 from typing import Optional
 from app.core.demographics import local_today
@@ -10,10 +10,22 @@ class AppointmentBase(BaseModel):
     appointment_reason: Optional[str] = None
     reason: Optional[str] = None
     is_for_dependent: bool = False
-    dependent_name: Optional[str] = Field(default=None, max_length=200)
+    dependent_name: Optional[str] = Field(default=None, max_length=120)
     dependent_birth_date: Optional[date] = None
     dependent_relationship: Optional[str] = Field(default=None, max_length=40)
     dependent_gender: Optional[str] = Field(default=None, max_length=30)
+
+    @field_validator("dependent_name")
+    @classmethod
+    def validate_dependent_name(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        value = value.strip()
+        if not value:
+            raise ValueError("El nombre del dependiente es obligatorio")
+        if any(character.isdigit() for character in value):
+            raise ValueError("El nombre no puede contener números")
+        return value
 
     @model_validator(mode="after")
     def validate_dependent(self):

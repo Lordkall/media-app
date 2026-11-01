@@ -25,8 +25,8 @@ class RescheduleAppointment(BaseModel):
 class ManualAppointmentCreate(BaseModel):
     appointment_date: date_type
     turn_number: int = Field(gt=0)
-    patient_first_name: str = Field(min_length=1, max_length=100)
-    patient_last_name: str = Field(min_length=1, max_length=100)
+    patient_first_name: str = Field(min_length=1, max_length=60)
+    patient_last_name: str = Field(min_length=1, max_length=60)
     patient_phone: str = Field(min_length=5, max_length=30)
     appointment_reason: str = Field(min_length=1, max_length=500)
     patient_birth_date: date_type | None = None
@@ -45,6 +45,13 @@ class ManualAppointmentCreate(BaseModel):
         value = value.strip()
         if not value:
             raise ValueError("Este dato es obligatorio")
+        return value
+
+    @field_validator("patient_first_name", "patient_last_name")
+    @classmethod
+    def reject_digits_in_patient_name(cls, value: str) -> str:
+        if any(character.isdigit() for character in value):
+            raise ValueError("Los nombres y apellidos no pueden contener números")
         return value
 
 async def _staff_doctor(current_user: User, db: AsyncSession) -> Doctor:

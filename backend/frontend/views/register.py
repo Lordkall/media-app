@@ -16,6 +16,13 @@ ESTADOS_VE = [
     "Trujillo", "Yaracuy", "Zulia"
 ]
 
+def strip_name_digits(e):
+    value = e.control.value or ""
+    cleaned = re.sub(r"\d", "", value)
+    if cleaned != value:
+        e.control.value = cleaned
+        e.control.update()
+
 def RegisterView(page: ft.Page):
     
     email_input = ft.TextField(
@@ -29,12 +36,16 @@ def RegisterView(page: ft.Page):
         label="Nombres",
         fill_color=colors.INPUT_BG, filled=True,
         color=colors.TEXT_DARK,
+        max_length=60,
+        on_change=strip_name_digits,
     )
 
     last_name_input = ft.TextField(
         label="Apellidos",
         fill_color=colors.INPUT_BG, filled=True,
         color=colors.TEXT_DARK,
+        max_length=60,
+        on_change=strip_name_digits,
     )
 
     phone_input = ft.TextField(
@@ -84,7 +95,7 @@ def RegisterView(page: ft.Page):
         prefix_icon=ft.Icons.SEARCH,
         fill_color=colors.INPUT_BG, filled=True,
         color=colors.TEXT_DARK,
-        on_change=lambda e: update_specialties_list(e.control.value),
+        max_length=80,
     )
     
     search_results_list = ft.ListView(height=150, spacing=5)
@@ -165,6 +176,12 @@ def RegisterView(page: ft.Page):
         if count == 0:
             search_results_list.controls.append(ft.Text("No se encontraron resultados", size=12, color=colors.TEXT_LIGHT))
         page.update()
+
+    def on_specialty_search(e):
+        strip_name_digits(e)
+        update_specialties_list(e.control.value or "")
+
+    specialty_search.on_change = on_specialty_search
 
     # Estado del rol
     role_value = {"value": "patient"}

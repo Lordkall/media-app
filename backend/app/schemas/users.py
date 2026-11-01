@@ -22,8 +22,8 @@ class RegisterRoleEnum(str, Enum):
 
 class UserCreate(BaseModel):
     email: EmailStr
-    first_name: str
-    last_name: str
+    first_name: str = Field(min_length=1, max_length=60)
+    last_name: str = Field(min_length=1, max_length=60)
     password: str
     phone: str
     identity_document: str
@@ -40,6 +40,16 @@ class UserCreate(BaseModel):
     medical_license_certificate_mime_type: Optional[str] = None
     accept_terms: bool
     accept_privacy: bool
+
+    @field_validator("first_name", "last_name")
+    @classmethod
+    def validate_person_name(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("El nombre es obligatorio")
+        if any(character.isdigit() for character in value):
+            raise ValueError("Los nombres y apellidos no pueden contener números")
+        return value
 
     @model_validator(mode="after")
     def validate_birth_date(self):
@@ -118,8 +128,8 @@ class UserCreate(BaseModel):
         return accepted
 
 class UserUpdate(BaseModel):
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
+    first_name: Optional[str] = Field(default=None, min_length=1, max_length=60)
+    last_name: Optional[str] = Field(default=None, min_length=1, max_length=60)
     phone: Optional[str] = None
     state: Optional[str] = None
     address: Optional[str] = None
@@ -128,6 +138,18 @@ class UserUpdate(BaseModel):
     avatar_url: Optional[str] = None
     fcm_token: Optional[str] = None
     show_whatsapp: Optional[bool] = None
+
+    @field_validator("first_name", "last_name")
+    @classmethod
+    def validate_updated_person_name(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        value = value.strip()
+        if not value:
+            raise ValueError("El nombre es obligatorio")
+        if any(character.isdigit() for character in value):
+            raise ValueError("Los nombres y apellidos no pueden contener números")
+        return value
 
     @field_validator("birth_date")
     @classmethod

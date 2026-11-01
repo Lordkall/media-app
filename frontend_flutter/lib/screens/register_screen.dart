@@ -722,10 +722,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     keyboardType: TextInputType.emailAddress),
                                 if (_role == 'clinic') ...[
                                   _buildTextField('Nombre del Centro Médico',
-                                      _firstNameCtrl),
+                                      _firstNameCtrl,
+                                      inputFormatters: [
+                                        FilteringTextInputFormatter.deny(
+                                            RegExp(r'[0-9]')),
+                                        LengthLimitingTextInputFormatter(60),
+                                      ],
+                                      maxLength: 60),
                                 ] else ...[
-                                  _buildTextField('Nombres', _firstNameCtrl),
-                                  _buildTextField('Apellidos', _lastNameCtrl),
+                                  _buildTextField('Nombres', _firstNameCtrl,
+                                      inputFormatters: [
+                                        FilteringTextInputFormatter.deny(
+                                            RegExp(r'[0-9]')),
+                                        LengthLimitingTextInputFormatter(60),
+                                      ],
+                                      maxLength: 60),
+                                  _buildTextField('Apellidos', _lastNameCtrl,
+                                      inputFormatters: [
+                                        FilteringTextInputFormatter.deny(
+                                            RegExp(r'[0-9]')),
+                                        LengthLimitingTextInputFormatter(60),
+                                      ],
+                                      maxLength: 60),
                                 ],
                                 _buildIdentityDocumentField(),
                                 _buildTextField(
@@ -796,6 +814,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       return TextField(
                                         controller: controller,
                                         focusNode: focusNode,
+                                        inputFormatters: [
+                                          FilteringTextInputFormatter.deny(
+                                              RegExp(r'[0-9]')),
+                                        ],
                                         decoration: InputDecoration(
                                           labelText: 'Buscar Especialidad',
                                           filled: true,
@@ -870,6 +892,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       return TextField(
                                         controller: controller,
                                         focusNode: focusNode,
+                                        inputFormatters: [
+                                          FilteringTextInputFormatter.deny(
+                                              RegExp(r'[0-9]')),
+                                        ],
                                         decoration: InputDecoration(
                                           labelText: 'Buscar Estado',
                                           filled: true,

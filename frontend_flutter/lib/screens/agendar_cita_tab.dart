@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../core/api_client.dart';
 import 'dart:convert';
 import 'package:table_calendar/table_calendar.dart';
@@ -109,15 +110,13 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
         return false;
       }
       final appointments = jsonDecode(response.body) as List<dynamic>;
-      final sameDay = appointments
+      final sameDoctorSameDay = appointments
           .where((item) =>
               item['date']?.toString().startsWith(date) == true &&
-              item['status']?.toString().toLowerCase() == 'scheduled')
+              item['status']?.toString().toLowerCase() == 'scheduled' &&
+              item['doctor_id']?.toString() == doctorId.toString())
           .toList();
-      final sameDoctorCount = sameDay
-          .where((item) => item['doctor_id']?.toString() == doctorId.toString())
-          .length;
-      if (sameDoctorCount >= 2) {
+      if (sameDoctorSameDay.length >= 2) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text(
@@ -126,13 +125,13 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
         }
         return false;
       }
-      if (sameDay.isEmpty || !mounted) return true;
+      if (sameDoctorSameDay.isEmpty || !mounted) return true;
       return await showDialog<bool>(
             context: context,
             builder: (dialogContext) => AlertDialog(
-              title: const Text('Ya tienes una cita ese día'),
+              title: const Text('Ya tienes una cita con este doctor'),
               content: const Text(
-                  'Ya tienes una cita programada para ese día. ¿Deseas agendar otra?'),
+                  'Ya tienes una cita programada con este doctor para ese día. ¿Deseas agendar otra?'),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(dialogContext, false),
@@ -290,6 +289,9 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                   TextField(
                     controller: queryController,
                     autofocus: true,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.deny(RegExp(r'[0-9]')),
+                    ],
                     decoration: const InputDecoration(
                       prefixIcon: Icon(Icons.search),
                       hintText: 'Escribe una especialidad',
@@ -486,6 +488,11 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
               TextField(
                 controller: _dependentNameController,
                 textCapitalization: TextCapitalization.words,
+                inputFormatters: [
+                  FilteringTextInputFormatter.deny(RegExp(r'[0-9]')),
+                  LengthLimitingTextInputFormatter(120),
+                ],
+                maxLength: 120,
                 decoration: InputDecoration(
                   labelText: 'Nombre completo del paciente',
                   border: OutlineInputBorder(
@@ -497,11 +504,10 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
               const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: () async {
-                  final today = DateTime.now();
+                  final today = caracasNow();
                   final selected = await showDatePicker(
                     context: context,
-                    initialDate: _dependentBirthDate ??
-                        DateTime(today.year - 10, today.month, today.day),
+                    initialDate: today,
                     firstDate: DateTime(1900),
                     lastDate: today,
                     helpText: 'Nacimiento del paciente',

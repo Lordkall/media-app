@@ -159,12 +159,22 @@ class _ManualAppointmentSheetState extends State<ManualAppointmentSheet> {
                 TextFormField(
                     controller: _firstName,
                     textCapitalization: TextCapitalization.words,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.deny(RegExp(r'[0-9]')),
+                      LengthLimitingTextInputFormatter(60),
+                    ],
+                    maxLength: 60,
                     decoration: _decoration('Nombre'),
                     validator: _required),
                 const SizedBox(height: 12),
                 TextFormField(
                     controller: _lastName,
                     textCapitalization: TextCapitalization.words,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.deny(RegExp(r'[0-9]')),
+                      LengthLimitingTextInputFormatter(60),
+                    ],
+                    maxLength: 60,
                     decoration: _decoration('Apellido'),
                     validator: _required),
                 const SizedBox(height: 12),
@@ -186,12 +196,10 @@ class _ManualAppointmentSheetState extends State<ManualAppointmentSheet> {
                   onPressed: _saving
                       ? null
                       : () async {
-                          final today = DateTime.now();
+                          final today = caracasNow();
                           final value = await showDatePicker(
                             context: context,
-                            initialDate: _patientBirthDate ??
-                                DateTime(
-                                    today.year - 30, today.month, today.day),
+                            initialDate: today,
                             firstDate: DateTime(1900),
                             lastDate: today,
                             helpText: 'Fecha de nacimiento del paciente',

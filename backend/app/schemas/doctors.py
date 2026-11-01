@@ -3,7 +3,7 @@ from typing import List, Optional
 from datetime import date
 
 class DoctorUpdate(BaseModel):
-    bio: Optional[str] = None
+    bio: Optional[str] = Field(default=None, max_length=120)
     clinic_info: Optional[str] = None
     consultation_fee: Optional[float] = None
     show_fee_in_ves: Optional[bool] = None

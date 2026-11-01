@@ -3,7 +3,15 @@ Vista de Perfil de Usuario (Doctores y Pacientes).
 Permite visualizar y editar la información personal, datos profesionales/médicos y foto de perfil.
 """
 import flet as ft
+import re
 from core import colors
+
+def strip_name_digits(e):
+    value = e.control.value or ""
+    cleaned = re.sub(r"\d", "", value)
+    if cleaned != value:
+        e.control.value = cleaned
+        e.control.update()
 
 PRIMARY_COLOR = colors.PRIMARY
 BG_COLOR = colors.BACKGROUND
@@ -64,12 +72,16 @@ class ProfileView(ft.Container):
         self.first_name_input = ft.TextField(
             label="Nombre",
             value=self.user.first_name if self.user else "",
+            max_length=60,
+            on_change=strip_name_digits,
             border_radius=10,
             bgcolor=colors.INPUT_BG,
         )
         self.last_name_input = ft.TextField(
             label="Apellido",
             value=self.user.last_name if self.user else "",
+            max_length=60,
+            on_change=strip_name_digits,
             border_radius=10,
             bgcolor=colors.INPUT_BG,
         )
@@ -327,6 +339,7 @@ class ProfileView(ft.Container):
             self.bio_input = ft.TextField(
                 label="Biografía / Presentación Profesional",
                 value=doc_bio,
+                max_length=120,
                 multiline=True,
                 min_lines=3,
                 border_radius=10,

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:local_auth/local_auth.dart';
@@ -459,8 +460,8 @@ class _PersonalInfoPageState extends State<_PersonalInfoPage> {
   @override
   Widget build(BuildContext context) =>
       _SettingsPage(title: 'Información Personal', children: [
-        _field('Nombres', name),
-        _field('Apellidos', surname),
+        _field('Nombres', name, maxLength: 60),
+        _field('Apellidos', surname, maxLength: 60),
         _field(
             'Cédula / RIF',
             TextEditingController(
@@ -618,7 +619,7 @@ class _DoctorDataPageState extends State<_DoctorDataPage> {
                 text: widget.doctor['medical_license_number']?.toString() ??
                     'No registrada'),
             enabled: false),
-        _field('Biografía', bio, lines: 4),
+        _field('Biografía', bio, lines: 4, maxLength: 120),
         Autocomplete<String>(
           textEditingController: _specialtySearch,
           optionsBuilder: (value) => medicalSpecialties.where((item) =>
@@ -637,6 +638,9 @@ class _DoctorDataPageState extends State<_DoctorDataPage> {
               TextField(
             controller: controller,
             focusNode: focusNode,
+            inputFormatters: [
+              FilteringTextInputFormatter.deny(RegExp(r'[0-9]')),
+            ],
             decoration: const InputDecoration(
               labelText: 'Buscar especialidad',
               prefixIcon: Icon(Icons.search),
@@ -1055,5 +1059,8 @@ Widget _field(String label, TextEditingController controller,
             obscureText: secret,
             enabled: enabled,
             maxLength: maxLength,
+            inputFormatters: label == 'Nombres' || label == 'Apellidos'
+                ? [FilteringTextInputFormatter.deny(RegExp(r'[0-9]'))]
+                : null,
             decoration: InputDecoration(
                 labelText: label, border: const OutlineInputBorder())));
