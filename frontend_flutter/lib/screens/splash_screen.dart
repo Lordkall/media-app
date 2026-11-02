@@ -28,10 +28,10 @@ class _SplashScreenState extends State<SplashScreen>
     )..repeat();
     _introController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 5),
+      duration: const Duration(seconds: 4),
     )..forward();
 
-    _navigationTimer = Timer(const Duration(seconds: 5), () {
+    _navigationTimer = Timer(const Duration(seconds: 4), () {
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
@@ -69,6 +69,10 @@ class _SplashScreenState extends State<SplashScreen>
               );
               final heartbeatReveal =
                   (_introController.value / 0.54).clamp(0.0, 1.0).toDouble();
+              // The 4-second intro controller advances by 0.375 in 1.5 seconds.
+              final loadingProgress =
+                  (_introController.value - 0.56).clamp(0.0, 0.375).toDouble() /
+                      0.375;
               return Stack(
                 alignment: Alignment.center,
                 children: [
@@ -146,7 +150,7 @@ class _SplashScreenState extends State<SplashScreen>
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(8),
                               child: LinearProgressIndicator(
-                                value: _introController.value,
+                                value: loadingProgress,
                                 minHeight: 4,
                                 backgroundColor: Colors.white.withOpacity(0.22),
                                 valueColor: const AlwaysStoppedAnimation<Color>(
