@@ -10,6 +10,14 @@ set(BINARY_NAME "salud_now")
 # versions of CMake.
 cmake_policy(VERSION 3.14...3.25)
 
+# Firebase's bundled CMake project still declares a 3.1 minimum. CMake 4.x
+# requires an explicit compatibility floor when configuring that dependency.
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+
+# Older Windows plugins still include Microsoft's deprecated experimental
+# coroutine header, which recent Visual Studio previews treat as an error.
+add_compile_definitions(_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
+
 # Define build configuration option.
 get_property(IS_MULTICONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 if(IS_MULTICONFIG)
@@ -68,6 +76,9 @@ set(CMAKE_VS_INCLUDE_INSTALL_TO_DEFAULT_BUILD 1)
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   set(CMAKE_INSTALL_PREFIX "${BUILD_BUNDLE_DIR}" CACHE PATH "..." FORCE)
 endif()
+# Flutter's CMake invocation is leaving this cache set to Program Files, which
+# makes `flutter run` fail while installing the debug bundle without elevation.
+set(CMAKE_INSTALL_PREFIX "${BUILD_BUNDLE_DIR}" CACHE PATH "..." FORCE)
 
 set(INSTALL_BUNDLE_DATA_DIR "${CMAKE_INSTALL_PREFIX}/data")
 set(INSTALL_BUNDLE_LIB_DIR "${CMAKE_INSTALL_PREFIX}")

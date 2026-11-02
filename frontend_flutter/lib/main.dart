@@ -8,11 +8,12 @@ import 'core/local_notification_service.dart';
 import 'core/app_navigator.dart';
 import 'screens/legal_screens.dart';
 import 'screens/login_screen.dart';
+import 'screens/splash_screen.dart';
 import 'widgets/profile_avatar.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  if (!kIsWeb) {
+  if (!kIsWeb && defaultTargetPlatform != TargetPlatform.windows) {
     await Firebase.initializeApp();
   }
   debugPrint("Handling a background message: ${message.messageId}");
@@ -21,10 +22,14 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('es_ES', null);
-  if (!kIsWeb) {
+  final supportsFirebaseMessaging = !kIsWeb &&
+      defaultTargetPlatform != TargetPlatform.windows &&
+      defaultTargetPlatform != TargetPlatform.linux &&
+      defaultTargetPlatform != TargetPlatform.macOS;
+  if (supportsFirebaseMessaging) {
     await Firebase.initializeApp();
   }
-  if (!kIsWeb) {
+  if (supportsFirebaseMessaging) {
     await LocalNotificationService.initialize();
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   }
@@ -66,7 +71,7 @@ class SaludNowApp extends StatelessWidget {
       ),
       initialRoute: initialPath,
       routes: {
-        '/': (_) => const LoginScreen(),
+        '/': (_) => const SplashScreen(),
         '/privacidad': (_) => const PrivacyPolicyScreen(),
         '/cookies': (_) => const CookiesPolicyScreen(),
         '/politicas': (_) => const TermsAndConditionsScreen(),
