@@ -159,34 +159,33 @@ async def create_ad(
     if expires_at <= datetime.now(timezone.utc):
         raise HTTPException(status_code=422, detail="La fecha de expiración debe estar en el futuro.")
 
-    filename = file.filename or ""
-    extension = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
-    image_spec = SUPPORTED_IMAGES.get(extension)
-    if image_spec is None:
-        raise HTTPException(status_code=400, detail="Usa una imagen PNG, JPG, WEBP o GIF.")
-    content_type = (file.content_type or "").split(";", 1)[0].lower()
-    if content_type and content_type not in {image_spec[0], "application/octet-stream"}:
-        raise HTTPException(status_code=400, detail="El tipo de archivo no coincide con la imagen.")
-    image_data = await file.read(MAX_IMAGE_BYTES + 1)
-    if not image_data:
-        raise HTTPException(status_code=400, detail="La imagen está vacía.")
-    if len(image_data) > MAX_IMAGE_BYTES:
-        raise HTTPException(status_code=413, detail="La imagen no puede superar 8 MB.")
-    if not image_data.startswith(image_spec[1]):
-        raise HTTPException(status_code=400, detail="El archivo no parece ser una imagen válida.")
-    if extension == "webp" and image_data[8:12] != b"WEBP":
-        raise HTTPException(status_code=400, detail="El archivo WEBP no es válido.")
+    normalized_link = link_url.strip() if link_url and link_url.strip() else None
+    if normalized_link and not (normalized_link.startswith("http://") or normalized_link.startswith("https://")):
+        raise HTTPException(status_code=422, detail="El enlace debe comenzar con http:// o https://")
 
-    safe_name = f"{uuid.uuid4().hex}.{extension}"
-    upload_dir = Path("uploads") / "ads"
+    filename = (file.filename or "").lower()
+    extension = filename.rsplit(".", 1)[-1] if "." in filename else ""
+    if extension not in SUPPORTED_IMAGES:
+        raise HTTPException(status_code=422, detail="Formato no admitido. Usa JPG, PNG, WebP o GIF.")
+
+    payload = await file.read()
+    if not payload:
+        raise HTTPException(status_code=422, detail="La imagen no contiene datos.")
+    if len(payload) > MAX_IMAGE_BYTES:
+        raise HTTPException(status_code=422, detail="La imagen no debe superar los 8 MB.")
+
+    _, magic_bytes = SUPPORTED_IMAGES[extension]
+    if not payload.startswith(magic_bytes):
+        raise HTTPException(status_code=422, detail="El contenido del archivo no coincide con su extensión.")
+
+    upload_dir = Path("uploads/ads")
     upload_dir.mkdir(parents=True, exist_ok=True)
-    destination = upload_dir / safe_name
+    stored_name = f"{uuid.uuid4().hex}.{extension}"
+    destination = upload_dir / stored_name
+    destination.write_bytes(payload)
+    image_url = f"/api/v1/uploads/ads/{stored_name}"
+
     try:
-        destination.write_bytes(image_data)
-        image_url = f"/api/v1/uploads/ads/{safe_name}"
-        normalized_link = link_url.strip() if link_url and link_url.strip() else None
-        if normalized_link and not normalized_link.lower().startswith(("https://", "http://")):
-            normalized_link = f"https://{normalized_link}"
         ad = FloatingAd(
             title=title.strip(),
             image_url=image_url,
@@ -208,8 +207,8 @@ async def create_ad(
         raise
 
 
-@router.delete("/admin/{ad_id}")
-async def deactivate_ad(
+@router.patch("/admin/{ad_id}/toggle-active")
+async def toggle_ad_active(
     ad_id: int,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -218,6 +217,31 @@ async def deactivate_ad(
     ad = await db.get(FloatingAd, ad_id)
     if ad is None:
         raise HTTPException(status_code=404, detail="Anuncio no encontrado.")
-    ad.is_active = False
+    ad.is_active = not ad.is_active
     await db.commit()
-    return {"message": "Anuncio desactivado."}
+    await db.refresh(ad)
+    return _serialize(ad, await _ad_counts(db, ad.id))
+
+
+@router.delete("/admin/{ad_id}")
+async def delete_ad(
+    ad_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    _require_admin(current_user)
+    ad = await db.get(FloatingAd, ad_id)
+    if ad is None:
+        raise HTTPException(status_code=404, detail="Anuncio no encontrado.")
+
+    # Remove stored image if exists
+    if ad.image_url and "/uploads/" in ad.image_url:
+        filename = ad.image_url.split("/uploads/")[-1]
+        try:
+            (Path("uploads") / filename).unlink(missing_ok=True)
+        except OSError:
+            pass
+
+    await db.delete(ad)
+    await db.commit()
+    return {"message": "Anuncio eliminado correctamente."}

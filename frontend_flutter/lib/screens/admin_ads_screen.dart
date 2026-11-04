@@ -173,17 +173,58 @@ class _AdminAdsScreenState extends State<AdminAdsScreen> {
     }
   }
 
-  Future<void> _deactivateAd(int id) async {
+  Future<void> _toggleAdActive(int id) async {
+    try {
+      final response = await ApiClient.patch('/ads/admin/$id/toggle-active', {});
+      if (!mounted) return;
+      if (response.statusCode != 200) {
+        throw Exception(
+            _errorMessage(response.body, 'No se pudo cambiar el estado del anuncio.'));
+      }
+      await _loadAds();
+    } catch (error) {
+      if (mounted) {
+        _showMessage(error.toString().replaceFirst('Exception: ', ''));
+      }
+    }
+  }
+
+  Future<void> _deleteAd(int id, String title) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar anuncio'),
+        content: Text(
+          '¿Estás seguro de que deseas eliminar permanentemente el anuncio "$title"?\n\nEsta acción no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
     try {
       final response = await ApiClient.delete('/ads/admin/$id');
       if (!mounted) return;
       if (response.statusCode != 200) {
-        throw Exception(_errorMessage(response.body, 'No se pudo desactivar.'));
+        throw Exception(
+            _errorMessage(response.body, 'No se pudo eliminar el anuncio.'));
       }
+      _showMessage('Anuncio eliminado.');
       await _loadAds();
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         _showMessage(error.toString().replaceFirst('Exception: ', ''));
+      }
     }
   }
 
@@ -429,13 +470,26 @@ class _AdminAdsScreenState extends State<AdminAdsScreen> {
                               fontWeight: FontWeight.w800,
                               color: Color(0xFF0B2545))),
                     ),
-                    if (isActive)
+                    if (id != null) ...[
                       IconButton(
-                        tooltip: 'Desactivar anuncio',
-                        onPressed: id == null ? null : () => _deactivateAd(id),
-                        icon: const Icon(Icons.visibility_off_outlined,
-                            color: Color(0xFF64748B)),
+                        tooltip:
+                            isActive ? 'Pausar anuncio' : 'Reactivar anuncio',
+                        onPressed: () => _toggleAdActive(id),
+                        icon: Icon(
+                          isActive
+                              ? Icons.pause_circle_outline
+                              : Icons.play_circle_outline,
+                          color: isActive ? Colors.orange : Colors.green,
+                        ),
                       ),
+                      IconButton(
+                        tooltip: 'Eliminar anuncio',
+                        onPressed: () => _deleteAd(
+                            id, ad['title']?.toString() ?? 'Anuncio'),
+                        icon:
+                            const Icon(Icons.delete_outline, color: Colors.red),
+                      ),
+                    ],
                   ],
                 ),
                 Text('Público: $roles',
