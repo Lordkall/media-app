@@ -414,7 +414,7 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
     final tabs = _tabs;
     final activeIndex = _currentIndex.clamp(0, tabs.length - 1);
 
-    return Scaffold(
+    final scaffold = Scaffold(
       extendBody:
           true, // Importante para que el body vaya por debajo del BottomAppBar transparente
       body: Stack(
@@ -435,15 +435,6 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
                 },
                 child: const Icon(Icons.support_agent, color: Colors.white),
               ),
-            ),
-          if (_role != null &&
-              _role != 'admin' &&
-              MediaQuery.viewInsetsOf(context).bottom == 0)
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 164,
-              child: FloatingAdsOverlay(key: ValueKey('ads-$_role')),
             ),
         ],
       ),
@@ -530,6 +521,19 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
           ),
         ),
       ),
+    );
+
+    if (_role == null || _role == 'admin') {
+      return scaffold;
+    }
+
+    return Stack(
+      children: [
+        scaffold,
+        Positioned.fill(
+          child: FloatingAdsOverlay(key: ValueKey('ads-$_role')),
+        ),
+      ],
     );
   }
 

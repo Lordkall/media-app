@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -150,90 +152,194 @@ class _FloatingAdsOverlayState extends State<FloatingAdsOverlay> {
   @override
   Widget build(BuildContext context) {
     final ad = _currentAd;
-    if (ad == null) return const SizedBox.shrink();
+    if (ad == null) return const IgnorePointer(child: SizedBox.shrink());
     final id = int.tryParse(ad['id']?.toString() ?? '');
     final expiration =
         DateTime.tryParse(ad['expires_at']?.toString() ?? '')?.toLocal();
     if (id == null ||
         expiration == null ||
         !expiration.isAfter(DateTime.now())) {
-      return const SizedBox.shrink();
+      return const IgnorePointer(child: SizedBox.shrink());
     }
+
+    final size = MediaQuery.sizeOf(context);
+    final cardWidth = math.min(size.width * 0.88, 400.0);
+    final cardHeight = math.min(size.height * 0.66, 540.0);
+    final title = ad['title']?.toString().trim() ?? '';
+    final hasTitle = title.isNotEmpty;
+    final linkUrl = ad['link_url']?.toString().trim() ?? '';
+    final hasLink = linkUrl.isNotEmpty;
+
     return Material(
       color: Colors.transparent,
-      child: Container(
-        height: 112,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF0B2545).withValues(alpha: .22),
-              blurRadius: 18,
-              offset: const Offset(0, 7),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            InkWell(
-              onTap: _openCurrentAd,
-              child: Image.network(
-                _imageUrl(ad['image_url']?.toString() ?? ''),
-                fit: BoxFit.cover,
-                loadingBuilder: (context, child, progress) => progress == null
-                    ? child
-                    : const Center(
-                        child: CircularProgressIndicator(strokeWidth: 2)),
-                errorBuilder: (_, __, ___) {
-                  _handleImageError(id);
-                  return const SizedBox.shrink();
-                },
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // 1. Fondo difuminado (blur) que bloquea todas las interacciones
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {}, // Bloquea toques al contenido de fondo
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 7, sigmaY: 7),
+              child: Container(
+                color: Colors.black.withValues(alpha: 0.55),
               ),
             ),
-            Positioned(
-              top: 6,
-              right: 6,
-              child: Material(
-                color: Colors.black.withValues(alpha: .56),
-                shape: const CircleBorder(),
-                child: IconButton(
-                  tooltip: 'Cerrar anuncio',
-                  visualDensity: VisualDensity.compact,
-                  onPressed: _dismissCurrent,
-                  icon: const Icon(Icons.close_rounded,
-                      size: 19, color: Colors.white),
-                ),
+          ),
+          // 2. Tarjeta del anuncio modal abarcando el área central
+          Center(
+            child: Container(
+              width: cardWidth,
+              height: cardHeight,
+              margin: const EdgeInsets.symmetric(horizontal: 20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.4),
+                    blurRadius: 30,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
               ),
-            ),
-            if ((ad['title']?.toString().trim().isNotEmpty ?? false))
-              Positioned(
-                left: 10,
-                bottom: 8,
-                child: IgnorePointer(
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: .55),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      ad['title'].toString(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 12),
+              clipBehavior: Clip.antiAlias,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Imagen del anuncio (al tocar abre enlace si existe)
+                  InkWell(
+                    onTap: hasLink ? _openCurrentAd : null,
+                    child: Image.network(
+                      _imageUrl(ad['image_url']?.toString() ?? ''),
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, progress) =>
+                          progress == null
+                              ? child
+                              : const Center(
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    color: Color(0xFF0056B3),
+                                  ),
+                                ),
+                      errorBuilder: (_, __, ___) {
+                        _handleImageError(id);
+                        return const SizedBox.shrink();
+                      },
                     ),
                   ),
-                ),
+                  // Degradado inferior para título y botón de acción
+                  if (hasTitle || hasLink)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        padding: const EdgeInsets.fromLTRB(16, 32, 16, 16),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.topCenter,
+                            colors: [
+                              Colors.black.withValues(alpha: 0.88),
+                              Colors.black.withValues(alpha: 0.5),
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (hasTitle)
+                              Text(
+                                title,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 18,
+                                  shadows: [
+                                    Shadow(
+                                      color: Colors.black87,
+                                      blurRadius: 6,
+                                      offset: Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            if (hasLink) ...[
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                height: 42,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        Color(0xFF0756A4),
+                                        Color(0xFF0A3D78)
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(21),
+                                  ),
+                                  child: ElevatedButton.icon(
+                                    onPressed: _openCurrentAd,
+                                    icon: const Icon(Icons.open_in_new,
+                                        size: 16, color: Colors.white),
+                                    label: const Text(
+                                      'Ver más',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.transparent,
+                                      shadowColor: Colors.transparent,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(21),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  // Botón de cerrar (X) en la esquina superior derecha
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: Material(
+                      color: Colors.black.withValues(alpha: 0.65),
+                      shape: const CircleBorder(),
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: _dismissCurrent,
+                        child: const Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Icon(
+                            Icons.close_rounded,
+                            size: 24,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-          ],
-        ),
+            ),
+          ),
+        ],
       ),
     );
   }
