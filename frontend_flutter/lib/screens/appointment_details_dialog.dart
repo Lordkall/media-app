@@ -36,11 +36,7 @@ Future<void> showAppointmentDetailsDialog(
                       imageUrl: avatarUrl,
                       size: 84,
                       fallbackRole: isDoctor ? 'patient' : 'doctor',
-                      borderColor: !isDoctor && appt['doctor_is_vip'] == true
-                          ? const Color(0xFFFFC107)
-                          : Colors.transparent,
-                      borderWidth:
-                          !isDoctor && appt['doctor_is_vip'] == true ? 3 : 0,
+                      borderWidth: 0,
                     ),
                     const SizedBox(height: 12),
                     Text(otherPersonName,

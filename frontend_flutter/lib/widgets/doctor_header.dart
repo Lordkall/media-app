@@ -82,7 +82,6 @@ class _DoctorHeaderState extends State<DoctorHeader> {
           setState(
               () => _unreadMessages += (data['count'] as num?)?.toInt() ?? 0);
       }
-
     } catch (e) {
       // Ignorar en caso de error
     }
@@ -115,25 +114,30 @@ class _DoctorHeaderState extends State<DoctorHeader> {
 
   @override
   Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).width < 320;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      padding:
+          EdgeInsets.symmetric(horizontal: compact ? 8.0 : 16.0, vertical: 8.0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Image.asset(
-            'assets/logo_transparent.png',
-            height: 38,
-            fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) => const Row(
-              children: [
-                Icon(Icons.favorite, color: Color(0xFF0056B3)),
-                SizedBox(width: 8),
-                Text('Salud Now',
-                    style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0056B3))),
-              ],
+          Expanded(
+            child: Image.asset(
+              'assets/logo_transparent.png',
+              height: 38,
+              alignment: Alignment.centerLeft,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.favorite, color: Color(0xFF0056B3)),
+                  SizedBox(width: 8),
+                  Text('Salud Now',
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0056B3))),
+                ],
+              ),
             ),
           ),
           Row(
@@ -141,6 +145,9 @@ class _DoctorHeaderState extends State<DoctorHeader> {
               Stack(
                 children: [
                   IconButton(
+                    constraints: BoxConstraints.tightFor(
+                        width: compact ? 36 : 48, height: compact ? 40 : 48),
+                    padding: EdgeInsets.zero,
                     icon: const Icon(Icons.notifications,
                         color: Color(0xFF0056B3), size: 28),
                     onPressed: () async {
@@ -191,6 +198,9 @@ class _DoctorHeaderState extends State<DoctorHeader> {
                 Stack(
                   children: [
                     IconButton(
+                      constraints: BoxConstraints.tightFor(
+                          width: compact ? 36 : 48, height: compact ? 40 : 48),
+                      padding: EdgeInsets.zero,
                       tooltip: 'Mensajes',
                       icon: const Icon(Icons.chat_bubble_outline,
                           color: Color(0xFF0056B3), size: 25),
@@ -384,8 +394,8 @@ class _DoctorHeaderState extends State<DoctorHeader> {
               },
               child: const Text(
                 'Mejorar a VIP',
-                style: TextStyle(
-                    color: Colors.white, fontWeight: FontWeight.bold),
+                style:
+                    TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
               ),
             ),
         ],

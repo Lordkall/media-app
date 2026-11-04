@@ -1,18 +1,95 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from app.core.database import get_db
 from app.models.users import User
 from app.models.doctors import Doctor, Availability
 from app.models.appointments import Appointment, AppointmentStatus
+from app.models.patients import Patient
+from app.models.doctor_ratings import DoctorRating, DoctorPatientHistory
 from app.models.subscriptions import Subscription, SubscriptionStatus, SubscriptionPlan
-from app.schemas.doctors import DoctorResponse, DoctorUpdate
+from app.schemas.doctors import DoctorResponse, DoctorUpdate, DoctorRatingCreate
 from app.schemas.availability import AvailabilityUpdate
 from app.api.v1.endpoints.users import get_current_user
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 router = APIRouter()
+
+
+async def _attach_current_rating(db: AsyncSession, doctor: Doctor) -> None:
+    average, count = (await db.execute(select(
+        func.avg(DoctorRating.rating), func.count(DoctorRating.id)
+    ).where(DoctorRating.doctor_id == doctor.id))).one()
+    doctor.rating = float(average) if count else 5.0
+    doctor.total_reviews = int(count)
+
+
+@router.get("/{doctor_id}/rating/me")
+async def get_my_doctor_rating(
+    doctor_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if current_user.role.value != "patient":
+        raise HTTPException(status_code=403, detail="Solo los pacientes pueden calificar")
+    from app.api.v1.endpoints.appointments import auto_complete_expired_appointments
+
+    await auto_complete_expired_appointments(db)
+    patient = await db.scalar(select(Patient).where(Patient.user_id == current_user.id))
+    if patient is None:
+        raise HTTPException(status_code=404, detail="Perfil de paciente no encontrado")
+    doctor = await db.get(Doctor, doctor_id)
+    if doctor is None:
+        raise HTTPException(status_code=404, detail="Doctor no encontrado")
+
+    existing = await db.scalar(select(DoctorRating).where(
+        DoctorRating.doctor_id == doctor_id,
+        DoctorRating.patient_id == patient.id,
+    ))
+    return {"my_rating": existing.rating if existing else None,
+            "can_rate": existing is None,
+            "has_rated": existing is not None}
+
+
+@router.post("/{doctor_id}/rating", status_code=status.HTTP_201_CREATED)
+async def rate_doctor(
+    doctor_id: int,
+    payload: DoctorRatingCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if current_user.role.value != "patient":
+        raise HTTPException(status_code=403, detail="Solo los pacientes pueden calificar")
+    from app.api.v1.endpoints.appointments import auto_complete_expired_appointments
+
+    await auto_complete_expired_appointments(db)
+    patient = await db.scalar(select(Patient).where(Patient.user_id == current_user.id))
+    if patient is None:
+        raise HTTPException(status_code=404, detail="Perfil de paciente no encontrado")
+    doctor = await db.get(Doctor, doctor_id)
+    if doctor is None:
+        raise HTTPException(status_code=404, detail="Doctor no encontrado")
+
+    existing = await db.scalar(select(DoctorRating).where(
+        DoctorRating.doctor_id == doctor_id,
+        DoctorRating.patient_id == patient.id,
+    ))
+    if existing is not None:
+        raise HTTPException(status_code=409, detail="Ya calificaste a este doctor")
+    db.add(DoctorRating(doctor_id=doctor_id, patient_id=patient.id, rating=payload.rating))
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="Ya calificaste a este doctor") from exc
+
+    rating, review_count = (await db.execute(select(
+        func.avg(DoctorRating.rating), func.count(DoctorRating.id)
+    ).where(DoctorRating.doctor_id == doctor_id))).one()
+    return {"rating": float(rating or 5), "total_reviews": int(review_count),
+            "my_rating": payload.rating, "can_rate": False, "has_rated": True}
 
 @router.get("/me", response_model=DoctorResponse)
 async def read_doctor_me(
@@ -28,6 +105,8 @@ async def read_doctor_me(
     
     if not doc:
         raise HTTPException(status_code=404, detail="Doctor profile not found")
+
+    await _attach_current_rating(db, doc)
         
     # Check if doctor is VIP (sponsored)
     sub_query = select(Subscription).where(
@@ -74,6 +153,7 @@ async def update_doctor_me(
     db.add(doc)
     await db.commit()
     await db.refresh(doc)
+    await _attach_current_rating(db, doc)
     
     active_vip = await db.scalar(
         select(Subscription.id).where(
@@ -272,6 +352,19 @@ async def get_public_doctors(db: AsyncSession = Depends(get_db)):
     query = select(Doctor, User).join(User, Doctor.user_id == User.id)
     result = await db.execute(query)
     doctors_data = result.all()
+
+    patient_counts = dict((await db.execute(
+        select(DoctorPatientHistory.doctor_id, func.count(DoctorPatientHistory.patient_id))
+        .group_by(DoctorPatientHistory.doctor_id)
+    )).all())
+    rating_rows = (await db.execute(
+        select(DoctorRating.doctor_id, func.avg(DoctorRating.rating), func.count(DoctorRating.id))
+        .group_by(DoctorRating.doctor_id)
+    )).all()
+    rating_stats = {
+        doctor_id: (float(average), int(count))
+        for doctor_id, average, count in rating_rows
+    }
     
     out = []
     from app.core.profile_privacy import redact_phone_numbers
@@ -305,6 +398,7 @@ async def get_public_doctors(db: AsyncSession = Depends(get_db)):
         has_active_plan = active_subscription is not None
         if not has_active_plan and doc.clinic_id and doc.clinic_join_status in (None, "approved"):
             has_active_plan = await active_clinic_subscription(db, doc.clinic_id) is not None
+        average_rating, total_reviews = rating_stats.get(doc.id, (5.0, 0))
         out.append({
             "id": doc.id,
             "name": doctor_name,
@@ -324,6 +418,10 @@ async def get_public_doctors(db: AsyncSession = Depends(get_db)):
             "medical_license_number": doc.medical_license_number,
             "consultation_fee": doc.consultation_fee,
             "show_fee_in_ves": doc.show_fee_in_ves,
+            "patients_count": int(patient_counts.get(doc.id, 0)),
+            "years_experience": doc.years_experience or 0,
+            "rating": average_rating,
+            "total_reviews": total_reviews,
             "is_vip": is_vip,
         })
     return out

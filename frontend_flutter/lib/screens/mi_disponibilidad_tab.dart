@@ -104,6 +104,7 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
                 await ApiClient.get('/doctors/$linkedDoctorId/availability');
             if (availabilityRes.statusCode == 200) {
               final List<dynamic> avails = jsonDecode(availabilityRes.body);
+              if (!mounted) return;
               setState(() {
                 _selectedDates =
                     avails.map((a) => a['date'].toString()).toSet();
@@ -130,6 +131,7 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
               await ApiClient.get('/doctors/$_doctorId/availability');
           if (availRes.statusCode == 200) {
             final List<dynamic> avails = jsonDecode(availRes.body);
+            if (!mounted) return;
             setState(() {
               _selectedDates = avails.map((a) => a['date'].toString()).toSet();
               if (avails.isNotEmpty) {

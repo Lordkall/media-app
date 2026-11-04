@@ -61,10 +61,7 @@ class _ClinicProfileScreenState extends State<ClinicProfileScreen> {
                         imageUrl: widget.clinic['avatar_url']?.toString(),
                         fallbackRole: 'clinic',
                         size: 80,
-                        borderColor: widget.clinic['is_vip'] == true
-                            ? const Color(0xFFFFC107)
-                            : Colors.transparent,
-                        borderWidth: widget.clinic['is_vip'] == true ? 3 : 0,
+                        borderWidth: 0,
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -78,11 +75,15 @@ class _ClinicProfileScreenState extends State<ClinicProfileScreen> {
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                                const Icon(Icons.location_on,
+                                    size: 16, color: Colors.grey),
                                 const SizedBox(width: 4),
                                 Expanded(
-                                  child: Text(widget.clinic['address'] ?? 'Sin dirección',
-                                      style: const TextStyle(color: Colors.grey)),
+                                  child: Text(
+                                      widget.clinic['address'] ??
+                                          'Sin dirección',
+                                      style:
+                                          const TextStyle(color: Colors.grey)),
                                 ),
                               ],
                             ),
@@ -105,18 +106,25 @@ class _ClinicProfileScreenState extends State<ClinicProfileScreen> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(Icons.phone, size: 16, color: Color(0xFF0056B3)),
+                      const Icon(Icons.phone,
+                          size: 16, color: Color(0xFF0056B3)),
                       const SizedBox(width: 8),
-                      Text(widget.clinic['phone'] ?? 'Sin número de contacto principal',
+                      Text(
+                          widget.clinic['phone'] ??
+                              'Sin número de contacto principal',
                           style: const TextStyle(fontSize: 16)),
                     ],
                   ),
                   if (widget.clinic['contact_phone_2'] != null &&
-                      widget.clinic['contact_phone_2'].toString().trim().isNotEmpty) ...[
+                      widget.clinic['contact_phone_2']
+                          .toString()
+                          .trim()
+                          .isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        const Icon(Icons.phone, size: 16, color: Color(0xFF0056B3)),
+                        const Icon(Icons.phone,
+                            size: 16, color: Color(0xFF0056B3)),
                         const SizedBox(width: 8),
                         Text(widget.clinic['contact_phone_2'].toString(),
                             style: const TextStyle(fontSize: 16)),

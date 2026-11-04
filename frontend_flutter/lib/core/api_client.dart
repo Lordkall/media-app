@@ -121,6 +121,44 @@ class ApiClient {
         'El servidor rechazó la imagen (${response.statusCode})${detail.isEmpty ? '' : ': $detail'}');
   }
 
+  static Future<http.Response> uploadMultipart(
+    String endpoint, {
+    required List<int> bytes,
+    required String filename,
+    required Map<String, String> fields,
+  }) async {
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$baseUrl$endpoint'),
+    );
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+    if (token != null) request.headers['Authorization'] = 'Bearer $token';
+
+    final extension =
+        filename.contains('.') ? filename.split('.').last.toLowerCase() : '';
+    final subtype = switch (extension) {
+      'jpg' || 'jpeg' => 'jpeg',
+      'png' => 'png',
+      'gif' => 'gif',
+      'webp' => 'webp',
+      _ => 'octet-stream',
+    };
+    request.fields.addAll(fields);
+    request.files.add(http.MultipartFile.fromBytes(
+      'file',
+      bytes,
+      filename: filename,
+      contentType: subtype == 'octet-stream'
+          ? MediaType('application', subtype)
+          : MediaType('image', subtype),
+    ));
+    final streamed = await request.send();
+    final body = await streamed.stream.bytesToString();
+    return http.Response(body, streamed.statusCode,
+        headers: streamed.headers, request: streamed.request);
+  }
+
   static Future<http.Response> patch(
       String endpoint, Map<String, dynamic> body) async {
     final url = Uri.parse('$baseUrl$endpoint');

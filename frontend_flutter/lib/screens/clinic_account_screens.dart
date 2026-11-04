@@ -9,6 +9,7 @@ import '../core/distribution_config.dart';
 import '../widgets/profile_avatar.dart';
 import '../core/profile_image_helper.dart';
 import '../widgets/doctor_header.dart';
+import '../widgets/home_search_bar.dart';
 import 'login_screen.dart';
 import 'select_plan_screen.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -85,10 +86,14 @@ class ClinicHomeTab extends StatefulWidget {
       required this.onCalendar,
       required this.onDoctors,
       this.onSearch,
+      this.onSearchTap,
+      this.onSearchSubmitted,
       this.onProfileTap});
   final VoidCallback onCalendar;
   final VoidCallback onDoctors;
   final VoidCallback? onSearch;
+  final VoidCallback? onSearchTap;
+  final ValueChanged<String>? onSearchSubmitted;
   final VoidCallback? onProfileTap;
 
   @override
@@ -204,6 +209,11 @@ class _ClinicHomeTabState extends State<ClinicHomeTab> {
             const DoctorHeader(),
             const SizedBox(height: 16),
             _buildProfileSection(),
+            const SizedBox(height: 14),
+            HomeSearchBar(
+              onSearch: widget.onSearchSubmitted,
+              onTap: widget.onSearchTap ?? widget.onSearch,
+            ),
             const SizedBox(height: 24),
             Expanded(
               child: ListView(

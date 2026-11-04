@@ -7,6 +7,8 @@ from app.api.dependencies import get_db, get_current_patient
 from app.api.v1.endpoints.users import get_current_user
 from app.models.users import User, RoleEnum
 from app.models.appointments import Appointment, AppointmentStatus
+from app.models.doctor_ratings import DoctorPatientHistory
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from app.schemas.appointments import AppointmentCreate, AppointmentResponse
 from datetime import datetime, timedelta, date as date_type
 from zoneinfo import ZoneInfo
@@ -456,6 +458,7 @@ async def auto_complete_expired_appointments(db: AsyncSession) -> int:
     scheduled_appts = result.scalars().all()
 
     updated_count = 0
+    recorded_patient_pairs: set[tuple[int, int]] = set()
     for appt in scheduled_appts:
         is_expired = False
         if appt.appointment_date < today:
@@ -487,6 +490,15 @@ async def auto_complete_expired_appointments(db: AsyncSession) -> int:
         if is_expired:
             appt.status = AppointmentStatus.COMPLETED
             db.add(appt)
+            if appt.patient_id is not None:
+                pair = (appt.doctor_id, appt.patient_id)
+                if pair not in recorded_patient_pairs:
+                    await db.execute(
+                        pg_insert(DoctorPatientHistory)
+                        .values(doctor_id=appt.doctor_id, patient_id=appt.patient_id)
+                        .on_conflict_do_nothing(index_elements=["doctor_id", "patient_id"])
+                    )
+                    recorded_patient_pairs.add(pair)
             updated_count += 1
 
     if updated_count > 0:

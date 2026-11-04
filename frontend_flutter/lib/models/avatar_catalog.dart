@@ -1,8 +1,8 @@
 class AvatarCatalog {
-  static const int patientCount = 15;
-  static const int doctorCount = 15;
-  static const int assistantCount = 15;
-  static const int clinicCount = 6;
+  static const int patientCount = 18;
+  static const int doctorCount = 18;
+  static const int assistantCount = 18;
+  static const int clinicCount = 18;
 
   static String normalizeRole(String? role) {
     switch (role?.toLowerCase()) {
@@ -30,11 +30,9 @@ class AvatarCatalog {
     }
   }
 
-  static int columnsForRole(String role) =>
-      normalizeRole(role) == 'clinic' ? 3 : 5;
+  static int columnsForRole(String role) => 6;
 
-  static int rowsForRole(String role) =>
-      normalizeRole(role) == 'clinic' ? 2 : 3;
+  static int rowsForRole(String role) => 3;
 
   static int countForRole(String role) {
     switch (normalizeRole(role)) {

@@ -33,10 +33,10 @@ class _ProfileTabState extends State<ProfileTab> {
   List<String> _specialties = [];
   bool _isLoading = true;
   bool _isSaving = false;
-  bool _isVip = false;
-  bool _isClinicVip = false;
   bool _showFeeInVes = false;
   String? _medicalLicenseNumber;
+  int _yearsExperience = 0;
+  int? _doctorId;
 
   bool get _isDoctor => _userData?['role'] == 'doctor';
 
@@ -63,27 +63,23 @@ class _ProfileTabState extends State<ProfileTab> {
       }
       final user = Map<String, dynamic>.from(jsonDecode(userResponse.body));
       Map<String, dynamic>? doctor;
-      Map<String, dynamic>? subscription;
       if (user['role'] == 'doctor') {
-        final responses = await Future.wait([
-          ApiClient.get('/doctors/me'),
-          ApiClient.get('/subscriptions/me'),
-        ]);
-        if (responses[0].statusCode == 200) {
-          doctor = Map<String, dynamic>.from(jsonDecode(responses[0].body));
-        }
-        if (responses[1].statusCode == 200) {
-          subscription =
-              Map<String, dynamic>.from(jsonDecode(responses[1].body));
-        }
-      } else if (user['role'] == 'clinic') {
-        final subResp = await ApiClient.get('/subscriptions/me');
-        if (subResp.statusCode == 200) {
-          final sub = jsonDecode(subResp.body) as Map<String, dynamic>;
-          final plan = sub['current']?['plan']?.toString() ?? '';
-          if (mounted) {
-            setState(
-                () => _isClinicVip = plan == 'clinic_vip' || plan == 'vip');
+        final response = await ApiClient.get('/doctors/me');
+        if (response.statusCode == 200) {
+          doctor = Map<String, dynamic>.from(jsonDecode(response.body));
+          final doctorId = int.tryParse(doctor['id']?.toString() ?? '');
+          if (doctorId != null) {
+            final prefs = await SharedPreferences.getInstance();
+            final cacheKey = 'doctor_years_experience_$doctorId';
+            final locallySavedExperience = prefs.getInt(cacheKey);
+            final serverExperience =
+                (doctor['years_experience'] as num?)?.toInt() ?? 0;
+            if (locallySavedExperience != null &&
+                locallySavedExperience == serverExperience) {
+              await prefs.remove(cacheKey);
+            } else if (locallySavedExperience != null) {
+              doctor['years_experience'] = locallySavedExperience;
+            }
           }
         }
       }
@@ -96,17 +92,12 @@ class _ProfileTabState extends State<ProfileTab> {
           List<String>.from(doctor?['specialties'] ?? const <String>[]);
       _showFeeInVes = doctor?['show_fee_in_ves'] == true;
       _medicalLicenseNumber = doctor?['medical_license_number']?.toString();
+      _yearsExperience = (doctor?['years_experience'] as num?)?.toInt() ?? 0;
+      _doctorId = int.tryParse(doctor?['id']?.toString() ?? '');
       ProfileImageHelper.updateCurrentUserAvatar(
           user['avatar_url']?.toString());
       setState(() {
         _userData = user;
-        final plan =
-            subscription?['current']?['plan']?.toString().toLowerCase() ?? '';
-        _isVip = plan == 'sponsored' ||
-            plan == 'vip' ||
-            plan.contains('vip') ||
-            plan.contains('patrocinado') ||
-            subscription?['is_vip'] == true;
         _isLoading = false;
       });
     } catch (e) {
@@ -246,9 +237,7 @@ class _ProfileTabState extends State<ProfileTab> {
                 currentUser: true,
                 fallbackRole: _userData?['role']?.toString() ?? 'patient',
                 size: 120,
-                borderColor: (_isDoctor && _isVip) || _isClinicVip
-                    ? const Color(0xFFD7AF48)
-                    : const Color(0xFF0056B3),
+                borderColor: const Color(0xFF0056B3),
                 borderWidth: 4,
               ),
             ),
@@ -296,6 +285,8 @@ class _ProfileTabState extends State<ProfileTab> {
                         'clinic_info': _clinicInfo.text,
                         'show_fee_in_ves': _showFeeInVes,
                         'medical_license_number': _medicalLicenseNumber,
+                        'years_experience': _yearsExperience,
+                        'id': _doctorId,
                       }))),
             if (_userData?['role'] == 'clinic')
               _menuRow(
@@ -375,12 +366,11 @@ class _AvatarPickerSheet extends StatelessWidget {
                   selected: isSelected,
                   child: InkWell(
                     onTap: () => Navigator.pop(context, index),
-                    customBorder: const CircleBorder(),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 160),
                       padding: const EdgeInsets.all(3),
                       decoration: BoxDecoration(
-                        shape: BoxShape.circle,
+                        borderRadius: BorderRadius.circular(18),
                         border: Border.all(
                           color: isSelected
                               ? const Color(0xFF0056B3)
@@ -388,7 +378,8 @@ class _AvatarPickerSheet extends StatelessWidget {
                           width: isSelected ? 3 : 1,
                         ),
                       ),
-                      child: ClipOval(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(15),
                         child: AvatarSprite(
                           role: role,
                           index: index,
@@ -590,12 +581,15 @@ class _DoctorDataPage extends StatefulWidget {
 
 class _DoctorDataPageState extends State<_DoctorDataPage> {
   final TextEditingController _specialtySearch = TextEditingController();
+  final FocusNode _specialtyFocusNode = FocusNode();
   late final bio =
       TextEditingController(text: widget.doctor['bio']?.toString());
   late final fee = TextEditingController(
       text: widget.doctor['consultation_fee']?.toString());
   late final location =
       TextEditingController(text: widget.doctor['clinic_info']?.toString());
+  late final yearsExperience = TextEditingController(
+      text: (widget.doctor['years_experience'] ?? 0).toString());
   late bool showFeeInVes = widget.doctor['show_fee_in_ves'] == true;
   late List<String> specialties =
       (widget.doctor['specialties'] as List? ?? const [])
@@ -607,6 +601,8 @@ class _DoctorDataPageState extends State<_DoctorDataPage> {
   @override
   void dispose() {
     _specialtySearch.dispose();
+    _specialtyFocusNode.dispose();
+    yearsExperience.dispose();
     super.dispose();
   }
 
@@ -620,8 +616,11 @@ class _DoctorDataPageState extends State<_DoctorDataPage> {
                     'No registrada'),
             enabled: false),
         _field('Biografía', bio, lines: 4, maxLength: 120),
+        _field('Años de experiencia', yearsExperience,
+            type: TextInputType.number, maxLength: 2),
         Autocomplete<String>(
           textEditingController: _specialtySearch,
+          focusNode: _specialtyFocusNode,
           optionsBuilder: (value) => medicalSpecialties.where((item) =>
               item.toLowerCase().contains(value.text.trim().toLowerCase()) &&
               !specialties.contains(item)),
@@ -674,23 +673,57 @@ class _DoctorDataPageState extends State<_DoctorDataPage> {
         _field('Ubicación de consultorio', location, lines: 2),
         FilledButton(
             onPressed: () async {
+              final parsedExperience =
+                  int.tryParse(yearsExperience.text.trim());
+              if (parsedExperience == null || parsedExperience > 80) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content:
+                        Text('Ingresa entre 0 y 80 años de experiencia.')));
+                return;
+              }
               final r = await ApiClient.put('/doctors/me', {
                 'bio': bio.text.trim(),
                 'consultation_fee':
                     double.tryParse(fee.text.replaceAll(',', '.')),
                 'show_fee_in_ves': showFeeInVes,
+                'years_experience': parsedExperience,
                 'clinic_info': location.text.trim(),
                 'specialties': specialties
               });
               if (context.mounted) {
+                var experienceSynced = false;
                 if (r.statusCode == 200) {
+                  final prefs = await SharedPreferences.getInstance();
+                  if (!mounted) return;
+                  final doctorId =
+                      int.tryParse(widget.doctor['id']?.toString() ?? '');
+                  if (doctorId != null) {
+                    final cacheKey = 'doctor_years_experience_$doctorId';
+                    var savedExperienceFromServer = -1;
+                    try {
+                      final body = jsonDecode(r.body);
+                      savedExperienceFromServer =
+                          (body['years_experience'] as num?)?.toInt() ?? -1;
+                    } catch (_) {}
+                    experienceSynced =
+                        savedExperienceFromServer == parsedExperience;
+                    if (experienceSynced) {
+                      await prefs.remove(cacheKey);
+                    } else {
+                      await prefs.setInt(cacheKey, parsedExperience);
+                    }
+                  }
                   widget.doctor['show_fee_in_ves'] = showFeeInVes;
                   widget.doctor['consultation_fee'] =
                       double.tryParse(fee.text.replaceAll(',', '.'));
+                  widget.doctor['years_experience'] = parsedExperience;
                 }
+                if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                     content: Text(r.statusCode == 200
-                        ? 'Datos laborales guardados.'
+                        ? experienceSynced
+                            ? 'Datos laborales guardados.'
+                            : 'Datos guardados en este dispositivo; el servidor aún no sincroniza la experiencia.'
                         : 'No se pudieron guardar.')));
               }
             },
@@ -1061,6 +1094,8 @@ Widget _field(String label, TextEditingController controller,
             maxLength: maxLength,
             inputFormatters: label == 'Nombres' || label == 'Apellidos'
                 ? [FilteringTextInputFormatter.deny(RegExp(r'[0-9]'))]
-                : null,
+                : label == 'Años de experiencia'
+                    ? [FilteringTextInputFormatter.digitsOnly]
+                    : null,
             decoration: InputDecoration(
                 labelText: label, border: const OutlineInputBorder())));

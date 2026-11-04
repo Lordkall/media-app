@@ -13,7 +13,9 @@ import 'widgets/profile_avatar.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  if (!kIsWeb && defaultTargetPlatform != TargetPlatform.windows) {
+  if (!kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS)) {
     await Firebase.initializeApp();
   }
   debugPrint("Handling a background message: ${message.messageId}");
@@ -23,9 +25,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('es_ES', null);
   final supportsFirebaseMessaging = !kIsWeb &&
-      defaultTargetPlatform != TargetPlatform.windows &&
-      defaultTargetPlatform != TargetPlatform.linux &&
-      defaultTargetPlatform != TargetPlatform.macOS;
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
   if (supportsFirebaseMessaging) {
     await Firebase.initializeApp();
   }

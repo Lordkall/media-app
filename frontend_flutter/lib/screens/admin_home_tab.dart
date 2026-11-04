@@ -7,10 +7,20 @@ import '../core/profile_image_helper.dart';
 import '../core/identity_document.dart';
 import '../core/api_client.dart';
 import '../widgets/profile_avatar.dart';
+import '../widgets/home_search_bar.dart';
 
 class AdminHomeTab extends StatefulWidget {
-  const AdminHomeTab({super.key, this.onProfileTap});
+  const AdminHomeTab({
+    super.key,
+    this.onProfileTap,
+    this.onSearchTap,
+    this.onSearchSubmitted,
+    this.onManageAdsTap,
+  });
   final VoidCallback? onProfileTap;
+  final VoidCallback? onSearchTap;
+  final ValueChanged<String>? onSearchSubmitted;
+  final VoidCallback? onManageAdsTap;
 
   @override
   State<AdminHomeTab> createState() => _AdminHomeTabState();
@@ -100,20 +110,12 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
             const DoctorHeader(), // Adapts perfectly as it shows the top bar
             const SizedBox(height: 16),
             _buildProfileSection(),
-            const SizedBox(height: 32),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24.0),
-              child: Text(
-                'Menú principal',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF0B2545),
-                ),
-                textAlign: TextAlign.center,
-              ),
+            const SizedBox(height: 14),
+            HomeSearchBar(
+              onSearch: widget.onSearchSubmitted,
+              onTap: widget.onSearchTap,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 32),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -127,6 +129,23 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
                     ),
                   ),
                   const SizedBox(height: 12),
+                  Card(
+                    color: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                    child: ListTile(
+                      leading: const CircleAvatar(
+                        backgroundColor: Color(0xFFE0EAFC),
+                        child: Icon(Icons.campaign_outlined,
+                            color: Color(0xFF0056B3)),
+                      ),
+                      title: const Text('Anuncios flotantes',
+                          style: TextStyle(fontWeight: FontWeight.w700)),
+                      subtitle: const Text('Crear campañas y revisar métricas'),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: widget.onManageAdsTap,
+                    ),
+                  ),
                   if (_isLoadingNotifications)
                     const Center(child: CircularProgressIndicator())
                   else if (_notifications.isEmpty)
@@ -163,16 +182,7 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
                         ),
                       );
                     }),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Accesos Directos',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0B2545),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                 ],
               ),
             )

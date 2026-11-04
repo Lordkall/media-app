@@ -11,6 +11,7 @@ from app.api.v1.endpoints import upload
 from app.api.v1.endpoints import support
 from app.api.v1.endpoints import clinics
 from app.api.v1.endpoints import conversations
+from app.api.v1.endpoints import ads
 
 api_router = APIRouter()
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
@@ -25,6 +26,7 @@ api_router.include_router(upload.router, prefix="/upload", tags=["upload"])
 api_router.include_router(support.router, prefix="/support", tags=["support"])
 api_router.include_router(clinics.router, prefix="/clinics", tags=["clinics"])
 api_router.include_router(conversations.router, prefix="/conversations", tags=["conversations"])
+api_router.include_router(ads.router, prefix="/ads", tags=["ads"])
 
 from app.api.v1.endpoints import ws
 api_router.include_router(ws.router, prefix="/ws", tags=["websocket"])

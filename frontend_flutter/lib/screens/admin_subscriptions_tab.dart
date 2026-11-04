@@ -450,15 +450,24 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF0056B3) : Colors.transparent,
+            gradient: isSelected
+                ? const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF0756A4), Color(0xFF0A3D78)],
+                  )
+                : null,
+            color: isSelected ? null : Colors.transparent,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFF0056B3)),
+            border: Border.all(
+              color: isSelected ? Colors.transparent : const Color(0xFF0756A4),
+            ),
           ),
           child: Center(
             child: Text(
               title,
               style: TextStyle(
-                color: isSelected ? Colors.white : const Color(0xFF0056B3),
+                color: isSelected ? Colors.white : const Color(0xFF0756A4),
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -893,14 +902,28 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
           Row(
             children: [
               Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => _updateSub(targetId, 'activate',
-                      _searchType == 'Doctores' ? 'sponsored' : 'clinic_vip'),
-                  icon: const Icon(Icons.star, color: Colors.white, size: 16),
-                  label: const Text('VIP',
-                      style: TextStyle(color: Colors.white, fontSize: 12)),
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0056B3)),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF0756A4), Color(0xFF0A3D78)],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: ElevatedButton.icon(
+                    onPressed: () => _updateSub(targetId, 'activate',
+                        _searchType == 'Doctores' ? 'sponsored' : 'clinic_vip'),
+                    icon: const Icon(Icons.star, color: Colors.white, size: 16),
+                    label: const Text('VIP',
+                        style: TextStyle(color: Colors.white, fontSize: 12)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20)),
+                    ),
+                  ),
                 ),
               ),
               if (_searchType == 'Clínicas') ...[
@@ -934,16 +957,27 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
             ],
           ),
           const SizedBox(height: 8),
-          ElevatedButton.icon(
-            onPressed: () => _updateSub(targetId, 'renew'),
-            icon: const Icon(Icons.autorenew, color: Colors.white),
-            label: const Text('Renovar plan',
-                style: TextStyle(color: Colors.white)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0056B3),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20)),
-              minimumSize: const Size(double.infinity, 40),
+          Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF0756A4), Color(0xFF0A3D78)],
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: ElevatedButton.icon(
+              onPressed: () => _updateSub(targetId, 'renew'),
+              icon: const Icon(Icons.autorenew, color: Colors.white),
+              label: const Text('Renovar plan',
+                  style: TextStyle(color: Colors.white)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20)),
+                minimumSize: const Size(double.infinity, 40),
+              ),
             ),
           ),
           const SizedBox(height: 8),

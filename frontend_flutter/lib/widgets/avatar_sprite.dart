@@ -110,14 +110,10 @@ class _AvatarSpritePainter extends CustomPainter {
 
     final column = index % columns;
     final row = index ~/ columns;
-    final clinicSheet = columns == 3;
-    final xPitch = sourceImage.width / columns * 0.975;
-    final yPitch = sourceImage.height * (clinicSheet ? 0.469 : 0.293);
-    final centerX =
-        sourceImage.width / 2 + (column - (columns - 1) / 2) * xPitch;
-    final centerY =
-        sourceImage.height * (clinicSheet ? 0.254 : 0.186) + row * yPitch;
-    final sourceSide = math.min(xPitch, yPitch) * 0.93;
+    final imageScale = sourceImage.width / 1080;
+    final centerX = (115.5 + column * 170.3) * imageScale;
+    final centerY = (120 + row * 176) * imageScale;
+    final sourceSide = 142 * imageScale;
     final sourceRect = Rect.fromLTWH(
       centerX - sourceSide / 2,
       centerY - sourceSide / 2,
@@ -128,7 +124,9 @@ class _AvatarSpritePainter extends CustomPainter {
       sourceImage,
       sourceRect,
       Offset.zero & size,
-      Paint()..filterQuality = FilterQuality.medium,
+      Paint()
+        ..filterQuality = FilterQuality.high
+        ..isAntiAlias = true,
     );
   }
 

@@ -9,6 +9,7 @@ class DoctorUpdate(BaseModel):
     show_fee_in_ves: Optional[bool] = None
     specialties: Optional[List[str]] = Field(default=None, max_length=5)
     max_patients_per_day: Optional[int] = None
+    years_experience: Optional[int] = Field(default=None, ge=0, le=80)
 
     @field_validator("specialties")
     @classmethod
@@ -34,6 +35,7 @@ class DoctorResponse(BaseModel):
     medical_license_number: Optional[str] = None
     rating: float
     total_reviews: int
+    years_experience: int = 0
     max_patients_per_day: int
     is_vip: Optional[bool] = False # A computed field for the frontend
     clinic_id: Optional[int] = None
@@ -42,3 +44,7 @@ class DoctorResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+
+class DoctorRatingCreate(BaseModel):
+    rating: int = Field(ge=1, le=5)

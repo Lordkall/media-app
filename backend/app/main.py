@@ -228,6 +228,7 @@ async def lifespan(app: FastAPI):
                 "is_approved BOOLEAN DEFAULT FALSE",
                 "rating FLOAT DEFAULT 0.0",
                 "total_reviews INTEGER DEFAULT 0",
+                "years_experience INTEGER NOT NULL DEFAULT 0",
                 "consultation_fee FLOAT",
                 "bio TEXT",
                 "clinic_info TEXT",
@@ -237,6 +238,13 @@ async def lifespan(app: FastAPI):
                     await conn.execute(text(f"ALTER TABLE doctors ADD COLUMN IF NOT EXISTS {col_def}"))
                 except Exception:
                     pass
+            await conn.execute(text("""
+                INSERT INTO doctor_patient_history (doctor_id, patient_id)
+                SELECT DISTINCT doctor_id, patient_id
+                FROM appointments
+                WHERE status = 'COMPLETED' AND patient_id IS NOT NULL
+                ON CONFLICT (doctor_id, patient_id) DO NOTHING
+            """))
             print("Doctors migration done.")
     except Exception as e:
         print(f"Doctors migration error: {e}")

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'patient_home_tab.dart';
 import 'doctor_home_tab.dart';
@@ -22,6 +23,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:local_auth/local_auth.dart';
 import 'clinic_account_screens.dart';
 import 'blocked_account_screen.dart';
+import 'admin_ads_screen.dart';
+import '../widgets/floating_ads_overlay.dart';
 
 class MainDoctorScreen extends StatefulWidget {
   const MainDoctorScreen({super.key});
@@ -31,8 +34,15 @@ class MainDoctorScreen extends StatefulWidget {
 }
 
 class _MainDoctorScreenState extends State<MainDoctorScreen> {
+  bool get _supportsFirebaseMessaging =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
+
   int _currentIndex = 0;
   String? _role;
+  String? _browseSpecialty;
+  String _browseQuery = '';
   StreamSubscription<String>? _tokenSubscription;
   StreamSubscription<RemoteMessage>? _messageSubscription;
   StreamSubscription<RemoteMessage>? _openedMessageSubscription;
@@ -54,7 +64,7 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       NotificationNavigation.consumePending();
     });
-    if (!kIsWeb) {
+    if (_supportsFirebaseMessaging) {
       _openedMessageSubscription =
           FirebaseMessaging.onMessageOpenedApp.listen((message) {
         NotificationNavigation.open(message.data['action_url']?.toString());
@@ -215,7 +225,7 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
   }
 
   Future<void> _setupFCM() async {
-    if (kIsWeb) return;
+    if (!_supportsFirebaseMessaging) return;
     try {
       final messaging = FirebaseMessaging.instance;
       await messaging.setAutoInitEnabled(true);
@@ -301,6 +311,19 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
     super.dispose();
   }
 
+  void _goToSchedule() {
+    if (!mounted) return;
+    setState(() => _currentIndex = _role == 'clinic' ? 1 : 3);
+  }
+
+  void _submitHomeSearch(String query) {
+    setState(() {
+      _browseSpecialty = null;
+      _browseQuery = query;
+      _currentIndex = _role == 'admin' ? 1 : 2;
+    });
+  }
+
   List<Widget> get _tabs {
     if (_role == 'clinic') {
       return [
@@ -308,30 +331,56 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
           onCalendar: () => setState(() => _currentIndex = 1),
           onDoctors: () => setState(() => _currentIndex = 3),
           onSearch: () => setState(() => _currentIndex = 2),
+          onSearchTap: () => setState(() => _currentIndex = 2),
+          onSearchSubmitted: _submitHomeSearch,
           onProfileTap: () => setState(() => _currentIndex = 4),
         ),
         const ClinicCalendarTab(),
-        const BrowseDoctorsTab(),
+        BrowseDoctorsTab(
+          initialQuery: _browseQuery,
+          onViewSchedule: _goToSchedule,
+        ),
         const ClinicDoctorsTab(),
         const ProfileTab(),
       ];
     } else if (_role == 'admin') {
       return [
-        AdminHomeTab(onProfileTap: () => setState(() => _currentIndex = 4)),
+        AdminHomeTab(
+          onProfileTap: () => setState(() => _currentIndex = 3),
+          onSearchTap: () => setState(() => _currentIndex = 1),
+          onSearchSubmitted: _submitHomeSearch,
+          onManageAdsTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const AdminAdsScreen(),
+            ),
+          ),
+        ),
         const AdminSubscriptionsTab(),
-        const BrowseDoctorsTab(),
         const AdminStatsTab(),
         const ProfileTab(),
       ];
     } else if (_role == 'patient') {
       return [
-        PatientHomeTab(onProfileTap: () => setState(() => _currentIndex = 4)),
-        AgendarCitaTab(onCitaAgendada: () {
-          setState(() {
-            _currentIndex = 0;
-          });
-        }),
-        const BrowseDoctorsTab(),
+        PatientHomeTab(
+          onProfileTap: () => setState(() => _currentIndex = 4),
+          onSearchTap: () => setState(() => _currentIndex = 2),
+          onSearchSubmitted: _submitHomeSearch,
+          onViewSchedule: _goToSchedule,
+          onSpecialtyTap: (specialty) => setState(() {
+            _browseSpecialty = specialty;
+            _browseQuery = '';
+            _currentIndex = 2;
+          }),
+        ),
+        AgendarCitaTab(
+          onCitaAgendada: () => setState(() => _currentIndex = 0),
+          onVerAgenda: () => setState(() => _currentIndex = 3),
+        ),
+        BrowseDoctorsTab(
+          initialSpecialty: _browseSpecialty,
+          initialQuery: _browseQuery,
+          onViewSchedule: _goToSchedule,
+        ),
         const MisCitasTab(),
         const ProfileTab(),
       ];
@@ -341,9 +390,19 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
         DoctorHomeTab(
           onProfileTap: () => setState(() => _currentIndex = 4),
           onCitasHoyTap: () => setState(() => _currentIndex = 3),
+          onSearchTap: () => setState(() => _currentIndex = 2),
+          onSearchSubmitted: _submitHomeSearch,
+          onSpecialtyTap: (specialty) => setState(() {
+            _browseSpecialty = specialty;
+            _browseQuery = '';
+            _currentIndex = 2;
+          }),
         ),
         const MiDisponibilidadTab(),
-        const BrowseDoctorsTab(),
+        BrowseDoctorsTab(
+          initialQuery: _browseQuery,
+          onViewSchedule: _goToSchedule,
+        ),
         MisCitasTab(initialDate: caracasNow()),
         const ProfileTab(),
       ];
@@ -352,12 +411,15 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final tabs = _tabs;
+    final activeIndex = _currentIndex.clamp(0, tabs.length - 1);
+
     return Scaffold(
       extendBody:
           true, // Importante para que el body vaya por debajo del BottomAppBar transparente
       body: Stack(
         children: [
-          _tabs[_currentIndex],
+          tabs[activeIndex],
           // Botón flotante de soporte
           if (_role != 'admin')
             Positioned(
@@ -373,80 +435,170 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
                 },
                 child: const Icon(Icons.support_agent, color: Colors.white),
               ),
-            )
+            ),
+          if (_role != null &&
+              _role != 'admin' &&
+              MediaQuery.viewInsetsOf(context).bottom == 0)
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 164,
+              child: FloatingAdsOverlay(key: ValueKey('ads-$_role')),
+            ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        heroTag: 'searchFAB',
-        backgroundColor: const Color(0xFF0056B3),
-        shape: const CircleBorder(),
-        onPressed: () {
-          setState(() {
-            _currentIndex = 2;
-          });
-        },
-        child: const Icon(Icons.search, color: Colors.white, size: 28),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: BottomAppBar(
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 8.0,
-        color: Colors.white,
-        child: SizedBox(
-          height: 60,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(Icons.home, 'Home', 0),
-              if (_role == 'clinic') ...[
-                _buildNavItem(Icons.calendar_month, 'Calendario', 1),
-                const SizedBox(width: 48),
-                _buildNavItem(Icons.groups, 'Doctores', 3),
-              ] else if (_role == 'admin') ...[
-                _buildNavItem(Icons.people_outline, 'Usuarios', 1),
-                const SizedBox(width: 48),
-                _buildNavItem(Icons.bar_chart, 'Estadísticas', 3),
-              ] else if (_role == 'patient') ...[
-                _buildNavItem(Icons.calendar_month, 'Agendar', 1),
-                const SizedBox(width: 48),
-                _buildNavItem(Icons.medical_information, 'Citas', 3),
-              ] else ...[
-                // doctor
-                _buildNavItem(Icons.schedule, 'Horario', 1),
-                const SizedBox(width: 48),
-                _buildNavItem(Icons.book, 'Citas', 3),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
+          child: Container(
+            height: 64,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: .98),
+              borderRadius: BorderRadius.circular(32),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF0B2545).withValues(alpha: .16),
+                  blurRadius: 18,
+                  offset: const Offset(0, 6),
+                ),
               ],
-              _buildNavItem(Icons.person_outline, 'Perfil', 4),
-            ],
+            ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final compactLayout = constraints.maxWidth < 320;
+                final inset = compactLayout ? 4.0 : 10.0;
+                final availableWidth = constraints.maxWidth - inset * 2;
+                final minimumIdleWidth = compactLayout ? 36.0 : 40.0;
+                final selectedWidth = math.min(
+                  _role == 'admin' ? 120.0 : 104.0,
+                  availableWidth - 3 * minimumIdleWidth,
+                );
+                final idleWidth = math.min(compactLayout ? 36.0 : 42.0,
+                    (availableWidth - selectedWidth) / 3);
+                final doctorHome = _role == 'doctor' || _role == 'assistant';
+
+                if (_role == 'admin') {
+                  return Padding(
+                    padding: EdgeInsets.symmetric(horizontal: inset),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildNavItem(Icons.home_rounded, 'Home', 0,
+                            selectedWidth, idleWidth, compactLayout),
+                        _buildNavItem(Icons.people_alt_outlined, 'Usuarios', 1,
+                            selectedWidth, idleWidth, compactLayout),
+                        _buildNavItem(Icons.bar_chart_rounded, 'Estadísticas', 2,
+                            selectedWidth, idleWidth, compactLayout),
+                        _buildNavItem(Icons.person_outline, 'Perfil', 3,
+                            selectedWidth, idleWidth, compactLayout),
+                      ],
+                    ),
+                  );
+                }
+
+                return Padding(
+                  padding: EdgeInsets.symmetric(horizontal: inset),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildNavItem(Icons.home_rounded, 'Home', 0,
+                          selectedWidth, idleWidth, compactLayout),
+                      _buildNavItem(
+                          doctorHome
+                              ? Icons.access_time_rounded
+                              : Icons.medical_services_outlined,
+                          doctorHome ? 'Horario' : 'Agendar',
+                          doctorHome ? 1 : 2,
+                          selectedWidth,
+                          idleWidth,
+                          compactLayout),
+                      _buildNavItem(
+                          Icons.calendar_month_rounded,
+                          'Citas',
+                          _role == 'clinic' ? 1 : 3,
+                          selectedWidth,
+                          idleWidth,
+                          compactLayout),
+                      _buildNavItem(Icons.person_outline, 'Perfil', 4,
+                          selectedWidth, idleWidth, compactLayout),
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildNavItem(IconData icon, String label, int index) {
+  Widget _buildNavItem(IconData icon, String label, int index,
+      double selectedWidth, double idleWidth, bool compactLayout) {
     final isSelected = _currentIndex == index;
-    final color =
-        isSelected ? const Color(0xFF0056B3) : const Color(0xFF475569);
 
     return InkWell(
-      onTap: () => setState(() => _currentIndex = index),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: color, size: 24), // Tamaño fijo para que no crezcan
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: TextStyle(
-              color: color,
-              fontSize: 10,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            ),
-            overflow: TextOverflow.ellipsis,
+      onTap: () => setState(() {
+        _currentIndex = index;
+        if (index != 2) _browseSpecialty = null;
+      }),
+      child: AnimatedContainer(
+        duration:
+            compactLayout ? Duration.zero : const Duration(milliseconds: 240),
+        curve: Curves.easeOutCubic,
+        width: isSelected ? selectedWidth : idleWidth,
+        height: 44,
+        padding: EdgeInsets.symmetric(horizontal: compactLayout ? 6 : 8),
+        decoration: BoxDecoration(
+          gradient: isSelected
+              ? const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF0756A4), Color(0xFF0A3D78)],
+                )
+              : null,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Semantics(
+          button: true,
+          label: label,
+          selected: isSelected,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // Keep the icon alone while the pill is still expanding. This
+              // prevents the label from wrapping or overflowing for a frame.
+              final showLabel = isSelected &&
+                  constraints.maxWidth >= (compactLayout ? 60 : 76);
+              return ClipRect(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(icon,
+                        color:
+                            isSelected ? Colors.white : const Color(0xFF475569),
+                        size: compactLayout ? 18 : 20),
+                    if (showLabel) ...[
+                      SizedBox(width: compactLayout ? 4 : 6),
+                      Flexible(
+                        child: Text(
+                          label,
+                          maxLines: 1,
+                          softWrap: false,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: compactLayout ? 10 : 11,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            },
           ),
-        ],
+        ),
       ),
     );
   }

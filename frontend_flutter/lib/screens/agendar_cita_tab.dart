@@ -4,13 +4,18 @@ import '../core/api_client.dart';
 import 'dart:convert';
 import 'package:table_calendar/table_calendar.dart';
 import '../models/ve_catalogs.dart';
-import 'appointment_details_dialog.dart';
-import '../core/app_navigator.dart';
+import 'appointment_success_screen.dart';
 
 class AgendarCitaTab extends StatefulWidget {
   final VoidCallback? onCitaAgendada;
+  final VoidCallback? onVerAgenda;
   final int? initialDoctorId;
-  const AgendarCitaTab({super.key, this.onCitaAgendada, this.initialDoctorId});
+  const AgendarCitaTab({
+    super.key,
+    this.onCitaAgendada,
+    this.onVerAgenda,
+    this.initialDoctorId,
+  });
 
   @override
   State<AgendarCitaTab> createState() => _AgendarCitaTabState();
@@ -58,7 +63,10 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
         if (mounted) {
           setState(() {
             _allDoctors = docs
-                .where((d) => d['plan'] != 'Ninguno' || d['clinic_id'] != null)
+                .where((d) =>
+                    d['plan'] != 'Ninguno' ||
+                    d['clinic_id'] != null ||
+                    d['id']?.toString() == widget.initialDoctorId?.toString())
                 .toList();
             if (profileState != null && veStates.contains(profileState)) {
               _selectedEstado = profileState;
@@ -349,109 +357,142 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Agendar Cita',
-            style: TextStyle(
-                color: Color(0xFF0056B3), fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.transparent,
+        title: Text(
+          widget.initialDoctorId == null
+              ? 'Agendar cita'
+              : 'Agendar con ${_doctorDisplayName(_findDoctor(widget.initialDoctorId!) ?? {
+                    'first_name': '',
+                    'last_name': ''
+                  }).split(' · ').first}',
+          style: const TextStyle(
+              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        backgroundColor: const Color(0xFF0756A4),
         elevation: 0,
-        centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
-      backgroundColor:
-          const Color(0xFFE2F1F8), // Match the light blue background
+      backgroundColor: const Color(0xFFCFDEF3),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'Agende su cita con su médico (por orden de llegada).',
-              style: TextStyle(color: Color(0xFF475569), fontSize: 16),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            _buildDropdown(
-              hint: 'Estado',
-              value: _selectedEstado,
-              items: _availableStates,
-              onChanged: (val) {
-                setState(() {
-                  _selectedEstado = val;
-                  _selectedEspecialidad = null;
-                  _allSpecialtiesSelected = false;
-                  _selectedDoctorId = null;
-                  _selectedTurnNumber = null;
-                });
-              },
-            ),
-            const SizedBox(height: 16),
-            OutlinedButton.icon(
-              onPressed: _selectSpecialty,
-              icon: const Icon(Icons.search),
-              label: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(_selectedEspecialidad ??
-                    (_allSpecialtiesSelected
-                        ? 'Todas las especialidades'
-                        : 'Buscar especialidad')),
+            if (widget.initialDoctorId != null)
+              _buildSectionCard(
+                icon: Icons.event_available_rounded,
+                title: 'Completa tu reserva',
+                child: const Text(
+                  'Selecciona el motivo, indica para quién es la consulta y elige un día y turno disponible.',
+                  style: TextStyle(color: Color(0xFF475569), height: 1.4),
+                ),
+              )
+            else
+              const Text(
+                'Agenda tu consulta con el especialista que prefieras.',
+                style: TextStyle(color: Color(0xFF475569), fontSize: 16),
+                textAlign: TextAlign.center,
               ),
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 52),
-                alignment: Alignment.centerLeft,
-                backgroundColor: Colors.white.withValues(alpha: 0.5),
-                foregroundColor: const Color(0xFF0B2545),
-                side: BorderSide(color: Colors.grey.withValues(alpha: 0.3)),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+            const SizedBox(height: 20),
+            if (widget.initialDoctorId == null) ...[
+              _buildDropdown(
+                hint: 'Estado',
+                value: _selectedEstado,
+                items: _availableStates,
+                onChanged: (val) {
+                  setState(() {
+                    _selectedEstado = val;
+                    _selectedEspecialidad = null;
+                    _allSpecialtiesSelected = false;
+                    _selectedDoctorId = null;
+                    _selectedTurnNumber = null;
+                  });
+                },
               ),
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<int>(
-              isExpanded: true,
-              initialValue: _availableDoctors.any((doctor) =>
-                      int.tryParse(doctor['id'].toString()) ==
-                      _selectedDoctorId)
-                  ? _selectedDoctorId
-                  : null,
-              decoration: InputDecoration(
-                labelText: 'Selecciona Médico',
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                filled: true,
-                fillColor: Colors.white.withValues(alpha: 0.5),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: _selectSpecialty,
+                icon: const Icon(Icons.search),
+                label: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(_selectedEspecialidad ??
+                      (_allSpecialtiesSelected
+                          ? 'Todas las especialidades'
+                          : 'Buscar especialidad')),
+                ),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 52),
+                  alignment: Alignment.centerLeft,
+                  backgroundColor: Colors.white.withValues(alpha: 0.5),
+                  foregroundColor: const Color(0xFF0B2545),
+                  side: BorderSide(color: Colors.grey.withValues(alpha: 0.3)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
               ),
-              items: _availableDoctors
-                  .map((doctor) {
-                    final id = int.tryParse(doctor['id'].toString());
-                    return DropdownMenuItem<int>(
-                      value: id,
-                      child: Text(_doctorDisplayName(doctor),
-                          overflow: TextOverflow.ellipsis),
-                    );
-                  })
-                  .where((item) => item.value != null)
-                  .toList(),
-              onChanged: (val) async {
-                setState(() {
-                  _selectedDoctorId = val;
-                  _doctorAvailabilityInfo = [];
-                  _selectedTurnNumber = null;
-                });
-                final doctor = _findDoctor(val);
-                if (doctor != null) await _loadDoctorAvailability(doctor);
-              },
-            ),
-            const SizedBox(height: 16),
-            _buildDropdown(
-              hint: 'Motivo de Cita',
-              value: _selectedMotivo,
-              items: ['Consulta', 'Entrega de examenes', 'Cura', 'Otros'],
-              onChanged: (val) => setState(() {
-                _selectedMotivo = val;
-                if (val != 'Otros') {
-                  _customMotivoController.clear();
-                }
-              }),
-            ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<int>(
+                isExpanded: true,
+                initialValue: _availableDoctors.any((doctor) =>
+                        int.tryParse(doctor['id'].toString()) ==
+                        _selectedDoctorId)
+                    ? _selectedDoctorId
+                    : null,
+                decoration: InputDecoration(
+                  labelText: 'Selecciona Médico',
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  filled: true,
+                  fillColor: Colors.white.withValues(alpha: 0.5),
+                ),
+                items: _availableDoctors
+                    .map((doctor) {
+                      final id = int.tryParse(doctor['id'].toString());
+                      return DropdownMenuItem<int>(
+                        value: id,
+                        child: Text(_doctorDisplayName(doctor),
+                            overflow: TextOverflow.ellipsis),
+                      );
+                    })
+                    .where((item) => item.value != null)
+                    .toList(),
+                onChanged: (val) async {
+                  setState(() {
+                    _selectedDoctorId = val;
+                    _doctorAvailabilityInfo = [];
+                    _selectedTurnNumber = null;
+                  });
+                  final doctor = _findDoctor(val);
+                  if (doctor != null) await _loadDoctorAvailability(doctor);
+                },
+              ),
+              const SizedBox(height: 16),
+            ],
+            if (widget.initialDoctorId != null)
+              _buildSectionCard(
+                icon: Icons.medical_services_outlined,
+                title: 'Motivo de la cita',
+                child: _buildDropdown(
+                  hint: 'Selecciona un motivo',
+                  value: _selectedMotivo,
+                  items: ['Consulta', 'Entrega de examenes', 'Cura', 'Otros'],
+                  onChanged: (val) => setState(() {
+                    _selectedMotivo = val;
+                    if (val != 'Otros') _customMotivoController.clear();
+                  }),
+                ),
+              )
+            else
+              _buildDropdown(
+                hint: 'Motivo de Cita',
+                value: _selectedMotivo,
+                items: ['Consulta', 'Entrega de examenes', 'Cura', 'Otros'],
+                onChanged: (val) => setState(() {
+                  _selectedMotivo = val;
+                  if (val != 'Otros') _customMotivoController.clear();
+                }),
+              ),
             if (_selectedMotivo == 'Otros') ...[
               const SizedBox(height: 12),
               TextField(
@@ -468,101 +509,135 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
               ),
             ],
             const SizedBox(height: 8),
-            CheckboxListTile(
-              contentPadding: EdgeInsets.zero,
-              controlAffinity: ListTileControlAffinity.leading,
-              title: const Text(
-                  'La consulta es para un menor o alguien a mi cargo'),
-              value: _bookingForDependent,
-              onChanged: (value) => setState(() {
-                _bookingForDependent = value ?? false;
-                if (!_bookingForDependent) {
-                  _dependentNameController.clear();
-                  _dependentBirthDate = null;
-                  _dependentRelationship = null;
-                  _dependentGender = null;
-                }
-              }),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: const Color(0xFFD5E2F1)),
+              ),
+              child: CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                activeColor: const Color(0xFF0056B3),
+                title: const Text(
+                  'La cita es para un menor o alguien a mi cargo',
+                  style: TextStyle(
+                      color: Color(0xFF0B2545), fontWeight: FontWeight.w700),
+                ),
+                subtitle: const Text('Agrega sus datos para la reserva.'),
+                value: _bookingForDependent,
+                onChanged: (value) => setState(() {
+                  _bookingForDependent = value ?? false;
+                  if (!_bookingForDependent) {
+                    _dependentNameController.clear();
+                    _dependentBirthDate = null;
+                    _dependentRelationship = null;
+                    _dependentGender = null;
+                  }
+                }),
+              ),
             ),
             if (_bookingForDependent) ...[
-              TextField(
-                controller: _dependentNameController,
-                textCapitalization: TextCapitalization.words,
-                inputFormatters: [
-                  FilteringTextInputFormatter.deny(RegExp(r'[0-9]')),
-                  LengthLimitingTextInputFormatter(120),
-                ],
-                maxLength: 120,
-                decoration: InputDecoration(
-                  labelText: 'Nombre completo del paciente',
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  filled: true,
-                  fillColor: Colors.white,
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEAF2FC),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0xFFD5E2F1)),
                 ),
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  final today = caracasNow();
-                  final selected = await showDatePicker(
-                    context: context,
-                    initialDate: today,
-                    firstDate: DateTime(1900),
-                    lastDate: today,
-                    helpText: 'Nacimiento del paciente',
-                  );
-                  if (selected != null)
-                    setState(() => _dependentBirthDate = selected);
-                },
-                icon: const Icon(Icons.cake_outlined),
-                label: Text(_dependentBirthDate == null
-                    ? 'Fecha de nacimiento del paciente'
-                    : 'Nacimiento: ${_dependentBirthDate!.day.toString().padLeft(2, '0')}/${_dependentBirthDate!.month.toString().padLeft(2, '0')}/${_dependentBirthDate!.year}'),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: _dependentRelationship,
-                decoration: const InputDecoration(
-                  labelText: 'Parentesco',
-                  border: OutlineInputBorder(),
-                  filled: true,
-                  fillColor: Colors.white,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text('Datos del paciente',
+                        style: TextStyle(
+                            color: Color(0xFF0B2545),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16)),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _dependentNameController,
+                      textCapitalization: TextCapitalization.words,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.deny(RegExp(r'[0-9]')),
+                        LengthLimitingTextInputFormatter(120),
+                      ],
+                      maxLength: 120,
+                      decoration: InputDecoration(
+                        labelText: 'Nombre completo del paciente',
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        final today = caracasNow();
+                        final selected = await showDatePicker(
+                          context: context,
+                          initialDate: today,
+                          firstDate: DateTime(1900),
+                          lastDate: today,
+                          helpText: 'Nacimiento del paciente',
+                        );
+                        if (selected != null)
+                          setState(() => _dependentBirthDate = selected);
+                      },
+                      icon: const Icon(Icons.cake_outlined),
+                      label: Text(_dependentBirthDate == null
+                          ? 'Fecha de nacimiento del paciente'
+                          : 'Nacimiento: ${_dependentBirthDate!.day.toString().padLeft(2, '0')}/${_dependentBirthDate!.month.toString().padLeft(2, '0')}/${_dependentBirthDate!.year}'),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: _dependentRelationship,
+                      decoration: const InputDecoration(
+                        labelText: 'Parentesco',
+                        border: OutlineInputBorder(),
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                      items: const [
+                        'Hijo',
+                        'Hija',
+                        'Abuelo',
+                        'Abuela',
+                        'Padre',
+                        'Madre',
+                        'Tutor',
+                        'Representante legal'
+                      ]
+                          .map((item) =>
+                              DropdownMenuItem(value: item, child: Text(item)))
+                          .toList(),
+                      onChanged: (value) =>
+                          setState(() => _dependentRelationship = value),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: _dependentGender,
+                      decoration: const InputDecoration(
+                        labelText: 'Género (opcional)',
+                        border: OutlineInputBorder(),
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                      items: const [
+                        'Masculino',
+                        'Femenino',
+                        'Otro / Prefiero no decirlo'
+                      ]
+                          .map((item) =>
+                              DropdownMenuItem(value: item, child: Text(item)))
+                          .toList(),
+                      onChanged: (value) =>
+                          setState(() => _dependentGender = value),
+                    ),
+                  ],
                 ),
-                items: const [
-                  'Hijo',
-                  'Hija',
-                  'Abuelo',
-                  'Abuela',
-                  'Padre',
-                  'Madre',
-                  'Tutor',
-                  'Representante legal'
-                ]
-                    .map((item) =>
-                        DropdownMenuItem(value: item, child: Text(item)))
-                    .toList(),
-                onChanged: (value) =>
-                    setState(() => _dependentRelationship = value),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: _dependentGender,
-                decoration: const InputDecoration(
-                  labelText: 'Género (opcional)',
-                  border: OutlineInputBorder(),
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
-                items: const [
-                  'Masculino',
-                  'Femenino',
-                  'Otro / Prefiero no decirlo'
-                ]
-                    .map((item) =>
-                        DropdownMenuItem(value: item, child: Text(item)))
-                    .toList(),
-                onChanged: (value) => setState(() => _dependentGender = value),
               ),
             ],
             const SizedBox(height: 32),
@@ -701,201 +776,179 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: SizedBox(
                 width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () async {
-                    if (_selectedDoctorId == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                          content: Text('Por favor selecciona un médico.')));
-                      return;
-                    }
-                    if (_selectedMotivo == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text(
-                                'Por favor selecciona el motivo de la cita.')),
-                      );
-                      return;
-                    }
-                    if (_selectedTurnNumber == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                          content: Text('Selecciona un turno disponible.')));
-                      return;
-                    }
-                    if (_bookingForDependent &&
-                        (_dependentNameController.text.trim().isEmpty ||
-                            _dependentBirthDate == null ||
-                            _dependentRelationship == null)) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                          content: Text(
-                              'Completa el nombre, nacimiento y parentesco del paciente.')));
-                      return;
-                    }
-
-                    final doc = _findDoctor(_selectedDoctorId);
-                    if (doc == null || doc['id'] == null) return;
-
-                    final String motivoFinal = (_selectedMotivo == 'Otros' &&
-                            _customMotivoController.text.trim().isNotEmpty)
-                        ? _customMotivoController.text.trim()
-                        : (_selectedMotivo ?? 'Consulta');
-
-                    final appointmentDate = _dateKey(_selectedDate);
-                    if (!await _confirmSameDayAppointment(
-                        doc['id'] as int, appointmentDate)) {
-                      return;
-                    }
-
-                    final reqBody = {
-                      "doctor_id": doc['id'],
-                      "appointment_date": appointmentDate,
-                      "turn_number": _selectedTurnNumber,
-                      "appointment_reason": motivoFinal,
-                      "is_for_dependent": _bookingForDependent,
-                      if (_bookingForDependent) ...{
-                        "dependent_name": _dependentNameController.text.trim(),
-                        "dependent_birth_date": _dateKey(_dependentBirthDate!),
-                        "dependent_relationship": _dependentRelationship,
-                        "dependent_gender": _dependentGender,
-                      },
-                    };
-
-                    try {
-                      final response =
-                          await ApiClient.post('/appointments/', reqBody);
-                      if (!context.mounted) return;
-                      if (response.statusCode == 201) {
-                        Map<String, dynamic>? appointmentDetails;
-                        try {
-                          final created =
-                              jsonDecode(response.body) as Map<String, dynamic>;
-                          final createdId = created['id']?.toString();
-                          final listResponse =
-                              await ApiClient.get('/appointments/my');
-                          final decoded = jsonDecode(listResponse.body);
-                          final appointments = decoded is List
-                              ? decoded
-                              : (decoded is Map && decoded['items'] is List
-                                  ? decoded['items'] as List
-                                  : <dynamic>[]);
-                          for (final item in appointments) {
-                            if (item is Map &&
-                                item['id']?.toString() == createdId) {
-                              appointmentDetails =
-                                  Map<String, dynamic>.from(item);
-                              break;
-                            }
-                          }
-                        } catch (_) {}
-                        final showDetails = await showDialog<bool>(
-                          context: context,
-                          barrierDismissible: false,
-                          builder: (dialogContext) => AlertDialog(
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(24)),
-                            backgroundColor: const Color(0xFFF4F7FC),
-                            content: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 72,
-                                  height: 72,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: const Color(0xFFE1F3E8),
-                                    border: Border.all(
-                                        color: const Color(0xFF43A653),
-                                        width: 2),
-                                  ),
-                                  child: const Icon(Icons.check_rounded,
-                                      color: Color(0xFF329447), size: 44),
-                                ),
-                                const SizedBox(height: 18),
-                                const Text('¡Su cita fue agendada con éxito!',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                        color: Color(0xFF0B2545),
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold)),
-                                const SizedBox(height: 8),
-                                const Text(
-                                    'La cita ya está confirmada. Puedes consultar sus detalles ahora.',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                        color: Color(0xFF52657A),
-                                        fontSize: 14)),
-                              ],
-                            ),
-                            actionsAlignment: MainAxisAlignment.center,
-                            actions: [
-                              TextButton(
-                                  onPressed: () =>
-                                      Navigator.pop(dialogContext, false),
-                                  child: const Text('OK')),
-                              FilledButton.icon(
-                                  onPressed: appointmentDetails == null
-                                      ? null
-                                      : () =>
-                                          Navigator.pop(dialogContext, true),
-                                  icon: const Icon(Icons.event_note_outlined),
-                                  label: const Text('Ver cita')),
-                            ],
-                          ),
-                        );
-                        if (!context.mounted) return;
-                        setState(() {
-                          _selectedEspecialidad = null;
-                          _allSpecialtiesSelected = false;
-                          _selectedDoctorId = null;
-                          _selectedMotivo = null;
-                          _customMotivoController.clear();
-                          _dependentNameController.clear();
-                          _bookingForDependent = false;
-                          _dependentBirthDate = null;
-                          _dependentRelationship = null;
-                          _dependentGender = null;
-                          _selectedTurnNumber = null;
-                        });
-                        if (widget.onCitaAgendada != null) {
-                          widget.onCitaAgendada!();
-                        }
-                        if (showDetails == true && appointmentDetails != null) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            final rootContext = appNavigatorKey.currentContext;
-                            if (rootContext != null && rootContext.mounted) {
-                              showAppointmentDetailsDialog(
-                                rootContext,
-                                appointmentDetails!,
-                                isDoctor: false,
-                              );
-                            }
-                          });
-                        }
-                      } else {
-                        var errorMessage = 'No se pudo agendar la cita.';
-                        try {
-                          errorMessage =
-                              jsonDecode(response.body)['detail']?.toString() ??
-                                  errorMessage;
-                        } catch (_) {}
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF0756A4), Color(0xFF0A3D78)],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      if (_selectedDoctorId == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(errorMessage)));
+                            const SnackBar(
+                                content:
+                                    Text('Por favor selecciona un médico.')));
+                        return;
                       }
-                    } catch (e) {
-                      ScaffoldMessenger.of(context)
-                          .showSnackBar(SnackBar(content: Text('Error: $e')));
-                    }
-                  },
-                  icon: const Icon(Icons.check_circle, color: Colors.white),
-                  label: const Text('Confirmar Cita',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0056B3),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      if (_selectedMotivo == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text(
+                                  'Por favor selecciona el motivo de la cita.')),
+                        );
+                        return;
+                      }
+                      if (_selectedTurnNumber == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content:
+                                    Text('Selecciona un turno disponible.')));
+                        return;
+                      }
+                      if (_bookingForDependent &&
+                          (_dependentNameController.text.trim().isEmpty ||
+                              _dependentBirthDate == null ||
+                              _dependentRelationship == null)) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                            content: Text(
+                                'Completa el nombre, nacimiento y parentesco del paciente.')));
+                        return;
+                      }
+
+                      final doc = _findDoctor(_selectedDoctorId);
+                      if (doc == null || doc['id'] == null) return;
+
+                      final String motivoFinal = (_selectedMotivo == 'Otros' &&
+                              _customMotivoController.text.trim().isNotEmpty)
+                          ? _customMotivoController.text.trim()
+                          : (_selectedMotivo ?? 'Consulta');
+
+                      final appointmentDate = _dateKey(_selectedDate);
+                      if (!await _confirmSameDayAppointment(
+                          doc['id'] as int, appointmentDate)) {
+                        return;
+                      }
+
+                      final reqBody = {
+                        "doctor_id": doc['id'],
+                        "appointment_date": appointmentDate,
+                        "turn_number": _selectedTurnNumber,
+                        "appointment_reason": motivoFinal,
+                        "is_for_dependent": _bookingForDependent,
+                        if (_bookingForDependent) ...{
+                          "dependent_name":
+                              _dependentNameController.text.trim(),
+                          "dependent_birth_date":
+                              _dateKey(_dependentBirthDate!),
+                          "dependent_relationship": _dependentRelationship,
+                          "dependent_gender": _dependentGender,
+                        },
+                      };
+
+                      try {
+                        final response =
+                            await ApiClient.post('/appointments/', reqBody);
+                        if (!context.mounted) return;
+                        if (response.statusCode == 201) {
+                          Map<String, dynamic>? appointmentDetails;
+                          try {
+                            final created = jsonDecode(response.body)
+                                as Map<String, dynamic>;
+                            final createdId = created['id']?.toString();
+                            final listResponse =
+                                await ApiClient.get('/appointments/my');
+                            final decoded = jsonDecode(listResponse.body);
+                            final appointments = decoded is List
+                                ? decoded
+                                : (decoded is Map && decoded['items'] is List
+                                    ? decoded['items'] as List
+                                    : <dynamic>[]);
+                            for (final item in appointments) {
+                              if (item is Map &&
+                                  item['id']?.toString() == createdId) {
+                                appointmentDetails =
+                                    Map<String, dynamic>.from(item);
+                                break;
+                              }
+                            }
+                          } catch (_) {}
+                          final selectedSlot = _availableSlots
+                              .where((slot) =>
+                                  slot['turn_number'] == _selectedTurnNumber)
+                              .toList();
+                          final successAppointment = appointmentDetails ??
+                              <String, dynamic>{
+                                'date': appointmentDate,
+                                'time_block': selectedSlot.isEmpty
+                                    ? 'Hora pendiente'
+                                    : selectedSlot.first['time_block'],
+                                'turn_number': _selectedTurnNumber,
+                              };
+                          final successAction = await Navigator.of(
+                            context,
+                            rootNavigator: true,
+                          ).push<AppointmentSuccessAction>(
+                            MaterialPageRoute<AppointmentSuccessAction>(
+                              builder: (_) => AppointmentSuccessScreen(
+                                doctor: doc,
+                                appointment: successAppointment,
+                              ),
+                            ),
+                          );
+                          if (!context.mounted) return;
+                          setState(() {
+                            _selectedEspecialidad = null;
+                            _allSpecialtiesSelected = false;
+                            _selectedDoctorId = null;
+                            _selectedMotivo = null;
+                            _customMotivoController.clear();
+                            _dependentNameController.clear();
+                            _bookingForDependent = false;
+                            _dependentBirthDate = null;
+                            _dependentRelationship = null;
+                            _dependentGender = null;
+                            _selectedTurnNumber = null;
+                          });
+                          if (successAction ==
+                              AppointmentSuccessAction.viewSchedule) {
+                            (widget.onVerAgenda ?? widget.onCitaAgendada)
+                                ?.call();
+                          } else {
+                            widget.onCitaAgendada?.call();
+                          }
+                        } else {
+                          var errorMessage = 'No se pudo agendar la cita.';
+                          try {
+                            errorMessage = jsonDecode(response.body)['detail']
+                                    ?.toString() ??
+                                errorMessage;
+                          } catch (_) {}
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(errorMessage)));
+                        }
+                      } catch (e) {
+                        ScaffoldMessenger.of(context)
+                            .showSnackBar(SnackBar(content: Text('Error: $e')));
+                      }
+                    },
+                    icon: const Icon(Icons.check_circle, color: Colors.white),
+                    label: const Text('Confirmar Cita',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      surfaceTintColor: Colors.transparent,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
                   ),
                 ),
               ),
@@ -903,6 +956,46 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
             const SizedBox(height: 80),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSectionCard({
+    required IconData icon,
+    required String title,
+    required Widget child,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFD5E2F1)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0B2545).withValues(alpha: .05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 20, color: const Color(0xFF0056B3)),
+              const SizedBox(width: 8),
+              Text(title,
+                  style: const TextStyle(
+                      color: Color(0xFF0B2545),
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          child,
+        ],
       ),
     );
   }

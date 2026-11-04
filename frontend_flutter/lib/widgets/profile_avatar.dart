@@ -41,18 +41,21 @@ class ProfileAvatar extends StatelessWidget {
     final defaultAvatar = url == null || url.trim().isEmpty;
     final spriteRole = preset?.role ?? AvatarCatalog.normalizeRole(role);
     final spriteIndex = preset?.index ?? 0;
+    final cornerRadius = size * 0.22;
     return Container(
       width: size,
       height: size,
       padding: EdgeInsets.all(borderWidth),
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
+        borderRadius: BorderRadius.circular(cornerRadius),
         border: borderWidth > 0
             ? Border.all(color: borderColor, width: borderWidth)
             : null,
         color: const Color(0xFFE0EAFC),
       ),
-      child: ClipOval(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(
+            (cornerRadius - borderWidth).clamp(0, cornerRadius).toDouble()),
         child: preset != null || defaultAvatar || url.startsWith('preset:')
             ? AvatarSprite(
                 key: ValueKey('$spriteRole:$spriteIndex'),
@@ -66,6 +69,7 @@ class ProfileAvatar extends StatelessWidget {
                 height: innerSize,
                 image: ProfileImageHelper.getProfileImageProvider(url),
                 fit: BoxFit.cover,
+                filterQuality: FilterQuality.high,
                 errorBuilder: (context, error, stackTrace) => Container(
                   color: const Color(0xFFE0EAFC),
                   alignment: Alignment.center,

@@ -10,3 +10,5 @@ from app.models.support import SupportTicket, TicketMessage
 from app.models.password_reset import PasswordResetToken
 from app.models.clinics import Clinic
 from app.models.direct_conversations import DirectConversation, DirectMessage
+from app.models.doctor_ratings import DoctorRating, DoctorPatientHistory
+from app.models.ads import FloatingAd, FloatingAdMetric
