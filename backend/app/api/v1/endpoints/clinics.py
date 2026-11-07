@@ -7,6 +7,8 @@ from app.core.database import get_db
 from app.models.clinics import Clinic
 from app.models.users import User
 from app.models.doctors import Doctor, Availability
+from app.models.doctor_ratings import DoctorRating, DoctorPatientHistory, ClinicRating
+from app.models.patients import Patient
 from pydantic import BaseModel
 from app.api.v1.endpoints.users import get_current_user
 from app.models.users import RoleEnum
@@ -401,6 +403,10 @@ async def get_clinic_invite(
         clinic.invite_code = secrets.token_urlsafe(9)
         await db.commit()
     return {"code": clinic.invite_code, "url": f"https://saludnow.site/?clinic_invite={clinic.invite_code}"}
+class ClinicRatingCreate(BaseModel):
+    rating: int
+
+
 @router.get("/{clinic_id}/doctors")
 async def get_clinic_doctors(clinic_id: int, db: AsyncSession = Depends(get_db)):
     query = select(Doctor, User).join(User, Doctor.user_id == User.id).where(Doctor.clinic_id == clinic_id)
@@ -411,24 +417,171 @@ async def get_clinic_doctors(clinic_id: int, db: AsyncSession = Depends(get_db))
     sub = await active_clinic_subscription(db, clinic_id)
     clinic_is_vip = sub is not None and sub.plan == SubscriptionPlan.CLINIC_VIP
 
+    patient_counts = dict((await db.execute(
+        select(DoctorPatientHistory.doctor_id, func.count(DoctorPatientHistory.patient_id))
+        .group_by(DoctorPatientHistory.doctor_id)
+    )).all())
+    rating_rows = (await db.execute(
+        select(DoctorRating.doctor_id, func.avg(DoctorRating.rating), func.count(DoctorRating.id))
+        .group_by(DoctorRating.doctor_id)
+    )).all()
+    rating_stats = {
+        doctor_id: (float(average), int(count))
+        for doctor_id, average, count in rating_rows
+    }
+
     docs = []
     from app.core.profile_privacy import redact_phone_numbers
     for d, u in rows:
+        average_rating, total_reviews = rating_stats.get(d.id, (5.0, 0))
         docs.append({
             "id": d.id,
             "user_id": d.user_id,
             "first_name": u.first_name,
             "last_name": u.last_name,
-            "specialties": d.specialties,
+            "specialties": d.specialties or [],
             "address": u.address,
             "phone": u.phone if u.show_whatsapp else "",
             "bio": redact_phone_numbers(d.bio, u.show_whatsapp),
             "consultation_fee": d.consultation_fee,
             "show_fee_in_ves": d.show_fee_in_ves,
             "is_vip": bool(d.is_sponsored or clinic_is_vip),
-            "avatar_url": u.avatar_url
+            "avatar_url": u.avatar_url,
+            "patients_count": int(patient_counts.get(d.id, 0)),
+            "years_experience": d.years_experience or 0,
+            "rating": average_rating,
+            "total_reviews": total_reviews,
         })
     return docs
+
+
+@router.get("/{clinic_id}/stats")
+async def get_clinic_stats(
+    clinic_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    clinic = await db.get(Clinic, clinic_id)
+    if not clinic:
+        raise HTTPException(status_code=404, detail="Clínica no encontrada")
+
+    doctor_rows = (await db.execute(
+        select(Doctor).where(Doctor.clinic_id == clinic_id)
+    )).scalars().all()
+    doctor_ids = [d.id for d in doctor_rows]
+
+    total_patients = 0
+    if doctor_ids:
+        counts = (await db.execute(
+            select(func.count(DoctorPatientHistory.patient_id.distinct()))
+            .where(DoctorPatientHistory.doctor_id.in_(doctor_ids))
+        )).scalar() or 0
+        total_patients = int(counts)
+
+    max_experience = max([d.years_experience or 0 for d in doctor_rows], default=0)
+
+    direct_avg, direct_count = (await db.execute(
+        select(func.avg(ClinicRating.rating), func.count(ClinicRating.id))
+        .where(ClinicRating.clinic_id == clinic_id)
+    )).one()
+
+    if direct_count and direct_count > 0:
+        clinic_rating = float(direct_avg)
+        total_reviews = int(direct_count)
+    elif doctor_ids:
+        doc_avg, doc_count = (await db.execute(
+            select(func.avg(DoctorRating.rating), func.count(DoctorRating.id))
+            .where(DoctorRating.doctor_id.in_(doctor_ids))
+        )).one()
+        clinic_rating = float(doc_avg) if doc_count else 5.0
+        total_reviews = int(doc_count or 0)
+    else:
+        clinic_rating = 5.0
+        total_reviews = 0
+
+    my_rating = None
+    can_rate = False
+    role_str = current_user.role.value if hasattr(current_user.role, 'value') else str(current_user.role)
+    if role_str in ("patient", "doctor"):
+        patient = await db.scalar(select(Patient).where(Patient.user_id == current_user.id))
+        if patient:
+            existing = await db.scalar(select(ClinicRating).where(
+                ClinicRating.clinic_id == clinic_id,
+                ClinicRating.patient_id == patient.id,
+            ))
+            if existing:
+                my_rating = existing.rating
+                can_rate = False
+            else:
+                can_rate = True
+        else:
+            can_rate = True
+
+    return {
+        "patients_count": total_patients,
+        "years_experience": max_experience,
+        "rating": clinic_rating,
+        "total_reviews": total_reviews,
+        "can_rate": can_rate,
+        "my_rating": my_rating,
+    }
+
+
+@router.post("/{clinic_id}/rating")
+async def rate_clinic(
+    clinic_id: int,
+    payload: ClinicRatingCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    role_str = current_user.role.value if hasattr(current_user.role, 'value') else str(current_user.role)
+    if role_str not in ("patient", "doctor"):
+        raise HTTPException(
+            status_code=403,
+            detail="Solo pacientes y doctores pueden calificar clínicas."
+        )
+
+    clinic = await db.get(Clinic, clinic_id)
+    if not clinic:
+        raise HTTPException(status_code=404, detail="Clínica no encontrada")
+
+    patient = await db.scalar(select(Patient).where(Patient.user_id == current_user.id))
+    if not patient:
+        patient = Patient(user_id=current_user.id)
+        db.add(patient)
+        await db.flush()
+
+    if payload.rating < 1 or payload.rating > 5:
+        raise HTTPException(status_code=422, detail="La calificación debe estar entre 1 y 5 estrellas.")
+
+    existing = await db.scalar(select(ClinicRating).where(
+        ClinicRating.clinic_id == clinic_id,
+        ClinicRating.patient_id == patient.id,
+    ))
+
+    if existing:
+        existing.rating = payload.rating
+    else:
+        db.add(ClinicRating(
+            clinic_id=clinic_id,
+            patient_id=patient.id,
+            rating=payload.rating,
+        ))
+    await db.commit()
+
+    direct_avg, direct_count = (await db.execute(
+        select(func.avg(ClinicRating.rating), func.count(ClinicRating.id))
+        .where(ClinicRating.clinic_id == clinic_id)
+    )).one()
+
+    return {
+        "message": "Calificación registrada con éxito",
+        "rating": float(direct_avg) if direct_count else float(payload.rating),
+        "total_reviews": int(direct_count or 1),
+        "my_rating": payload.rating,
+        "can_rate": False,
+        "has_rated": True,
+    }
 
 
 @router.get("/me/search-doctors")

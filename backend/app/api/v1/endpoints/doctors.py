@@ -32,25 +32,35 @@ async def get_my_doctor_rating(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    if current_user.role.value != "patient":
-        raise HTTPException(status_code=403, detail="Solo los pacientes pueden calificar")
-    from app.api.v1.endpoints.appointments import auto_complete_expired_appointments
+    role_str = current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role)
+    if role_str not in ("patient", "doctor"):
+        raise HTTPException(
+            status_code=403,
+            detail="Solo pacientes y doctores pueden calificar."
+        )
 
-    await auto_complete_expired_appointments(db)
-    patient = await db.scalar(select(Patient).where(Patient.user_id == current_user.id))
-    if patient is None:
-        raise HTTPException(status_code=404, detail="Perfil de paciente no encontrado")
     doctor = await db.get(Doctor, doctor_id)
     if doctor is None:
         raise HTTPException(status_code=404, detail="Doctor no encontrado")
+
+    is_self = (doctor.user_id == current_user.id)
+    if is_self:
+        return {"my_rating": None, "can_rate": False, "has_rated": False, "is_self": True}
+
+    patient = await db.scalar(select(Patient).where(Patient.user_id == current_user.id))
+    if patient is None:
+        return {"my_rating": None, "can_rate": True, "has_rated": False, "is_self": False}
 
     existing = await db.scalar(select(DoctorRating).where(
         DoctorRating.doctor_id == doctor_id,
         DoctorRating.patient_id == patient.id,
     ))
-    return {"my_rating": existing.rating if existing else None,
-            "can_rate": existing is None,
-            "has_rated": existing is not None}
+    return {
+        "my_rating": existing.rating if existing else None,
+        "can_rate": existing is None,
+        "has_rated": existing is not None,
+        "is_self": False
+    }
 
 
 @router.post("/{doctor_id}/rating", status_code=status.HTTP_201_CREATED)
@@ -60,36 +70,55 @@ async def rate_doctor(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    if current_user.role.value != "patient":
-        raise HTTPException(status_code=403, detail="Solo los pacientes pueden calificar")
-    from app.api.v1.endpoints.appointments import auto_complete_expired_appointments
+    role_str = current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role)
+    if role_str not in ("patient", "doctor"):
+        raise HTTPException(
+            status_code=403,
+            detail="Solo pacientes y doctores pueden calificar."
+        )
 
-    await auto_complete_expired_appointments(db)
-    patient = await db.scalar(select(Patient).where(Patient.user_id == current_user.id))
-    if patient is None:
-        raise HTTPException(status_code=404, detail="Perfil de paciente no encontrado")
     doctor = await db.get(Doctor, doctor_id)
     if doctor is None:
         raise HTTPException(status_code=404, detail="Doctor no encontrado")
+
+    if doctor.user_id == current_user.id:
+        raise HTTPException(status_code=400, detail="No puedes calificarte a ti mismo.")
+
+    patient = await db.scalar(select(Patient).where(Patient.user_id == current_user.id))
+    if patient is None:
+        patient = Patient(user_id=current_user.id)
+        db.add(patient)
+        await db.flush()
+
+    if payload.rating < 1 or payload.rating > 5:
+        raise HTTPException(status_code=422, detail="La calificación debe estar entre 1 y 5 estrellas.")
 
     existing = await db.scalar(select(DoctorRating).where(
         DoctorRating.doctor_id == doctor_id,
         DoctorRating.patient_id == patient.id,
     ))
     if existing is not None:
-        raise HTTPException(status_code=409, detail="Ya calificaste a este doctor")
-    db.add(DoctorRating(doctor_id=doctor_id, patient_id=patient.id, rating=payload.rating))
+        existing.rating = payload.rating
+    else:
+        db.add(DoctorRating(doctor_id=doctor_id, patient_id=patient.id, rating=payload.rating))
+
     try:
         await db.commit()
     except IntegrityError as exc:
         await db.rollback()
-        raise HTTPException(status_code=409, detail="Ya calificaste a este doctor") from exc
+        raise HTTPException(status_code=409, detail="Error al guardar calificación") from exc
 
     rating, review_count = (await db.execute(select(
         func.avg(DoctorRating.rating), func.count(DoctorRating.id)
     ).where(DoctorRating.doctor_id == doctor_id))).one()
-    return {"rating": float(rating or 5), "total_reviews": int(review_count),
-            "my_rating": payload.rating, "can_rate": False, "has_rated": True}
+    return {
+        "rating": float(rating or payload.rating),
+        "total_reviews": int(review_count or 1),
+        "my_rating": payload.rating,
+        "can_rate": False,
+        "has_rated": True,
+        "is_self": False
+    }
 
 @router.get("/me", response_model=DoctorResponse)
 async def read_doctor_me(

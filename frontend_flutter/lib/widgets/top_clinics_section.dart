@@ -152,6 +152,8 @@ class _TopClinicsSectionState extends State<TopClinicsSection> {
                       imageUrl: clinic['avatar_url']?.toString(),
                       fallbackRole: 'clinic',
                       size: 112,
+                      displayName: name,
+                      subtitle: detail,
                     ),
                   ),
                 ),

@@ -1,13 +1,17 @@
 import 'dart:convert';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/api_client.dart';
+import '../core/auth_helper.dart';
 import '../core/profile_image_helper.dart';
 import '../models/avatar_catalog.dart';
 import '../models/ve_catalogs.dart';
 import '../widgets/avatar_sprite.dart';
+import '../widgets/instagram_photo_preview.dart';
 import 'appointment_success_screen.dart';
 
 class DoctorProfileScreen extends StatefulWidget {
@@ -28,6 +32,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
   String _favoriteStorageKey = 'patient_favorite_doctors_current';
   bool _canRateDoctor = false;
   bool _isPatient = false;
+  bool _isSelf = false;
   bool _isLoadingRatingState = true;
   int? _myDoctorRating;
   double _averageRating = 5;
@@ -126,23 +131,32 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
       return;
     }
     try {
-      final userResponse = await ApiClient.get('/users/me');
-      if (userResponse.statusCode == 200) {
-        final user = jsonDecode(userResponse.body) as Map<String, dynamic>;
-        _isPatient = user['role']?.toString().toLowerCase() == 'patient';
+      final currentUserId = await AuthHelper.getUserId();
+      final doctorUserId = _doctor['user_id']?.toString();
+      if (currentUserId != null && doctorUserId != null && currentUserId == doctorUserId) {
+        if (mounted) {
+          setState(() {
+            _isSelf = true;
+            _canRateDoctor = false;
+            _isLoadingRatingState = false;
+          });
+        }
+        return;
       }
+
       final response = await ApiClient.get('/doctors/$doctorId/rating/me');
       if (!mounted) return;
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        _canRateDoctor = data['can_rate'] == true;
+        final isSelf = data['is_self'] == true;
+        _isSelf = isSelf;
+        _canRateDoctor = data['can_rate'] == true && !isSelf;
         _myDoctorRating = (data['my_rating'] as num?)?.toInt();
-      } else if (_isPatient) {
-        // Older API deployments may not return the new eligibility field yet.
-        _canRateDoctor = true;
+      } else {
+        _canRateDoctor = false;
       }
     } catch (_) {
-      _canRateDoctor = _isPatient;
+      _canRateDoctor = false;
     }
     if (mounted) setState(() => _isLoadingRatingState = false);
   }
@@ -183,7 +197,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
 
   Future<void> _submitDoctorRating(int stars) async {
     final doctorId = _doctor['id'];
-    if (doctorId == null || !_isPatient) return;
+    if (doctorId == null || _isSelf) return;
     try {
       final response = await ApiClient.post(
         '/doctors/$doctorId/rating',
@@ -191,7 +205,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
       );
       if (!mounted) return;
       final data = jsonDecode(response.body);
-      if (response.statusCode == 201 && data is Map) {
+      if ((response.statusCode == 200 || response.statusCode == 201) && data is Map) {
         setState(() {
           _averageRating =
               (data['rating'] as num?)?.toDouble() ?? stars.toDouble();
@@ -217,12 +231,15 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
   }
 
   Future<void> _openRatingPicker() async {
-    if (_myDoctorRating != null) {
+    if (_isSelf) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ya calificaste a este doctor.')));
+        const SnackBar(content: Text('No puedes calificarte a ti mismo.')),
+      );
       return;
     }
-    if (!_isPatient) {
+    if (_myDoctorRating != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ya calificaste a este doctor con $_myDoctorRating estrella(s).')));
       return;
     }
     var selectedStars = 5;
@@ -448,37 +465,54 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
   Widget _buildSquarePortrait(String? imageUrl) {
     final preset = AvatarCatalog.parse(imageUrl);
     final defaultAvatar = imageUrl == null || imageUrl.trim().isEmpty;
-    return Container(
-      width: 180,
-      height: 180,
-      decoration: BoxDecoration(
-        color: const Color(0xFFE7F4FA),
-        borderRadius: BorderRadius.circular(38),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: .2),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(38),
-        child: preset != null || defaultAvatar
-            ? AvatarSprite(
-                role: preset?.role ?? 'doctor',
-                index: preset?.index ?? 0,
-                size: 180,
-              )
-            : Image(
-                image: ProfileImageHelper.getProfileImageProvider(imageUrl),
-                fit: BoxFit.cover,
-                filterQuality: FilterQuality.high,
-                errorBuilder: (_, __, ___) => const ColoredBox(
-                  color: Color(0xFFE0EAFC),
-                  child: Icon(Icons.person, size: 90, color: Color(0xFF0056B3)),
+    final doctorName =
+        'Dr. ${_doctor['first_name'] ?? ''} ${_doctor['last_name'] ?? ''}'.trim();
+    final specialties =
+        (_doctor['specialties'] as List<dynamic>?)?.join(', ');
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onLongPress: () {
+        InstagramPhotoPreview.show(
+          context,
+          imageUrl: imageUrl,
+          fallbackRole: 'doctor',
+          title: doctorName.isEmpty ? 'Doctor' : doctorName,
+          subtitle: specialties,
+        );
+      },
+      child: Container(
+        width: 180,
+        height: 180,
+        decoration: BoxDecoration(
+          color: const Color(0xFFE7F4FA),
+          borderRadius: BorderRadius.circular(38),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: .2),
+              blurRadius: 24,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(38),
+          child: preset != null || defaultAvatar
+              ? AvatarSprite(
+                  role: preset?.role ?? 'doctor',
+                  index: preset?.index ?? 0,
+                  size: 180,
+                )
+              : Image(
+                  image: ProfileImageHelper.getProfileImageProvider(imageUrl),
+                  fit: BoxFit.cover,
+                  filterQuality: FilterQuality.high,
+                  errorBuilder: (_, __, ___) => const ColoredBox(
+                    color: Color(0xFFE0EAFC),
+                    child:
+                        Icon(Icons.person, size: 90, color: Color(0xFF0056B3)),
+                  ),
                 ),
-              ),
+        ),
       ),
     );
   }
@@ -1074,14 +1108,9 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                 left: 0,
                 right: 0,
                 height: 265 + topInset,
-                child: const DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFF0756A4), Color(0xFF073B68)],
-                    ),
-                  ),
+                child: DoctorHeaderMeshGlow(
+                  height: 265 + topInset,
+                  topInset: topInset,
                 ),
               ),
               SingleChildScrollView(
@@ -1175,7 +1204,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                   detail: _totalReviews == 0
                                       ? 'sin votos'
                                       : '$_totalReviews votos',
-                                  onTap: _isPatient &&
+                                  onTap: !_isSelf &&
                                           !_isLoadingRatingState &&
                                           _myDoctorRating == null
                                       ? _openRatingPicker
@@ -1184,8 +1213,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                               ),
                             ],
                           ),
-                          if (!_isLoadingRatingState &&
-                              (_isPatient || _myDoctorRating != null)) ...[
+                          if (!_isLoadingRatingState && !_isSelf) ...[
                             const SizedBox(height: 12),
                             Align(
                               alignment: Alignment.centerLeft,
@@ -1199,14 +1227,16 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                             const Color(0xFF0756A4),
                                       ),
                                     )
-                                  : Text(
-                                      'Tu calificación: $_myDoctorRating de 5',
-                                      style: const TextStyle(
-                                        color: Color(0xFF64748B),
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
+                                  : (_myDoctorRating != null
+                                      ? Text(
+                                          'Tu calificación: $_myDoctorRating de 5',
+                                          style: const TextStyle(
+                                            color: Color(0xFF64748B),
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        )
+                                      : const SizedBox.shrink()),
                             ),
                           ],
                           const SizedBox(height: 22),
@@ -1286,6 +1316,234 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                       const TextStyle(color: Color(0xFF64748B), fontSize: 9)),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Encabezado con efecto Mesh Gradient / Orbes de luz flotantes
+/// que dan un efecto de halo brillante, limpio y moderno detrás de la foto del doctor.
+class DoctorHeaderMeshGlow extends StatefulWidget {
+  final double height;
+  final double topInset;
+
+  const DoctorHeaderMeshGlow({
+    super.key,
+    required this.height,
+    required this.topInset,
+  });
+
+  @override
+  State<DoctorHeaderMeshGlow> createState() => _DoctorHeaderMeshGlowState();
+}
+
+class _DoctorHeaderMeshGlowState extends State<DoctorHeaderMeshGlow>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    // Controlador continuo de alta precisión para las físicas de rebote
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 120),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  /// Calcula la posición rebotando elásticamente entre [min] y [max]
+  double _bounce({
+    required double t,
+    required double speed,
+    required double offset,
+    required double min,
+    required double max,
+  }) {
+    final range = max - min;
+    if (range <= 0) return min;
+    // Ciclo continuo que rebota en 0 y en 1
+    final progress = (t * speed + offset) % 2.0;
+    final factor = progress > 1.0 ? 2.0 - progress : progress;
+    // Frena al tocar la pared y acelera al rebotar (curva senoidal)
+    final smooth = (1.0 - math.cos(factor * math.pi)) / 2.0;
+    return min + smooth * range;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final headerHeight = widget.height;
+    // Centro del avatar (ubicado en topInset + 42 y 180 px de altura)
+    final avatarCenterY = widget.topInset + 42 + 90;
+    final centerX = screenWidth * 0.5;
+
+    return ClipRect(
+      child: Container(
+        height: headerHeight,
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF062952), Color(0xFF0A4480)],
+          ),
+        ),
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, _) {
+            // Tiempo continuo transcurrido en segundos
+            final t = _controller.value * 120.0;
+
+            // --- Orbe 1: Cian Eléctrico (260 px) ---
+            const s1 = 260.0;
+            final x1 = _bounce(
+              t: t,
+              speed: 0.17,
+              offset: 0.2,
+              min: -s1 * 0.35,
+              max: screenWidth - s1 * 0.65,
+            );
+            final y1 = _bounce(
+              t: t,
+              speed: 0.13,
+              offset: 0.7,
+              min: -s1 * 0.25,
+              max: headerHeight - s1 * 0.70,
+            );
+
+            // --- Orbe 2: Azul Cielo / Índigo Neón (280 px) ---
+            const s2 = 280.0;
+            final x2 = _bounce(
+              t: t,
+              speed: 0.14,
+              offset: 1.1,
+              min: -s2 * 0.35,
+              max: screenWidth - s2 * 0.65,
+            );
+            final y2 = _bounce(
+              t: t,
+              speed: 0.21,
+              offset: 0.3,
+              min: -s2 * 0.25,
+              max: headerHeight - s2 * 0.70,
+            );
+
+            // --- Orbe 3: Turquesa Menta Brillante (240 px) ---
+            const s3 = 240.0;
+            final x3 = _bounce(
+              t: t,
+              speed: 0.22,
+              offset: 1.6,
+              min: -s3 * 0.35,
+              max: screenWidth - s3 * 0.65,
+            );
+            final y3 = _bounce(
+              t: t,
+              speed: 0.16,
+              offset: 1.2,
+              min: -s3 * 0.25,
+              max: headerHeight - s3 * 0.70,
+            );
+
+            return Stack(
+              clipBehavior: Clip.none,
+              children: [
+                // Orbe 1: Cian eléctrico (#00E5FF a #38BDF8)
+                Positioned(
+                  left: x1,
+                  top: y1,
+                  child: Container(
+                    width: s1,
+                    height: s1,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          const Color(0xFF00E5FF).withOpacity(0.70),
+                          const Color(0xFF38BDF8).withOpacity(0.45),
+                          const Color(0xFF0284C7).withOpacity(0.20),
+                          const Color(0xFF0284C7).withOpacity(0.0),
+                        ],
+                        stops: const [0.0, 0.32, 0.65, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Orbe 2: Azul cielo / Índigo neón (#60A5FA a #818CF8)
+                Positioned(
+                  left: x2,
+                  top: y2,
+                  child: Container(
+                    width: s2,
+                    height: s2,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          const Color(0xFF60A5FA).withOpacity(0.65),
+                          const Color(0xFF818CF8).withOpacity(0.40),
+                          const Color(0xFF1D4ED8).withOpacity(0.18),
+                          const Color(0xFF1D4ED8).withOpacity(0.0),
+                        ],
+                        stops: const [0.0, 0.35, 0.68, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Orbe 3: Turquesa menta luminosa (#2DD4BF a #38BDF8)
+                Positioned(
+                  left: x3,
+                  top: y3,
+                  child: Container(
+                    width: s3,
+                    height: s3,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          const Color(0xFF2DD4BF).withOpacity(0.65),
+                          const Color(0xFF38BDF8).withOpacity(0.38),
+                          const Color(0xFF0EA5E9).withOpacity(0.16),
+                          const Color(0xFF0EA5E9).withOpacity(0.0),
+                        ],
+                        stops: const [0.0, 0.32, 0.65, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Halo sutil constante detrás de la foto para rim-light perfecto
+                Positioned(
+                  left: centerX - 120,
+                  top: avatarCenterY - 120,
+                  child: Container(
+                    width: 240,
+                    height: 240,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          const Color(0xFFBAE6FD).withOpacity(0.40),
+                          const Color(0xFF38BDF8).withOpacity(0.18),
+                          const Color(0xFF38BDF8).withOpacity(0.0),
+                        ],
+                        stops: const [0.0, 0.45, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );

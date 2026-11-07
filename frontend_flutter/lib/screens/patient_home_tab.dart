@@ -14,6 +14,7 @@ import '../models/ve_catalogs.dart';
 import '../widgets/avatar_sprite.dart';
 import '../widgets/home_search_bar.dart';
 import '../widgets/top_clinics_section.dart';
+import '../widgets/instagram_photo_preview.dart';
 import 'doctor_profile_screen.dart';
 
 class PatientHomeTab extends StatefulWidget {
@@ -464,8 +465,25 @@ class _PatientHomeTabState extends State<PatientHomeTab> {
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(19),
-                        child: _buildSquareDoctorPhoto(
-                            doctor['avatar_url']?.toString()),
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onLongPress: () {
+                            final name =
+                                '${doctor['first_name'] ?? ''} ${doctor['last_name'] ?? ''}'
+                                    .trim();
+                            final specialties =
+                                (doctor['specialties'] as List?)?.join(', ');
+                            InstagramPhotoPreview.show(
+                              context,
+                              imageUrl: doctor['avatar_url']?.toString(),
+                              fallbackRole: 'doctor',
+                              title: name.isEmpty ? 'Doctor' : 'Dr. $name',
+                              subtitle: specialties,
+                            );
+                          },
+                          child: _buildSquareDoctorPhoto(
+                              doctor['avatar_url']?.toString()),
+                        ),
                       ),
                       Positioned(
                         top: 7,
@@ -611,6 +629,10 @@ class _PatientHomeTabState extends State<PatientHomeTab> {
                     imageUrl: _userData?['avatar_url']?.toString(),
                     currentUser: true,
                     fallbackRole: 'patient',
+                    displayName:
+                        '${_userData?['first_name'] ?? ''} ${_userData?['last_name'] ?? ''}'
+                            .trim(),
+                    subtitle: 'Paciente',
                     size: avatarSize,
                     borderColor: const Color(0xFF0056B3),
                     borderWidth: compact ? 2 : 3),

@@ -4,6 +4,8 @@ import '../core/api_client.dart';
 import 'dart:convert';
 import 'package:table_calendar/table_calendar.dart';
 import '../models/ve_catalogs.dart';
+import '../widgets/profile_avatar.dart';
+import '../widgets/instagram_photo_preview.dart';
 import 'appointment_success_screen.dart';
 
 class AgendarCitaTab extends StatefulWidget {
@@ -469,6 +471,14 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
               ),
               const SizedBox(height: 16),
             ],
+            () {
+              final activeDoc =
+                  _findDoctor(_selectedDoctorId ?? widget.initialDoctorId);
+              if (activeDoc != null) {
+                return _buildSelectedDoctorCard(activeDoc);
+              }
+              return const SizedBox.shrink();
+            }(),
             if (widget.initialDoctorId != null)
               _buildSectionCard(
                 icon: Icons.medical_services_outlined,
@@ -956,6 +966,84 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
             const SizedBox(height: 80),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSelectedDoctorCard(Map<String, dynamic> doctor) {
+    final name = _doctorDisplayName(doctor);
+    final specialties =
+        (doctor['specialties'] as List?)?.join(', ') ?? 'Especialista';
+    final address = doctor['clinic_info']?.toString() ??
+        doctor['address']?.toString() ??
+        doctor['city']?.toString() ??
+        '';
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFF0056B3).withOpacity(0.18),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          ProfileAvatar(
+            imageUrl: doctor['avatar_url']?.toString(),
+            fallbackRole: 'doctor',
+            size: 60,
+            displayName: name,
+            subtitle: specialties,
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0B2545),
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  specialties,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF0056B3),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (address.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    address,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

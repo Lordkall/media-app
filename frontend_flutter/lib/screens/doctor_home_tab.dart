@@ -420,6 +420,10 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
                         child: ProfileAvatar(
                           imageUrl: doctor['avatar_url']?.toString(),
                           fallbackRole: 'doctor',
+                          displayName:
+                              '${doctor['first_name'] ?? ''} ${doctor['last_name'] ?? ''}'
+                                  .trim(),
+                          subtitle: (doctor['specialties'] as List?)?.join(', '),
                           size: 112,
                         ),
                       ),
@@ -806,6 +810,10 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
               imageUrl: _userData?['avatar_url']?.toString(),
               currentUser: true,
               fallbackRole: _userData?['role']?.toString() ?? 'doctor',
+              displayName:
+                  '${_userData?['first_name'] ?? ''} ${_userData?['last_name'] ?? ''}'
+                      .trim(),
+              subtitle: 'Médico',
               size: 80,
               borderColor: const Color(0xFF0056B3),
               borderWidth: 3,

@@ -18,7 +18,7 @@ router = APIRouter()
 
 
 class MessageCreate(BaseModel):
-    body: str = Field(min_length=1, max_length=4000)
+    body: str = Field(min_length=1, max_length=10_000_000)
 
 
 def _role(user: User) -> str:
@@ -189,7 +189,15 @@ async def list_conversations(
             "conversation_type": "assistant_patient" if item.assistant_user_id else "doctor_patient",
             "is_closed": item.is_closed,
             "unread_count": unread,
-            "last_message": last_message.body if last_message else "",
+            "last_message": (
+                "📷 Imagen adjunta"
+                if last_message and last_message.body.startswith("data:image/")
+                else (
+                    "📎 Archivo adjunto"
+                    if last_message and last_message.body.startswith("data:")
+                    else (last_message.body if last_message else "")
+                )
+            ),
             "updated_at": last_message.created_at.isoformat() if last_message else item.created_at.isoformat(),
         })
     output.sort(key=lambda row: row["updated_at"], reverse=True)
@@ -332,10 +340,19 @@ async def send_message(
                 sender_label = f"Asistente {current_user.first_name}"
             else:
                 sender_label = f"Dr. {current_user.first_name}"
+            preview_text = (
+                "Te ha enviado una imagen adjunta."
+                if body.startswith("data:image/")
+                else (
+                    "Te ha enviado un archivo adjunto."
+                    if body.startswith("data:")
+                    else "Abre Salud Now para leer tu mensaje."
+                )
+            )
             send_push_notification(
                 recipient.fcm_token,
                 f"Nuevo mensaje de {sender_label}",
-                "Abre Salud Now para leer tu mensaje.",
+                preview_text,
                 {"type": "direct_message", "conversation_id": str(conversation.id)},
             )
     except Exception as exc:

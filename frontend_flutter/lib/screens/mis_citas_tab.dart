@@ -208,6 +208,8 @@ class _MisCitasTabState extends State<MisCitasTab> {
                         size: 84,
                         fallbackRole: isDoctor ? 'patient' : 'doctor',
                         borderWidth: 0,
+                        displayName: otherPersonName,
+                        subtitle: specialty,
                       ),
                       const SizedBox(height: 12),
                       Text(

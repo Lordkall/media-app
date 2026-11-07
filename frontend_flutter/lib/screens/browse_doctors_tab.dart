@@ -6,6 +6,7 @@ import '../core/profile_image_helper.dart';
 import '../models/avatar_catalog.dart';
 import '../models/ve_catalogs.dart';
 import '../widgets/avatar_sprite.dart';
+import '../widgets/instagram_photo_preview.dart';
 import 'dart:convert';
 import 'doctor_profile_screen.dart';
 import 'clinic_profile_screen.dart';
@@ -674,7 +675,19 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      _buildCardPhoto(imageUrl, isClinic),
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onLongPress: () {
+                          InstagramPhotoPreview.show(
+                            context,
+                            imageUrl: imageUrl,
+                            fallbackRole: isClinic ? 'clinic' : 'doctor',
+                            title: name,
+                            subtitle: specialty,
+                          );
+                        },
+                        child: _buildCardPhoto(imageUrl, isClinic),
+                      ),
                       if (isVip)
                         Positioned(
                           left: 6,

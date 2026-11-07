@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../core/api_client.dart';
 import '../core/auth_helper.dart';
@@ -223,10 +225,149 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
     }
   }
 
+  Future<void> _pickAndSendImage(ImageSource source) async {
+    if (_closed || _sending) return;
+    try {
+      final picker = ImagePicker();
+      final image = await picker.pickImage(
+        source: source,
+        imageQuality: 70,
+        maxWidth: 1600,
+        maxHeight: 1600,
+      );
+      if (image == null) return;
+
+      setState(() => _sending = true);
+
+      final bytes = await image.readAsBytes();
+      final base64Image = base64Encode(bytes);
+      final extension = image.name.split('.').last.toLowerCase();
+      final mimeType = extension == 'png' ? 'image/png' : 'image/jpeg';
+      final dataUri = 'data:$mimeType;base64,$base64Image';
+
+      final response = await ApiClient.post(
+        '/conversations/$_conversationId/messages',
+        {'body': dataUri},
+      );
+
+      if (response.statusCode == 201) {
+        await _loadMessages();
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  'No se pudo enviar la imagen (${response.statusCode}).')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al adjuntar imagen: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  void _openImageFullScreen(Uint8List bytes) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.85),
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(12),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            InteractiveViewer(
+              panEnabled: true,
+              minScale: 0.8,
+              maxScale: 4.0,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.memory(bytes, fit: BoxFit.contain),
+              ),
+            ),
+            Positioned(
+              top: 10,
+              right: 10,
+              child: CircleAvatar(
+                backgroundColor: Colors.black54,
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImageAttachment(String dataUri, bool mine) {
+    try {
+      final base64Str = dataUri.split(',').last;
+      final bytes = base64Decode(base64Str);
+      return GestureDetector(
+        onTap: () => _openImageFullScreen(bytes),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Stack(
+            alignment: Alignment.bottomRight,
+            children: [
+              Image.memory(
+                bytes,
+                width: 240,
+                height: 240,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text('Error al mostrar imagen',
+                      style: TextStyle(color: Colors.red)),
+                ),
+              ),
+              Container(
+                margin: const EdgeInsets.all(6),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.zoom_in_rounded, color: Colors.white, size: 14),
+                    SizedBox(width: 4),
+                    Text(
+                      'Ver',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    } catch (_) {
+      return const Text(
+        'Imagen no disponible',
+        style: TextStyle(fontStyle: FontStyle.italic, color: Colors.red),
+      );
+    }
+  }
+
   Future<void> _close() async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         title: const Text('Cerrar conversación'),
         content:
             const Text('Ya no se podrán enviar mensajes en esta conversación.'),
@@ -234,9 +375,23 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
           TextButton(
               onPressed: () => Navigator.pop(context, false),
               child: const Text('Volver')),
-          FilledButton(
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF0756A4), Color(0xFF0A3D78)],
+              ),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                foregroundColor: Colors.white,
+              ),
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Cerrar')),
+              child: const Text('Cerrar'),
+            ),
+          ),
         ],
       ),
     );
@@ -316,6 +471,9 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
                           Map<String, dynamic>.from(_messages[index] as Map);
                       final mine = _userId != null &&
                           message['sender_user_id'] == _userId;
+                      final body = message['body']?.toString() ?? '';
+                      final isImage = body.startsWith('data:image/');
+
                       return Align(
                         alignment:
                             mine ? Alignment.centerRight : Alignment.centerLeft,
@@ -323,30 +481,72 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
                           constraints: BoxConstraints(
                               maxWidth: MediaQuery.sizeOf(context).width * .78),
                           margin: const EdgeInsets.only(bottom: 10),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 10),
+                          padding: isImage
+                              ? const EdgeInsets.all(6)
+                              : const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 10),
                           decoration: BoxDecoration(
-                            color: mine
-                                ? const Color(0xFF0056B3)
-                                : const Color(0xFFEAF1FA),
-                            borderRadius: BorderRadius.circular(16),
+                            gradient: mine
+                                ? const LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      Color(0xFF0756A4),
+                                      Color(0xFF0A3D78)
+                                    ],
+                                  )
+                                : null,
+                            color: mine ? null : const Color(0xFFEAF1FA),
+                            borderRadius: BorderRadius.only(
+                              topLeft: const Radius.circular(16),
+                              topRight: const Radius.circular(16),
+                              bottomLeft: mine
+                                  ? const Radius.circular(16)
+                                  : const Radius.circular(4),
+                              bottomRight: mine
+                                  ? const Radius.circular(4)
+                                  : const Radius.circular(16),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.06),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
+                            crossAxisAlignment: mine
+                                ? CrossAxisAlignment.end
+                                : CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(message['body']?.toString() ?? '',
+                              if (isImage)
+                                _buildImageAttachment(body, mine)
+                              else
+                                Text(
+                                  body,
                                   style: TextStyle(
-                                      color: mine
-                                          ? Colors.white
-                                          : const Color(0xFF172B4D))),
+                                    color: mine
+                                        ? Colors.white
+                                        : const Color(0xFF172B4D),
+                                    fontSize: 15,
+                                  ),
+                                ),
                               const SizedBox(height: 4),
-                              Text(formatChatDateTime(message['created_at']),
+                              Padding(
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: isImage ? 6 : 0),
+                                child: Text(
+                                  formatChatDateTime(message['created_at']),
                                   style: TextStyle(
-                                      fontSize: 10,
-                                      color: mine
-                                          ? Colors.white70
-                                          : Colors.black54)),
+                                    fontSize: 10,
+                                    color: mine
+                                        ? Colors.white70
+                                        : Colors.black54,
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -362,32 +562,130 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
           else
             SafeArea(
               top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 6,
+                      offset: const Offset(0, -2),
+                    ),
+                  ],
+                ),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _controller,
-                        minLines: 1,
-                        maxLines: 4,
-                        textCapitalization: TextCapitalization.sentences,
-                        decoration: const InputDecoration(
-                          hintText: 'Escribe un mensaje…',
-                          border: OutlineInputBorder(),
+                    // Botón de adjuntar con gradiente
+                    Container(
+                      width: 44,
+                      height: 44,
+                      margin: const EdgeInsets.only(bottom: 2),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFF0756A4), Color(0xFF0A3D78)],
                         ),
-                        onSubmitted: (_) => _send(),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color:
+                                const Color(0xFF0756A4).withValues(alpha: 0.3),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(22),
+                          onTap: _closed || _sending
+                              ? null
+                              : () => _pickAndSendImage(ImageSource.gallery),
+                          child: const Icon(
+                            Icons.attach_file_rounded,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
-                    IconButton.filled(
-                      onPressed: _sending ? null : _send,
-                      icon: _sending
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2))
-                          : const Icon(Icons.send),
+                    Expanded(
+                      child: Container(
+                        constraints: const BoxConstraints(maxHeight: 120),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: TextField(
+                          controller: _controller,
+                          minLines: 1,
+                          maxLines: 4,
+                          textCapitalization: TextCapitalization.sentences,
+                          style: const TextStyle(
+                              fontSize: 15, color: Color(0xFF0F172A)),
+                          decoration: const InputDecoration(
+                            hintText: 'Escribe un mensaje…',
+                            hintStyle: TextStyle(
+                                color: Color(0xFF94A3B8), fontSize: 14),
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 11),
+                          ),
+                          onSubmitted: (_) => _send(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Botón de enviar con gradiente
+                    Container(
+                      width: 44,
+                      height: 44,
+                      margin: const EdgeInsets.only(bottom: 2),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFF0756A4), Color(0xFF0A3D78)],
+                        ),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF0756A4)
+                                .withValues(alpha: 0.35),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(22),
+                          onTap: _sending ? null : _send,
+                          child: Center(
+                            child: _sending
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Icon(
+                                    Icons.send_rounded,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),

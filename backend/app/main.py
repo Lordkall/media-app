@@ -72,6 +72,16 @@ async def lifespan(app: FastAPI):
             from app.models.support import SupportTicket, TicketMessage
             from app.models.base import Base
             await conn.run_sync(Base.metadata.create_all)
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS clinic_ratings (
+                    id SERIAL PRIMARY KEY,
+                    clinic_id INTEGER NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
+                    patient_id INTEGER NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+                    rating SMALLINT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    CONSTRAINT uq_clinic_rating_patient UNIQUE (clinic_id, patient_id)
+                );
+            """))
             await conn.execute(text("ALTER TABLE tasas_de_cambio ADD COLUMN IF NOT EXISTS fecha_vigencia DATE;"))
             await conn.execute(text("ALTER TABLE tasas_de_cambio ADD COLUMN IF NOT EXISTS tasa_pendiente NUMERIC(10, 4);"))
             await conn.execute(text("ALTER TABLE tasas_de_cambio ADD COLUMN IF NOT EXISTS fecha_vigencia_pendiente DATE;"))

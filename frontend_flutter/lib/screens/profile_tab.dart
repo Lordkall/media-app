@@ -236,6 +236,16 @@ class _ProfileTabState extends State<ProfileTab> {
                 imageUrl: _userData?['avatar_url']?.toString(),
                 currentUser: true,
                 fallbackRole: _userData?['role']?.toString() ?? 'patient',
+                displayName:
+                    '${_userData?['first_name'] ?? ''} ${_userData?['last_name'] ?? ''}'
+                        .trim(),
+                subtitle: _userData?['role'] == 'doctor'
+                    ? 'Médico'
+                    : (_userData?['role'] == 'clinic'
+                        ? 'Clínica'
+                        : (_userData?['role'] == 'admin'
+                            ? 'Administrador'
+                            : 'Paciente')),
                 size: 120,
                 borderColor: const Color(0xFF0056B3),
                 borderWidth: 4,

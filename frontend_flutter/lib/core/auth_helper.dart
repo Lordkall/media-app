@@ -41,6 +41,12 @@ class AuthHelper {
     return decoded?['role']?.toString();
   }
 
+  static Future<String?> getUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+    return getUserIdFromToken(token);
+  }
+
   static String? getUserIdFromToken(String? token) {
     if (token == null) return null;
     final decoded = decodeToken(token);

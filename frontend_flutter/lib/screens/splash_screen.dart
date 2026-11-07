@@ -137,7 +137,7 @@ class _SplashScreenState extends State<SplashScreen>
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Tu salud, a un clic',
+                            'Tu salud, a un Click',
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.78),
                               fontSize: 16,

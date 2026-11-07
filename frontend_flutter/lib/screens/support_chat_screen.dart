@@ -367,10 +367,41 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
       child: SafeArea(
         child: Row(
           children: [
-            IconButton(
-              icon: const Icon(Icons.attach_file, color: Colors.grey),
-              onPressed: _isClosed ? null : _pickAndSendImage,
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                gradient: _isClosed
+                    ? null
+                    : const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF0756A4), Color(0xFF0A3D78)],
+                      ),
+                color: _isClosed ? Colors.grey[400] : null,
+                shape: BoxShape.circle,
+                boxShadow: _isClosed
+                    ? null
+                    : [
+                        BoxShadow(
+                          color:
+                              const Color(0xFF0756A4).withValues(alpha: 0.3),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(21),
+                  onTap: _isClosed ? null : _pickAndSendImage,
+                  child: const Icon(Icons.attach_file_rounded,
+                      color: Colors.white, size: 21),
+                ),
+              ),
             ),
+            const SizedBox(width: 8),
             Expanded(
               child: TextField(
                 controller: _messageController,
@@ -384,27 +415,60 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
                     borderSide: BorderSide.none,
                   ),
                   filled: true,
-                  fillColor: Colors.grey[200],
+                  fillColor: Colors.grey[100],
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 ),
               ),
             ),
             const SizedBox(width: 8),
-            CircleAvatar(
-              backgroundColor:
-                  _isClosed ? Colors.grey : const Color(0xFF0056B3),
-              child: _isSending
-                  ? const Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2),
-                    )
-                  : IconButton(
-                      icon:
-                          const Icon(Icons.send, color: Colors.white, size: 20),
-                      onPressed: _isClosed ? null : _sendMessage,
-                    ),
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                gradient: _isClosed
+                    ? null
+                    : const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF0756A4), Color(0xFF0A3D78)],
+                      ),
+                color: _isClosed ? Colors.grey[400] : null,
+                shape: BoxShape.circle,
+                boxShadow: _isClosed
+                    ? null
+                    : [
+                        BoxShadow(
+                          color:
+                              const Color(0xFF0756A4).withValues(alpha: 0.35),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(22),
+                  onTap: _isClosed ? null : _sendMessage,
+                  child: Center(
+                    child: _isSending
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.send_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                  ),
+                ),
+              ),
             ),
           ],
         ),

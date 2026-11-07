@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../core/profile_image_helper.dart';
 import '../models/avatar_catalog.dart';
 import 'avatar_sprite.dart';
+import 'instagram_photo_preview.dart';
 
 class ProfileAvatar extends StatelessWidget {
   final String? imageUrl;
@@ -10,6 +11,9 @@ class ProfileAvatar extends StatelessWidget {
   final double borderWidth;
   final bool currentUser;
   final String fallbackRole;
+  final bool enableLongPress;
+  final String? displayName;
+  final String? subtitle;
 
   const ProfileAvatar({
     super.key,
@@ -19,6 +23,9 @@ class ProfileAvatar extends StatelessWidget {
     this.borderWidth = 0,
     this.currentUser = false,
     this.fallbackRole = 'patient',
+    this.enableLongPress = true,
+    this.displayName,
+    this.subtitle,
   });
 
   @override
@@ -26,13 +33,39 @@ class ProfileAvatar extends StatelessWidget {
     if (currentUser) {
       return ValueListenableBuilder<String?>(
         valueListenable: ProfileImageHelper.currentUserAvatarUrl,
-        builder: (context, currentUrl, _) => _buildImage(
-          currentUrl ?? imageUrl,
-          fallbackRole,
-        ),
+        builder: (context, currentUrl, _) {
+          final resolvedUrl = currentUrl ?? imageUrl;
+          return _wrapWithLongPress(
+            context,
+            resolvedUrl,
+            _buildImage(resolvedUrl, fallbackRole),
+          );
+        },
       );
     }
-    return _buildImage(imageUrl, fallbackRole);
+    return _wrapWithLongPress(
+      context,
+      imageUrl,
+      _buildImage(imageUrl, fallbackRole),
+    );
+  }
+
+  Widget _wrapWithLongPress(
+      BuildContext context, String? resolvedUrl, Widget child) {
+    if (!enableLongPress) return child;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onLongPress: () {
+        InstagramPhotoPreview.show(
+          context,
+          imageUrl: resolvedUrl,
+          fallbackRole: fallbackRole,
+          title: displayName,
+          subtitle: subtitle,
+        );
+      },
+      child: child,
+    );
   }
 
   Widget _buildImage(String? url, String role) {
@@ -56,7 +89,7 @@ class ProfileAvatar extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(
             (cornerRadius - borderWidth).clamp(0, cornerRadius).toDouble()),
-        child: preset != null || defaultAvatar || url.startsWith('preset:')
+        child: preset != null || defaultAvatar || (url != null && url.startsWith('preset:'))
             ? AvatarSprite(
                 key: ValueKey('$spriteRole:$spriteIndex'),
                 role: spriteRole,
