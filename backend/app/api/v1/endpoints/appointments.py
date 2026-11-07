@@ -16,8 +16,16 @@ from app.models.doctors import Doctor, Availability
 from app.models.patients import Patient
 from app.services.twilio_service import normalize_whatsapp_phone
 from pydantic import BaseModel, Field, field_validator
+from app.api.v1.endpoints.assistant import chat_with_assistant, AssistantChatRequest, AssistantChatResponse
 
 router = APIRouter()
+
+@router.post("/assistant", response_model=AssistantChatResponse)
+async def appointments_assistant_endpoint(
+    request: AssistantChatRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    return await chat_with_assistant(request, db)
 
 class RescheduleAppointment(BaseModel):
     appointment_date: date_type

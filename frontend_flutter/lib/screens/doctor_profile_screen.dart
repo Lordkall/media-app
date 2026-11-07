@@ -17,9 +17,16 @@ import 'appointment_success_screen.dart';
 class DoctorProfileScreen extends StatefulWidget {
   final Map<String, dynamic> doctor;
   final VoidCallback? onViewSchedule;
+  final DateTime? initialSelectedDate;
+  final int? initialTurnNumber;
 
-  const DoctorProfileScreen(
-      {super.key, required this.doctor, this.onViewSchedule});
+  const DoctorProfileScreen({
+    super.key,
+    required this.doctor,
+    this.onViewSchedule,
+    this.initialSelectedDate,
+    this.initialTurnNumber,
+  });
 
   @override
   State<DoctorProfileScreen> createState() => _DoctorProfileScreenState();
@@ -58,6 +65,12 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialSelectedDate != null) {
+      _selectedBookingDate = widget.initialSelectedDate;
+    }
+    if (widget.initialTurnNumber != null) {
+      _selectedTurnNumber = widget.initialTurnNumber;
+    }
     _bookingDaysController.addListener(_handleBookingDaysScroll);
     _refreshPublicDoctorData();
     _loadBcvRate();
@@ -301,13 +314,32 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
           .map((row) => Map<String, dynamic>.from(row))
           .toList();
       final today = _dateKey(caracasNow());
-      return rows.where((day) {
+      final result = rows.where((day) {
         final slots = day['slots'] as List<dynamic>? ?? [];
         return (day['date']?.toString() ?? '').compareTo(today) >= 0 &&
             day['is_full'] != true &&
             slots.any((slot) => slot is Map && slot['available'] == true);
       }).toList()
         ..sort((a, b) => a['date'].toString().compareTo(b['date'].toString()));
+
+      if (_selectedBookingDate != null && mounted) {
+        final targetKey = _dateKey(_selectedBookingDate!);
+        final idx = result.indexWhere((d) => d['date']?.toString() == targetKey);
+        if (idx > 0) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_bookingDaysController.hasClients) {
+              final offset = (idx * 86.0).clamp(0.0, _bookingDaysController.position.maxScrollExtent);
+              _bookingDaysController.animateTo(
+                offset,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOut,
+              );
+            }
+          });
+        }
+      }
+
+      return result;
     } catch (_) {
       return [];
     }

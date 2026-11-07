@@ -13,6 +13,7 @@ import '../widgets/profile_avatar.dart';
 import '../widgets/home_search_bar.dart';
 import '../widgets/top_clinics_section.dart';
 import '../widgets/health_today_section.dart';
+import '../widgets/click_assistant_section.dart';
 import '../screens/doctor_profile_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'select_plan_screen.dart';
@@ -50,6 +51,9 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
   Map<String, dynamic>? _subData;
   Timer? _pollingTimer;
   final ScrollController _topDoctorsController = ScrollController();
+  final ScrollController _homeScrollController = ScrollController();
+  final GlobalKey<ClickAssistantSectionState> _clickSectionKey =
+      GlobalKey<ClickAssistantSectionState>();
 
   @override
   void initState() {
@@ -65,7 +69,33 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
   void dispose() {
     _pollingTimer?.cancel();
     _topDoctorsController.dispose();
+    _homeScrollController.dispose();
     super.dispose();
+  }
+
+  void _scrollToClick() {
+    final state = _clickSectionKey.currentState;
+    if (_homeScrollController.hasClients) {
+      _homeScrollController.animateTo(
+        _homeScrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeOutCubic,
+      ).then((_) {
+        state?.focusAndScrollToInput();
+      });
+    } else {
+      final ctx = _clickSectionKey.currentContext;
+      if (ctx != null) {
+        Scrollable.ensureVisible(
+          ctx,
+          alignment: 1.0,
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.easeOutCubic,
+        ).then((_) {
+          state?.focusAndScrollToInput();
+        });
+      }
+    }
   }
 
   Future<void> _resolveInvitation(int clinicId, String action) async {
@@ -617,9 +647,89 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
               onSearch: widget.onSearchSubmitted,
               onTap: widget.onSearchTap,
             ),
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: _scrollToClick,
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF003893), Color(0xFF00B4D8)],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF003893).withValues(alpha: 0.18),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 1.5),
+                          ),
+                          child: ClipOval(
+                            child: Image.asset(
+                              'assets/click_mascot.jpg',
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                Icons.smart_toy_rounded,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Asistente Virtual Click 🤖',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                'Encuentra doctores y agenda citas al instante • Toca aquí',
+                                style: TextStyle(
+                                  color: Color(0xFFE0F2FE),
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(
+                          Icons.arrow_downward_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
             const SizedBox(height: 14),
             Expanded(
               child: ListView(
+                controller: _homeScrollController,
+                cacheExtent: 3000,
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 children: [
                   Row(
@@ -705,6 +815,12 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
                         )),
                     const SizedBox(height: 16),
                   ],
+                  const SizedBox(height: 24),
+                  ClickAssistantSection(
+                    key: _clickSectionKey,
+                    onCitaAgendada: _fetchData,
+                  ),
+                  const SizedBox(height: 120),
                 ],
               ),
             )

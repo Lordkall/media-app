@@ -12,8 +12,10 @@ from app.api.v1.endpoints import support
 from app.api.v1.endpoints import clinics
 from app.api.v1.endpoints import conversations
 from app.api.v1.endpoints import ads
+from app.api.v1.endpoints import assistant
 
 api_router = APIRouter()
+api_router.include_router(assistant.router, prefix="/assistant", tags=["assistant"])
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
 api_router.include_router(appointments.router, prefix="/appointments", tags=["appointments"])
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])

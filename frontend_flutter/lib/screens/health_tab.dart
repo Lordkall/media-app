@@ -178,20 +178,20 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                         padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
                         sliver: SliverList(
                           delegate: SliverChildListDelegate([
-                            // 1. Tarjeta de Hidratación (Azul gradiente)
+                            // 1. Medidas Corporales & IMC (Estatura, Peso, IMC)
+                            _buildBodyMetricsCard(context, metrics),
+                            const SizedBox(height: 18),
+
+                            // 2. Tarjeta de Hidratación (Azul gradiente)
                             _buildHydrationCard(metrics),
                             const SizedBox(height: 18),
 
-                            // 2. Tarjeta de Respiración (Azul gradiente)
+                            // 3. Tarjeta de Respiración (Azul gradiente)
                             _buildBreathingCard(),
                             const SizedBox(height: 18),
 
-                            // 3. Tarjeta de Pasos en la Semana (Azul gradiente)
+                            // 4. Tarjeta de Pasos en la Semana (Azul gradiente)
                             _buildWeeklyStepsCard(metrics),
-                            const SizedBox(height: 18),
-
-                            // 4. Medidas Corporales & IMC (Estatura, Peso, IMC)
-                            _buildBodyMetricsCard(context, metrics),
                             const SizedBox(height: 18),
 
                             // 5. Métricas de hoy (Ritmo cardíaco y Sueño)
@@ -416,7 +416,7 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Water',
+                  'Agua',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
@@ -425,7 +425,7 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                 ),
                 const SizedBox(height: 4),
 
-                // 6 / 8 glasses
+                // 6 / 8 vasos
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.baseline,
                   textBaseline: TextBaseline.alphabetic,
@@ -441,7 +441,7 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      '/ $totalGlasses glasses',
+                      '/ $totalGlasses vasos',
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
@@ -452,9 +452,9 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                 ),
                 const SizedBox(height: 4),
 
-                // 1500 ml of 2000 ml
+                // 1500 ml de 2000 ml
                 Text(
-                  '${metrics.waterMilliliters} ml of ${metrics.waterGoalMilliliters} ml',
+                  '${metrics.waterMilliliters} ml de ${metrics.waterGoalMilliliters} ml',
                   style: const TextStyle(
                     fontSize: 13,
                     color: Color(0xFF64748B),
@@ -563,7 +563,7 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Breathing',
+                'Respiración',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -582,7 +582,7 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                     Icon(Icons.air_rounded, color: Colors.white, size: 14),
                     SizedBox(width: 4),
                     Text(
-                      '4-4-4 Box',
+                      'Caja 4-4-4',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 11,
@@ -668,7 +668,7 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                 ),
               ),
               child: Text(
-                _isBreathingActive ? 'Stop' : 'Iniciar',
+                _isBreathingActive ? 'Detener' : 'Iniciar',
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
@@ -711,7 +711,7 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: const [
               Text(
-                'This week',
+                'Esta semana',
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.bold,
@@ -720,7 +720,7 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                 ),
               ),
               Text(
-                'Steps (k)',
+                'Pasos (k)',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -1139,45 +1139,47 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0756A4).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.accessibility_new_rounded,
-                      color: Color(0xFF0756A4),
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Medidas Corporales & IMC',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF0F172A),
-                        ),
-                      ),
-                      Text(
-                        'Visible para tu médico en consulta',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF64748B),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0756A4).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.accessibility_new_rounded,
+                  color: Color(0xFF0756A4),
+                  size: 20,
+                ),
               ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Medidas Corporales & IMC',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0F172A),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      'Visible para tu médico en consulta',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF64748B),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
               InkWell(
                 onTap: () => _openBodyMetricsSheet(context, metrics),
                 borderRadius: BorderRadius.circular(14),
@@ -1189,6 +1191,7 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                     border: Border.all(color: const Color(0xFFBFDBFE)),
                   ),
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: const [
                       Icon(Icons.edit_outlined, size: 14, color: Color(0xFF0756A4)),
                       SizedBox(width: 4),
@@ -1226,12 +1229,15 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                         style: TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
                       ),
                       const SizedBox(height: 2),
-                      Text(
-                        height != null ? '${height.toStringAsFixed(0)} cm' : '--',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFF0F172A),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          height != null ? '${height.toStringAsFixed(0)} cm' : '--',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF0F172A),
+                          ),
                         ),
                       ),
                     ],
@@ -1256,12 +1262,15 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                         style: TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
                       ),
                       const SizedBox(height: 2),
-                      Text(
-                        weight != null ? '${weight.toStringAsFixed(1)} kg' : '--',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFF0F172A),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          weight != null ? '${weight.toStringAsFixed(1)} kg' : '--',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF0F172A),
+                          ),
                         ),
                       ),
                     ],
@@ -1286,12 +1295,15 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                         style: TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
                       ),
                       const SizedBox(height: 2),
-                      Text(
-                        bmi != null ? bmi.toStringAsFixed(1) : '--',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFF0F172A),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          bmi != null ? bmi.toStringAsFixed(1) : '--',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF0F172A),
+                          ),
                         ),
                       ),
                     ],

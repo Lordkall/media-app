@@ -12,11 +12,22 @@ class AgendarCitaTab extends StatefulWidget {
   final VoidCallback? onCitaAgendada;
   final VoidCallback? onVerAgenda;
   final int? initialDoctorId;
+  final String? initialSpecialty;
+  final DateTime? initialDate;
+  final int? initialTurnNumber;
+  final String? initialTimeBlock;
+  final String? initialMotivo;
+
   const AgendarCitaTab({
     super.key,
     this.onCitaAgendada,
     this.onVerAgenda,
     this.initialDoctorId,
+    this.initialSpecialty,
+    this.initialDate,
+    this.initialTurnNumber,
+    this.initialTimeBlock,
+    this.initialMotivo,
   });
 
   @override
@@ -46,6 +57,25 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialDate != null) {
+      _selectedDate = widget.initialDate!;
+    }
+    if (widget.initialTurnNumber != null) {
+      _selectedTurnNumber = widget.initialTurnNumber;
+    }
+    if (widget.initialSpecialty != null) {
+      _selectedEspecialidad = widget.initialSpecialty;
+    }
+    const validMotivos = ['Consulta', 'Entrega de examenes', 'Cura', 'Otros'];
+    if (widget.initialMotivo != null) {
+      if (validMotivos.contains(widget.initialMotivo)) {
+        _selectedMotivo = widget.initialMotivo;
+      } else {
+        _selectedMotivo = 'Consulta';
+      }
+    } else {
+      _selectedMotivo ??= 'Consulta';
+    }
     _fetchDoctors();
   }
 
@@ -80,16 +110,34 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                 final specialties = (doctor['specialties'] as List? ?? const [])
                     .map((item) => item.toString())
                     .toList();
-                _selectedEspecialidad =
-                    specialties.isEmpty ? null : specialties.first;
+                _selectedEspecialidad = widget.initialSpecialty ??
+                    (specialties.isEmpty ? null : specialties.first);
                 _selectedDoctorId = widget.initialDoctorId;
               }
+            }
+            if (widget.initialDate != null) {
+              _selectedDate = widget.initialDate!;
+            }
+            if (widget.initialTurnNumber != null) {
+              _selectedTurnNumber = widget.initialTurnNumber;
             }
             _isLoading = false;
           });
           if (widget.initialDoctorId != null) {
             final doctor = _findDoctor(widget.initialDoctorId);
-            if (doctor != null) await _loadDoctorAvailability(doctor);
+            if (doctor != null) {
+              await _loadDoctorAvailability(doctor);
+              if (mounted) {
+                setState(() {
+                  if (widget.initialDate != null) {
+                    _selectedDate = widget.initialDate!;
+                  }
+                  if (widget.initialTurnNumber != null) {
+                    _selectedTurnNumber = widget.initialTurnNumber;
+                  }
+                });
+              }
+            }
           }
         }
       } else {
@@ -485,7 +533,9 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                 title: 'Motivo de la cita',
                 child: _buildDropdown(
                   hint: 'Selecciona un motivo',
-                  value: _selectedMotivo,
+                  value: ['Consulta', 'Entrega de examenes', 'Cura', 'Otros'].contains(_selectedMotivo)
+                      ? _selectedMotivo
+                      : 'Consulta',
                   items: ['Consulta', 'Entrega de examenes', 'Cura', 'Otros'],
                   onChanged: (val) => setState(() {
                     _selectedMotivo = val;
@@ -496,7 +546,9 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
             else
               _buildDropdown(
                 hint: 'Motivo de Cita',
-                value: _selectedMotivo,
+                value: ['Consulta', 'Entrega de examenes', 'Cura', 'Otros'].contains(_selectedMotivo)
+                    ? _selectedMotivo
+                    : 'Consulta',
                 items: ['Consulta', 'Entrega de examenes', 'Cura', 'Otros'],
                 onChanged: (val) => setState(() {
                   _selectedMotivo = val;
