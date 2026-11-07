@@ -93,7 +93,7 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
             '¡Hola! Soy **Click**, tu asistente médico inteligente de Salud Now 🤖\n\n'
             'Dime qué especialista necesitas o para qué fecha '
             '(ej: *"Quiero una cita con un odontólogo este martes"* o *"¿Qué doctores de ginecología hay la semana que viene?"*) '
-            'y encontraré turnos libres para agendar tu cita en un toque.',
+            'y encontraré turnos libres para agendar tu cita en un click!',
       ),
     );
   }
