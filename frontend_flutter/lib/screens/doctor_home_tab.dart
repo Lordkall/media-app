@@ -12,6 +12,7 @@ import '../models/ve_catalogs.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/home_search_bar.dart';
 import '../widgets/top_clinics_section.dart';
+import '../widgets/health_today_section.dart';
 import '../screens/doctor_profile_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'select_plan_screen.dart';
@@ -655,6 +656,10 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
                             Map<String, dynamic>.from(appointment))),
                   const SizedBox(height: 20),
                   _buildSpecialties(),
+                  if (!kIsWeb) ...[
+                    const SizedBox(height: 20),
+                    const HealthTodaySection(),
+                  ],
                   const SizedBox(height: 20),
                   _buildTopDoctorsSection(),
                   const SizedBox(height: 20),
@@ -700,91 +705,6 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
                         )),
                     const SizedBox(height: 16),
                   ],
-                  const SizedBox(height: 4),
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.8),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                          color: const Color(0xFF0056B3), width: 1.5),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Mi Suscripción',
-                                style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF0B2545))),
-                            Icon(Icons.star, color: Color(0xFF0056B3)),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Builder(builder: (context) {
-                          final rawPlan =
-                              _subData?['current']?['plan'] ?? 'Ninguno';
-                          final displayPlan = rawPlan == 'sponsored'
-                              ? 'VIP'
-                              : rawPlan == 'basic'
-                                  ? 'Básico'
-                                  : rawPlan == 'featured'
-                                      ? 'Destacado'
-                                      : rawPlan == 'clinic_vip'
-                                          ? 'VIP de Clínica'
-                                          : rawPlan == 'clinic_basic'
-                                              ? 'Básico de Clínica'
-                                              : rawPlan;
-                          final isClinicMember =
-                              _subData?['is_clinic_member'] == true;
-                          return Text(
-                              isClinicMember
-                                  ? 'Plan activo: $displayPlan · ${_getDaysRemaining()} días restantes'
-                                  : 'Plan Actual: $displayPlan',
-                              style: const TextStyle(
-                                  fontSize: 16, color: Color(0xFF475569)));
-                        }),
-                        const SizedBox(height: 8),
-                        if (_subData?['is_clinic_member'] != true)
-                          Text(
-                              'Vence: ${_subData?['current']?['end_date']?.toString().split('T')[0] ?? '--'}',
-                              style: const TextStyle(
-                                  fontSize: 16, color: Color(0xFF475569))),
-                        const SizedBox(height: 24),
-                        if (!isGooglePlayBuild &&
-                            _subData?['is_clinic_member'] != true)
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: () {
-                                if (_userData != null) {
-                                  Navigator.of(context).push(MaterialPageRoute(
-                                      builder: (_) => SelectPlanScreen(
-                                          doctorData: _userData!,
-                                          isRenewal: true)));
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF0056B3),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12)),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 14),
-                              ),
-                              child: Text(
-                                  'Renovar o Cambiar Plan (Quedan ${_getDaysRemaining()} días)',
-                                  style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold)),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
                 ],
               ),
             )

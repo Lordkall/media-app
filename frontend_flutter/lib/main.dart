@@ -6,6 +6,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'core/local_notification_service.dart';
 import 'core/app_navigator.dart';
+import 'core/health_module_helper.dart';
 import 'screens/legal_screens.dart';
 import 'screens/login_screen.dart';
 import 'screens/splash_screen.dart';
@@ -34,6 +35,7 @@ void main() async {
     await LocalNotificationService.initialize();
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   }
+  await HealthModuleHelper.initialize();
   runApp(const SaludNowApp());
 }
 

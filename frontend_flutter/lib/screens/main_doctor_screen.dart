@@ -24,6 +24,7 @@ import 'package:local_auth/local_auth.dart';
 import 'clinic_account_screens.dart';
 import 'blocked_account_screen.dart';
 import 'admin_ads_screen.dart';
+import 'health_tab.dart';
 import '../widgets/floating_ads_overlay.dart';
 
 class MainDoctorScreen extends StatefulWidget {
@@ -360,9 +361,10 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
         const ProfileTab(),
       ];
     } else if (_role == 'patient') {
+      final showHealth = !kIsWeb;
       return [
         PatientHomeTab(
-          onProfileTap: () => setState(() => _currentIndex = 4),
+          onProfileTap: () => setState(() => _currentIndex = showHealth ? 5 : 4),
           onSearchTap: () => setState(() => _currentIndex = 2),
           onSearchSubmitted: _submitHomeSearch,
           onViewSchedule: _goToSchedule,
@@ -382,13 +384,15 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
           onViewSchedule: _goToSchedule,
         ),
         const MisCitasTab(),
+        if (showHealth) const HealthTab(),
         const ProfileTab(),
       ];
     } else {
       // doctor
+      final showHealth = !kIsWeb;
       return [
         DoctorHomeTab(
-          onProfileTap: () => setState(() => _currentIndex = 4),
+          onProfileTap: () => setState(() => _currentIndex = showHealth ? 5 : 4),
           onCitasHoyTap: () => setState(() => _currentIndex = 3),
           onSearchTap: () => setState(() => _currentIndex = 2),
           onSearchSubmitted: _submitHomeSearch,
@@ -404,6 +408,7 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
           onViewSchedule: _goToSchedule,
         ),
         MisCitasTab(initialDate: caracasNow()),
+        if (showHealth) const HealthTab(),
         const ProfileTab(),
       ];
     }
@@ -457,16 +462,22 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
             ),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final compactLayout = constraints.maxWidth < 320;
-                final inset = compactLayout ? 4.0 : 10.0;
+                final showHealth = !kIsWeb && (_role == 'patient' || _role == 'doctor' || _role == 'assistant');
+                final navItemCount = showHealth ? 5 : 4;
+                final compactLayout = constraints.maxWidth < 360;
+                final inset = compactLayout ? 4.0 : 8.0;
                 final availableWidth = constraints.maxWidth - inset * 2;
-                final minimumIdleWidth = compactLayout ? 36.0 : 40.0;
+                final minimumIdleWidth = compactLayout ? 32.0 : 36.0;
                 final selectedWidth = math.min(
-                  _role == 'admin' ? 120.0 : 104.0,
-                  availableWidth - 3 * minimumIdleWidth,
+                  showHealth
+                      ? (compactLayout ? 84.0 : 92.0)
+                      : (_role == 'admin' ? 120.0 : 104.0),
+                  availableWidth - (navItemCount - 1) * minimumIdleWidth,
                 );
-                final idleWidth = math.min(compactLayout ? 36.0 : 42.0,
-                    (availableWidth - selectedWidth) / 3);
+                final idleWidth = math.min(
+                  compactLayout ? 34.0 : 40.0,
+                  (availableWidth - selectedWidth) / (navItemCount - 1),
+                );
                 final doctorHome = _role == 'doctor' || _role == 'assistant';
 
                 if (_role == 'admin') {
@@ -487,6 +498,8 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
                     ),
                   );
                 }
+
+                final profileIndex = showHealth ? 5 : 4;
 
                 return Padding(
                   padding: EdgeInsets.symmetric(horizontal: inset),
@@ -511,7 +524,16 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
                           selectedWidth,
                           idleWidth,
                           compactLayout),
-                      _buildNavItem(Icons.person_outline, 'Perfil', 4,
+                      if (showHealth)
+                        _buildNavItem(
+                            Icons.monitor_heart_rounded,
+                            'Salud',
+                            4,
+                            selectedWidth,
+                            idleWidth,
+                            compactLayout,
+                            isHealth: true),
+                      _buildNavItem(Icons.person_outline, 'Perfil', profileIndex,
                           selectedWidth, idleWidth, compactLayout),
                     ],
                   ),
@@ -538,7 +560,8 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
   }
 
   Widget _buildNavItem(IconData icon, String label, int index,
-      double selectedWidth, double idleWidth, bool compactLayout) {
+      double selectedWidth, double idleWidth, bool compactLayout,
+      {bool isHealth = false}) {
     final isSelected = _currentIndex == index;
 
     return InkWell(

@@ -186,7 +186,9 @@ class _MisCitasTabState extends State<MisCitasTab> {
     final timeRemaining = _appointmentDateTime(appt).difference(caracasNow());
     final String displayStatus = status == 'scheduled'
         ? _countdownLabel(timeRemaining)
-        : (status == 'cancelled' ? 'CANCELADA' : status.toUpperCase());
+        : (status == 'completed'
+            ? 'COMPLETADA'
+            : (status == 'cancelled' ? 'CANCELADA' : status.toUpperCase()));
 
     showDialog(
       context: context,
@@ -236,11 +238,11 @@ class _MisCitasTabState extends State<MisCitasTab> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: status == 'scheduled'
-                              ? const Color(0xFF0056B3)
+                          color: (status == 'scheduled' || status == 'completed')
+                              ? const Color(0xFF10B981)
                               : (status == 'cancelled'
                                   ? Colors.red.shade400
-                                  : Colors.blueGrey),
+                                  : Colors.orange),
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Text(
@@ -1264,10 +1266,18 @@ class _MisCitasTabState extends State<MisCitasTab> {
                                                           horizontal: 10,
                                                           vertical: 4),
                                                       decoration: BoxDecoration(
-                                                        color: appt['status'] ==
-                                                                'scheduled'
-                                                            ? Colors.green
-                                                            : Colors.orange,
+                                                        color: (appt['status'] ==
+                                                                    'scheduled' ||
+                                                                appt['status'] ==
+                                                                    'completed')
+                                                            ? const Color(
+                                                                0xFF10B981)
+                                                            : (appt['status'] ==
+                                                                    'cancelled'
+                                                                ? Colors
+                                                                    .redAccent
+                                                                : Colors
+                                                                    .orange),
                                                         borderRadius:
                                                             BorderRadius
                                                                 .circular(12),
@@ -1277,11 +1287,14 @@ class _MisCitasTabState extends State<MisCitasTab> {
                                                                   'scheduled'
                                                               ? 'PROGRAMADA'
                                                               : (appt['status'] ==
-                                                                      'cancelled'
-                                                                  ? 'CANCELADA'
-                                                                  : appt['status']
-                                                                      .toString()
-                                                                      .toUpperCase()),
+                                                                      'completed'
+                                                                  ? 'COMPLETADA'
+                                                                  : (appt['status'] ==
+                                                                          'cancelled'
+                                                                      ? 'CANCELADA'
+                                                                      : appt['status']
+                                                                          .toString()
+                                                                          .toUpperCase())),
                                                           style: const TextStyle(
                                                               color:
                                                                   Colors.white,

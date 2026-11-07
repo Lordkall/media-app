@@ -13,8 +13,11 @@ import '../models/avatar_catalog.dart';
 import '../models/ve_catalogs.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/avatar_sprite.dart';
+import '../core/health_module_helper.dart';
+import '../core/distribution_config.dart';
 import 'login_screen.dart';
 import 'legal_screens.dart';
+import 'select_plan_screen.dart';
 
 class ProfileTab extends StatefulWidget {
   const ProfileTab({super.key});
@@ -30,6 +33,7 @@ class _ProfileTabState extends State<ProfileTab> {
   final _clinicInfo = TextEditingController();
 
   Map<String, dynamic>? _userData;
+  Map<String, dynamic>? _subData;
   List<String> _specialties = [];
   bool _isLoading = true;
   bool _isSaving = false;
@@ -96,8 +100,18 @@ class _ProfileTabState extends State<ProfileTab> {
       _doctorId = int.tryParse(doctor?['id']?.toString() ?? '');
       ProfileImageHelper.updateCurrentUserAvatar(
           user['avatar_url']?.toString());
+
+      Map<String, dynamic>? subData;
+      try {
+        final subResp = await ApiClient.get('/subscriptions/me');
+        if (subResp.statusCode == 200) {
+          subData = jsonDecode(subResp.body) as Map<String, dynamic>?;
+        }
+      } catch (_) {}
+
       setState(() {
         _userData = user;
+        _subData = subData;
         _isLoading = false;
       });
     } catch (e) {
@@ -309,8 +323,117 @@ class _ProfileTabState extends State<ProfileTab> {
                 'Acerca de Salud Now',
                 () => _open('Acerca de Salud Now',
                     _AboutPage(onOpen: _open, menuRow: _menuRow))),
+            if (_subData != null && _subData!['current'] != null) ...[
+              const SizedBox(height: 18),
+              _buildSubscriptionCard(),
+              const SizedBox(height: 18),
+            ],
           ],
         ),
+      ),
+    );
+  }
+
+  int _getDaysRemaining() {
+    final endDate =
+        DateTime.tryParse(_subData?['current']?['end_date']?.toString() ?? '');
+    if (endDate == null) return 0;
+    final today = caracasNow();
+    final end = endDate.toLocal();
+    final days = DateTime(end.year, end.month, end.day)
+        .difference(DateTime(today.year, today.month, today.day))
+        .inDays;
+    return days > 0 ? days : 0;
+  }
+
+  Widget _buildSubscriptionCard() {
+    final rawPlan = _subData?['current']?['plan'] ?? 'Ninguno';
+    final displayPlan = rawPlan == 'sponsored'
+        ? 'VIP'
+        : rawPlan == 'basic'
+            ? 'Básico'
+            : rawPlan == 'featured'
+                ? 'Destacado'
+                : rawPlan == 'clinic_vip'
+                    ? 'VIP de Clínica'
+                    : rawPlan == 'clinic_basic'
+                        ? 'Básico de Clínica'
+                        : rawPlan;
+    final isClinicMember = _subData?['is_clinic_member'] == true;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFF0056B3), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0056B3).withValues(alpha: 0.08),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: const [
+              Text(
+                'Mi Suscripción',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0B2545),
+                ),
+              ),
+              Icon(Icons.star_rounded, color: Color(0xFF0056B3), size: 24),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            isClinicMember
+                ? 'Plan activo: $displayPlan · ${_getDaysRemaining()} días restantes'
+                : 'Plan Actual: $displayPlan',
+            style: const TextStyle(fontSize: 15, color: Color(0xFF475569)),
+          ),
+          if (!isClinicMember) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Vence: ${_subData?['current']?['end_date']?.toString().split('T')[0] ?? '--'}',
+              style: const TextStyle(fontSize: 14, color: Color(0xFF64748B)),
+            ),
+          ],
+          if (!isGooglePlayBuild && !isClinicMember) ...[
+            const SizedBox(height: 18),
+            SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: ElevatedButton(
+                onPressed: () {
+                  if (_userData != null) {
+                    Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => SelectPlanScreen(
+                            doctorData: _userData!, isRenewal: true)));
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0056B3),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                child: Text(
+                  'Renovar o Cambiar Plan (Quedan ${_getDaysRemaining()} días)',
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -1027,6 +1150,30 @@ class _AboutPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       _SettingsPage(title: 'Acerca de Salud Now', children: [
+        if (!kIsWeb) ...[
+          const Padding(
+              padding: EdgeInsets.all(12),
+              child: Text('Módulo de Salud',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))),
+          ValueListenableBuilder<bool>(
+            valueListenable: HealthModuleHelper.isEnabledNotifier,
+            builder: (context, enabled, _) => SwitchListTile.adaptive(
+              title: const Text('Activar módulo de salud',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+              subtitle: const Text(
+                'Muestra pasos, ritmo cardíaco y sueño en inicio',
+                style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+              ),
+              secondary:
+                  const Icon(Icons.favorite_rounded, color: Color(0xFFEF4444)),
+              activeColor: const Color(0xFF0756A4),
+              value: enabled,
+              onChanged: (val) => HealthModuleHelper.setEnabled(val),
+              shape:
+                  const Border(bottom: BorderSide(color: Color(0x220B2545))),
+            ),
+          ),
+        ],
         const Padding(
             padding: EdgeInsets.all(12),
             child: Text('Preferencia de Datos',

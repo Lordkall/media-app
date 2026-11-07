@@ -14,7 +14,9 @@ Future<void> showAppointmentDetailsDialog(
   final status = (appt['status'] ?? 'scheduled').toString().toLowerCase();
   final displayStatus = status == 'scheduled'
       ? 'PROGRAMADA'
-      : (status == 'cancelled' ? 'CANCELADA' : status.toUpperCase());
+      : (status == 'completed'
+          ? 'COMPLETADA'
+          : (status == 'cancelled' ? 'CANCELADA' : status.toUpperCase()));
   final avatarUrl = appt['doctor_avatar']?.toString();
 
   await showDialog<void>(

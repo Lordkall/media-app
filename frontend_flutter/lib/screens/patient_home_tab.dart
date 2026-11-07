@@ -15,6 +15,7 @@ import '../widgets/avatar_sprite.dart';
 import '../widgets/home_search_bar.dart';
 import '../widgets/top_clinics_section.dart';
 import '../widgets/instagram_photo_preview.dart';
+import '../widgets/health_today_section.dart';
 import 'doctor_profile_screen.dart';
 
 class PatientHomeTab extends StatefulWidget {
@@ -233,6 +234,10 @@ class _PatientHomeTabState extends State<PatientHomeTab> {
                     }),
                   const SizedBox(height: 18),
                   _buildSpecialtiesSection(),
+                  if (!kIsWeb) ...[
+                    const SizedBox(height: 20),
+                    const HealthTodaySection(),
+                  ],
                   const SizedBox(height: 20),
                   _buildTopDoctorsSection(),
                   const SizedBox(height: 24),
@@ -699,8 +704,11 @@ class _PatientHomeTabState extends State<PatientHomeTab> {
     final avatarUrl = appt['doctor_avatar'] as String?;
     final countdown = _countdownLabel(
         (_appointmentDateTime(appt) ?? caracasNow()).difference(caracasNow()));
-    final String displayStatus =
-        status == 'scheduled' ? countdown : status.toUpperCase();
+    final String displayStatus = status == 'scheduled'
+        ? countdown
+        : (status == 'completed'
+            ? 'COMPLETADA'
+            : (status == 'cancelled' ? 'CANCELADA' : status.toUpperCase()));
 
     showDialog(
       context: context,

@@ -82,5 +82,11 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSMotionUsageDescription</key>
+	<string>Salud Now utiliza el sensor de movimiento y podómetro nativo de tu iPhone para contar tus pasos diarios.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Salud Now accede a tus métricas de ritmo cardíaco, pasos y sueño desde Apple Health y tu Apple Watch para mostrarlas en tiempo real.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Salud Now puede sincronizar tus registros de hidratación y salud con Apple Health.</string>
 </dict>
 </plist>
