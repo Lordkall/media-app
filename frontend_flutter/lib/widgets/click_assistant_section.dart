@@ -437,21 +437,31 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
       }
     } catch (_) {}
 
-    final specClean = specialty.toLowerCase();
+    String normalizeText(String text) {
+      var withAccents = 'áéíóúÁÉÍÓÚñÑüÜ';
+      var withoutAccents = 'aeiouAEIOUnNuU';
+      var res = text;
+      for (int i = 0; i < withAccents.length; i++) {
+        res = res.replaceAll(withAccents[i], withoutAccents[i]);
+      }
+      return res.toLowerCase().trim();
+    }
+
+    final normSpec = normalizeText(specialty);
 
     // Filtrar doctores que tengan esa especialidad
     List<dynamic> matchingDocs = [];
     if (!isGeneralRequest) {
       matchingDocs = allDoctors.where((d) {
         final specs = (d['specialties'] as List<dynamic>? ?? [])
-            .map((s) => s.toString().toLowerCase())
+            .map((s) => normalizeText(s.toString()))
             .toList();
-        return specs.any((s) => s.contains(specClean) || specClean.contains(s));
+        return specs.any((s) => s.contains(normSpec) || normSpec.contains(s));
       }).toList();
     } else {
       matchingDocs = allDoctors.where((d) {
         final specs = (d['specialties'] as List<dynamic>? ?? [])
-            .map((s) => s.toString().toLowerCase())
+            .map((s) => normalizeText(s.toString()))
             .toList();
         return specs.any((s) =>
             s.contains('general') ||
@@ -461,25 +471,16 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
       if (matchingDocs.isEmpty) matchingDocs = allDoctors;
     }
 
-    bool isShowingGeneralFallback = false;
-
     // Si NO hay doctores registrados con esa especialidad específica:
     if (!isGeneralRequest && matchingDocs.isEmpty) {
-      isShowingGeneralFallback = true;
-      // Buscar doctores de Medicina General para sugerir como alternativa
-      matchingDocs = allDoctors.where((d) {
-        final specs = (d['specialties'] as List<dynamic>? ?? [])
-            .map((s) => s.toString().toLowerCase())
-            .toList();
-        return specs.any((s) =>
-            s.contains('general') ||
-            s.contains('familiar') ||
-            s.contains('interna'));
-      }).toList();
-
-      if (matchingDocs.isEmpty) {
-        matchingDocs = allDoctors;
-      }
+      return {
+        'especialidad': specialty,
+        'fecha_inicio': dateStr,
+        'fecha_fin': dateStr,
+        'mensaje_respuesta':
+            'En este momento no contamos con doctores especialistas en **$specialty** registrados en la plataforma.',
+        'doctors': <Map<String, dynamic>>[],
+      };
     }
 
     // 5. Consultar disponibilidad y turnos libres para cada doctor
@@ -565,8 +566,8 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
                   .toList();
               final displaySpec = docSpecs.firstWhere(
                 (s) =>
-                    s.toLowerCase().contains(specClean) ||
-                    specClean.contains(s.toLowerCase()),
+                    normalizeText(s).contains(normSpec) ||
+                    normSpec.contains(normalizeText(s)),
                 orElse: () =>
                     docSpecs.isNotEmpty ? docSpecs.first : specialty,
               );
@@ -600,25 +601,18 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
 
     String answer;
     if (doctorSlots.isNotEmpty) {
-      if (isShowingGeneralFallback && !isGeneralRequest) {
+      final exactMatch = doctorSlots.any((d) => d['date'] == dateStr);
+      if (exactMatch) {
         answer =
-            'En este momento no contamos con especialistas registrados en **$specialty**. '
-            'Sin embargo, te recomendamos consultar con **Medicina General** para una evaluación inicial o emisión de referencia médica. '
-            'Aquí tienes médicos generales disponibles con turnos próximos:';
+            '¡Excelente! He encontrado turnos disponibles en **$specialty** para el **$dateStr**. Puedes tocar **"Agendar"** en la tarjeta para ver su perfil y confirmar tu turno:';
       } else {
-        final exactMatch = doctorSlots.any((d) => d['date'] == dateStr);
-        if (exactMatch) {
-          answer =
-              '¡Excelente! He encontrado turnos disponibles en **$specialty** para el **$dateStr**. Puedes tocar **"Agendar"** en la tarjeta para ver su perfil y confirmar tu turno:';
-        } else {
-          answer =
-              'Para el **$dateStr** no encontré cupos directos en **$specialty**, pero aquí tienes las opciones más próximas con especialistas en esa área:';
-        }
+        answer =
+            'Para el **$dateStr** no encontré cupos directos en **$specialty**, pero aquí tienes las opciones más próximas con especialistas en esa área:';
       }
     } else {
       if (!isGeneralRequest) {
         answer =
-            'En este momento no disponemos de especialistas en **$specialty** con turnos abiertos. Te recomendamos agendar una consulta con **Medicina General** o consultar para otra fecha.';
+            'En este momento los especialistas en **$specialty** no tienen turnos libres registrados para esa fecha.';
       } else {
         answer =
             'Consulté a nuestros médicos, pero en este momento no tienen turnos libres registrados para esa fecha. ¿Te gustaría consultar para otro día?';

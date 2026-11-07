@@ -1,4 +1,7 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:pedometer/pedometer.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api_client.dart';
 import 'local_notification_service.dart';
@@ -167,7 +170,75 @@ class HealthModuleHelper {
       if (breathingWeekly && isEnabled && !kIsWeb) {
         await LocalNotificationService.scheduleWeeklyBreathingReminder();
       }
+      unawaited(initializePedometer());
     } catch (_) {}
+  }
+
+  static StreamSubscription<StepCount>? _stepCountSubscription;
+  static int _initialBootSteps = -1;
+  static String? _savedDateKey;
+
+  /// Inicializa el sensor de podómetro nativo en Android / iOS y solicita permisos de actividad física.
+  static Future<void> initializePedometer() async {
+    if (kIsWeb) return;
+    if (defaultTargetPlatform != TargetPlatform.android &&
+        defaultTargetPlatform != TargetPlatform.iOS) {
+      return;
+    }
+
+    try {
+      // Solicitar permiso de reconocimiento de actividad física (Android 10+)
+      var status = await Permission.activityRecognition.status;
+      if (!status.isGranted) {
+        status = await Permission.activityRecognition.request();
+      }
+
+      if (status.isGranted) {
+        final prefs = await SharedPreferences.getInstance();
+        final todayStr = DateTime.now().toIso8601String().substring(0, 10);
+        _savedDateKey = prefs.getString('health_pedometer_last_date');
+        _initialBootSteps = prefs.getInt('health_pedometer_boot_base') ?? -1;
+
+        if (_savedDateKey != todayStr) {
+          _savedDateKey = todayStr;
+          await prefs.setString('health_pedometer_last_date', todayStr);
+          _initialBootSteps = -1;
+        }
+
+        await _stepCountSubscription?.cancel();
+        _stepCountSubscription = Pedometer.stepCountStream.listen(
+          (StepCount event) async {
+            final nowDayStr = DateTime.now().toIso8601String().substring(0, 10);
+            final currentBootSteps = event.steps;
+
+            if (_savedDateKey != nowDayStr) {
+              _savedDateKey = nowDayStr;
+              _initialBootSteps = currentBootSteps;
+              await prefs.setString('health_pedometer_last_date', nowDayStr);
+              await prefs.setInt('health_pedometer_boot_base', _initialBootSteps);
+            }
+
+            if (_initialBootSteps < 0 || currentBootSteps < _initialBootSteps) {
+              _initialBootSteps = currentBootSteps;
+              await prefs.setInt('health_pedometer_boot_base', _initialBootSteps);
+            }
+
+            final todaySteps = (currentBootSteps - _initialBootSteps).clamp(0, 100000);
+            await updateMetrics(
+              heartRate: metricsNotifier.value.heartRate,
+              sleepHours: metricsNotifier.value.sleepHours,
+              steps: todaySteps,
+            );
+          },
+          onError: (error) {
+            debugPrint('Aviso: Sensor de podómetro no disponible en este dispositivo: $error');
+          },
+          cancelOnError: false,
+        );
+      }
+    } catch (e) {
+      debugPrint('Aviso inicializando sensor de podómetro: $e');
+    }
   }
 
   static Future<void> setEnabled(bool enabled) async {
@@ -180,6 +251,9 @@ class HealthModuleHelper {
         } else if (!enabled) {
           await LocalNotificationService.cancelWeeklyBreathingReminder();
           await LocalNotificationService.cancelWaterReminder();
+        }
+        if (enabled) {
+          unawaited(initializePedometer());
         }
       }
     } catch (_) {}

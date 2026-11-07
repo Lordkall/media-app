@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import re
+import unicodedata
 from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional
 from zoneinfo import ZoneInfo
@@ -382,41 +383,116 @@ async def chat_with_assistant(
     bcv_rate = float(rate_obj.tasa) if rate_obj and rate_obj.tasa else 36.5
 
     # 3. Consultar doctores en PostgreSQL
-    # Buscar doctores cuya especialidad coincida
+    def _normalize_text(t: str) -> str:
+        if not t:
+            return ""
+        nfkd = unicodedata.normalize('NFKD', t.lower())
+        return ''.join(c for c in nfkd if not unicodedata.combining(c)).strip()
+
+    SPECIALTY_ROOTS = {
+        "odont": "Odontología",
+        "dent": "Odontología",
+        "diente": "Odontología",
+        "muela": "Odontología",
+        "cardio": "Cardiología",
+        "corazon": "Cardiología",
+        "gine": "Ginecología y Obstetricia",
+        "embaraz": "Ginecología y Obstetricia",
+        "obstet": "Ginecología y Obstetricia",
+        "pediat": "Pediatría",
+        "nino": "Pediatría",
+        "nina": "Pediatría",
+        "bebe": "Pediatría",
+        "derma": "Dermatología",
+        "piel": "Dermatología",
+        "oftalm": "Oftalmología",
+        "ojo": "Oftalmología",
+        "vista": "Oftalmología",
+        "trauma": "Traumatología",
+        "hueso": "Traumatología",
+        "ortoped": "Traumatología",
+        "urolo": "Urología",
+        "neuro": "Neurología",
+        "otorrino": "Otorrinolaringología",
+        "nutri": "Nutrición y Dietética",
+        "alerg": "Alergología",
+        "gastro": "Gastroenterología",
+        "estomago": "Gastroenterología",
+        "oncol": "Oncología",
+        "cancer": "Oncología",
+        "endocrin": "Endocrinología",
+        "tiroid": "Endocrinología",
+        "diabet": "Endocrinología",
+        "nefrol": "Nefrología",
+        "rinon": "Nefrología",
+        "neumon": "Neumonología",
+        "pulmon": "Neumonología",
+        "reumat": "Reumatología",
+        "artrit": "Reumatología",
+        "infectol": "Infectología",
+        "psiquiat": "Psiquiatría",
+        "psicol": "Psicología",
+        "geriatr": "Geriatría",
+        "cirug": "Cirugía General",
+        "hematol": "Hematología",
+        "sangre": "Hematología",
+    }
+
+    user_msg_norm = _normalize_text(request.message)
+    spec_norm = _normalize_text(especialidad)
+
+    detected_root = None
+    target_spec_name = especialidad
+
+    for root, official_name in SPECIALTY_ROOTS.items():
+        if root in spec_norm or root in user_msg_norm:
+            detected_root = root
+            target_spec_name = official_name
+            break
+
+    is_explicit_general = detected_root is None and any(
+        k in spec_norm or k in user_msg_norm for k in ("general", "familiar", "interna", "internist")
+    )
+
     doctors_query = select(Doctor, User).join(User, Doctor.user_id == User.id)
     all_docs_res = await db.execute(doctors_query)
     all_docs = all_docs_res.all()
 
-    clean_spec = especialidad.strip().lower()
     matching_doctors = []
-    other_doctors = []
-
     for doc, user in all_docs:
-        specs = [s.lower() for s in (doc.specialties or [])]
-        is_match = any(clean_spec in s or s in clean_spec for s in specs) if specs else False
-        if not is_match and clean_spec in ("medicina general", "general", "especialista"):
-            is_match = True
-        if is_match:
-            matching_doctors.append((doc, user))
-        else:
-            other_doctors.append((doc, user))
-
-    is_fallback_general = False
-    if not matching_doctors and clean_spec not in ("medicina general", "general", "especialista"):
-        is_fallback_general = True
-        for doc, user in all_docs:
-            specs = [s.lower() for s in (doc.specialties or [])]
-            if any("general" in s or "familiar" in s or "interna" in s for s in specs):
+        specs_norm = [_normalize_text(s) for s in (doc.specialties or [])]
+        if detected_root:
+            if any(detected_root in s for s in specs_norm):
                 matching_doctors.append((doc, user))
-        if not matching_doctors:
-            matching_doctors = all_docs
+        elif is_explicit_general:
+            if any(k in s for s in specs_norm for k in ("general", "familiar", "interna")):
+                matching_doctors.append((doc, user))
+        else:
+            if any(spec_norm in s or s in spec_norm for s in specs_norm):
+                matching_doctors.append((doc, user))
 
-    target_docs = matching_doctors if matching_doctors else all_docs
+    # Si se solicitó una especialidad y no hay ningún doctor registrado con ella:
+    if not matching_doctors:
+        return AssistantChatResponse(
+            especialidad=target_spec_name,
+            fecha_inicio=fecha_inicio_str,
+            fecha_fin=fecha_fin_str,
+            mensaje_respuesta=f"En este momento no contamos con doctores especialistas en **{target_spec_name}** registrados en la plataforma.",
+            doctors=[],
+        )
 
-    # 4. Consultar disponibilidades y turnos libres
+    # 4. Consultar disponibilidades y turnos libres SOLAMENTE para los doctores que coinciden
     found_slots: List[DoctorSlotItem] = []
 
-    for doc, user in target_docs:
+    def _get_matched_doc_spec(doc_obj) -> str:
+        doc_specs = doc_obj.specialties or []
+        if detected_root:
+            for s in doc_specs:
+                if detected_root in _normalize_text(s):
+                    return s
+        return doc_specs[0] if doc_specs else target_spec_name
+
+    for doc, user in matching_doctors:
         avails_res = await db.execute(
             select(Availability).where(
                 Availability.doctor_id == doc.id,
@@ -481,7 +557,7 @@ async def chat_with_assistant(
                 first_slot = free_slots_for_day[0]
                 prefix = "Dra." if user.gender in ["Femenino", "Femenina"] else "Dr."
                 doc_name = f"{prefix} {user.first_name or ''} {user.last_name or ''}".strip()
-                doc_spec = doc.specialties[0] if doc.specialties else especialidad
+                doc_spec = _get_matched_doc_spec(doc)
                 fee = float(doc.consultation_fee or 50.0)
                 fee_bcv = round(fee * bcv_rate, 2)
 
@@ -508,7 +584,7 @@ async def chat_with_assistant(
                     )
                 )
 
-    # Si no se encontraron turnos en la fecha solicitada, buscar próximas aperturas de esos doctores
+    # Si no se encontraron turnos en la fecha solicitada, buscar próximas aperturas de esos mismos especialistas
     if not found_slots and matching_doctors:
         fallback_end = start_d + timedelta(days=21)
         for doc, user in matching_doctors:
@@ -523,7 +599,7 @@ async def chat_with_assistant(
             for a in avails:
                 prefix = "Dra." if user.gender in ["Femenino", "Femenina"] else "Dr."
                 doc_name = f"{prefix} {user.first_name or ''} {user.last_name or ''}".strip()
-                doc_spec = doc.specialties[0] if doc.specialties else especialidad
+                doc_spec = _get_matched_doc_spec(doc)
                 fee = float(doc.consultation_fee or 50.0)
                 fee_bcv = round(fee * bcv_rate, 2)
                 avatar = user.avatar_url or (f"data:{user.avatar_content_type};base64,{user.avatar_data}" if user.avatar_data else None)
@@ -552,33 +628,18 @@ async def chat_with_assistant(
                 break
 
         if found_slots:
-            if is_fallback_general:
-                mensaje_respuesta = (
-                    f"En este momento no contamos con especialistas registrados en **{especialidad}**. "
-                    f"Sin embargo, te recomendamos consultar con **Medicina General** para una evaluación inicial o emisión de referencia médica. "
-                    f"Aquí tienes médicos generales disponibles con turnos próximos:"
-                )
-            else:
-                mensaje_respuesta = (
-                    f"No encontré cupos libres exactamente entre el {fecha_inicio_str} y el {fecha_fin_str}, "
-                    f"pero aquí tienes las opciones más próximas de especialistas en {especialidad}:"
-                )
+            mensaje_respuesta = (
+                f"No encontré cupos libres en **{target_spec_name}** exactamente entre el {fecha_inicio_str} y el {fecha_fin_str}, "
+                f"pero aquí tienes las opciones más próximas de especialistas en esa área:"
+            )
 
     if not found_slots:
-        if is_fallback_general:
-            mensaje_respuesta = (
-                f"En este momento no disponemos de especialistas en **{especialidad}** ni turnos de consulta general abiertos. "
-                f"Por favor intenta con otra fecha o especialidad."
-            )
-        else:
-            mensaje_respuesta = (
-                f"He consultado a nuestros especialistas en {especialidad}, pero en este momento no tienen cupos "
-                f"libres registrados para el rango del {fecha_inicio_str} al {fecha_fin_str}. "
-                f"¿Te gustaría buscar en otra fecha o consultar otra especialidad?"
-            )
+        mensaje_respuesta = (
+            f"En este momento los especialistas en **{target_spec_name}** no tienen turnos disponibles registrados para esa fecha."
+        )
 
     return AssistantChatResponse(
-        especialidad=especialidad,
+        especialidad=target_spec_name,
         fecha_inicio=fecha_inicio_str,
         fecha_fin=fecha_fin_str,
         mensaje_respuesta=mensaje_respuesta,

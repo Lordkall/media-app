@@ -30,6 +30,7 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    HealthModuleHelper.initializePedometer();
 
     _waterWaveController = AnimationController(
       vsync: this,
