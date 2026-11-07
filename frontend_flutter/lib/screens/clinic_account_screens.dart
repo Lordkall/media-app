@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/api_client.dart';
+import '../core/auth_helper.dart';
 import '../core/distribution_config.dart';
 import '../widgets/profile_avatar.dart';
 import '../core/profile_image_helper.dart';
@@ -48,8 +49,7 @@ class _ClinicStatusScreen extends StatelessWidget {
   final String message;
 
   Future<void> _logout(BuildContext context) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('access_token');
+    await AuthHelper.logout();
     if (!context.mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginScreen()),

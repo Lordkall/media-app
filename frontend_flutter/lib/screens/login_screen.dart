@@ -9,6 +9,7 @@ import 'dart:async';
 import '../core/api_client.dart';
 import '../core/auth_helper.dart';
 import '../core/profile_image_helper.dart';
+import '../core/health_module_helper.dart';
 import 'main_doctor_screen.dart';
 import 'dart:convert';
 import 'dart:ui';
@@ -137,6 +138,7 @@ class _LoginScreenState extends State<LoginScreen> {
           (prefs.getBool('biometrics_enabled_$currentUserId') ?? false);
 
       if (kIsWeb || !currentUserBio) {
+        await HealthModuleHelper.loadForUser(currentUserId);
         _navigateToHome();
         return;
       }
@@ -245,6 +247,8 @@ class _LoginScreenState extends State<LoginScreen> {
             return;
           }
           ProfileImageHelper.updateCurrentUserAvatar(null);
+          final bioUserId = AuthHelper.getUserIdFromToken(savedToken);
+          await HealthModuleHelper.loadForUser(bioUserId);
           _navigateToHome();
         } else {
           _clearBiometricPrefill();
@@ -323,6 +327,7 @@ class _LoginScreenState extends State<LoginScreen> {
           }
         }
         ProfileImageHelper.updateCurrentUserAvatar(null);
+        await HealthModuleHelper.loadForUser(userId);
 
         _navigateToHome();
       } else {

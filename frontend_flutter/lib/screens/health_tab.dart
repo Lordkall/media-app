@@ -24,12 +24,13 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
   // Water wave animation controller (movimiento constante del agua)
   late AnimationController _waterWaveController;
 
-  // Selected day index in weekly bar chart (default today = 3, Thu/9.0k like in image 3)
-  int _selectedDayIndex = 3;
+  // Selected day index in weekly bar chart (default today)
+  int _selectedDayIndex = 0;
 
   @override
   void initState() {
     super.initState();
+    _selectedDayIndex = (DateTime.now().weekday - 1).clamp(0, 6);
     HealthModuleHelper.initializePedometer();
 
     _waterWaveController = AnimationController(
@@ -688,8 +689,8 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
     // Días de la semana: L, M, M, J, V, S, D
     const dayLabels = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
-    // Encontrar el valor más alto para escalar las barras (mínimo 10.0k)
-    final maxSteps = math.max(10000, weekly.reduce(math.max));
+    // Encontrar el valor más alto para escalar las barras (mínimo 10000 para escala adecuada)
+    final maxSteps = weekly.isEmpty ? 10000 : math.max(10000, weekly.reduce(math.max));
 
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
@@ -707,7 +708,7 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Encabezado: "This week" y "Steps (k)"
+          // Encabezado: "Esta semana" y "Pasos" (sin "(k)")
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: const [
@@ -721,7 +722,7 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                 ),
               ),
               Text(
-                'Pasos (k)',
+                'Pasos',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -741,8 +742,9 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
               children: List.generate(7, (index) {
                 final daySteps = index < weekly.length ? weekly[index] : 0;
                 final isSelected = index == _selectedDayIndex;
-                final fraction = (daySteps / maxSteps).clamp(0.12, 1.0);
-                final kValue = (daySteps / 1000.0).toStringAsFixed(1);
+                final fraction = maxSteps > 0
+                    ? (daySteps / maxSteps).clamp(daySteps > 0 ? 0.16 : 0.08, 1.0)
+                    : 0.08;
 
                 return GestureDetector(
                   onTap: () {
@@ -753,19 +755,22 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      // Etiqueta flotante con el valor (ej. 9.0) en Azul si está seleccionado
+                      // Etiqueta flotante con la cantidad exacta de pasos (ej: "32 pasos", "0 pasos")
                       if (isSelected) ...[
-                        Text(
-                          kValue,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF0756A4),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            '$daySteps pasos',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF0756A4),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 4),
                       ] else ...[
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 18),
                       ],
 
                       // Barra vertical redondeada (Pill) en Azul Gradiente

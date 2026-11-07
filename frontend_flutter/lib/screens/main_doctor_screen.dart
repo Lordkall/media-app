@@ -25,6 +25,7 @@ import 'clinic_account_screens.dart';
 import 'blocked_account_screen.dart';
 import 'admin_ads_screen.dart';
 import 'health_tab.dart';
+import '../core/health_module_helper.dart';
 import '../widgets/floating_ads_overlay.dart';
 
 class MainDoctorScreen extends StatefulWidget {
@@ -295,6 +296,8 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
           );
           return;
         }
+        final userId = userData['id']?.toString() ?? await AuthHelper.getUserId();
+        await HealthModuleHelper.loadForUser(userId);
       }
     } catch (_) {}
     final role = await AuthHelper.getRole();

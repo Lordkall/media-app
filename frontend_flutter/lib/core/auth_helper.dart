@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 import 'profile_image_helper.dart';
 import 'api_client.dart';
+import 'health_module_helper.dart';
 
 class AuthHelper {
   static Map<String, dynamic>? decodeToken(String token) {
@@ -60,6 +61,7 @@ class AuthHelper {
   }
 
   static Future<void> logout({bool preserveBiometricToken = true}) async {
+    await HealthModuleHelper.onLogout();
     ProfileImageHelper.updateCurrentUserAvatar(null);
     final prefs = await SharedPreferences.getInstance();
     final currentToken = prefs.getString('access_token');

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:salud_now/screens/login_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../core/auth_helper.dart';
 import '../core/distribution_config.dart';
 
 class PaymentPendingScreen extends StatelessWidget {
@@ -8,8 +8,7 @@ class PaymentPendingScreen extends StatelessWidget {
   final bool isClinic;
 
   Future<void> _logout(BuildContext context) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('access_token');
+    await AuthHelper.logout();
     if (!context.mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
