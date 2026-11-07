@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, computed_field
 from typing import Optional
 from enum import Enum
 from datetime import date
@@ -135,6 +135,8 @@ class UserUpdate(BaseModel):
     address: Optional[str] = None
     gender: Optional[str] = None
     birth_date: Optional[date] = None
+    height_cm: Optional[float] = None
+    weight_kg: Optional[float] = None
     avatar_url: Optional[str] = None
     fcm_token: Optional[str] = None
     show_whatsapp: Optional[bool] = None
@@ -183,10 +185,19 @@ class UserResponse(BaseModel):
     address: Optional[str] = None
     gender: Optional[str] = None
     birth_date: Optional[date] = None
+    height_cm: Optional[float] = None
+    weight_kg: Optional[float] = None
     avatar_url: Optional[str] = None
     linked_doctor_id: Optional[int] = None
     assistant_doctor_name: Optional[str] = None
     is_blocked: bool = False
+
+    @computed_field
+    @property
+    def bmi(self) -> Optional[float]:
+        if self.height_cm and self.weight_kg and self.height_cm > 0:
+            return round(float(self.weight_kg) / ((float(self.height_cm) / 100.0) ** 2), 1)
+        return None
     
     class Config:
         from_attributes = True

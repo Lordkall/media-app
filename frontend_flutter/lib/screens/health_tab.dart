@@ -190,7 +190,11 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                             _buildWeeklyStepsCard(metrics),
                             const SizedBox(height: 18),
 
-                            // 4. Métricas de hoy (Ritmo cardíaco y Sueño)
+                            // 4. Medidas Corporales & IMC (Estatura, Peso, IMC)
+                            _buildBodyMetricsCard(context, metrics),
+                            const SizedBox(height: 18),
+
+                            // 5. Métricas de hoy (Ritmo cardíaco y Sueño)
                             _buildDailySummaryCard(context, metrics),
                             const SizedBox(height: 18),
 
@@ -1096,6 +1100,474 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
       ),
     );
   }
+
+  // --- Medidas Corporales & IMC (Altura, Peso e IMC con categoría y edición) ---
+  Widget _buildBodyMetricsCard(BuildContext context, HealthMetrics metrics) {
+    final height = metrics.heightCm;
+    final weight = metrics.weightKg;
+    final bmi = metrics.bmi;
+    final category = metrics.bmiCategory;
+
+    Color categoryColor;
+    if (bmi == null || bmi <= 0) {
+      categoryColor = const Color(0xFF94A3B8);
+    } else if (bmi < 18.5) {
+      categoryColor = const Color(0xFF3B82F6);
+    } else if (bmi < 25.0) {
+      categoryColor = const Color(0xFF10B981);
+    } else if (bmi < 30.0) {
+      categoryColor = const Color(0xFFF59E0B);
+    } else {
+      categoryColor = const Color(0xFFEF4444);
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0B2545).withValues(alpha: 0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0756A4).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.accessibility_new_rounded,
+                      color: Color(0xFF0756A4),
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Medidas Corporales & IMC',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                      Text(
+                        'Visible para tu médico en consulta',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              InkWell(
+                onTap: () => _openBodyMetricsSheet(context, metrics),
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFBFDBFE)),
+                  ),
+                  child: Row(
+                    children: const [
+                      Icon(Icons.edit_outlined, size: 14, color: Color(0xFF0756A4)),
+                      SizedBox(width: 4),
+                      Text(
+                        'Modificar',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0756A4),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.height_rounded, color: Color(0xFF0756A4), size: 20),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'Altura',
+                        style: TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        height != null ? '${height.toStringAsFixed(0)} cm' : '--',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.monitor_weight_outlined, color: Color(0xFF0756A4), size: 20),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'Peso',
+                        style: TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        weight != null ? '${weight.toStringAsFixed(1)} kg' : '--',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.speed_rounded, color: Color(0xFF0756A4), size: 20),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'IMC',
+                        style: TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        bmi != null ? bmi.toStringAsFixed(1) : '--',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: categoryColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: categoryColor.withValues(alpha: 0.25)),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  bmi != null && bmi >= 18.5 && bmi < 25.0
+                      ? Icons.check_circle_rounded
+                      : Icons.info_outline_rounded,
+                  color: categoryColor,
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    bmi != null
+                        ? 'Estado: $category (IMC ${bmi.toStringAsFixed(1)} kg/m²)'
+                        : 'Ingresa tu altura y peso para calcular tu IMC',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: categoryColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openBodyMetricsSheet(BuildContext context, HealthMetrics metrics) {
+    final heightCtrl = TextEditingController(
+      text: metrics.heightCm != null ? metrics.heightCm!.toStringAsFixed(0) : '',
+    );
+    final weightCtrl = TextEditingController(
+      text: metrics.weightKg != null ? metrics.weightKg!.toStringAsFixed(1) : '',
+    );
+
+    double? liveHeight = metrics.heightCm;
+    double? liveWeight = metrics.weightKg;
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (bottomCtx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final liveBmi = HealthMetrics.calculateBMI(liveHeight, liveWeight);
+            final liveCategory = HealthMetrics.getBMICategory(liveBmi);
+
+            Color catColor = const Color(0xFF94A3B8);
+            if (liveBmi != null && liveBmi > 0) {
+              if (liveBmi < 18.5) catColor = const Color(0xFF3B82F6);
+              else if (liveBmi < 25.0) catColor = const Color(0xFF10B981);
+              else if (liveBmi < 30.0) catColor = const Color(0xFFF59E0B);
+              else catColor = const Color(0xFFEF4444);
+            }
+
+            return Container(
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 20,
+                bottom: MediaQuery.of(bottomCtx).viewInsets.bottom + 24,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFCBD5E1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Actualizar Altura y Peso',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(bottomCtx),
+                        icon: const Icon(Icons.close, color: Color(0xFF64748B)),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Tu Índice de Masa Corporal (IMC) se calculará automáticamente y tus médicos podrán consultarlo en cada turno.',
+                    style: TextStyle(fontSize: 12, color: Color(0xFF64748B), height: 1.4),
+                  ),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: heightCtrl,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                    ],
+                    onChanged: (val) {
+                      setModalState(() {
+                        liveHeight = double.tryParse(val.trim());
+                      });
+                    },
+                    decoration: InputDecoration(
+                      labelText: 'Estatura / Altura',
+                      hintText: 'Ej. 170',
+                      suffixText: 'cm',
+                      prefixIcon: const Icon(Icons.height_rounded, color: Color(0xFF0756A4)),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: weightCtrl,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                    ],
+                    onChanged: (val) {
+                      setModalState(() {
+                        liveWeight = double.tryParse(val.trim());
+                      });
+                    },
+                    decoration: InputDecoration(
+                      labelText: 'Peso corporal',
+                      hintText: 'Ej. 70.5',
+                      suffixText: 'kg',
+                      prefixIcon: const Icon(Icons.monitor_weight_outlined, color: Color(0xFF0756A4)),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: catColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: catColor.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'IMC CALCULADO',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF64748B),
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              liveBmi != null ? '${liveBmi.toStringAsFixed(1)} kg/m²' : 'Completa ambos campos',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                                color: catColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: catColor,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            liveCategory,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0756A4),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        elevation: 0,
+                      ),
+                      onPressed: () async {
+                        final h = double.tryParse(heightCtrl.text.trim());
+                        final w = double.tryParse(weightCtrl.text.trim());
+                        if (h == null || h <= 40 || h > 260) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Por favor ingresa una estatura válida en centímetros (ej: 170).')),
+                          );
+                          return;
+                        }
+                        if (w == null || w <= 10 || w > 350) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Por favor ingresa un peso válido en kilogramos (ej: 70.5).')),
+                          );
+                          return;
+                        }
+
+                        HapticFeedback.mediumImpact();
+                        await HealthModuleHelper.updateBodyMetrics(heightCm: h, weightKg: w);
+                        if (context.mounted) {
+                          Navigator.pop(bottomCtx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              backgroundColor: Color(0xFF10B981),
+                              content: Text('Medidas e IMC actualizados exitosamente.'),
+                            ),
+                          );
+                        }
+                      },
+                      child: const Text(
+                        'Guardar medidas',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
 }
 
 // --- CustomPainter del Vaso de Agua estilizado en Azul Gradiente ---

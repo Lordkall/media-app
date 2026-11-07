@@ -89,6 +89,8 @@ async def lifespan(app: FastAPI):
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS fcm_token VARCHAR;"))
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS show_whatsapp BOOLEAN NOT NULL DEFAULT TRUE;"))
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS birth_date DATE;"))
+            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS height_cm NUMERIC(5, 1);"))
+            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS weight_kg NUMERIC(5, 1);"))
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS identity_document VARCHAR(13);"))
             await conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_users_identity_document ON users (identity_document) WHERE identity_document IS NOT NULL;"))
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_weekly_schedule_reminder_date DATE;"))

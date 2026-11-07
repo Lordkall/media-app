@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import '../core/api_client.dart';
 import '../core/auth_helper.dart';
+import '../core/health_module_helper.dart';
 import '../widgets/profile_avatar.dart';
 import '../models/ve_catalogs.dart';
 import 'manual_appointment_sheet.dart';
@@ -181,14 +182,17 @@ class _MisCitasTabState extends State<MisCitasTab> {
     final location = appt['doctor_location']?.toString() ?? '';
     final reason = appt['appointment_reason']?.toString() ??
         (appt['reason']?.toString() ?? 'Consulta Médica');
-    final status = (appt['status'] ?? 'scheduled').toString().toLowerCase();
+    final rawStatus = (appt['status'] ?? 'scheduled').toString().toLowerCase().trim();
+    final isCompleted = rawStatus == 'completed' || rawStatus == 'completada';
+    final isScheduled = rawStatus == 'scheduled' || rawStatus == 'programada';
+    final isCancelled = rawStatus == 'cancelled' || rawStatus == 'cancelada';
     final avatarUrl = appt['doctor_avatar'] as String?;
     final timeRemaining = _appointmentDateTime(appt).difference(caracasNow());
-    final String displayStatus = status == 'scheduled'
+    final String displayStatus = isScheduled
         ? _countdownLabel(timeRemaining)
-        : (status == 'completed'
+        : (isCompleted
             ? 'COMPLETADA'
-            : (status == 'cancelled' ? 'CANCELADA' : status.toUpperCase()));
+            : (isCancelled ? 'CANCELADA' : rawStatus.toUpperCase()));
 
     showDialog(
       context: context,
@@ -238,9 +242,9 @@ class _MisCitasTabState extends State<MisCitasTab> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: (status == 'scheduled' || status == 'completed')
+                          color: (isScheduled || isCompleted)
                               ? const Color(0xFF10B981)
-                              : (status == 'cancelled'
+                              : (isCancelled
                                   ? Colors.red.shade400
                                   : Colors.orange),
                           borderRadius: BorderRadius.circular(16),
@@ -319,6 +323,32 @@ class _MisCitasTabState extends State<MisCitasTab> {
                       'Edad del paciente',
                       appt['patient_age_display']?.toString() ??
                           '${appt['patient_age']}'),
+                ],
+                if (isDoctor) ...[
+                  const SizedBox(height: 12),
+                  _buildDetailRow(
+                    Icons.height_rounded,
+                    'Estatura / Altura',
+                    appt['patient_height'] != null
+                        ? '${appt['patient_height']} cm'
+                        : 'No registrada',
+                  ),
+                  const SizedBox(height: 12),
+                  _buildDetailRow(
+                    Icons.monitor_weight_outlined,
+                    'Peso corporal',
+                    appt['patient_weight'] != null
+                        ? '${appt['patient_weight']} kg'
+                        : 'No registrado',
+                  ),
+                  const SizedBox(height: 12),
+                  _buildDetailRow(
+                    Icons.speed_rounded,
+                    'Índice de Masa Corporal (IMC)',
+                    appt['patient_bmi'] != null
+                        ? '${appt['patient_bmi']} · ${HealthMetrics.getBMICategory((appt['patient_bmi'] as num?)?.toDouble())}'
+                        : 'No calculado',
+                  ),
                 ],
                 if (isDoctor &&
                     appt['patient_relationship']?.toString().isNotEmpty ==
@@ -1260,49 +1290,35 @@ class _MisCitasTabState extends State<MisCitasTab> {
                                                               FontWeight.bold),
                                                     ),
                                                     const SizedBox(height: 8),
-                                                    Container(
-                                                      padding: const EdgeInsets
-                                                          .symmetric(
-                                                          horizontal: 10,
-                                                          vertical: 4),
-                                                      decoration: BoxDecoration(
-                                                        color: (appt['status'] ==
-                                                                    'scheduled' ||
-                                                                appt['status'] ==
-                                                                    'completed')
-                                                            ? const Color(
-                                                                0xFF10B981)
-                                                            : (appt['status'] ==
-                                                                    'cancelled'
-                                                                ? Colors
-                                                                    .redAccent
-                                                                : Colors
-                                                                    .orange),
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(12),
-                                                      ),
-                                                      child: Text(
-                                                          appt['status'] ==
-                                                                  'scheduled'
-                                                              ? 'PROGRAMADA'
-                                                              : (appt['status'] ==
-                                                                      'completed'
-                                                                  ? 'COMPLETADA'
-                                                                  : (appt['status'] ==
-                                                                          'cancelled'
-                                                                      ? 'CANCELADA'
-                                                                      : appt['status']
-                                                                          .toString()
-                                                                          .toUpperCase())),
+                                                    Builder(builder: (_) {
+                                                      final rawCardStatus = (appt['status'] ?? 'scheduled').toString().toLowerCase().trim();
+                                                      final isCardCompleted = rawCardStatus == 'completed' || rawCardStatus == 'completada';
+                                                      final isCardScheduled = rawCardStatus == 'scheduled' || rawCardStatus == 'programada';
+                                                      final isCardCancelled = rawCardStatus == 'cancelled' || rawCardStatus == 'cancelada';
+                                                      final cardColor = (isCardScheduled || isCardCompleted)
+                                                          ? const Color(0xFF10B981)
+                                                          : (isCardCancelled ? Colors.redAccent : Colors.orange);
+                                                      final cardText = isCardScheduled
+                                                          ? 'PROGRAMADA'
+                                                          : (isCardCompleted
+                                                              ? 'COMPLETADA'
+                                                              : (isCardCancelled ? 'CANCELADA' : rawCardStatus.toUpperCase()));
+                                                      return Container(
+                                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                                        decoration: BoxDecoration(
+                                                          color: cardColor,
+                                                          borderRadius: BorderRadius.circular(12),
+                                                        ),
+                                                        child: Text(
+                                                          cardText,
                                                           style: const TextStyle(
-                                                              color:
-                                                                  Colors.white,
-                                                              fontSize: 10,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .bold)),
-                                                    ),
+                                                            color: Colors.white,
+                                                            fontSize: 10,
+                                                            fontWeight: FontWeight.bold,
+                                                          ),
+                                                        ),
+                                                      );
+                                                    }),
                                                     const SizedBox(height: 8),
                                                     if (!_doctorView) ...[
                                                       Row(
@@ -1582,19 +1598,18 @@ class _MisCitasTabState extends State<MisCitasTab> {
                                             ),
                                           ] else ...[
                                             const SizedBox(height: 8),
-                                            Text(
-                                              appt['status'] == 'cancelled'
-                                                  ? 'Cita Cancelada'
-                                                  : 'Cita Completada',
-                                              style: TextStyle(
-                                                color: appt['status'] ==
-                                                        'cancelled'
-                                                    ? Colors.white60
-                                                    : Colors.white70,
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
+                                            Builder(builder: (_) {
+                                              final rawS = (appt['status'] ?? '').toString().toLowerCase().trim();
+                                              final isCanc = rawS == 'cancelled' || rawS == 'cancelada';
+                                              return Text(
+                                                isCanc ? 'Cita Cancelada' : 'Cita Completada',
+                                                style: TextStyle(
+                                                  color: isCanc ? Colors.white60 : Colors.white70,
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              );
+                                            }),
                                           ],
                                         ],
                                       ),

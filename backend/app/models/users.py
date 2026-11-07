@@ -1,5 +1,5 @@
 from typing import Optional, List
-from sqlalchemy import String, Enum, ForeignKey, Text, DateTime, Boolean, Date
+from sqlalchemy import String, Enum, ForeignKey, Text, DateTime, Boolean, Date, Float
 from datetime import date, datetime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base
@@ -27,6 +27,8 @@ class User(Base):
     address: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     gender: Mapped[Optional[str]] = mapped_column(String(20), default="No Especificado")
     birth_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    height_cm: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    weight_kg: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     last_weekly_schedule_reminder_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     avatar_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     avatar_data: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -46,4 +48,3 @@ class User(Base):
     patient_profile: Mapped[Optional["Patient"]] = relationship(back_populates="user")
     clinic_profile: Mapped[Optional["Clinic"]] = relationship(back_populates="user", foreign_keys="[Clinic.user_id]")
     notifications: Mapped[List["Notification"]] = relationship(back_populates="user")
-

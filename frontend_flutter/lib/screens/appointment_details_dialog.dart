@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/health_module_helper.dart';
 import '../widgets/profile_avatar.dart';
 
 Future<void> showAppointmentDetailsDialog(
@@ -11,12 +12,21 @@ Future<void> showAppointmentDetailsDialog(
       (isDoctor ? appt['patient_name'] : appt['doctor_name'])?.toString() ??
           (isDoctor ? 'Paciente' : 'Doctor');
   final specialty = appt['doctor_specialty']?.toString() ?? 'Consulta Médica';
-  final status = (appt['status'] ?? 'scheduled').toString().toLowerCase();
-  final displayStatus = status == 'scheduled'
+  final rawStatus = (appt['status'] ?? 'scheduled').toString().toLowerCase().trim();
+  final isCompleted = rawStatus == 'completed' || rawStatus == 'completada';
+  final isScheduled = rawStatus == 'scheduled' || rawStatus == 'programada';
+  final isCancelled = rawStatus == 'cancelled' || rawStatus == 'cancelada';
+
+  final displayStatus = isScheduled
       ? 'PROGRAMADA'
-      : (status == 'completed'
+      : (isCompleted
           ? 'COMPLETADA'
-          : (status == 'cancelled' ? 'CANCELADA' : status.toUpperCase()));
+          : (isCancelled ? 'CANCELADA' : rawStatus.toUpperCase()));
+  final statusColor = isCompleted
+      ? const Color(0xFF10B981)
+      : (isScheduled
+          ? Colors.green.shade600
+          : (isCancelled ? Colors.red.shade400 : Colors.blueGrey));
   final avatarUrl = appt['doctor_avatar']?.toString();
 
   await showDialog<void>(
@@ -59,11 +69,7 @@ Future<void> showAppointmentDetailsDialog(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                          color: status == 'scheduled'
-                              ? Colors.green.shade600
-                              : (status == 'cancelled'
-                                  ? Colors.red.shade400
-                                  : Colors.blueGrey),
+                          color: statusColor,
                           borderRadius: BorderRadius.circular(16)),
                       child: Text(displayStatus,
                           style: const TextStyle(
@@ -134,6 +140,32 @@ Future<void> showAppointmentDetailsDialog(
                     'Edad del paciente',
                     appt['patient_age_display']?.toString() ??
                         '${appt['patient_age']}'),
+              ],
+              if (isDoctor) ...[
+                const SizedBox(height: 12),
+                _detail(
+                  Icons.height_rounded,
+                  'Estatura / Altura',
+                  appt['patient_height'] != null
+                      ? '${appt['patient_height']} cm'
+                      : 'No registrada',
+                ),
+                const SizedBox(height: 12),
+                _detail(
+                  Icons.monitor_weight_outlined,
+                  'Peso corporal',
+                  appt['patient_weight'] != null
+                      ? '${appt['patient_weight']} kg'
+                      : 'No registrado',
+                ),
+                const SizedBox(height: 12),
+                _detail(
+                  Icons.speed_rounded,
+                  'Índice de Masa Corporal (IMC)',
+                  appt['patient_bmi'] != null
+                      ? '${appt['patient_bmi']} · ${HealthMetrics.getBMICategory((appt['patient_bmi'] as num?)?.toDouble())}'
+                      : 'No calculado',
+                ),
               ],
               if (isDoctor &&
                   appt['patient_relationship']?.toString().isNotEmpty ==

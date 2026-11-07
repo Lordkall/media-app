@@ -662,6 +662,25 @@ async def get_my_appointments(
         ) if doctor_view else (f"{pat.user.first_name} {pat.user.last_name}" if pat and pat.user else (f"{appt.patient_first_name or ''} {appt.patient_last_name or ''}".strip() or "Paciente presencial"))
         doctor_full_name = f"{'Dra.' if doc.user.gender in ['Femenino', 'Femenina'] else 'Dr.'} {doc.user.first_name} {doc.user.last_name}" if doc and doc.user else "Dr(a). Médico"
 
+        patient_height = None
+        patient_weight = None
+        patient_bmi = None
+        if pat and pat.user:
+            raw_h = getattr(pat.user, "height_cm", None)
+            raw_w = getattr(pat.user, "weight_kg", None)
+            if raw_h is not None:
+                try:
+                    patient_height = float(raw_h)
+                except Exception:
+                    pass
+            if raw_w is not None:
+                try:
+                    patient_weight = float(raw_w)
+                except Exception:
+                    pass
+            if patient_height and patient_weight and patient_height > 0:
+                patient_bmi = round(patient_weight / ((patient_height / 100.0) ** 2), 1)
+
         out.append({
             "id": appt.id,
             "patient_id": appt.patient_id,
@@ -670,6 +689,9 @@ async def get_my_appointments(
             "patient_name": patient_full_name,
             "patient_age": patient_age,
             "patient_age_display": age_display,
+            "patient_height": patient_height,
+            "patient_weight": patient_weight,
+            "patient_bmi": patient_bmi,
             "patient_relationship": appt.dependent_relationship if appt.is_for_dependent else None,
             "patient_gender": patient_gender,
             "doctor_full_name": doctor_full_name,

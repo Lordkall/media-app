@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'api_client.dart';
 import 'local_notification_service.dart';
 
 class HealthMetrics {
@@ -14,6 +15,10 @@ class HealthMetrics {
   final bool isNativePedometerActive; // steps tracked natively
   final List<int> weeklySteps; // Mon-Sun daily steps (7 days)
   final bool breathingWeeklyReminderEnabled; // weekly breathing & anti-stress reminder
+  final double? heightCm; // e.g. 170.0 cm
+  final double? weightKg; // e.g. 70.0 kg
+  final double? bmi; // Body Mass Index (calculated automatically)
+  final String bmiCategory; // "Bajo peso", "Normal", "Sobrepeso", "Obesidad"
 
   const HealthMetrics({
     this.heartRate = 72,
@@ -27,6 +32,10 @@ class HealthMetrics {
     this.isNativePedometerActive = true,
     this.weeklySteps = const [4200, 6800, 5100, 9000, 3400, 1800, 0],
     this.breathingWeeklyReminderEnabled = true,
+    this.heightCm,
+    this.weightKg,
+    this.bmi,
+    this.bmiCategory = 'Sin registrar',
   });
 
   HealthMetrics copyWith({
@@ -41,6 +50,10 @@ class HealthMetrics {
     bool? isNativePedometerActive,
     List<int>? weeklySteps,
     bool? breathingWeeklyReminderEnabled,
+    double? heightCm,
+    double? weightKg,
+    double? bmi,
+    String? bmiCategory,
   }) {
     return HealthMetrics(
       heartRate: heartRate ?? this.heartRate,
@@ -57,7 +70,27 @@ class HealthMetrics {
       weeklySteps: weeklySteps ?? this.weeklySteps,
       breathingWeeklyReminderEnabled:
           breathingWeeklyReminderEnabled ?? this.breathingWeeklyReminderEnabled,
+      heightCm: heightCm ?? this.heightCm,
+      weightKg: weightKg ?? this.weightKg,
+      bmi: bmi ?? this.bmi,
+      bmiCategory: bmiCategory ?? this.bmiCategory,
     );
+  }
+
+  static double? calculateBMI(double? heightCm, double? weightKg) {
+    if (heightCm == null || weightKg == null || heightCm <= 0 || weightKg <= 0) {
+      return null;
+    }
+    final meters = heightCm / 100.0;
+    return double.parse((weightKg / (meters * meters)).toStringAsFixed(1));
+  }
+
+  static String getBMICategory(double? bmi) {
+    if (bmi == null || bmi <= 0) return 'Sin registrar';
+    if (bmi < 18.5) return 'Bajo peso';
+    if (bmi < 25.0) return 'Normal';
+    if (bmi < 30.0) return 'Sobrepeso';
+    return 'Obesidad';
   }
 
   static String calculateSleepQuality(double hours) {
@@ -79,6 +112,8 @@ class HealthModuleHelper {
   static const String _waterIntervalKey = 'health_water_interval_hours';
   static const String _breathingWeeklyReminderKey =
       'health_breathing_weekly_reminder_enabled';
+  static const String _heightKey = 'health_body_height_cm';
+  static const String _weightKey = 'health_body_weight_kg';
 
   /// Default disabled (false) as requested by user.
   static final ValueNotifier<bool> isEnabledNotifier = ValueNotifier<bool>(false);
@@ -102,6 +137,11 @@ class HealthModuleHelper {
       final breathingWeekly =
           prefs.getBool(_breathingWeeklyReminderKey) ?? true;
 
+      final height = prefs.getDouble(_heightKey);
+      final weight = prefs.getDouble(_weightKey);
+      final bmi = HealthMetrics.calculateBMI(height, weight);
+      final bmiCategory = HealthMetrics.getBMICategory(bmi);
+
       metricsNotifier.value = HealthMetrics(
         heartRate: hr,
         steps: st,
@@ -114,6 +154,10 @@ class HealthModuleHelper {
         isNativePedometerActive: true,
         weeklySteps: [4200, 6800, 5100, 9000, 3400, 1800, st],
         breathingWeeklyReminderEnabled: breathingWeekly,
+        heightCm: height,
+        weightKg: weight,
+        bmi: bmi,
+        bmiCategory: bmiCategory,
       );
 
       if (reminder && !kIsWeb) {
@@ -167,6 +211,32 @@ class HealthModuleHelper {
       sleepHours: sleepHours,
       sleepQuality: quality,
       weeklySteps: updatedWeekly,
+    );
+  }
+
+  static Future<void> updateBodyMetrics({
+    required double heightCm,
+    required double weightKg,
+  }) async {
+    final bmi = HealthMetrics.calculateBMI(heightCm, weightKg);
+    final bmiCat = HealthMetrics.getBMICategory(bmi);
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble(_heightKey, heightCm);
+      await prefs.setDouble(_weightKey, weightKg);
+      // Sync with user profile on backend
+      await ApiClient.put('/users/me', {
+        'height_cm': heightCm,
+        'weight_kg': weightKg,
+      });
+    } catch (_) {}
+
+    metricsNotifier.value = metricsNotifier.value.copyWith(
+      heightCm: heightCm,
+      weightKg: weightKg,
+      bmi: bmi,
+      bmiCategory: bmiCat,
     );
   }
 
