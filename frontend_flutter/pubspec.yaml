@@ -30,8 +30,6 @@ dependencies:
   printing: ^5.13.1
   pedometer: ^4.2.0
   permission_handler: 11.3.1
-  flutter_blue_plus: ^2.3.15
-  health: ^13.1.4
 
 dev_dependencies:
   flutter_test:

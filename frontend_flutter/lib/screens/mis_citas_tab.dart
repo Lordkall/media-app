@@ -672,40 +672,62 @@ class _MisCitasTabState extends State<MisCitasTab> {
           Row(
             children: [
               Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
+                child: Container(
+                  height: 38,
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(19),
+                    border: Border.all(color: const Color(0xFFDCE8F8)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF0B2545).withValues(alpha: 0.04),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
                   child: Row(
                     children: [
-                      _buildPastStatusChip('Todas'),
-                      const SizedBox(width: 6),
-                      _buildPastStatusChip('Completadas'),
-                      const SizedBox(width: 6),
-                      _buildPastStatusChip('Canceladas'),
+                      _buildPastStatusSegment('Todas', const Color(0xFF0756A4)),
+                      _buildPastStatusSegment(
+                          'Completadas', const Color(0xFF16A34A)),
+                      _buildPastStatusSegment(
+                          'Canceladas', const Color(0xFFDC2626)),
                     ],
                   ),
                 ),
               ),
               const SizedBox(width: 8),
-              TextButton.icon(
-                onPressed: _clearHistory,
-                icon: const Icon(Icons.delete_outline_rounded,
-                    color: Color(0xFFDC2626), size: 16),
-                label: const Text(
-                  'Borrar',
-                  style: TextStyle(
-                    color: Color(0xFFDC2626),
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12,
-                  ),
-                ),
-                style: TextButton.styleFrom(
-                  backgroundColor: const Color(0xFFFEE2E2),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(19),
+                  onTap: _clearHistory,
+                  child: Container(
+                    height: 38,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEE2E2),
+                      borderRadius: BorderRadius.circular(19),
+                      border: Border.all(color: const Color(0xFFFECACA)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(Icons.delete_outline_rounded,
+                            color: Color(0xFFDC2626), size: 16),
+                        SizedBox(width: 4),
+                        Text(
+                          'Borrar',
+                          style: TextStyle(
+                            color: Color(0xFFDC2626),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -716,41 +738,32 @@ class _MisCitasTabState extends State<MisCitasTab> {
     );
   }
 
-  Widget _buildPastStatusChip(String filterName) {
+  Widget _buildPastStatusSegment(String filterName, Color activeColor) {
     final selected = _pastStatusFilter == filterName;
-    Color activeColor = const Color(0xFF0756A4);
-    if (filterName == 'Completadas') activeColor = const Color(0xFF16A34A);
-    if (filterName == 'Canceladas') activeColor = const Color(0xFFDC2626);
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(20),
-      onTap: () => setState(() => _pastStatusFilter = filterName),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: selected ? activeColor : Colors.white.withValues(alpha: 0.85),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: selected ? activeColor : const Color(0xFFCBD5E1),
-            width: selected ? 1.5 : 1.0,
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          HapticFeedback.selectionClick();
+          setState(() => _pastStatusFilter = filterName);
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: selected ? activeColor : Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
           ),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: activeColor.withValues(alpha: 0.25),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  )
-                ]
-              : null,
-        ),
-        child: Text(
-          filterName,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: selected ? FontWeight.bold : FontWeight.w600,
-            color: selected ? Colors.white : const Color(0xFF475569),
+          child: Text(
+            filterName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: selected ? FontWeight.bold : FontWeight.w600,
+              color: selected ? Colors.white : const Color(0xFF64748B),
+            ),
           ),
         ),
       ),
@@ -885,26 +898,27 @@ class _MisCitasTabState extends State<MisCitasTab> {
     final turn = appointment['turn_number']?.toString();
     final normalizedAppointment = Map<String, dynamic>.from(appointment);
 
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        onTap: () => _showAppointmentDetails(appointment),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFD7E4F3)),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF0B2545).withValues(alpha: .08),
-                blurRadius: 14,
-                offset: const Offset(0, 5),
-              ),
-            ],
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0B2545).withValues(alpha: .06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
-          child: Row(
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () => _showAppointmentDetails(appointment),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
             children: [
               Container(
                 width: 52,
@@ -970,24 +984,24 @@ class _MisCitasTabState extends State<MisCitasTab> {
                 ),
               ),
               if (scheduled) ...[
-                const SizedBox(width: 4),
+                const SizedBox(width: 6),
                 Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _patientAppointmentIconButton(
-                      icon: Icons.replay_rounded,
+                      icon: Icons.restart_alt_rounded,
                       tooltip: 'Reprogramar cita',
                       color: const Color(0xFF0756A4),
-                      background: const Color(0xFFE5EFFB),
+                      background: const Color(0xFFEFF6FF),
                       onPressed: () =>
                           _reschedulePatientAppointment(normalizedAppointment),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     _patientAppointmentIconButton(
                       icon: Icons.close_rounded,
                       tooltip: 'Cancelar cita',
-                      color: const Color(0xFFCC4357),
-                      background: const Color(0xFFFCE7EA),
+                      color: const Color(0xFFEF4444),
+                      background: const Color(0xFFFEF2F2),
                       onPressed: () =>
                           _cancelPatientAppointment(normalizedAppointment),
                     ),
@@ -998,8 +1012,9 @@ class _MisCitasTabState extends State<MisCitasTab> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _appointmentMiniLabel(IconData icon, String label, {Color? color}) {
     return Row(
@@ -1032,15 +1047,22 @@ class _MisCitasTabState extends State<MisCitasTab> {
     return Tooltip(
       message: tooltip,
       child: Material(
-        color: background,
-        shape: const CircleBorder(),
+        color: Colors.transparent,
         child: InkWell(
           customBorder: const CircleBorder(),
           onTap: onPressed,
-          child: SizedBox(
-            width: 34,
-            height: 34,
-            child: Icon(icon, size: 18, color: color),
+          child: Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: background,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: color.withValues(alpha: 0.2),
+                width: 1,
+              ),
+            ),
+            child: Icon(icon, size: 17, color: color),
           ),
         ),
       ),
