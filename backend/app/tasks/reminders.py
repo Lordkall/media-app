@@ -211,16 +211,25 @@ async def send_water_reminders_async():
         now_utc = datetime.now(timezone.utc)
         two_hours_ago = now_utc - timedelta(hours=2)
 
+        # Si un usuario nuevo tiene last_water_reminder_date en None, inicializarlo
+        # para que espere su intervalo completo de 2 horas antes del primer recordatorio.
+        new_users_res = await session.execute(
+            select(User).where(
+                User.water_reminder_enabled == True,
+                User.last_water_reminder_date.is_(None),
+            )
+        )
+        for nu in new_users_res.scalars().all():
+            nu.last_water_reminder_date = now_utc
+
+        # Solo enviar a quienes ya hayan cumplido sus 2 horas
         query = (
             select(User)
             .where(
                 User.water_reminder_enabled == True,
                 User.fcm_token.isnot(None),
                 User.fcm_token != "",
-                (
-                    (User.last_water_reminder_date.is_(None)) |
-                    (User.last_water_reminder_date <= two_hours_ago)
-                ),
+                User.last_water_reminder_date <= two_hours_ago,
             )
             .limit(100)
         )

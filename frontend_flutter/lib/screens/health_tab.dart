@@ -381,19 +381,67 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                         child: ValueListenableBuilder<int?>(
                           valueListenable: SmartwatchBleHelper.liveBpmNotifier,
                           builder: (context, bpm, _) {
-                            return Text(
-                              bpm != null
-                                  ? '$bpm bpm (Transmitiendo en tiempo real)'
-                                  : 'Esperando primera lectura del sensor...',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF0F172A),
-                              ),
+                            if (bpm != null) {
+                              return Text(
+                                '$bpm bpm (Transmitiendo en tiempo real)',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF0F172A),
+                                ),
+                              );
+                            }
+                            return Row(
+                              children: [
+                                const Expanded(
+                                  child: Text(
+                                    'Esperando lectura...',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF64748B),
+                                    ),
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.sync_rounded,
+                                      size: 18, color: Color(0xFF0756A4)),
+                                  tooltip: 'Pedir lectura al reloj',
+                                  onPressed: () async {
+                                    HapticFeedback.selectionClick();
+                                    await SmartwatchBleHelper
+                                        .requestHeartRateReading();
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                            content: Text(
+                                                'Solicitando telemetría a tu smartwatch...')),
+                                      );
+                                    }
+                                  },
+                                ),
+                                TextButton(
+                                  onPressed: () =>
+                                      _showManualBpmDialog(context),
+                                  style: TextButton.styleFrom(
+                                    padding:
+                                        const EdgeInsets.symmetric(horizontal: 6),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  child: const Text('Fijar BPM',
+                                      style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF0756A4))),
+                                ),
+                              ],
                             );
                           },
                         ),
                       ),
+                      const SizedBox(width: 8),
                       TextButton(
                         onPressed: () {
                           HapticFeedback.selectionClick();
@@ -468,6 +516,71 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
           ),
         );
       },
+    );
+  }
+
+  void _showManualBpmDialog(BuildContext context) {
+    final controller = TextEditingController(
+        text: SmartwatchBleHelper.liveBpmNotifier.value?.toString() ?? '86');
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: const [
+            Icon(Icons.watch_rounded, color: Color(0xFF0756A4)),
+            SizedBox(width: 8),
+            Text('Lectura de tu reloj', style: TextStyle(fontSize: 16)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Ingresa las pulsaciones (BPM) que marca tu smartwatch (ej. 86 bpm) para sincronizarlas al instante con tu aplicación y el Home:',
+              style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: 'Pulsaciones (BPM)',
+                suffixText: 'bpm',
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0756A4),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              final val = int.tryParse(controller.text.trim());
+              if (val != null && val >= 35 && val <= 240) {
+                SmartwatchBleHelper.setLiveBpm(val);
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                      content:
+                          Text('Ritmo cardíaco actualizado a $val bpm.')),
+                );
+              }
+            },
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
     );
   }
 

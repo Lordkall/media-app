@@ -124,6 +124,8 @@ class HealthModuleHelper {
   static const String _weeklyStepsWeekKey = 'health_weekly_steps_week';
 
   static String _activeUserId = 'guest';
+  static bool _waterReminderScheduled = false;
+  static int? _scheduledIntervalHours;
 
   static String _userKey(String base) => 'user_${_activeUserId}_$base';
 
@@ -306,7 +308,12 @@ class HealthModuleHelper {
         bmiCategory: bmiCategory,
       );
 
-      if (reminder && !kIsWeb) {
+      if (reminder &&
+          !kIsWeb &&
+          (!_waterReminderScheduled || _scheduledIntervalHours != interval) &&
+          water < goal) {
+        _waterReminderScheduled = true;
+        _scheduledIntervalHours = interval;
         await LocalNotificationService.scheduleWaterReminder(
             intervalHours: interval);
       }
@@ -555,21 +562,15 @@ class HealthModuleHelper {
         if (enabled &&
             metricsNotifier.value.waterMilliliters <
                 metricsNotifier.value.waterGoalMilliliters) {
+          _waterReminderScheduled = true;
+          _scheduledIntervalHours = interval;
           await LocalNotificationService.scheduleWaterReminder(
               intervalHours: interval);
-          await LocalNotificationService.showWaterReminderNow(
-            title: '💧 Recordatorio de agua activado',
-            body:
-                'Te avisaremos cada $interval hora(s) para mantenerte hidratado.',
-          );
         } else {
+          _waterReminderScheduled = false;
+          _scheduledIntervalHours = null;
           await LocalNotificationService.cancelWaterReminder();
         }
-      }
-      if (enabled) {
-        try {
-          await ApiClient.post('/users/me/notifications/water-reminder', {});
-        } catch (_) {}
       }
       try {
         await ApiClient.put('/users/me', {'water_reminder_enabled': enabled});

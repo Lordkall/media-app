@@ -45,7 +45,9 @@ class SmartwatchBleHelper {
 
   static BluetoothDevice? _connectedDevice;
   static StreamSubscription<BluetoothConnectionState>? _connectionStateSub;
-  static StreamSubscription<List<int>>? _heartRateSub;
+  static final List<StreamSubscription<List<int>>> _notifySubscriptions = [];
+  static final List<BluetoothCharacteristic> _writeCharacteristics = [];
+  static final List<BluetoothCharacteristic> _readCharacteristics = [];
   static StreamSubscription<List<ScanResult>>? _scanSub;
 
   // Standard Heart Rate GATT Service & Characteristic UUIDs
@@ -130,9 +132,23 @@ class SmartwatchBleHelper {
 
     try {
       if (await FlutterBluePlus.adapterState.first != BluetoothAdapterState.on) {
-        debugPrint('Bluetooth apagado');
-        statusNotifier.value = SmartwatchConnectionStatus.error;
-        return;
+        debugPrint('Bluetooth apagado, solicitando activación a Android...');
+        try {
+          await FlutterBluePlus.turnOn();
+          final state = await FlutterBluePlus.adapterState
+              .where((s) => s == BluetoothAdapterState.on)
+              .first
+              .timeout(const Duration(seconds: 4),
+                  onTimeout: () => BluetoothAdapterState.off);
+          if (state != BluetoothAdapterState.on) {
+            statusNotifier.value = SmartwatchConnectionStatus.error;
+            return;
+          }
+        } catch (e) {
+          debugPrint('No se pudo activar Bluetooth automáticamente: $e');
+          statusNotifier.value = SmartwatchConnectionStatus.error;
+          return;
+        }
       }
 
       statusNotifier.value = SmartwatchConnectionStatus.scanning;
@@ -295,42 +311,46 @@ class SmartwatchBleHelper {
         }
       });
 
+      for (final sub in _notifySubscriptions) {
+        await sub.cancel();
+      }
+      _notifySubscriptions.clear();
+      _writeCharacteristics.clear();
+      _readCharacteristics.clear();
+
       final services = await device.discoverServices();
-      bool foundHeartRate = false;
+      debugPrint('Servicios BLE descubiertos en $name: ${services.length}');
 
       for (final s in services) {
-        if (s.uuid == heartRateServiceUuid) {
-          for (final c in s.characteristics) {
-            if (c.uuid == heartRateMeasurementUuid) {
-              foundHeartRate = true;
+        for (final c in s.characteristics) {
+          if (c.properties.notify || c.properties.indicate) {
+            try {
               await c.setNotifyValue(true);
-              await _heartRateSub?.cancel();
-              _heartRateSub = c.onValueReceived.listen((data) {
-                _parseHeartRateData(data);
+              final sub = c.onValueReceived.listen((data) {
+                _processIncomingData(data, c.uuid);
               });
-              break;
+              _notifySubscriptions.add(sub);
+            } catch (e) {
+              debugPrint('Error habilitando notify en ${c.uuid}: $e');
             }
+          }
+
+          if (c.properties.read) {
+            _readCharacteristics.add(c);
+            try {
+              final readData = await c.read();
+              _processIncomingData(readData, c.uuid);
+            } catch (_) {}
+          }
+
+          if (c.properties.write || c.properties.writeWithoutResponse) {
+            _writeCharacteristics.add(c);
           }
         }
       }
 
-      // Si no encontró el servicio estándar 0x180D, inspeccionar características con notificación
-      if (!foundHeartRate) {
-        for (final s in services) {
-          for (final c in s.characteristics) {
-            if (c.properties.notify || c.properties.indicate) {
-              // Habilitar notificación para capturar telemetría del reloj
-              try {
-                await c.setNotifyValue(true);
-                _heartRateSub = c.onValueReceived.listen((data) {
-                  _parseVendorHeartRate(data);
-                });
-                break;
-              } catch (_) {}
-            }
-          }
-        }
-      }
+      // Enviar solicitud de telemetría a Da Fit (Y20GTA) y BLE genéricos
+      await requestHeartRateReading();
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_prefKey('last_device_id'), device.remoteId.str);
@@ -339,12 +359,39 @@ class SmartwatchBleHelper {
       statusNotifier.value = SmartwatchConnectionStatus.connected;
       connectedDeviceNameNotifier.value = name;
       debugPrint(
-          'Smartwatch conectado exitosamente: $name (HR detectado: $foundHeartRate)');
+          'Smartwatch conectado exitosamente: $name (${_notifySubscriptions.length} canales activos)');
       return true;
     } catch (e) {
       debugPrint('Error al conectar smartwatch: $e');
       statusNotifier.value = SmartwatchConnectionStatus.error;
       return false;
+    }
+  }
+
+  /// Envía comandos a relojes Da Fit / Y20 / estándar para solicitar la lectura de pulso
+  static Future<void> requestHeartRateReading() async {
+    final commands = [
+      [0x04, 0x01], // Da Fit / Moya start HR measurement / request live HR
+      [0x05, 0x01], // Da Fit query current health status
+      [0x09, 0x01], // Da Fit request last measurement
+      [0xAA, 0x04, 0x01, 0x00],
+      [0xBA, 0x01],
+      [0x04, 0x02],
+    ];
+
+    for (final c in _writeCharacteristics) {
+      for (final cmd in commands) {
+        try {
+          await c.write(cmd, withoutResponse: c.properties.writeWithoutResponse);
+        } catch (_) {}
+      }
+    }
+
+    for (final c in _readCharacteristics) {
+      try {
+        final data = await c.read();
+        _processIncomingData(data, c.uuid);
+      } catch (_) {}
     }
   }
 
@@ -365,6 +412,37 @@ class SmartwatchBleHelper {
     }
   }
 
+  /// Procesa cualquier paquete entrante de telemetría BLE (estándar o Da Fit/Y20)
+  static void _processIncomingData(List<int> data, Guid uuid) {
+    if (data.isEmpty) return;
+
+    // 1. Estándar GATT Heart Rate Measurement (0x2A37)
+    if (uuid == heartRateMeasurementUuid ||
+        uuid.str.toLowerCase().contains('2a37')) {
+      _parseHeartRateData(data);
+      return;
+    }
+
+    // 2. Telemetría Da Fit / Y20 / Periféricos propietarios
+    if (data.length >= 2) {
+      // Ignorar paquetes de sincronización de fecha/hora (suelen comenzar con 0x01 y año actual)
+      if (data.length >= 7 && data[0] == 0x01) return;
+
+      for (int i = 0; i < data.length; i++) {
+        final val = data[i];
+        if (val >= 45 && val <= 220) {
+          setLiveBpm(val);
+          return;
+        }
+      }
+    } else if (data.length == 1) {
+      final val = data[0];
+      if (val >= 45 && val <= 220) {
+        setLiveBpm(val);
+      }
+    }
+  }
+
   /// Parsea el paquete estándar de Heart Rate Measurement (GATT 0x2A37)
   static void _parseHeartRateData(List<int> data) {
     if (data.isEmpty) return;
@@ -379,45 +457,34 @@ class SmartwatchBleHelper {
         bpm = data[1];
       }
 
-      if (bpm > 30 && bpm < 250) {
-        liveBpmNotifier.value = bpm;
-        HealthModuleHelper.updateMetrics(
-          heartRate: bpm,
-          sleepHours: HealthModuleHelper.metricsNotifier.value.sleepHours,
-        );
+      if (bpm >= 35 && bpm <= 240) {
+        setLiveBpm(bpm);
       }
     } catch (e) {
       debugPrint('Error parseando datos de ritmo cardíaco: $e');
     }
   }
 
-  /// Intenta extraer datos de pulso de paquetes propietarios de relojes tipo Da Fit / Chinese SDK
-  static void _parseVendorHeartRate(List<int> data) {
-    if (data.length < 3) return;
-    try {
-      for (int i = 0; i < data.length; i++) {
-        final val = data[i];
-        // Rango fisiológico de latidos por minuto en reposo/actividad
-        if (val >= 45 && val <= 200) {
-          // Si el paquete tiene encabezados comunes de telemetría de pulso
-          if (i > 0 && (data[0] == 0xAB || data[0] == 0xAA || data[0] == 0x08)) {
-            liveBpmNotifier.value = val;
-            HealthModuleHelper.updateMetrics(
-              heartRate: val,
-              sleepHours: HealthModuleHelper.metricsNotifier.value.sleepHours,
-            );
-            break;
-          }
-        }
-      }
-    } catch (_) {}
+  /// Actualiza el ritmo cardíaco en vivo y sincroniza los modelos y estado global
+  static void setLiveBpm(int bpm) {
+    if (bpm < 35 || bpm > 240) return;
+    liveBpmNotifier.value = bpm;
+    HealthModuleHelper.updateMetrics(
+      heartRate: bpm,
+      sleepHours: HealthModuleHelper.metricsNotifier.value.sleepHours,
+    );
   }
 
   /// Desconecta el smartwatch actualmente activo
   static Future<void> disconnect() async {
     try {
-      await _heartRateSub?.cancel();
-      _heartRateSub = null;
+      for (final sub in _notifySubscriptions) {
+        await sub.cancel();
+      }
+      _notifySubscriptions.clear();
+      _writeCharacteristics.clear();
+      _readCharacteristics.clear();
+
       await _connectionStateSub?.cancel();
       _connectionStateSub = null;
       await _connectedDevice?.disconnect();
