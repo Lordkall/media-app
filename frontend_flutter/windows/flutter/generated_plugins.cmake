@@ -6,6 +6,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   app_links
   file_selector_windows
   firebase_core
+  flutter_blue_plus_winrt
   local_auth_windows
   permission_handler_windows
   printing

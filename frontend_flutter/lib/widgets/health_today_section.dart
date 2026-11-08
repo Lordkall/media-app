@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../core/health_module_helper.dart';
+import '../core/smartwatch_ble_helper.dart';
 
 class HealthTodaySection extends StatelessWidget {
   const HealthTodaySection({super.key});
@@ -868,107 +869,182 @@ class _AnimatedHeartCardState extends State<_AnimatedHeartCard>
       vsync: this,
       duration: const Duration(milliseconds: 1400),
     )..repeat();
+    SmartwatchBleHelper.liveBpmNotifier.addListener(_onBpmChanged);
+    _onBpmChanged();
+  }
+
+  void _onBpmChanged() {
+    final bpm = SmartwatchBleHelper.liveBpmNotifier.value;
+    if (bpm != null && bpm >= 40 && bpm <= 220) {
+      final ms = (60000 / bpm).round().clamp(300, 2000);
+      _animController.duration = Duration(milliseconds: ms);
+    } else {
+      _animController.duration = const Duration(milliseconds: 1400);
+    }
   }
 
   @override
   void dispose() {
+    SmartwatchBleHelper.liveBpmNotifier.removeListener(_onBpmChanged);
     _animController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFF1F5F9)),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF0B2545).withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+    return ValueListenableBuilder<int?>(
+      valueListenable: SmartwatchBleHelper.liveBpmNotifier,
+      builder: (context, liveBpm, _) {
+        final effectiveBpm = liveBpm ?? widget.heartRate;
+        final isStreaming = liveBpm != null;
+
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isStreaming
+                  ? const Color(0xFF10B981).withValues(alpha: 0.35)
+                  : const Color(0xFFF1F5F9),
+              width: isStreaming ? 1.5 : 1.0,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: isStreaming
+                    ? const Color(0xFF10B981).withValues(alpha: 0.08)
+                    : const Color(0xFF0B2545).withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: widget.onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    AnimatedBuilder(
-                      animation: _animController,
-                      builder: (context, child) {
-                        final beat = math.sin(_animController.value * math.pi * 2);
-                        final scale = 1.0 + (beat > 0.7 ? (beat - 0.7) * 0.4 : 0.0);
-                        return Transform.scale(
-                          scale: scale,
-                          child: const Icon(Icons.favorite,
-                              color: Color(0xFFEF4444), size: 15),
-                        );
-                      },
-                    ),
-                    const SizedBox(width: 4),
-                    const Text(
-                      'Cardíaco',
-                      style: TextStyle(
-                        color: Color(0xFF64748B),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-                Column(
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(20),
+              onTap: widget.onTap,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      '${widget.heartRate}',
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF0F172A),
-                        height: 1.1,
-                      ),
+                    Row(
+                      children: [
+                        AnimatedBuilder(
+                          animation: _animController,
+                          builder: (context, child) {
+                            final beat =
+                                math.sin(_animController.value * math.pi * 2);
+                            final scale =
+                                1.0 + (beat > 0.7 ? (beat - 0.7) * 0.4 : 0.0);
+                            return Transform.scale(
+                              scale: scale,
+                              child: Icon(
+                                Icons.favorite,
+                                color: isStreaming
+                                    ? const Color(0xFF10B981)
+                                    : const Color(0xFFEF4444),
+                                size: 15,
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 4),
+                        const Text(
+                          'Cardíaco',
+                          style: TextStyle(
+                            color: Color(0xFF64748B),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (isStreaming) ...[
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 5, vertical: 1.5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981)
+                                  .withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 5,
+                                  height: 5,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF10B981),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 3),
+                                const Text(
+                                  'En vivo',
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF10B981),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                    const Text(
-                      'bpm',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFF64748B),
-                        fontWeight: FontWeight.w500,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '$effectiveBpm',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                            color: isStreaming
+                                ? const Color(0xFF065F46)
+                                : const Color(0xFF0F172A),
+                            height: 1.1,
+                          ),
+                        ),
+                        Text(
+                          isStreaming ? 'bpm · Reloj' : 'bpm',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isStreaming
+                                ? const Color(0xFF059669)
+                                : const Color(0xFF64748B),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 26,
+                      child: AnimatedBuilder(
+                        animation: _animController,
+                        builder: (context, _) {
+                          return CustomPaint(
+                            painter: _AnimatedEcgWavePainter(
+                              progress: _animController.value,
+                              color: isStreaming
+                                  ? const Color(0xFF10B981)
+                                  : const Color(0xFFEF4444),
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ],
                 ),
-                SizedBox(
-                  width: double.infinity,
-                  height: 26,
-                  child: AnimatedBuilder(
-                    animation: _animController,
-                    builder: (context, _) {
-                      return CustomPaint(
-                        painter: _AnimatedEcgWavePainter(
-                          progress: _animController.value,
-                          color: const Color(0xFFEF4444),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

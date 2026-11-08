@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'api_client.dart';
 import 'auth_helper.dart';
 import 'local_notification_service.dart';
+import 'smartwatch_ble_helper.dart';
 
 class HealthMetrics {
   final int heartRate; // bpm (default: 72)
@@ -205,6 +206,7 @@ class HealthModuleHelper {
     _startMidnightTimer();
     final userId = await AuthHelper.getUserId();
     await loadForUser(userId);
+    unawaited(SmartwatchBleHelper.initialize());
   }
 
   /// Carga las métricas aisladas para el usuario activo (paciente, doctor o invitado).
@@ -315,6 +317,7 @@ class HealthModuleHelper {
   /// Limpia suscripciones y reinicia estado al cerrar sesión.
   static Future<void> onLogout() async {
     try {
+      await SmartwatchBleHelper.disconnect();
       await _stepCountSubscription?.cancel();
       _stepCountSubscription = null;
       _initialBootSteps = -1;
