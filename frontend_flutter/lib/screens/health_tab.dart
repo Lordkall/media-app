@@ -545,7 +545,7 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
               ),
               const SizedBox(height: 6),
               const Text(
-                'Asegúrate de que tu reloj (Da Fit u otro) tenga el Bluetooth encendido y esté cerca de tu teléfono.',
+                'Asegúrate de que tu reloj tenga el Bluetooth encendido. Si está vinculado a Da Fit u otra app, ciérrala o desconéctalo para que libere su señal.',
                 style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
               ),
               const SizedBox(height: 14),
@@ -618,6 +618,37 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                         fontSize: 12, color: Color(0xFF64748B)),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Container(
+                                  margin: const EdgeInsets.symmetric(
+                                      horizontal: 20),
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEFF6FF),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                        color: const Color(0xFFBFDBFE)),
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: const [
+                                      Icon(Icons.info_outline_rounded,
+                                          color: Color(0xFF1D4ED8), size: 18),
+                                      SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          '¿Tu reloj está vinculado en Da Fit? Los smartwatches apagan su señal visible mientras están conectados activamente a otra app. Cierra la app Da Fit o desconecta el reloj allí un momento y presiona "Escanear otra vez".',
+                                          style: TextStyle(
+                                            fontSize: 11.5,
+                                            color: Color(0xFF1E40AF),
+                                            height: 1.35,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                                 const SizedBox(height: 16),

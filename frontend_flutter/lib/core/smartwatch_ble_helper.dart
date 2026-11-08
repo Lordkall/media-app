@@ -91,14 +91,21 @@ class SmartwatchBleHelper {
     if (kIsWeb) return false;
     try {
       if (defaultTargetPlatform == TargetPlatform.android) {
-        // En Android 12+ (API 31+) se requieren BLUETOOTH_SCAN y BLUETOOTH_CONNECT
+        // En Android 12+ (API 31+), los permisos Bluetooth son bluetoothScan y bluetoothConnect.
         final scanStatus = await Permission.bluetoothScan.request();
         final connectStatus = await Permission.bluetoothConnect.request();
-        final locationStatus = await Permission.locationWhenInUse.request();
 
-        return (scanStatus.isGranted || scanStatus.isLimited) &&
-            (connectStatus.isGranted || connectStatus.isLimited) &&
-            locationStatus.isGranted;
+        bool hasBt = (scanStatus.isGranted || scanStatus.isLimited) &&
+            (connectStatus.isGranted || connectStatus.isLimited);
+
+        // Si bluetoothScan o bluetoothConnect no están concedidos (o en Android <= 11), probar ubicación
+        if (!hasBt) {
+          final locationStatus = await Permission.locationWhenInUse.request();
+          if (locationStatus.isGranted) {
+            hasBt = true;
+          }
+        }
+        return hasBt;
       } else if (defaultTargetPlatform == TargetPlatform.iOS) {
         final status = await Permission.bluetooth.request();
         return status.isGranted;
@@ -116,6 +123,7 @@ class SmartwatchBleHelper {
     if (kIsWeb) return;
     final hasPerms = await requestPermissions();
     if (!hasPerms) {
+      debugPrint('Permisos de Bluetooth no concedidos');
       statusNotifier.value = SmartwatchConnectionStatus.error;
       return;
     }
@@ -127,19 +135,64 @@ class SmartwatchBleHelper {
         return;
       }
 
-      discoveredDevicesNotifier.value = [];
       statusNotifier.value = SmartwatchConnectionStatus.scanning;
+
+      final initialList = <DiscoveredSmartwatch>[];
+      final seenIds = <String>{};
+
+      // 1. Obtener dispositivos BLE ya conectados al sistema Android (por ejemplo vinculados por Da Fit)
+      try {
+        final systemDevs = await FlutterBluePlus.systemDevices([]);
+        for (final d in systemDevs) {
+          final id = d.remoteId.str;
+          if (seenIds.contains(id)) continue;
+          seenIds.add(id);
+          final name = d.platformName.isNotEmpty
+              ? d.platformName
+              : (d.advName.isNotEmpty ? d.advName : 'Smartwatch (Conectado)');
+          initialList.add(DiscoveredSmartwatch(
+            device: d,
+            name: name,
+            rssi: -50,
+            hasHeartRateService: true,
+          ));
+        }
+      } catch (e) {
+        debugPrint('Error consultando systemDevices: $e');
+      }
+
+      // 2. Obtener dispositivos emparejados (bonded) en el teléfono
+      try {
+        final bonded = await FlutterBluePlus.bondedDevices;
+        for (final d in bonded) {
+          final id = d.remoteId.str;
+          if (seenIds.contains(id)) continue;
+          seenIds.add(id);
+          final name = d.platformName.isNotEmpty
+              ? d.platformName
+              : (d.advName.isNotEmpty ? d.advName : '');
+          if (name.trim().isEmpty) continue;
+          initialList.add(DiscoveredSmartwatch(
+            device: d,
+            name: name,
+            rssi: -65,
+            hasHeartRateService: false,
+          ));
+        }
+      } catch (e) {
+        debugPrint('Error consultando bondedDevices: $e');
+      }
+
+      discoveredDevicesNotifier.value = List.from(initialList);
 
       await _scanSub?.cancel();
       _scanSub = FlutterBluePlus.scanResults.listen((results) {
-        final list = <DiscoveredSmartwatch>[];
-        final seenIds = <String>{};
+        final currentList =
+            List<DiscoveredSmartwatch>.from(discoveredDevicesNotifier.value);
+        bool changed = false;
 
         for (final r in results) {
           final id = r.device.remoteId.str;
-          if (seenIds.contains(id)) continue;
-          seenIds.add(id);
-
           final advName = r.advertisementData.advName;
           final platformName = r.device.platformName;
           final name = advName.isNotEmpty
@@ -151,16 +204,32 @@ class SmartwatchBleHelper {
           final hasHr = r.advertisementData.serviceUuids
               .any((u) => u == heartRateServiceUuid);
 
-          list.add(DiscoveredSmartwatch(
-            device: r.device,
-            name: name,
-            rssi: r.rssi,
-            hasHeartRateService: hasHr,
-          ));
+          final existingIdx =
+              currentList.indexWhere((e) => e.device.remoteId.str == id);
+          if (existingIdx >= 0) {
+            currentList[existingIdx] = DiscoveredSmartwatch(
+              device: r.device,
+              name: name,
+              rssi: r.rssi,
+              hasHeartRateService:
+                  hasHr || currentList[existingIdx].hasHeartRateService,
+            );
+            changed = true;
+          } else {
+            currentList.add(DiscoveredSmartwatch(
+              device: r.device,
+              name: name,
+              rssi: r.rssi,
+              hasHeartRateService: hasHr,
+            ));
+            changed = true;
+          }
         }
 
-        list.sort((a, b) => b.rssi.compareTo(a.rssi));
-        discoveredDevicesNotifier.value = list;
+        if (changed) {
+          currentList.sort((a, b) => b.rssi.compareTo(a.rssi));
+          discoveredDevicesNotifier.value = currentList;
+        }
       });
 
       await FlutterBluePlus.startScan(
