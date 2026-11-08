@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../core/health_connect_helper.dart';
 import '../core/health_module_helper.dart';
 import '../core/smartwatch_ble_helper.dart';
 
@@ -553,152 +554,232 @@ class HealthTodaySection extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
 
-                  // Smartwatch detection banner & Ritmo cardíaco
-                  ValueListenableBuilder<SmartwatchConnectionStatus>(
-                    valueListenable: SmartwatchBleHelper.statusNotifier,
-                    builder: (context, status, _) {
-                      final isConnected =
-                          status == SmartwatchConnectionStatus.connected;
-                      final watchName =
-                          SmartwatchBleHelper.connectedDeviceNameNotifier.value ??
-                              'Smartwatch';
+                  // Health Connect / Apple Health & Smartwatch detection banner & Ritmo cardíaco
+                  ValueListenableBuilder<HealthPlatformStatus>(
+                    valueListenable: HealthConnectHelper.statusNotifier,
+                    builder: (context, healthStatus, _) {
+                      return ValueListenableBuilder<SmartwatchConnectionStatus>(
+                        valueListenable: SmartwatchBleHelper.statusNotifier,
+                        builder: (context, bleStatus, _) {
+                          final isHealthConnected =
+                              healthStatus == HealthPlatformStatus.authorized;
+                          final isBleConnected =
+                              bleStatus == SmartwatchConnectionStatus.connected;
+                          final isConnected =
+                              isHealthConnected || isBleConnected;
 
-                      return ValueListenableBuilder<int?>(
-                        valueListenable: SmartwatchBleHelper.liveBpmNotifier,
-                        builder: (context, liveBpm, _) {
-                          final effectiveBpm = liveBpm ?? current.heartRate;
+                          final platformName =
+                              HealthConnectHelper.platformName;
+                          final bleWatchName =
+                              SmartwatchBleHelper.connectedDeviceNameNotifier.value ??
+                                  'Smartwatch';
+                          final sourceName = isHealthConnected
+                              ? platformName
+                              : (isBleConnected ? bleWatchName : 'Dispositivo');
 
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 10),
-                                decoration: BoxDecoration(
-                                  color: isConnected
-                                      ? const Color(0xFFDCFCE7)
-                                      : const Color(0xFFE0F2FE),
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(
-                                    color: isConnected
-                                        ? const Color(0xFF86EFAC)
-                                        : const Color(0xFFBAE6FD),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.watch_rounded,
+                          return ValueListenableBuilder<int?>(
+                            valueListenable: SmartwatchBleHelper.liveBpmNotifier,
+                            builder: (context, liveBpm, _) {
+                              final effectiveBpm =
+                                  liveBpm ?? current.heartRate;
+
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 14, vertical: 10),
+                                    decoration: BoxDecoration(
                                       color: isConnected
-                                          ? const Color(0xFF16A34A)
-                                          : const Color(0xFF0284C7),
-                                      size: 24,
+                                          ? const Color(0xFFDCFCE7)
+                                          : const Color(0xFFE0F2FE),
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(
+                                        color: isConnected
+                                            ? const Color(0xFF86EFAC)
+                                            : const Color(0xFFBAE6FD),
+                                      ),
                                     ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          isConnected
+                                              ? Icons.health_and_safety_rounded
+                                              : Icons.watch_rounded,
+                                          color: isConnected
+                                              ? const Color(0xFF16A34A)
+                                              : const Color(0xFF0284C7),
+                                          size: 24,
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                isConnected
+                                                    ? '$sourceName conectado'
+                                                    : 'Dispositivo no vinculado',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w700,
+                                                  fontSize: 13,
+                                                  color: isConnected
+                                                      ? const Color(0xFF15803D)
+                                                      : const Color(0xFF0369A1),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 1),
+                                              Text(
+                                                isConnected
+                                                    ? 'Ritmo cardíaco y sueño sincronizados desde tu smartwatch. Pasos con móvil.'
+                                                    : 'Vincula $platformName o tu reloj para telemetría automática.',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: isConnected
+                                                      ? const Color(0xFF166534)
+                                                      : const Color(0xFF075985),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        if (!isConnected)
+                                          TextButton(
+                                            onPressed: () async {
+                                              HapticFeedback.selectionClick();
+                                              await HealthConnectHelper.requestAuthorization();
+                                            },
+                                            style: TextButton.styleFrom(
+                                              padding: const EdgeInsets.symmetric(
+                                                  horizontal: 8, vertical: 4),
+                                              minimumSize: Size.zero,
+                                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                            ),
+                                            child: const Text(
+                                              'Vincular',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFF0284C7),
+                                              ),
+                                            ),
+                                          )
+                                        else
+                                          IconButton(
+                                            icon: const Icon(Icons.sync_rounded,
+                                                size: 20, color: Color(0xFF15803D)),
+                                            tooltip: 'Sincronizar ahora',
+                                            onPressed: () async {
+                                              HapticFeedback.selectionClick();
+                                              await HealthConnectHelper.syncHealthData();
+                                            },
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 18),
+                                  if (isConnected) ...[
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 14, vertical: 12),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF8FAFC),
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(
+                                            color: const Color(0xFFE2E8F0)),
+                                      ),
+                                      child: Row(
                                         children: [
-                                          Text(
-                                            isConnected
-                                                ? 'Smartwatch conectado: $watchName'
-                                                : 'Smartwatch no detectado',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w700,
-                                              fontSize: 13,
-                                              color: isConnected
-                                                  ? const Color(0xFF15803D)
-                                                  : const Color(0xFF0369A1),
+                                          Container(
+                                            padding: const EdgeInsets.all(8),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFEF4444)
+                                                  .withValues(alpha: 0.1),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(
+                                              Icons.favorite_rounded,
+                                              color: Color(0xFFEF4444),
+                                              size: 20,
                                             ),
                                           ),
-                                          const SizedBox(height: 1),
-                                          Text(
-                                            isConnected
-                                                ? 'Telemetría de pulso en vivo. Pasos contados con sensor nativo del móvil.'
-                                                : 'Pasos contados por sensor nativo del móvil. Registro manual disponible.',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              color: isConnected
-                                                  ? const Color(0xFF166534)
-                                                  : const Color(0xFF075985),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                const Text(
+                                                  'Ritmo Cardíaco (bpm)',
+                                                  style: TextStyle(
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Color(0xFF0F172A),
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  '$effectiveBpm bpm (Sincronizado vía $sourceName)',
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                    color: Color(0xFF15803D),
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(Icons.edit_rounded,
+                                                color: Color(0xFF94A3B8), size: 18),
+                                            tooltip: 'Ajustar manualmente',
+                                            onPressed: () {
+                                              heartController.text = '$effectiveBpm';
+                                              showDialog(
+                                                context: context,
+                                                builder: (dCtx) => AlertDialog(
+                                                  shape: RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(20)),
+                                                  title: const Text('Ajustar BPM',
+                                                      style: TextStyle(fontSize: 16)),
+                                                  content: TextField(
+                                                    controller: heartController,
+                                                    keyboardType: TextInputType.number,
+                                                    decoration: const InputDecoration(
+                                                      labelText: 'Pulsaciones (BPM)',
+                                                      suffixText: 'bpm',
+                                                    ),
+                                                  ),
+                                                  actions: [
+                                                    TextButton(
+                                                      onPressed: () =>
+                                                          Navigator.pop(dCtx),
+                                                      child: const Text('Listo'),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            },
                                           ),
                                         ],
                                       ),
                                     ),
+                                  ] else ...[
+                                    _buildInputRow(
+                                      label: 'Ritmo Cardíaco (bpm)',
+                                      icon: Icons.favorite,
+                                      iconColor: const Color(0xFFEF4444),
+                                      controller: heartController,
+                                      keyboardType: TextInputType.number,
+                                      hint: 'Ej. 72',
+                                      onChanged: (_) {},
+                                    ),
                                   ],
-                                ),
-                              ),
-                              const SizedBox(height: 18),
-                              if (isConnected) ...[
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 14, vertical: 12),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF8FAFC),
-                                    borderRadius: BorderRadius.circular(14),
-                                    border: Border.all(
-                                        color: const Color(0xFFE2E8F0)),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFEF4444)
-                                              .withValues(alpha: 0.1),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(
-                                          Icons.favorite_rounded,
-                                          color: Color(0xFFEF4444),
-                                          size: 20,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            const Text(
-                                              'Ritmo Cardíaco (bpm)',
-                                              style: TextStyle(
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w600,
-                                                color: Color(0xFF0F172A),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              '$effectiveBpm bpm (Sincronizado desde $watchName)',
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                                color: Color(0xFF15803D),
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      const Icon(Icons.lock_outline_rounded,
-                                          color: Color(0xFF94A3B8), size: 20),
-                                    ],
-                                  ),
-                                ),
-                              ] else ...[
-                                _buildInputRow(
-                                  label: 'Ritmo Cardíaco (bpm)',
-                                  icon: Icons.favorite,
-                                  iconColor: const Color(0xFFEF4444),
-                                  controller: heartController,
-                                  keyboardType: TextInputType.number,
-                                  hint: 'Ej. 72',
-                                  onChanged: (_) {},
-                                ),
-                              ],
-                            ],
+                                ],
+                              );
+                            },
                           );
                         },
                       );

@@ -5,6 +5,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api_client.dart';
 import 'auth_helper.dart';
+import 'health_connect_helper.dart';
 import 'local_notification_service.dart';
 import 'smartwatch_ble_helper.dart';
 
@@ -216,7 +217,7 @@ class HealthModuleHelper {
     _startMidnightTimer();
     final userId = await AuthHelper.getUserId();
     await loadForUser(userId);
-    unawaited(SmartwatchBleHelper.initialize());
+    unawaited(HealthConnectHelper.initialize());
   }
 
   /// Carga las métricas aisladas para el usuario activo (paciente, doctor o invitado).
@@ -323,6 +324,7 @@ class HealthModuleHelper {
 
       if (isEnabled) {
         unawaited(initializePedometer());
+        unawaited(HealthConnectHelper.syncHealthData());
       }
     } catch (e) {
       debugPrint('Error al cargar métricas de salud para usuario $_activeUserId: $e');

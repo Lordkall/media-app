@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/doctor_header.dart';
 import '../widgets/profile_avatar.dart';
 import '../core/api_client.dart';
+import '../core/health_connect_helper.dart';
 import '../core/profile_image_helper.dart';
 import '../models/avatar_catalog.dart';
 import '../models/ve_catalogs.dart';
@@ -94,6 +95,9 @@ class _PatientHomeTabState extends State<PatientHomeTab> {
 
   Future<void> _fetchData() async {
     try {
+      if (!kIsWeb) {
+        unawaited(HealthConnectHelper.syncHealthData());
+      }
       final userResponse = await ApiClient.get('/users/me');
       if (userResponse.statusCode == 200) {
         final user = Map<String, dynamic>.from(jsonDecode(userResponse.body));

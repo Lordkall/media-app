@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../core/health_connect_helper.dart';
 import '../core/health_module_helper.dart';
 import '../core/smartwatch_ble_helper.dart';
 
@@ -33,6 +34,8 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
     super.initState();
     _selectedDayIndex = (DateTime.now().weekday - 1).clamp(0, 6);
     HealthModuleHelper.initializePedometer();
+    HealthConnectHelper.initialize();
+    HealthConnectHelper.syncHealthData();
     SmartwatchBleHelper.reconnectLastDevice();
 
     _waterWaveController = AnimationController(
@@ -186,8 +189,8 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                             _buildBodyMetricsCard(context, metrics),
                             const SizedBox(height: 18),
 
-                            // 2. Tarjeta de Vinculación Smartwatch (Bluetooth Low Energy)
-                            _buildSmartwatchSyncCard(context),
+                            // 2. Tarjeta de Sincronización Health Connect / Apple Health
+                            _buildHealthSyncCard(context),
                             const SizedBox(height: 18),
 
                             // 2. Tarjeta de Hidratación (Azul gradiente)
@@ -221,6 +224,510 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
             );
           },
         ),
+      ),
+    );
+  }
+
+  // --- Tarjeta de Sincronización Health Connect / Apple Health ---
+  Widget _buildHealthSyncCard(BuildContext context) {
+    return ValueListenableBuilder<HealthPlatformStatus>(
+      valueListenable: HealthConnectHelper.statusNotifier,
+      builder: (context, healthStatus, _) {
+        final isAuthorized =
+            healthStatus == HealthPlatformStatus.authorized;
+        final isSyncing = healthStatus == HealthPlatformStatus.syncing;
+        final needsInstall =
+            healthStatus == HealthPlatformStatus.needsInstall;
+        final platformName = HealthConnectHelper.platformName;
+
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: isAuthorized
+                  ? const Color(0xFF10B981).withValues(alpha: 0.35)
+                  : (needsInstall
+                      ? const Color(0xFFF59E0B).withValues(alpha: 0.35)
+                      : const Color(0xFFE2E8F0)),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: isAuthorized
+                    ? const Color(0xFF10B981).withValues(alpha: 0.06)
+                    : const Color(0xFF0B2545).withValues(alpha: 0.05),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: isAuthorized
+                          ? const Color(0xFF10B981).withValues(alpha: 0.12)
+                          : (needsInstall
+                              ? const Color(0xFFF59E0B).withValues(alpha: 0.12)
+                              : const Color(0xFF0756A4).withValues(alpha: 0.1)),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      isAuthorized
+                          ? Icons.health_and_safety_rounded
+                          : (needsInstall
+                              ? Icons.download_rounded
+                              : Icons.watch_rounded),
+                      color: isAuthorized
+                          ? const Color(0xFF10B981)
+                          : (needsInstall
+                              ? const Color(0xFFD97706)
+                              : const Color(0xFF0756A4)),
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          platformName,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          isAuthorized
+                              ? 'Sincronizado con smartwatch / Da Fit'
+                              : (needsInstall
+                                  ? 'Instalación requerida'
+                                  : 'Vincula tu smartwatch y sensores'),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isAuthorized
+                                ? const Color(0xFF059669)
+                                : const Color(0xFF64748B),
+                            fontWeight: isAuthorized
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isAuthorized
+                          ? const Color(0xFF10B981).withValues(alpha: 0.12)
+                          : (isSyncing
+                              ? const Color(0xFF0756A4).withValues(alpha: 0.1)
+                              : (needsInstall
+                                  ? const Color(0xFFF59E0B).withValues(alpha: 0.12)
+                                  : const Color(0xFFF1F5F9))),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isSyncing)
+                          const SizedBox(
+                            width: 10,
+                            height: 10,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Color(0xFF0756A4),
+                            ),
+                          )
+                        else
+                          Container(
+                            width: 7,
+                            height: 7,
+                            decoration: BoxDecoration(
+                              color: isAuthorized
+                                  ? const Color(0xFF10B981)
+                                  : (needsInstall
+                                      ? const Color(0xFFD97706)
+                                      : const Color(0xFF94A3B8)),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        const SizedBox(width: 6),
+                        Text(
+                          isAuthorized
+                              ? 'Conectado'
+                              : (isSyncing
+                                  ? 'Sincronizando'
+                                  : (needsInstall
+                                      ? 'Requiere App'
+                                      : 'Sin vincular')),
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: isAuthorized
+                                ? const Color(0xFF059669)
+                                : (needsInstall
+                                    ? const Color(0xFFD97706)
+                                    : const Color(0xFF64748B)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+
+              if (isAuthorized) ...[
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.favorite_rounded,
+                              color: Color(0xFFEF4444), size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: ValueListenableBuilder<int?>(
+                              valueListenable: SmartwatchBleHelper.liveBpmNotifier,
+                              builder: (context, bpm, _) {
+                                final currentBpm = bpm ??
+                                    HealthModuleHelper.metricsNotifier.value.heartRate;
+                                return Text(
+                                  '$currentBpm bpm (Ritmo cardíaco)',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF0F172A),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () => _showManualBpmDialog(context),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 6),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: const Text('Ajustar',
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF0756A4))),
+                          ),
+                        ],
+                      ),
+                      const Divider(height: 14, thickness: 0.6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.nightlight_round,
+                                  color: Color(0xFF6366F1), size: 16),
+                              const SizedBox(width: 6),
+                              ValueListenableBuilder<HealthMetrics>(
+                                valueListenable: HealthModuleHelper.metricsNotifier,
+                                builder: (context, m, _) {
+                                  return Text(
+                                    '${m.sleepHours}h de sueño',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF334155),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                          ValueListenableBuilder<DateTime?>(
+                            valueListenable: HealthConnectHelper.lastSyncNotifier,
+                            builder: (context, lastSync, _) {
+                              if (lastSync == null) {
+                                return const Text(
+                                  'Sincronizado ahora',
+                                  style: TextStyle(
+                                      fontSize: 11, color: Color(0xFF94A3B8)),
+                                );
+                              }
+                              final timeStr =
+                                  '${lastSync.hour.toString().padLeft(2, '0')}:${lastSync.minute.toString().padLeft(2, '0')}';
+                              return Text(
+                                'Última sincr: $timeStr',
+                                style: const TextStyle(
+                                    fontSize: 11, color: Color(0xFF64748B)),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  '✓ Pasos: continúan registrándose con el teléfono para máxima precisión.',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF64748B),
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 42,
+                        child: OutlinedButton.icon(
+                          onPressed: isSyncing
+                              ? null
+                              : () async {
+                                  HapticFeedback.selectionClick();
+                                  await HealthConnectHelper.syncHealthData();
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                            'Datos actualizados desde $platformName'),
+                                        duration: const Duration(seconds: 2),
+                                      ),
+                                    );
+                                  }
+                                },
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Color(0xFF0756A4)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          icon: isSyncing
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Color(0xFF0756A4),
+                                  ),
+                                )
+                              : const Icon(Icons.sync_rounded,
+                                  size: 18, color: Color(0xFF0756A4)),
+                          label: Text(
+                            isSyncing ? 'Sincronizando...' : 'Sincronizar ahora',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0756A4),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    IconButton(
+                      tooltip: '¿Cómo vincular Da Fit?',
+                      icon: const Icon(Icons.help_outline_rounded,
+                          color: Color(0xFF0756A4)),
+                      onPressed: () => _showDaFitInstructionsDialog(context),
+                    ),
+                  ],
+                ),
+              ] else if (needsInstall) ...[
+                const Text(
+                  'Para sincronizar tu smartwatch Da Fit u otros en Android se requiere Google Health Connect, la plataforma segura de Google para compartir ritmo cardíaco y sueño.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF64748B),
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      HapticFeedback.selectionClick();
+                      await HealthConnectHelper.installHealthConnect();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0756A4),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    icon: const Icon(Icons.download_rounded,
+                        color: Colors.white, size: 18),
+                    label: const Text(
+                      'Instalar Google Health Connect',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ),
+              ] else ...[
+                Text(
+                  'Conecta Salud Now con $platformName para obtener automáticamente tu ritmo cardíaco (BPM) y horas de sueño desde tu smartwatch (Da Fit u otros) sin desconexiones de Bluetooth.',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF64748B),
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF0756A4), Color(0xFF007BFF)],
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        HapticFeedback.selectionClick();
+                        final ok =
+                            await HealthConnectHelper.requestAuthorization();
+                        if (context.mounted) {
+                          if (ok) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                    '¡$platformName vinculado con éxito!'),
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                    'No se completó la vinculación o se requieren permisos.'),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      icon: const Icon(Icons.sync_rounded,
+                          color: Colors.white, size: 18),
+                      label: Text(
+                        'Vincular $platformName',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Center(
+                  child: TextButton.icon(
+                    onPressed: () => _openSmartwatchModal(context),
+                    icon: const Icon(Icons.bluetooth_searching_rounded,
+                        size: 16, color: Color(0xFF64748B)),
+                    label: const Text(
+                      'O vincular por Bluetooth Low Energy directo',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF64748B),
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showDaFitInstructionsDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: const [
+            Icon(Icons.watch_rounded, color: Color(0xFF0756A4)),
+            SizedBox(width: 8),
+            Text('Sincronizar Da Fit / Reloj', style: TextStyle(fontSize: 16)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Text(
+              'Para que tus mediciones de ritmo cardíaco y sueño lleguen a Salud Now:',
+              style: TextStyle(fontSize: 13, color: Color(0xFF0F172A), fontWeight: FontWeight.w600),
+            ),
+            SizedBox(height: 12),
+            Text(
+              '1. Abre la app Da Fit en tu teléfono.',
+              style: TextStyle(fontSize: 12, color: Color(0xFF475569)),
+            ),
+            SizedBox(height: 6),
+            Text(
+              '2. Ve a la pestaña "Perfil" o "Ajustes" y busca "Conexión a Health Connect" o "Google Fit".',
+              style: TextStyle(fontSize: 12, color: Color(0xFF475569)),
+            ),
+            SizedBox(height: 6),
+            Text(
+              '3. Concede los permisos para compartir ritmo cardíaco y sueño.',
+              style: TextStyle(fontSize: 12, color: Color(0xFF475569)),
+            ),
+            SizedBox(height: 6),
+            Text(
+              '4. ¡Listo! Al tocar "Sincronizar ahora" en Salud Now, tus datos se reflejarán inmediatamente.',
+              style: TextStyle(fontSize: 12, color: Color(0xFF059669), fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0756A4),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Entendido'),
+          ),
+        ],
       ),
     );
   }
@@ -1802,29 +2309,37 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                             ),
                           ),
                           const Spacer(),
-                          ValueListenableBuilder<SmartwatchConnectionStatus>(
-                            valueListenable: SmartwatchBleHelper.statusNotifier,
-                            builder: (context, status, _) {
-                              if (status == SmartwatchConnectionStatus.connected) {
-                                return Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 5, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF10B981)
-                                        .withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: const Text(
-                                    'En vivo',
-                                    style: TextStyle(
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF059669),
-                                    ),
-                                  ),
-                                );
-                              }
-                              return const SizedBox.shrink();
+                          ValueListenableBuilder<HealthPlatformStatus>(
+                            valueListenable: HealthConnectHelper.statusNotifier,
+                            builder: (context, hStatus, _) {
+                              return ValueListenableBuilder<SmartwatchConnectionStatus>(
+                                valueListenable: SmartwatchBleHelper.statusNotifier,
+                                builder: (context, status, _) {
+                                  final isConnected =
+                                      hStatus == HealthPlatformStatus.authorized ||
+                                      status == SmartwatchConnectionStatus.connected;
+                                  if (isConnected) {
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 5, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF10B981)
+                                            .withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Text(
+                                        'En vivo',
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF059669),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  return const SizedBox.shrink();
+                                },
+                              );
                             },
                           ),
                         ],
