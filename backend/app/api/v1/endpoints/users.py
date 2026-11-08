@@ -626,3 +626,29 @@ async def test_push_notification(
         ),
     }
 
+
+@router.post("/me/notifications/water-reminder")
+async def trigger_water_reminder(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.models.notifications import Notification, NotificationType
+
+    notif = Notification(
+        user_id=current_user.id,
+        type=NotificationType.WATER_REMINDER,
+        title="💧 Momento de hidratarte",
+        message="Toma un vaso de agua (250 ml) para mantener tu cuerpo hidratado y saludable.",
+        action_url="/health",
+    )
+    db.add(notif)
+    await db.commit()
+    await db.refresh(notif)
+
+    return {
+        "status": "ok",
+        "notification_id": notif.id,
+        "has_token": bool(current_user.fcm_token),
+    }
+
+

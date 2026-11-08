@@ -1,9 +1,10 @@
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 from app.core.database import async_session_maker
+from app.models.users import User
 from app.models.appointments import Appointment, AppointmentStatus
 from app.models.doctors import Doctor
 from app.models.patients import Patient
@@ -196,14 +197,62 @@ async def send_appointment_reminders_async():
 
         await session.commit()
 
+
+async def send_water_reminders_async():
+    """
+    Envía recordatorios periódicos de hidratación a usuarios con recordatorio activo
+    y token FCM registrado, entre las 8:00 AM y 9:00 PM (hora de Caracas).
+    """
+    async with async_session_maker() as session:
+        now_caracas = datetime.now(ZoneInfo("America/Caracas"))
+        if not (8 <= now_caracas.hour < 21):
+            return
+
+        now_utc = datetime.now(timezone.utc)
+        two_hours_ago = now_utc - timedelta(hours=2)
+
+        query = (
+            select(User)
+            .where(
+                User.water_reminder_enabled == True,
+                User.fcm_token.isnot(None),
+                User.fcm_token != "",
+                (
+                    (User.last_water_reminder_date.is_(None)) |
+                    (User.last_water_reminder_date <= two_hours_ago)
+                ),
+            )
+            .limit(100)
+        )
+
+        result = await session.execute(query)
+        users_to_remind = result.scalars().all()
+
+        for u in users_to_remind:
+            u.last_water_reminder_date = now_utc
+            notif = Notification(
+                user_id=u.id,
+                type=NotificationType.WATER_REMINDER,
+                title="💧 Momento de hidratarte",
+                message="Toma un vaso de agua (250 ml) para mantener tu cuerpo hidratado y saludable.",
+                action_url="/health",
+            )
+            session.add(notif)
+
+        if users_to_remind:
+            await session.commit()
+            print(f"[WATER REMINDERS] Enviados recordatorios de agua a {len(users_to_remind)} usuarios.")
+
+
 async def appointment_reminders_loop():
     """
     Bucle en segundo plano que corre periódicamente cada 15 minutos
-    para verificar y enviar los recordatorios de citas.
+    para verificar y enviar los recordatorios de citas y de hidratación.
     """
     while True:
         try:
             await send_appointment_reminders_async()
+            await send_water_reminders_async()
             async with async_session_maker() as session:
                 from app.api.v1.endpoints.appointments import auto_complete_expired_appointments
                 await auto_complete_expired_appointments(session)

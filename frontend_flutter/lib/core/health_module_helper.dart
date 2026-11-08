@@ -32,7 +32,7 @@ class HealthMetrics {
     this.sleepQuality = 'Bueno',
     this.waterMilliliters = 0,
     this.waterGoalMilliliters = 2000,
-    this.waterReminderEnabled = false,
+    this.waterReminderEnabled = true,
     this.waterReminderIntervalHours = 2,
     this.isNativePedometerActive = true,
     this.weeklySteps = const [0, 0, 0, 0, 0, 0, 0],
@@ -204,6 +204,7 @@ class HealthModuleHelper {
         await LocalNotificationService.scheduleWaterReminder(
           intervalHours: metricsNotifier.value.waterReminderIntervalHours,
         );
+        unawaited(ApiClient.put('/users/me', {'water_reminder_enabled': true}));
       }
     }
   }
@@ -277,7 +278,7 @@ class HealthModuleHelper {
       final sl = prefs.getDouble(_userKey(_sleepHoursKey)) ?? 7.3;
       final quality = HealthMetrics.calculateSleepQuality(sl);
       final goal = prefs.getInt(_userKey(_waterGoalKey)) ?? 2000;
-      final reminder = prefs.getBool(_userKey(_waterReminderKey)) ?? false;
+      final reminder = prefs.getBool(_userKey(_waterReminderKey)) ?? true;
       final interval = prefs.getInt(_userKey(_waterIntervalKey)) ?? 2;
       final breathingWeekly =
           prefs.getBool(_userKey(_breathingWeeklyReminderKey)) ?? true;
@@ -407,6 +408,13 @@ class HealthModuleHelper {
           await LocalNotificationService.cancelWaterReminder();
         }
         if (enabled) {
+          if (metricsNotifier.value.waterReminderEnabled &&
+              metricsNotifier.value.waterMilliliters <
+                  metricsNotifier.value.waterGoalMilliliters) {
+            await LocalNotificationService.scheduleWaterReminder(
+              intervalHours: metricsNotifier.value.waterReminderIntervalHours,
+            );
+          }
           unawaited(initializePedometer());
         }
       }
@@ -484,8 +492,11 @@ class HealthModuleHelper {
         metricsNotifier.value.copyWith(waterMilliliters: updated);
 
     // Al ya tener el máximo de vasos no debe llegar la notificación
-    if (!kIsWeb && updated >= goal) {
-      await LocalNotificationService.cancelWaterReminder();
+    if (updated >= goal) {
+      if (!kIsWeb) {
+        await LocalNotificationService.cancelWaterReminder();
+      }
+      unawaited(ApiClient.put('/users/me', {'water_reminder_enabled': false}));
     }
   }
 
@@ -546,10 +557,23 @@ class HealthModuleHelper {
                 metricsNotifier.value.waterGoalMilliliters) {
           await LocalNotificationService.scheduleWaterReminder(
               intervalHours: interval);
+          await LocalNotificationService.showWaterReminderNow(
+            title: '💧 Recordatorio de agua activado',
+            body:
+                'Te avisaremos cada $interval hora(s) para mantenerte hidratado.',
+          );
         } else {
           await LocalNotificationService.cancelWaterReminder();
         }
       }
+      if (enabled) {
+        try {
+          await ApiClient.post('/users/me/notifications/water-reminder', {});
+        } catch (_) {}
+      }
+      try {
+        await ApiClient.put('/users/me', {'water_reminder_enabled': enabled});
+      } catch (_) {}
     } catch (_) {}
     metricsNotifier.value = metricsNotifier.value.copyWith(
       waterReminderEnabled: enabled,

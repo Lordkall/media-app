@@ -140,6 +140,7 @@ class UserUpdate(BaseModel):
     avatar_url: Optional[str] = None
     fcm_token: Optional[str] = None
     show_whatsapp: Optional[bool] = None
+    water_reminder_enabled: Optional[bool] = None
 
     @field_validator("first_name", "last_name")
     @classmethod

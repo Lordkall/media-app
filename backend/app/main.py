@@ -88,6 +88,8 @@ async def lifespan(app: FastAPI):
             await conn.execute(text("ALTER TABLE users ALTER COLUMN avatar_url TYPE TEXT;"))
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS fcm_token VARCHAR;"))
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS show_whatsapp BOOLEAN NOT NULL DEFAULT TRUE;"))
+            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS water_reminder_enabled BOOLEAN NOT NULL DEFAULT TRUE;"))
+            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_water_reminder_date TIMESTAMP WITH TIME ZONE;"))
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS birth_date DATE;"))
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS height_cm NUMERIC(5, 1);"))
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS weight_kg NUMERIC(5, 1);"))
@@ -155,6 +157,8 @@ async def lifespan(app: FastAPI):
             "SUPPORT_MESSAGE",
             "CLINIC_JOIN_REQUEST",
             "CLINIC_JOIN_APPROVED",
+            "WATER_REMINDER",
+            "HEALTH_REMINDER",
             "new_subscription",
             "renewal_reminder",
             "grace_period_warning",
@@ -167,6 +171,8 @@ async def lifespan(app: FastAPI):
             "support_message",
             "clinic_join_request",
             "clinic_join_approved",
+            "water_reminder",
+            "health_reminder",
         ]
         async with engine.begin() as conn:
             for value in notification_values:

@@ -19,6 +19,8 @@ class NotificationType(str, enum.Enum):
     SUPPORT_MESSAGE = "support_message"
     CLINIC_JOIN_REQUEST = "clinic_join_request"
     CLINIC_JOIN_APPROVED = "clinic_join_approved"
+    WATER_REMINDER = "water_reminder"
+    HEALTH_REMINDER = "health_reminder"
 
 
 class Notification(Base):

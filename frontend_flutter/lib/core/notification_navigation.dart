@@ -7,6 +7,7 @@ import 'app_navigator.dart';
 import 'auth_helper.dart';
 import '../screens/agendar_cita_tab.dart';
 import '../screens/appointment_details_dialog.dart';
+import '../screens/health_tab.dart';
 import '../screens/mi_disponibilidad_tab.dart';
 
 class NotificationNavigation {
@@ -23,6 +24,16 @@ class NotificationNavigation {
         : appNavigatorKey.currentState;
     if (role == null || navigator == null) {
       _pendingAction = action;
+      return;
+    }
+
+    if (normalizedAction == '/health' || normalizedAction == 'health') {
+      navigator.push(MaterialPageRoute<void>(
+        builder: (_) => const _NotificationDestination(
+          title: 'Módulo de Salud',
+          child: HealthTab(),
+        ),
+      ));
       return;
     }
 

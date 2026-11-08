@@ -30,10 +30,12 @@ class LocalNotificationService {
         NotificationNavigation.open(response.payload);
       },
     );
-    await _plugin
+    final androidImplementation = _plugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(_channel);
+            AndroidFlutterLocalNotificationsPlugin>();
+    await androidImplementation?.createNotificationChannel(_channel);
+    await androidImplementation?.requestNotificationsPermission();
+    await androidImplementation?.requestExactAlarmsPermission();
   }
 
   static Future<void> showRemoteMessage(RemoteMessage message) async {
@@ -63,6 +65,48 @@ class LocalNotificationService {
     );
   }
 
+  static Future<void> showWaterReminderNow({
+    String title = '💧 Momento de hidratarte',
+    String body =
+        'Toma un vaso de agua (250 ml) para mantener tu cuerpo hidratado y saludable.',
+  }) async {
+    try {
+      const channel = AndroidNotificationChannel(
+        'salud_now_water_reminders',
+        'Recordatorios de Hidratación',
+        description: 'Notificaciones periódicas para beber agua',
+        importance: Importance.high,
+      );
+      await _plugin
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.createNotificationChannel(channel);
+
+      await _plugin.show(
+        999,
+        title,
+        body,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'salud_now_water_reminders',
+            'Recordatorios de Hidratación',
+            channelDescription: 'Notificaciones periódicas para beber agua',
+            importance: Importance.high,
+            priority: Priority.high,
+            icon: 'ic_stat_salud_now',
+            playSound: true,
+          ),
+          iOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+        payload: '/health',
+      );
+    } catch (_) {}
+  }
+
   static Future<void> scheduleWaterReminder({required int intervalHours}) async {
     try {
       const channel = AndroidNotificationChannel(
@@ -78,11 +122,11 @@ class LocalNotificationService {
 
       await cancelWaterReminder();
 
-      await _plugin.periodicallyShow(
+      await _plugin.periodicallyShowWithDuration(
         999,
         '💧 Momento de hidratarte',
         'Toma un vaso de agua (250 ml) para mantener tu cuerpo hidratado y saludable.',
-        intervalHours == 1 ? RepeatInterval.hourly : RepeatInterval.hourly,
+        Duration(hours: intervalHours),
         const NotificationDetails(
           android: AndroidNotificationDetails(
             'salud_now_water_reminders',

@@ -151,6 +151,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     } else if (type == 'support_message') {
                       icon = Icons.support_agent;
                       color = Colors.deepPurple;
+                    } else if (type == 'water_reminder' ||
+                        type == 'health_reminder') {
+                      icon = Icons.water_drop_rounded;
+                      color = const Color(0xFF0D6EFD);
                     }
 
                     return Card(
