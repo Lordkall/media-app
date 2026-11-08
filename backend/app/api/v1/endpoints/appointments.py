@@ -749,17 +749,32 @@ async def _assert_appointment_access(
     )
 
 @router.delete("/history")
-async def clear_doctor_appointment_history(
+async def clear_appointment_history(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    if current_user.role not in (RoleEnum.DOCTOR, RoleEnum.ASSISTANT):
-        raise HTTPException(status_code=403, detail="Solo el doctor puede limpiar su historial")
-    doctor = await _staff_doctor(current_user, db)
-    result = await db.execute(delete(Appointment).where(
-        Appointment.doctor_id == doctor.id,
-        Appointment.status.in_((AppointmentStatus.CANCELLED, AppointmentStatus.COMPLETED)),
-    ))
+    if current_user.role in (RoleEnum.DOCTOR, RoleEnum.ASSISTANT):
+        doctor = await _staff_doctor(current_user, db)
+        condition = (
+            Appointment.doctor_id == doctor.id,
+            Appointment.status.in_((AppointmentStatus.CANCELLED, AppointmentStatus.COMPLETED)),
+        )
+    elif current_user.role == RoleEnum.PATIENT:
+        patient = await db.scalar(select(Patient).where(Patient.user_id == current_user.id))
+        if not patient:
+            return {"deleted_count": 0, "message": "No se encontró el perfil de paciente"}
+        condition = (
+            Appointment.patient_id == patient.id,
+            Appointment.status.in_((AppointmentStatus.CANCELLED, AppointmentStatus.COMPLETED)),
+        )
+    elif current_user.role == RoleEnum.ADMIN:
+        condition = (
+            Appointment.status.in_((AppointmentStatus.CANCELLED, AppointmentStatus.COMPLETED)),
+        )
+    else:
+        raise HTTPException(status_code=403, detail="No autorizado para limpiar historial")
+
+    result = await db.execute(delete(Appointment).where(*condition))
     await db.commit()
     return {"deleted_count": result.rowcount or 0, "message": "Historial de citas limpiado"}
 

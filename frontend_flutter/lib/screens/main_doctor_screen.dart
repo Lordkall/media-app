@@ -348,9 +348,11 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
         const ProfileTab(),
       ];
     } else if (_role == 'admin') {
+      final showHealth = !kIsWeb;
       return [
         AdminHomeTab(
-          onProfileTap: () => setState(() => _currentIndex = 3),
+          onProfileTap: () =>
+              setState(() => _currentIndex = showHealth ? 4 : 3),
           onSearchTap: () => setState(() => _currentIndex = 1),
           onSearchSubmitted: _submitHomeSearch,
           onManageAdsTap: () => Navigator.of(context).push(
@@ -361,6 +363,7 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
         ),
         const AdminSubscriptionsTab(),
         const AdminStatsTab(),
+        if (showHealth) const HealthTab(),
         const ProfileTab(),
       ];
     } else if (_role == 'patient') {
@@ -429,8 +432,7 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
         children: [
           tabs[activeIndex],
           // Botón flotante de soporte
-          if (_role != 'admin')
-            Positioned(
+          Positioned(
               bottom: 90,
               right: 16,
               child: FloatingActionButton(
@@ -465,7 +467,7 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
             ),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final showHealth = !kIsWeb && (_role == 'patient' || _role == 'doctor' || _role == 'assistant');
+                final showHealth = !kIsWeb && (_role == 'patient' || _role == 'doctor' || _role == 'assistant' || _role == 'admin');
                 final navItemCount = showHealth ? 5 : 4;
                 final compactLayout = constraints.maxWidth < 360;
                 final inset = compactLayout ? 4.0 : 8.0;
@@ -484,6 +486,7 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
                 final doctorHome = _role == 'doctor' || _role == 'assistant';
 
                 if (_role == 'admin') {
+                  final adminProfileIndex = showHealth ? 4 : 3;
                   return Padding(
                     padding: EdgeInsets.symmetric(horizontal: inset),
                     child: Row(
@@ -495,8 +498,18 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
                             selectedWidth, idleWidth, compactLayout),
                         _buildNavItem(Icons.bar_chart_rounded, 'Estadísticas', 2,
                             selectedWidth, idleWidth, compactLayout),
-                        _buildNavItem(Icons.person_outline, 'Perfil', 3,
-                            selectedWidth, idleWidth, compactLayout),
+                        if (showHealth)
+                          _buildNavItem(
+                              Icons.monitor_heart_rounded,
+                              'Salud',
+                              3,
+                              selectedWidth,
+                              idleWidth,
+                              compactLayout,
+                              isHealth: true),
+                        _buildNavItem(Icons.person_outline, 'Perfil',
+                            adminProfileIndex, selectedWidth, idleWidth,
+                            compactLayout),
                       ],
                     ),
                   );

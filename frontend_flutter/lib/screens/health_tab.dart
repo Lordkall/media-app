@@ -942,6 +942,176 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
     );
   }
 
+  void _showWaterGoalPicker(BuildContext context, int currentGoal) {
+    HapticFeedback.selectionClick();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 44,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFCBD5E1),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: const [
+                  Icon(Icons.water_drop_rounded,
+                      color: Color(0xFF0284C7), size: 22),
+                  SizedBox(width: 8),
+                  Text(
+                    'Meta diaria de hidratación',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Elige tu consumo de agua recomendado por día. Las notificaciones se pausarán automáticamente al completar tu meta diaria.',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF64748B),
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 20),
+              _buildWaterGoalOption(
+                ctx,
+                ml: 2000,
+                glasses: 8,
+                title: '2000 ML / 8 vasos',
+                subtitle: 'Predeterminada recomendada',
+                isSelected: currentGoal == 2000,
+              ),
+              const SizedBox(height: 10),
+              _buildWaterGoalOption(
+                ctx,
+                ml: 2500,
+                glasses: 10,
+                title: '2500 ML / 10 vasos',
+                subtitle: 'Ideal para personas activas',
+                isSelected: currentGoal == 2500,
+              ),
+              const SizedBox(height: 10),
+              _buildWaterGoalOption(
+                ctx,
+                ml: 3000,
+                glasses: 12,
+                title: '3000 ML / 12 vasos',
+                subtitle: 'Alto rendimiento o climas calurosos',
+                isSelected: currentGoal == 3000,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildWaterGoalOption(
+    BuildContext context, {
+    required int ml,
+    required int glasses,
+    required String title,
+    required String subtitle,
+    required bool isSelected,
+  }) {
+    return Material(
+      color: isSelected ? const Color(0xFFE0F2FE) : const Color(0xFFF8FAFC),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () async {
+          HapticFeedback.mediumImpact();
+          await HealthModuleHelper.setWaterGoal(ml);
+          if (context.mounted) Navigator.pop(context);
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isSelected
+                  ? const Color(0xFF0284C7)
+                  : const Color(0xFFE2E8F0),
+              width: isSelected ? 1.8 : 1.0,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? const Color(0xFF0284C7)
+                      : const Color(0xFFE2E8F0),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.local_drink_rounded,
+                  size: 20,
+                  color: isSelected ? Colors.white : const Color(0xFF64748B),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: isSelected
+                            ? const Color(0xFF0369A1)
+                            : const Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isSelected)
+                const Icon(
+                  Icons.check_circle_rounded,
+                  color: Color(0xFF0284C7),
+                  size: 24,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   // --- 1. Tarjeta de Hidratación (Azul gradiente) ---
   Widget _buildHydrationCard(HealthMetrics metrics) {
     final glassesCount = (metrics.waterMilliliters / 250).toInt();
@@ -986,13 +1156,47 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Agua',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF64748B),
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Agua',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                    InkWell(
+                      borderRadius: BorderRadius.circular(10),
+                      onTap: () => _showWaterGoalPicker(
+                          context, metrics.waterGoalMilliliters),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE0F2FE),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.tune_rounded,
+                                size: 12, color: Color(0xFF0369A1)),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${metrics.waterGoalMilliliters} ml',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF0369A1),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 4),
 
@@ -1091,7 +1295,7 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                             child: Icon(
                               Icons.add,
                               color: Colors.white,
-                              size: 22,
+                              size: 24,
                             ),
                           ),
                         ),

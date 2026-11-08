@@ -66,14 +66,16 @@ class _MisCitasTabState extends State<MisCitasTab> {
       builder: (ctx) => AlertDialog(
         title: const Text('Limpiar historial'),
         content: const Text(
-            'Se eliminarán del historial las citas canceladas y completadas. Las citas programadas se conservarán.'),
+            '¿Deseas eliminar del historial tus citas pasadas (canceladas y completadas)? Tus citas programadas se conservarán.'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
               child: const Text('Volver')),
           FilledButton(
+              style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFFDC2626)),
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Limpiar')),
+              child: const Text('Borrar')),
         ],
       ),
     );
@@ -99,7 +101,7 @@ class _MisCitasTabState extends State<MisCitasTab> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No se pudo limpiar el historial.')),
+          const SnackBar(content: Text('Error al limpiar el historial.')),
         );
       }
     }
@@ -425,6 +427,7 @@ class _MisCitasTabState extends State<MisCitasTab> {
   String? _role;
   bool _assistantCanMessage = false;
   String _filterMode = 'Fecha';
+  String _pastStatusFilter = 'Todas'; // 'Todas', 'Completadas', 'Canceladas'
   bool get _canManageAppointments => _role == 'doctor' || _role == 'assistant';
   bool get _doctorView => _canManageAppointments;
 
@@ -474,9 +477,18 @@ class _MisCitasTabState extends State<MisCitasTab> {
     if (_filterMode == 'Historial') {
       final past = _appointments.where((a) {
         final aDateTime = _appointmentDateTime(a);
-        return aDateTime.isBefore(now) ||
-            a['status'] == 'completed' ||
-            a['status'] == 'cancelled';
+        final status = a['status']?.toString().toLowerCase();
+        final isPast = aDateTime.isBefore(now) ||
+            status == 'completed' ||
+            status == 'cancelled' ||
+            status == 'canceled';
+        if (!isPast) return false;
+        if (_pastStatusFilter == 'Completadas') {
+          return status == 'completed';
+        } else if (_pastStatusFilter == 'Canceladas') {
+          return status == 'cancelled' || status == 'canceled';
+        }
+        return true;
       }).toList();
       past.sort(
           (a, b) => _appointmentDateTime(b).compareTo(_appointmentDateTime(a)));
@@ -640,17 +652,107 @@ class _MisCitasTabState extends State<MisCitasTab> {
   }
 
   Widget _buildPatientFilters() {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: const Color(0xFFDCE8F8),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Row(
-        children: [
-          _buildPatientFilterOption('Próximas', 'Más próximas'),
-          _buildPatientFilterOption('Pasadas', 'Historial'),
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: const Color(0xFFDCE8F8),
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Row(
+            children: [
+              _buildPatientFilterOption('Próximas', 'Más próximas'),
+              _buildPatientFilterOption('Pasadas', 'Historial'),
+            ],
+          ),
+        ),
+        if (_filterMode == 'Historial') ...[
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildPastStatusChip('Todas'),
+                      const SizedBox(width: 6),
+                      _buildPastStatusChip('Completadas'),
+                      const SizedBox(width: 6),
+                      _buildPastStatusChip('Canceladas'),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              TextButton.icon(
+                onPressed: _clearHistory,
+                icon: const Icon(Icons.delete_outline_rounded,
+                    color: Color(0xFFDC2626), size: 16),
+                label: const Text(
+                  'Borrar',
+                  style: TextStyle(
+                    color: Color(0xFFDC2626),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                  ),
+                ),
+                style: TextButton.styleFrom(
+                  backgroundColor: const Color(0xFFFEE2E2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
+      ],
+    );
+  }
+
+  Widget _buildPastStatusChip(String filterName) {
+    final selected = _pastStatusFilter == filterName;
+    Color activeColor = const Color(0xFF0756A4);
+    if (filterName == 'Completadas') activeColor = const Color(0xFF16A34A);
+    if (filterName == 'Canceladas') activeColor = const Color(0xFFDC2626);
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: () => setState(() => _pastStatusFilter = filterName),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? activeColor : Colors.white.withValues(alpha: 0.85),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? activeColor : const Color(0xFFCBD5E1),
+            width: selected ? 1.5 : 1.0,
+          ),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: activeColor.withValues(alpha: 0.25),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  )
+                ]
+              : null,
+        ),
+        child: Text(
+          filterName,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: selected ? FontWeight.bold : FontWeight.w600,
+            color: selected ? Colors.white : const Color(0xFF475569),
+          ),
+        ),
       ),
     );
   }
@@ -873,7 +975,7 @@ class _MisCitasTabState extends State<MisCitasTab> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _patientAppointmentIconButton(
-                      icon: Icons.arrow_forward_rounded,
+                      icon: Icons.replay_rounded,
                       tooltip: 'Reprogramar cita',
                       color: const Color(0xFF0756A4),
                       background: const Color(0xFFE5EFFB),

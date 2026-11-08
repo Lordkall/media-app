@@ -198,6 +198,13 @@ class HealthModuleHelper {
         waterMilliliters: 0,
         weeklySteps: updatedWeekly,
       );
+      if (!kIsWeb &&
+          metricsNotifier.value.waterReminderEnabled &&
+          isEnabledNotifier.value) {
+        await LocalNotificationService.scheduleWaterReminder(
+          intervalHours: metricsNotifier.value.waterReminderIntervalHours,
+        );
+      }
     }
   }
 
@@ -467,24 +474,41 @@ class HealthModuleHelper {
 
   static Future<void> addWater([int ml = 250]) async {
     final current = metricsNotifier.value.waterMilliliters;
-    final updated = (current + ml).clamp(0, 8000);
+    final goal = metricsNotifier.value.waterGoalMilliliters;
+    final updated = (current + ml).clamp(0, goal);
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(_userKey(_waterMlKey), updated);
     } catch (_) {}
     metricsNotifier.value =
         metricsNotifier.value.copyWith(waterMilliliters: updated);
+
+    // Al ya tener el máximo de vasos no debe llegar la notificación
+    if (!kIsWeb && updated >= goal) {
+      await LocalNotificationService.cancelWaterReminder();
+    }
   }
 
   static Future<void> removeWater([int ml = 250]) async {
     final current = metricsNotifier.value.waterMilliliters;
-    final updated = (current - ml).clamp(0, 8000);
+    final goal = metricsNotifier.value.waterGoalMilliliters;
+    final updated = (current - ml).clamp(0, goal);
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(_userKey(_waterMlKey), updated);
     } catch (_) {}
     metricsNotifier.value =
         metricsNotifier.value.copyWith(waterMilliliters: updated);
+
+    // Si baja del máximo y tenía recordatorio activo, reprogramar
+    if (!kIsWeb &&
+        updated < goal &&
+        metricsNotifier.value.waterReminderEnabled &&
+        isEnabledNotifier.value) {
+      await LocalNotificationService.scheduleWaterReminder(
+        intervalHours: metricsNotifier.value.waterReminderIntervalHours,
+      );
+    }
   }
 
   static Future<void> setWaterGoal(int goal) async {
@@ -494,6 +518,18 @@ class HealthModuleHelper {
     } catch (_) {}
     metricsNotifier.value =
         metricsNotifier.value.copyWith(waterGoalMilliliters: goal);
+
+    if (!kIsWeb) {
+      final current = metricsNotifier.value.waterMilliliters;
+      if (current >= goal) {
+        await LocalNotificationService.cancelWaterReminder();
+      } else if (metricsNotifier.value.waterReminderEnabled &&
+          isEnabledNotifier.value) {
+        await LocalNotificationService.scheduleWaterReminder(
+          intervalHours: metricsNotifier.value.waterReminderIntervalHours,
+        );
+      }
+    }
   }
 
   static Future<void> setWaterReminder(bool enabled,
@@ -505,7 +541,9 @@ class HealthModuleHelper {
       await prefs.setBool(_userKey(_waterReminderKey), enabled);
       await prefs.setInt(_userKey(_waterIntervalKey), interval);
       if (!kIsWeb) {
-        if (enabled) {
+        if (enabled &&
+            metricsNotifier.value.waterMilliliters <
+                metricsNotifier.value.waterGoalMilliliters) {
           await LocalNotificationService.scheduleWaterReminder(
               intervalHours: interval);
         } else {

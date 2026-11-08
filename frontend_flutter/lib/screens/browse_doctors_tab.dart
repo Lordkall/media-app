@@ -37,7 +37,6 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
   String _selectedSort = 'Recomendados';
   bool _filtersExpanded = false;
   String _favoritesKey = 'patient_favorite_doctors_current';
-  String _sortKey = 'browse_sort_current';
   Set<String> _favoriteIds = {};
   final TextEditingController _searchController = TextEditingController();
 
@@ -209,10 +208,8 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
     super.dispose();
   }
 
-  Future<void> _saveSort(String value) async {
+  void _saveSort(String value) {
     setState(() => _selectedSort = value);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_sortKey, value);
   }
 
   Future<void> _fetchDoctors() async {
@@ -241,7 +238,7 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
       final favoritesKey = 'patient_favorite_doctors_${userId ?? 'current'}';
       final favoriteIds = prefs.getStringList(favoritesKey) ?? [];
       final sortKey = 'browse_sort_${userId ?? 'current'}';
-      final storedSort = prefs.getString(sortKey) ?? 'Recomendados';
+      await prefs.remove(sortKey);
 
       if (!mounted) return;
       setState(() {
@@ -254,15 +251,7 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
             .toList();
         _clinics = allClinics;
         _favoritesKey = favoritesKey;
-        _sortKey = sortKey;
-        if (const {
-          'Recomendados',
-          'Favoritos',
-          'Precio más bajo',
-          'Precio más alto',
-        }.contains(storedSort)) {
-          _selectedSort = storedSort;
-        }
+        _selectedSort = 'Recomendados';
         _favoriteIds = favoriteIds.toSet();
         _isLoading = false;
       });
@@ -374,7 +363,7 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
                         ))
                     .toList(),
                 onChanged: (value) {
-                  if (value != null) unawaited(_saveSort(value));
+                  if (value != null) _saveSort(value);
                 },
               ),
               if (_selectedState != 'Todos' ||
@@ -388,7 +377,7 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
                         _selectedState = 'Todos';
                         _selectedSpecialty = 'Todos';
                       });
-                      unawaited(_saveSort('Recomendados'));
+                      _saveSort('Recomendados');
                     },
                     child: const Text('Limpiar filtros'),
                   ),
