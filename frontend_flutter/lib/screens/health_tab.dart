@@ -1831,7 +1831,7 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Encabezado: "Esta semana" + selector interactivo de Meta
+          // Encabezado: "Pasos diarios" + selector interactivo de Meta diaria
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -1839,7 +1839,7 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Esta semana',
+                    'Pasos diarios',
                     style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.bold,
@@ -1875,7 +1875,7 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                           size: 14, color: Color(0xFF0756A4)),
                       const SizedBox(width: 5),
                       Text(
-                        '${metrics.stepGoal >= 1000 ? "${(metrics.stepGoal / 1000).toStringAsFixed(metrics.stepGoal % 1000 == 0 ? 0 : 1)}k" : "${metrics.stepGoal}"} pasos',
+                        'Meta: ${metrics.stepGoal >= 1000 ? "${(metrics.stepGoal / 1000).toStringAsFixed(metrics.stepGoal % 1000 == 0 ? 0 : 1)}k" : "${metrics.stepGoal}"} / día',
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -1888,7 +1888,30 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 18),
+
+          // Sub-encabezado: Historial semanal
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: const [
+              Text(
+                'Historial de la semana',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF64748B),
+                ),
+              ),
+              Text(
+                'Lunes a Domingo',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Color(0xFF94A3B8),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
 
           // Gráfico de 7 barras verticales redondeadas en Azul Gradiente
           SizedBox(

@@ -159,7 +159,7 @@ class HealthTodaySection extends StatelessWidget {
                           ),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 11),
+                                horizontal: 10, vertical: 10),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisAlignment:
@@ -186,94 +186,84 @@ class HealthTodaySection extends StatelessWidget {
                                   ),
                                 ),
 
-                                // Fila con número de vasos y botones [-] [+]
+                                // Contador de vasos
+                                InkWell(
+                                  borderRadius: BorderRadius.circular(6),
+                                  onTap: () => _openHealthTab(context),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${(metrics.waterMilliliters / 250).toInt()} / ${(metrics.waterGoalMilliliters / 250).toInt()}',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w800,
+                                          color: Color(0xFF0F172A),
+                                          height: 1.1,
+                                        ),
+                                      ),
+                                      const Text(
+                                        'vasos hoy',
+                                        style: TextStyle(
+                                          fontSize: 9.5,
+                                          color: Color(0xFF64748B),
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                // Botones [-] y [+] centrados horizontalmente sin desbordamiento
                                 Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.center,
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    // Contador de vasos
-                                    InkWell(
-                                      borderRadius: BorderRadius.circular(6),
-                                      onTap: () => _openHealthTab(context),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            '${(metrics.waterMilliliters / 250).toInt()} / ${(metrics.waterGoalMilliliters / 250).toInt()}',
-                                            style: const TextStyle(
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.w800,
-                                              color: Color(0xFF0F172A),
-                                              height: 1.1,
-                                            ),
+                                    // Botón Restar (-)
+                                    Material(
+                                      color: const Color(0xFFF1F5F9),
+                                      shape: const CircleBorder(),
+                                      child: InkWell(
+                                        customBorder:
+                                            const CircleBorder(),
+                                        onTap: () {
+                                          HapticFeedback.selectionClick();
+                                          HealthModuleHelper.removeWater(250);
+                                        },
+                                        child: const SizedBox(
+                                          width: 26,
+                                          height: 26,
+                                          child: Icon(
+                                            Icons.remove_rounded,
+                                            size: 15,
+                                            color: Color(0xFF475569),
                                           ),
-                                          const Text(
-                                            'vasos hoy',
-                                            style: TextStyle(
-                                              fontSize: 9.5,
-                                              color: Color(0xFF64748B),
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ],
+                                        ),
                                       ),
                                     ),
+                                    const SizedBox(width: 10),
 
-                                    // Botones circulares [-] y [+]
-                                    Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        // Botón Restar (-)
-                                        Material(
-                                          color: const Color(0xFFF1F5F9),
-                                          shape: const CircleBorder(),
-                                          child: InkWell(
-                                            customBorder:
-                                                const CircleBorder(),
-                                            onTap: () {
-                                              HapticFeedback.selectionClick();
-                                              HealthModuleHelper.removeWater(
-                                                  250);
-                                            },
-                                            child: const SizedBox(
-                                              width: 25,
-                                              height: 25,
-                                              child: Icon(
-                                                Icons.remove_rounded,
-                                                size: 15,
-                                                color: Color(0xFF475569),
-                                              ),
-                                            ),
+                                    // Botón Sumar (+)
+                                    Material(
+                                      color: const Color(0xFF0284C7),
+                                      shape: const CircleBorder(),
+                                      child: InkWell(
+                                        customBorder:
+                                            const CircleBorder(),
+                                        onTap: () {
+                                          HapticFeedback.mediumImpact();
+                                          HealthModuleHelper.addWater(250);
+                                        },
+                                        child: const SizedBox(
+                                          width: 26,
+                                          height: 26,
+                                          child: Icon(
+                                            Icons.add_rounded,
+                                            size: 15,
+                                            color: Colors.white,
                                           ),
                                         ),
-                                        const SizedBox(width: 4),
-
-                                        // Botón Sumar (+)
-                                        Material(
-                                          color: const Color(0xFF0284C7),
-                                          shape: const CircleBorder(),
-                                          child: InkWell(
-                                            customBorder:
-                                                const CircleBorder(),
-                                            onTap: () {
-                                              HapticFeedback.mediumImpact();
-                                              HealthModuleHelper.addWater(250);
-                                            },
-                                            child: const SizedBox(
-                                              width: 25,
-                                              height: 25,
-                                              child: Icon(
-                                                Icons.add_rounded,
-                                                size: 15,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
+                                      ),
                                     ),
                                   ],
                                 ),
