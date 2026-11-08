@@ -202,4 +202,93 @@ class LocalNotificationService {
       await _plugin.cancel(998);
     } catch (_) {}
   }
+
+  /// Notificación Push al completar la meta diaria de pasos.
+  static Future<void> showStepGoalCompleted({
+    required int steps,
+    required int goal,
+  }) async {
+    try {
+      const channel = AndroidNotificationChannel(
+        'salud_now_step_reminders',
+        'Recordatorios de Pasos',
+        description: 'Notificaciones de progreso y meta diaria de pasos',
+        importance: Importance.high,
+      );
+      await _plugin
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.createNotificationChannel(channel);
+
+      await _plugin.show(
+        980,
+        '🎉 ¡Meta diaria de pasos completada!',
+        '¡Felicidades! Has alcanzado $steps de $goal pasos hoy. ¡Excelente trabajo por tu salud!',
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'salud_now_step_reminders',
+            'Recordatorios de Pasos',
+            channelDescription:
+                'Notificaciones de progreso y meta diaria de pasos',
+            importance: Importance.high,
+            priority: Priority.high,
+            icon: 'ic_stat_salud_now',
+            playSound: true,
+          ),
+          iOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+        payload: '/health',
+      );
+    } catch (_) {}
+  }
+
+  /// Notificaciones Push periódicas de progreso de pasos (3 diarias: mañana, tarde y noche).
+  static Future<void> showStepProgressReminder({
+    required int notificationId,
+    required String title,
+    required int steps,
+    required int goal,
+    required String message,
+  }) async {
+    try {
+      const channel = AndroidNotificationChannel(
+        'salud_now_step_reminders',
+        'Recordatorios de Pasos',
+        description: 'Notificaciones de progreso y meta diaria de pasos',
+        importance: Importance.high,
+      );
+      await _plugin
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.createNotificationChannel(channel);
+
+      await _plugin.show(
+        notificationId,
+        title,
+        message,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'salud_now_step_reminders',
+            'Recordatorios de Pasos',
+            channelDescription:
+                'Notificaciones de progreso y meta diaria de pasos',
+            importance: Importance.high,
+            priority: Priority.high,
+            icon: 'ic_stat_salud_now',
+            playSound: true,
+          ),
+          iOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+        payload: '/health',
+      );
+    } catch (_) {}
+  }
 }

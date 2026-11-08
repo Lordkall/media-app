@@ -141,77 +141,170 @@ class HealthTodaySection extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
 
-                      // Card 2: Agua
+                      // Card 2: Agua (con botones interactivos para sumar y restar vasos)
                       Expanded(
-                        child: _buildHealthCard(
-                          context: context,
-                          onTap: () => _openHealthTab(context),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: const [
-                                  Icon(Icons.water_drop_rounded,
-                                      color: Color(0xFF0284C7), size: 16),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    'Agua',
-                                    style: TextStyle(
-                                      color: Color(0xFF64748B),
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0xFFF1F5F9)),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF0B2545)
+                                    .withValues(alpha: 0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 3),
                               ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '${(metrics.waterMilliliters / 250).toInt()} / ${(metrics.waterGoalMilliliters / 250).toInt()}',
-                                    style: const TextStyle(
-                                      fontSize: 19,
-                                      fontWeight: FontWeight.w800,
-                                      color: Color(0xFF0F172A),
-                                      height: 1.1,
-                                    ),
+                            ],
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 11),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
+                              children: [
+                                // Encabezado: icono y texto 'Agua' (toca para abrir módulo)
+                                InkWell(
+                                  borderRadius: BorderRadius.circular(6),
+                                  onTap: () => _openHealthTab(context),
+                                  child: Row(
+                                    children: const [
+                                      Icon(Icons.water_drop_rounded,
+                                          color: Color(0xFF0284C7), size: 16),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'Agua',
+                                        style: TextStyle(
+                                          color: Color(0xFF64748B),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  const Text(
-                                    'vasos hoy',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: Color(0xFF64748B),
-                                      fontWeight: FontWeight.w600,
+                                ),
+
+                                // Fila con número de vasos y botones [-] [+]
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.center,
+                                  children: [
+                                    // Contador de vasos
+                                    InkWell(
+                                      borderRadius: BorderRadius.circular(6),
+                                      onTap: () => _openHealthTab(context),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            '${(metrics.waterMilliliters / 250).toInt()} / ${(metrics.waterGoalMilliliters / 250).toInt()}',
+                                            style: const TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w800,
+                                              color: Color(0xFF0F172A),
+                                              height: 1.1,
+                                            ),
+                                          ),
+                                          const Text(
+                                            'vasos hoy',
+                                            style: TextStyle(
+                                              fontSize: 9.5,
+                                              color: Color(0xFF64748B),
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(6),
-                                child: Container(
-                                  width: double.infinity,
-                                  height: 6,
-                                  color: const Color(0xFFE2E8F0),
-                                  child: FractionallySizedBox(
-                                    alignment: Alignment.centerLeft,
-                                    widthFactor: (metrics.waterMilliliters /
-                                            metrics.waterGoalMilliliters)
-                                        .clamp(0.0, 1.0),
-                                    child: Container(
-                                      decoration: const BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            Color(0xFF0284C7),
-                                            Color(0xFF38BDF8)
-                                          ],
+
+                                    // Botones circulares [-] y [+]
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        // Botón Restar (-)
+                                        Material(
+                                          color: const Color(0xFFF1F5F9),
+                                          shape: const CircleBorder(),
+                                          child: InkWell(
+                                            customBorder:
+                                                const CircleBorder(),
+                                            onTap: () {
+                                              HapticFeedback.selectionClick();
+                                              HealthModuleHelper.removeWater(
+                                                  250);
+                                            },
+                                            child: const SizedBox(
+                                              width: 25,
+                                              height: 25,
+                                              child: Icon(
+                                                Icons.remove_rounded,
+                                                size: 15,
+                                                color: Color(0xFF475569),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+
+                                        // Botón Sumar (+)
+                                        Material(
+                                          color: const Color(0xFF0284C7),
+                                          shape: const CircleBorder(),
+                                          child: InkWell(
+                                            customBorder:
+                                                const CircleBorder(),
+                                            onTap: () {
+                                              HapticFeedback.mediumImpact();
+                                              HealthModuleHelper.addWater(250);
+                                            },
+                                            child: const SizedBox(
+                                              width: 25,
+                                              height: 25,
+                                              child: Icon(
+                                                Icons.add_rounded,
+                                                size: 15,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+
+                                // Barra de progreso
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: Container(
+                                    width: double.infinity,
+                                    height: 6,
+                                    color: const Color(0xFFE2E8F0),
+                                    child: FractionallySizedBox(
+                                      alignment: Alignment.centerLeft,
+                                      widthFactor: (metrics.waterMilliliters /
+                                              metrics.waterGoalMilliliters)
+                                          .clamp(0.0, 1.0),
+                                      child: Container(
+                                        decoration: const BoxDecoration(
+                                          gradient: LinearGradient(
+                                            colors: [
+                                              Color(0xFF0284C7),
+                                              Color(0xFF38BDF8)
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),

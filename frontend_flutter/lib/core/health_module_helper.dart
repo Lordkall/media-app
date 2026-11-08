@@ -158,7 +158,99 @@ class HealthModuleHelper {
     _midnightCheckTimer?.cancel();
     _midnightCheckTimer = Timer.periodic(const Duration(minutes: 1), (_) {
       checkMidnightReset();
+      _checkDailyStepReminders();
     });
+  }
+
+  /// Verifica las 3 notificaciones diarias de progreso de pasos (Mañana, Tarde y Noche).
+  static Future<void> _checkDailyStepReminders() async {
+    if (kIsWeb || !isEnabledNotifier.value) return;
+
+    final now = DateTime.now();
+    final todayStr = _getTodayStr();
+    final steps = metricsNotifier.value.steps;
+    final goal = metricsNotifier.value.stepGoal > 0
+        ? metricsNotifier.value.stepGoal
+        : 10000;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // 1. Mañana (10:00 AM - 1:59 PM)
+      if (now.hour >= 10 && now.hour < 14) {
+        final lastMorning =
+            prefs.getString(_userKey('health_step_reminder_morning_date'));
+        if (lastMorning != todayStr) {
+          await prefs.setString(
+              _userKey('health_step_reminder_morning_date'), todayStr);
+          await LocalNotificationService.showStepProgressReminder(
+            notificationId: 981,
+            title: '🚶‍♂️ Tus pasos de hoy',
+            steps: steps,
+            goal: goal,
+            message:
+                '¡Comienza tu día en movimiento! Llevas $steps de $goal pasos dados.',
+          );
+        }
+      }
+
+      // 2. Tarde (3:00 PM - 6:59 PM)
+      if (now.hour >= 15 && now.hour < 19) {
+        final lastAfternoon =
+            prefs.getString(_userKey('health_step_reminder_afternoon_date'));
+        if (lastAfternoon != todayStr) {
+          await prefs.setString(
+              _userKey('health_step_reminder_afternoon_date'), todayStr);
+          await LocalNotificationService.showStepProgressReminder(
+            notificationId: 982,
+            title: '🏃‍♂️ Progreso de pasos',
+            steps: steps,
+            goal: goal,
+            message:
+                '¡Mitad del día! Llevas $steps de $goal pasos dados. ¡Sigue activo para alcanzar tu meta!',
+          );
+        }
+      }
+
+      // 3. Noche (8:00 PM - 10:59 PM)
+      if (now.hour >= 20 && now.hour < 23) {
+        final lastEvening =
+            prefs.getString(_userKey('health_step_reminder_evening_date'));
+        if (lastEvening != todayStr) {
+          await prefs.setString(
+              _userKey('health_step_reminder_evening_date'), todayStr);
+          await LocalNotificationService.showStepProgressReminder(
+            notificationId: 983,
+            title: '👟 Cierre del día',
+            steps: steps,
+            goal: goal,
+            message:
+                'Llevas $steps de $goal pasos caminados hoy. ¡Revisa tu resumen diario en el Módulo de Salud!',
+          );
+        }
+      }
+    } catch (_) {}
+  }
+
+  /// Notificación push inmediata al alcanzar o superar la meta diaria de pasos.
+  static Future<void> _checkStepGoalCelebration(int steps, int goal) async {
+    if (kIsWeb || !isEnabledNotifier.value || goal <= 0) return;
+    if (steps < goal) return;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final todayStr = _getTodayStr();
+      final lastCelebrated =
+          prefs.getString(_userKey('health_step_goal_celebrated_date'));
+      if (lastCelebrated != todayStr) {
+        await prefs.setString(
+            _userKey('health_step_goal_celebrated_date'), todayStr);
+        await LocalNotificationService.showStepGoalCompleted(
+          steps: steps,
+          goal: goal,
+        );
+      }
+    } catch (_) {}
   }
 
   /// Verifica si ha pasado la medianoche (12:00 am) y reinicia agua y pasos a 0.
@@ -332,6 +424,8 @@ class HealthModuleHelper {
 
       if (isEnabled) {
         unawaited(initializePedometer());
+        unawaited(_checkDailyStepReminders());
+        unawaited(_checkStepGoalCelebration(st, stepGoal));
       }
     } catch (e) {
       debugPrint('Error al cargar métricas de salud para usuario $_activeUserId: $e');
@@ -397,6 +491,10 @@ class HealthModuleHelper {
               heartRate: metricsNotifier.value.heartRate,
               sleepHours: metricsNotifier.value.sleepHours,
               steps: todaySteps,
+            );
+            await _checkStepGoalCelebration(
+              todaySteps,
+              metricsNotifier.value.stepGoal,
             );
           },
           onError: (error) {
