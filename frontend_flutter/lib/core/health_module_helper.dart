@@ -5,9 +5,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api_client.dart';
 import 'auth_helper.dart';
-import 'health_connect_helper.dart';
 import 'local_notification_service.dart';
-import 'smartwatch_ble_helper.dart';
 
 class HealthMetrics {
   final int heartRate; // bpm (default: 72)
@@ -19,6 +17,7 @@ class HealthMetrics {
   final bool waterReminderEnabled; // reminder switch
   final int waterReminderIntervalHours; // e.g. 2 hours
   final bool isNativePedometerActive; // steps tracked natively
+  final int stepGoal; // daily goal (default: 10000)
   final List<int> weeklySteps; // Mon-Sun daily steps (7 days, starts at [0,0,0,0,0,0,0])
   final bool breathingWeeklyReminderEnabled; // weekly breathing & anti-stress reminder
   final double? heightCm; // e.g. 170.0 cm
@@ -29,6 +28,7 @@ class HealthMetrics {
   const HealthMetrics({
     this.heartRate = 72,
     this.steps = 0,
+    this.stepGoal = 10000,
     this.sleepHours = 7.3,
     this.sleepQuality = 'Bueno',
     this.waterMilliliters = 0,
@@ -47,6 +47,7 @@ class HealthMetrics {
   HealthMetrics copyWith({
     int? heartRate,
     int? steps,
+    int? stepGoal,
     double? sleepHours,
     String? sleepQuality,
     int? waterMilliliters,
@@ -64,6 +65,7 @@ class HealthMetrics {
     return HealthMetrics(
       heartRate: heartRate ?? this.heartRate,
       steps: steps ?? this.steps,
+      stepGoal: stepGoal ?? this.stepGoal,
       sleepHours: sleepHours ?? this.sleepHours,
       sleepQuality: sleepQuality ?? this.sleepQuality,
       waterMilliliters: waterMilliliters ?? this.waterMilliliters,
@@ -111,6 +113,7 @@ class HealthModuleHelper {
   static const String _enabledKey = 'health_module_enabled';
   static const String _heartRateKey = 'health_metric_heart_rate';
   static const String _stepsKey = 'health_metric_steps';
+  static const String _stepGoalKey = 'health_metric_step_goal';
   static const String _sleepHoursKey = 'health_metric_sleep_hours';
   static const String _waterMlKey = 'health_metric_water_ml';
   static const String _waterGoalKey = 'health_metric_water_goal';
@@ -217,7 +220,6 @@ class HealthModuleHelper {
     _startMidnightTimer();
     final userId = await AuthHelper.getUserId();
     await loadForUser(userId);
-    unawaited(HealthConnectHelper.initialize());
   }
 
   /// Carga las métricas aisladas para el usuario activo (paciente, doctor o invitado).
@@ -278,6 +280,7 @@ class HealthModuleHelper {
       isEnabledNotifier.value = isEnabled;
 
       final hr = prefs.getInt(_userKey(_heartRateKey)) ?? 72;
+      final stepGoal = prefs.getInt(_userKey(_stepGoalKey)) ?? 10000;
       final sl = prefs.getDouble(_userKey(_sleepHoursKey)) ?? 7.3;
       final quality = HealthMetrics.calculateSleepQuality(sl);
       final goal = prefs.getInt(_userKey(_waterGoalKey)) ?? 2000;
@@ -294,6 +297,7 @@ class HealthModuleHelper {
       metricsNotifier.value = HealthMetrics(
         heartRate: hr,
         steps: st,
+        stepGoal: stepGoal,
         sleepHours: sl,
         sleepQuality: quality,
         waterMilliliters: water,
@@ -309,10 +313,14 @@ class HealthModuleHelper {
         bmiCategory: bmiCategory,
       );
 
+      final scheduledInterval =
+          prefs.getInt(_userKey('health_water_scheduled_interval')) ?? 0;
       if (reminder &&
           !kIsWeb &&
-          (!_waterReminderScheduled || _scheduledIntervalHours != interval) &&
+          (scheduledInterval != interval) &&
           water < goal) {
+        await prefs.setInt(
+            _userKey('health_water_scheduled_interval'), interval);
         _waterReminderScheduled = true;
         _scheduledIntervalHours = interval;
         await LocalNotificationService.scheduleWaterReminder(
@@ -324,7 +332,6 @@ class HealthModuleHelper {
 
       if (isEnabled) {
         unawaited(initializePedometer());
-        unawaited(HealthConnectHelper.syncHealthData());
       }
     } catch (e) {
       debugPrint('Error al cargar métricas de salud para usuario $_activeUserId: $e');
@@ -334,7 +341,6 @@ class HealthModuleHelper {
   /// Limpia suscripciones y reinicia estado al cerrar sesión.
   static Future<void> onLogout() async {
     try {
-      await SmartwatchBleHelper.disconnect();
       await _stepCountSubscription?.cancel();
       _stepCountSubscription = null;
       _initialBootSteps = -1;
@@ -504,6 +510,10 @@ class HealthModuleHelper {
     if (updated >= goal) {
       if (!kIsWeb) {
         await LocalNotificationService.cancelWaterReminder();
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.remove(_userKey('health_water_scheduled_interval'));
+        } catch (_) {}
       }
       unawaited(ApiClient.put('/users/me', {'water_reminder_enabled': false}));
     }
@@ -529,6 +539,14 @@ class HealthModuleHelper {
         intervalHours: metricsNotifier.value.waterReminderIntervalHours,
       );
     }
+  }
+
+  static Future<void> setStepGoal(int goal) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(_userKey(_stepGoalKey), goal);
+    } catch (_) {}
+    metricsNotifier.value = metricsNotifier.value.copyWith(stepGoal: goal);
   }
 
   static Future<void> setWaterGoal(int goal) async {
@@ -566,11 +584,14 @@ class HealthModuleHelper {
                 metricsNotifier.value.waterGoalMilliliters) {
           _waterReminderScheduled = true;
           _scheduledIntervalHours = interval;
+          await prefs.setInt(
+              _userKey('health_water_scheduled_interval'), interval);
           await LocalNotificationService.scheduleWaterReminder(
               intervalHours: interval);
         } else {
           _waterReminderScheduled = false;
           _scheduledIntervalHours = null;
+          await prefs.remove(_userKey('health_water_scheduled_interval'));
           await LocalNotificationService.cancelWaterReminder();
         }
       }

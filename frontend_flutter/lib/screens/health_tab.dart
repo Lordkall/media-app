@@ -34,9 +34,6 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
     super.initState();
     _selectedDayIndex = (DateTime.now().weekday - 1).clamp(0, 6);
     HealthModuleHelper.initializePedometer();
-    HealthConnectHelper.initialize();
-    HealthConnectHelper.syncHealthData();
-    SmartwatchBleHelper.reconnectLastDevice();
 
     _waterWaveController = AnimationController(
       vsync: this,
@@ -127,39 +124,53 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: const [
-                                    Text(
-                                      'Salud',
-                                      style: TextStyle(
-                                        fontSize: 28,
-                                        fontWeight: FontWeight.w900,
-                                        color: Color(0xFF0B2545),
-                                        letterSpacing: -0.5,
-                                      ),
+                                if (Navigator.canPop(context)) ...[
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.arrow_back_ios_new_rounded,
+                                      color: Color(0xFF0B2545),
+                                      size: 22,
                                     ),
-                                    SizedBox(height: 2),
-                                    Text(
-                                      'Bienestar y seguimiento diario',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: Color(0xFF64748B),
-                                        fontWeight: FontWeight.w500,
+                                    onPressed: () => Navigator.pop(context),
+                                  ),
+                                  const SizedBox(width: 4),
+                                ],
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: const [
+                                      Text(
+                                        'Módulo de Salud',
+                                        style: TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.w900,
+                                          color: Color(0xFF0B2545),
+                                          letterSpacing: -0.5,
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                      SizedBox(height: 2),
+                                      Text(
+                                        'Estatura, peso, IMC, hidratación y pasos',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: Color(0xFF64748B),
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                                 Container(
                                   padding: const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF0756A4).withValues(alpha: 0.12),
+                                    color: const Color(0xFF0756A4)
+                                        .withValues(alpha: 0.12),
                                     shape: BoxShape.circle,
                                   ),
                                   child: const Icon(
-                                    Icons.favorite_rounded,
+                                    Icons.health_and_safety_rounded,
                                     color: Color(0xFF0756A4),
                                     size: 24,
                                   ),
@@ -182,15 +193,11 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                       )
                     else
                       SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
                         sliver: SliverList(
                           delegate: SliverChildListDelegate([
                             // 1. Medidas Corporales & IMC (Estatura, Peso, IMC)
                             _buildBodyMetricsCard(context, metrics),
-                            const SizedBox(height: 18),
-
-                            // 2. Tarjeta de Sincronización Health Connect / Apple Health
-                            _buildHealthSyncCard(context),
                             const SizedBox(height: 18),
 
                             // 2. Tarjeta de Hidratación (Azul gradiente)
@@ -203,10 +210,6 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
 
                             // 4. Tarjeta de Pasos en la Semana (Azul gradiente)
                             _buildWeeklyStepsCard(metrics),
-                            const SizedBox(height: 18),
-
-                            // 5. Métricas de hoy (Ritmo cardíaco y Sueño)
-                            _buildDailySummaryCard(context, metrics),
                             const SizedBox(height: 18),
 
                             // 5. Configuración de Recordatorio Semanal Antiestrés
@@ -224,510 +227,6 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
             );
           },
         ),
-      ),
-    );
-  }
-
-  // --- Tarjeta de Sincronización Health Connect / Apple Health ---
-  Widget _buildHealthSyncCard(BuildContext context) {
-    return ValueListenableBuilder<HealthPlatformStatus>(
-      valueListenable: HealthConnectHelper.statusNotifier,
-      builder: (context, healthStatus, _) {
-        final isAuthorized =
-            healthStatus == HealthPlatformStatus.authorized;
-        final isSyncing = healthStatus == HealthPlatformStatus.syncing;
-        final needsInstall =
-            healthStatus == HealthPlatformStatus.needsInstall;
-        final platformName = HealthConnectHelper.platformName;
-
-        return Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: isAuthorized
-                  ? const Color(0xFF10B981).withValues(alpha: 0.35)
-                  : (needsInstall
-                      ? const Color(0xFFF59E0B).withValues(alpha: 0.35)
-                      : const Color(0xFFE2E8F0)),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: isAuthorized
-                    ? const Color(0xFF10B981).withValues(alpha: 0.06)
-                    : const Color(0xFF0B2545).withValues(alpha: 0.05),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: isAuthorized
-                          ? const Color(0xFF10B981).withValues(alpha: 0.12)
-                          : (needsInstall
-                              ? const Color(0xFFF59E0B).withValues(alpha: 0.12)
-                              : const Color(0xFF0756A4).withValues(alpha: 0.1)),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      isAuthorized
-                          ? Icons.health_and_safety_rounded
-                          : (needsInstall
-                              ? Icons.download_rounded
-                              : Icons.watch_rounded),
-                      color: isAuthorized
-                          ? const Color(0xFF10B981)
-                          : (needsInstall
-                              ? const Color(0xFFD97706)
-                              : const Color(0xFF0756A4)),
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          platformName,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF0F172A),
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          isAuthorized
-                              ? 'Sincronizado con smartwatch / Da Fit'
-                              : (needsInstall
-                                  ? 'Instalación requerida'
-                                  : 'Vincula tu smartwatch y sensores'),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isAuthorized
-                                ? const Color(0xFF059669)
-                                : const Color(0xFF64748B),
-                            fontWeight: isAuthorized
-                                ? FontWeight.w600
-                                : FontWeight.normal,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: isAuthorized
-                          ? const Color(0xFF10B981).withValues(alpha: 0.12)
-                          : (isSyncing
-                              ? const Color(0xFF0756A4).withValues(alpha: 0.1)
-                              : (needsInstall
-                                  ? const Color(0xFFF59E0B).withValues(alpha: 0.12)
-                                  : const Color(0xFFF1F5F9))),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (isSyncing)
-                          const SizedBox(
-                            width: 10,
-                            height: 10,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Color(0xFF0756A4),
-                            ),
-                          )
-                        else
-                          Container(
-                            width: 7,
-                            height: 7,
-                            decoration: BoxDecoration(
-                              color: isAuthorized
-                                  ? const Color(0xFF10B981)
-                                  : (needsInstall
-                                      ? const Color(0xFFD97706)
-                                      : const Color(0xFF94A3B8)),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        const SizedBox(width: 6),
-                        Text(
-                          isAuthorized
-                              ? 'Conectado'
-                              : (isSyncing
-                                  ? 'Sincronizando'
-                                  : (needsInstall
-                                      ? 'Requiere App'
-                                      : 'Sin vincular')),
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: isAuthorized
-                                ? const Color(0xFF059669)
-                                : (needsInstall
-                                    ? const Color(0xFFD97706)
-                                    : const Color(0xFF64748B)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-
-              if (isAuthorized) ...[
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.favorite_rounded,
-                              color: Color(0xFFEF4444), size: 20),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: ValueListenableBuilder<int?>(
-                              valueListenable: SmartwatchBleHelper.liveBpmNotifier,
-                              builder: (context, bpm, _) {
-                                final currentBpm = bpm ??
-                                    HealthModuleHelper.metricsNotifier.value.heartRate;
-                                return Text(
-                                  '$currentBpm bpm (Ritmo cardíaco)',
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF0F172A),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: () => _showManualBpmDialog(context),
-                            style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 6),
-                              minimumSize: Size.zero,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            child: const Text('Ajustar',
-                                style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF0756A4))),
-                          ),
-                        ],
-                      ),
-                      const Divider(height: 14, thickness: 0.6),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.nightlight_round,
-                                  color: Color(0xFF6366F1), size: 16),
-                              const SizedBox(width: 6),
-                              ValueListenableBuilder<HealthMetrics>(
-                                valueListenable: HealthModuleHelper.metricsNotifier,
-                                builder: (context, m, _) {
-                                  return Text(
-                                    '${m.sleepHours}h de sueño',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF334155),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                          ValueListenableBuilder<DateTime?>(
-                            valueListenable: HealthConnectHelper.lastSyncNotifier,
-                            builder: (context, lastSync, _) {
-                              if (lastSync == null) {
-                                return const Text(
-                                  'Sincronizado ahora',
-                                  style: TextStyle(
-                                      fontSize: 11, color: Color(0xFF94A3B8)),
-                                );
-                              }
-                              final timeStr =
-                                  '${lastSync.hour.toString().padLeft(2, '0')}:${lastSync.minute.toString().padLeft(2, '0')}';
-                              return Text(
-                                'Última sincr: $timeStr',
-                                style: const TextStyle(
-                                    fontSize: 11, color: Color(0xFF64748B)),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 10),
-                const Text(
-                  '✓ Pasos: continúan registrándose con el teléfono para máxima precisión.',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Color(0xFF64748B),
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                Row(
-                  children: [
-                    Expanded(
-                      child: SizedBox(
-                        height: 42,
-                        child: OutlinedButton.icon(
-                          onPressed: isSyncing
-                              ? null
-                              : () async {
-                                  HapticFeedback.selectionClick();
-                                  await HealthConnectHelper.syncHealthData();
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                            'Datos actualizados desde $platformName'),
-                                        duration: const Duration(seconds: 2),
-                                      ),
-                                    );
-                                  }
-                                },
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Color(0xFF0756A4)),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          icon: isSyncing
-                              ? const SizedBox(
-                                  width: 14,
-                                  height: 14,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Color(0xFF0756A4),
-                                  ),
-                                )
-                              : const Icon(Icons.sync_rounded,
-                                  size: 18, color: Color(0xFF0756A4)),
-                          label: Text(
-                            isSyncing ? 'Sincronizando...' : 'Sincronizar ahora',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF0756A4),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    IconButton(
-                      tooltip: '¿Cómo vincular Da Fit?',
-                      icon: const Icon(Icons.help_outline_rounded,
-                          color: Color(0xFF0756A4)),
-                      onPressed: () => _showDaFitInstructionsDialog(context),
-                    ),
-                  ],
-                ),
-              ] else if (needsInstall) ...[
-                const Text(
-                  'Para sincronizar tu smartwatch Da Fit u otros en Android se requiere Google Health Connect, la plataforma segura de Google para compartir ritmo cardíaco y sueño.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF64748B),
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                SizedBox(
-                  width: double.infinity,
-                  height: 44,
-                  child: ElevatedButton.icon(
-                    onPressed: () async {
-                      HapticFeedback.selectionClick();
-                      await HealthConnectHelper.installHealthConnect();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0756A4),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    icon: const Icon(Icons.download_rounded,
-                        color: Colors.white, size: 18),
-                    label: const Text(
-                      'Instalar Google Health Connect',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                ),
-              ] else ...[
-                Text(
-                  'Conecta Salud Now con $platformName para obtener automáticamente tu ritmo cardíaco (BPM) y horas de sueño desde tu smartwatch (Da Fit u otros) sin desconexiones de Bluetooth.',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF64748B),
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                SizedBox(
-                  width: double.infinity,
-                  height: 44,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF0756A4), Color(0xFF007BFF)],
-                      ),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        HapticFeedback.selectionClick();
-                        final ok =
-                            await HealthConnectHelper.requestAuthorization();
-                        if (context.mounted) {
-                          if (ok) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                    '¡$platformName vinculado con éxito!'),
-                              ),
-                            );
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                    'No se completó la vinculación o se requieren permisos.'),
-                              ),
-                            );
-                          }
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        shadowColor: Colors.transparent,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      icon: const Icon(Icons.sync_rounded,
-                          color: Colors.white, size: 18),
-                      label: Text(
-                        'Vincular $platformName',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Center(
-                  child: TextButton.icon(
-                    onPressed: () => _openSmartwatchModal(context),
-                    icon: const Icon(Icons.bluetooth_searching_rounded,
-                        size: 16, color: Color(0xFF64748B)),
-                    label: const Text(
-                      'O vincular por Bluetooth Low Energy directo',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFF64748B),
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showDaFitInstructionsDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: const [
-            Icon(Icons.watch_rounded, color: Color(0xFF0756A4)),
-            SizedBox(width: 8),
-            Text('Sincronizar Da Fit / Reloj', style: TextStyle(fontSize: 16)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
-            Text(
-              'Para que tus mediciones de ritmo cardíaco y sueño lleguen a Salud Now:',
-              style: TextStyle(fontSize: 13, color: Color(0xFF0F172A), fontWeight: FontWeight.w600),
-            ),
-            SizedBox(height: 12),
-            Text(
-              '1. Abre la app Da Fit en tu teléfono.',
-              style: TextStyle(fontSize: 12, color: Color(0xFF475569)),
-            ),
-            SizedBox(height: 6),
-            Text(
-              '2. Ve a la pestaña "Perfil" o "Ajustes" y busca "Conexión a Health Connect" o "Google Fit".',
-              style: TextStyle(fontSize: 12, color: Color(0xFF475569)),
-            ),
-            SizedBox(height: 6),
-            Text(
-              '3. Concede los permisos para compartir ritmo cardíaco y sueño.',
-              style: TextStyle(fontSize: 12, color: Color(0xFF475569)),
-            ),
-            SizedBox(height: 6),
-            Text(
-              '4. ¡Listo! Al tocar "Sincronizar ahora" en Salud Now, tus datos se reflejarán inmediatamente.',
-              style: TextStyle(fontSize: 12, color: Color(0xFF059669), fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
-        actions: [
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0756A4),
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Entendido'),
-          ),
-        ],
       ),
     );
   }
@@ -1491,8 +990,8 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                 const SizedBox(height: 2),
                 Text(
                   isEnabled
-                      ? 'Muestra pasos, ritmo cardíaco y sueño en inicio'
-                      : 'Actívalo para ver hidratación, pasos y respiración',
+                      ? 'Medidas corporales, IMC, hidratación, respiración y pasos activos'
+                      : 'Actívalo para registrar peso, altura, IMC, agua, respiración y pasos',
                   style: const TextStyle(
                     fontSize: 12,
                     color: Color(0xFF64748B),
@@ -1529,7 +1028,7 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                 shape: BoxShape.circle,
               ),
               child: const Icon(
-                Icons.monitor_heart_outlined,
+                Icons.health_and_safety_outlined,
                 size: 64,
                 color: Color(0xFF0756A4),
               ),
@@ -1545,7 +1044,7 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Activa el módulo para registrar tus vasos de agua, seguir tu rutina de respiración guiada y ver tus pasos semanales.',
+              'Activa el módulo para registrar tu estatura y peso, calcular tu IMC, contar tus pasos diarios, monitorear tu hidratación y realizar ejercicios de respiración.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 14, color: Color(0xFF64748B), height: 1.4),
             ),
@@ -1597,84 +1096,278 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
     HapticFeedback.selectionClick();
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 44,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFCBD5E1),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
-              Row(
-                children: const [
-                  Icon(Icons.water_drop_rounded,
-                      color: Color(0xFF0284C7), size: 22),
-                  SizedBox(width: 8),
-                  Text(
-                    'Meta diaria de hidratación',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0F172A),
+        return SafeArea(
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFCBD5E1),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: const [
+                      Icon(Icons.water_drop_rounded,
+                          color: Color(0xFF0284C7), size: 22),
+                      SizedBox(width: 8),
+                      Text(
+                        'Meta diaria de hidratación',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Elige tu consumo de agua recomendado por día. Las notificaciones se pausarán automáticamente al completar tu meta diaria.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF64748B),
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  _buildWaterGoalOption(
+                    ctx,
+                    ml: 2000,
+                    glasses: 8,
+                    title: '2000 ML / 8 vasos',
+                    subtitle: 'Predeterminada recomendada',
+                    isSelected: currentGoal == 2000,
+                  ),
+                  const SizedBox(height: 10),
+                  _buildWaterGoalOption(
+                    ctx,
+                    ml: 2500,
+                    glasses: 10,
+                    title: '2500 ML / 10 vasos',
+                    subtitle: 'Ideal para personas activas',
+                    isSelected: currentGoal == 2500,
+                  ),
+                  const SizedBox(height: 10),
+                  _buildWaterGoalOption(
+                    ctx,
+                    ml: 3000,
+                    glasses: 12,
+                    title: '3000 ML / 12 vasos',
+                    subtitle: 'Alto rendimiento o climas calurosos',
+                    isSelected: currentGoal == 3000,
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
-              const Text(
-                'Elige tu consumo de agua recomendado por día. Las notificaciones se pausarán automáticamente al completar tu meta diaria.',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF64748B),
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 20),
-              _buildWaterGoalOption(
-                ctx,
-                ml: 2000,
-                glasses: 8,
-                title: '2000 ML / 8 vasos',
-                subtitle: 'Predeterminada recomendada',
-                isSelected: currentGoal == 2000,
-              ),
-              const SizedBox(height: 10),
-              _buildWaterGoalOption(
-                ctx,
-                ml: 2500,
-                glasses: 10,
-                title: '2500 ML / 10 vasos',
-                subtitle: 'Ideal para personas activas',
-                isSelected: currentGoal == 2500,
-              ),
-              const SizedBox(height: 10),
-              _buildWaterGoalOption(
-                ctx,
-                ml: 3000,
-                glasses: 12,
-                title: '3000 ML / 12 vasos',
-                subtitle: 'Alto rendimiento o climas calurosos',
-                isSelected: currentGoal == 3000,
-              ),
-            ],
+            ),
           ),
         );
       },
+    );
+  }
+
+  void _showStepGoalPicker(BuildContext context, int currentGoal) {
+    HapticFeedback.selectionClick();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return SafeArea(
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFCBD5E1),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: const [
+                      Icon(Icons.directions_walk_rounded,
+                          color: Color(0xFF0756A4), size: 24),
+                      SizedBox(width: 8),
+                      Text(
+                        'Meta diaria de pasos',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Define tu objetivo diario de pasos. Caminar con regularidad fortalece tu corazón y mantiene tu energía al máximo.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF64748B),
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  _buildStepGoalOption(
+                    ctx,
+                    steps: 6000,
+                    title: '6,000 pasos / día',
+                    subtitle: 'Objetivo inicial y mantenimiento básico',
+                    isSelected: currentGoal == 6000,
+                  ),
+                  const SizedBox(height: 10),
+                  _buildStepGoalOption(
+                    ctx,
+                    steps: 8000,
+                    title: '8,000 pasos / día',
+                    subtitle: 'Saludable y activo para el día a día',
+                    isSelected: currentGoal == 8000,
+                  ),
+                  const SizedBox(height: 10),
+                  _buildStepGoalOption(
+                    ctx,
+                    steps: 10000,
+                    title: '10,000 pasos / día',
+                    subtitle: 'Predeterminada recomendada por la OMS',
+                    isSelected: currentGoal == 10000,
+                  ),
+                  const SizedBox(height: 10),
+                  _buildStepGoalOption(
+                    ctx,
+                    steps: 12000,
+                    title: '12,000 pasos / día',
+                    subtitle: 'Ideal para personas muy activas',
+                    isSelected: currentGoal == 12000,
+                  ),
+                  const SizedBox(height: 10),
+                  _buildStepGoalOption(
+                    ctx,
+                    steps: 15000,
+                    title: '15,000 pasos / día',
+                    subtitle: 'Alto rendimiento y exigencia deportiva',
+                    isSelected: currentGoal == 15000,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStepGoalOption(
+    BuildContext ctx, {
+    required int steps,
+    required String title,
+    required String subtitle,
+    required bool isSelected,
+  }) {
+    return Material(
+      color: isSelected ? const Color(0xFFE0F2FE) : const Color(0xFFF8FAFC),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () async {
+          HapticFeedback.mediumImpact();
+          await HealthModuleHelper.setStepGoal(steps);
+          if (ctx.mounted) Navigator.pop(ctx);
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isSelected
+                  ? const Color(0xFF0756A4)
+                  : const Color(0xFFE2E8F0),
+              width: isSelected ? 1.8 : 1.0,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? const Color(0xFF0756A4)
+                      : const Color(0xFFE2E8F0),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.directions_walk_rounded,
+                  size: 20,
+                  color: isSelected ? Colors.white : const Color(0xFF64748B),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: isSelected
+                            ? const Color(0xFF0756A4)
+                            : const Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isSelected)
+                const Icon(
+                  Icons.check_circle_rounded,
+                  color: Color(0xFF0756A4),
+                  size: 24,
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -2113,8 +1806,14 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
     // Días de la semana: L, M, M, J, V, S, D
     const dayLabels = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
-    // Encontrar el valor más alto para escalar las barras (mínimo 10000 para escala adecuada)
-    final maxSteps = weekly.isEmpty ? 10000 : math.max(10000, weekly.reduce(math.max));
+    // Encontrar el valor más alto para escalar las barras (con respecto a la meta configurada)
+    final targetGoal = metrics.stepGoal > 0 ? metrics.stepGoal : 10000;
+    final maxSteps = weekly.isEmpty
+        ? targetGoal
+        : math.max(targetGoal, weekly.reduce(math.max));
+
+    final progressRatio = (metrics.steps / targetGoal).clamp(0.0, 1.0);
+    final remainingSteps = (targetGoal - metrics.steps).clamp(0, targetGoal);
 
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
@@ -2132,25 +1831,59 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Encabezado: "Esta semana" y "Pasos" (sin "(k)")
+          // Encabezado: "Esta semana" + selector interactivo de Meta
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
-              Text(
-                'Esta semana',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF0F172A),
-                  letterSpacing: -0.2,
-                ),
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Esta semana',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A),
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${metrics.steps} de $targetGoal pasos hoy',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
               ),
-              Text(
-                'Pasos',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF64748B),
+              InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: () => _showStepGoalPicker(context, metrics.stepGoal),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0756A4).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.tune_rounded,
+                          size: 14, color: Color(0xFF0756A4)),
+                      const SizedBox(width: 5),
+                      Text(
+                        '${metrics.stepGoal >= 1000 ? "${(metrics.stepGoal / 1000).toStringAsFixed(metrics.stepGoal % 1000 == 0 ? 0 : 1)}k" : "${metrics.stepGoal}"} pasos',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0756A4),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -2244,164 +1977,50 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
               }),
             ),
           ),
-        ],
-      ),
-    );
-  }
+          const SizedBox(height: 18),
 
-  // --- 4. Métricas Rápidas de Hoy (Ritmo cardíaco y Sueño) ---
-  Widget _buildDailySummaryCard(BuildContext context, HealthMetrics metrics) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF0B2545).withValues(alpha: 0.05),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
+          // Barra de progreso hacia la meta diaria
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              height: 8,
+              width: double.infinity,
+              color: const Color(0xFFE2E8F0),
+              child: FractionallySizedBox(
+                alignment: Alignment.centerLeft,
+                widthFactor: progressRatio,
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF007BFF), Color(0xFF0756A4)],
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+          const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
-              Text(
-                'Resumen de hoy',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF0F172A),
-                ),
-              ),
-              Icon(Icons.query_builder_rounded, color: Color(0xFF64748B), size: 18),
-            ],
-          ),
-          const SizedBox(height: 14),
-
-          Row(
             children: [
-              // Ritmo cardíaco
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEF2F2),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.favorite, color: Color(0xFFEF4444), size: 16),
-                          const SizedBox(width: 6),
-                          const Text(
-                            'Cardíaco',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF64748B),
-                            ),
-                          ),
-                          const Spacer(),
-                          ValueListenableBuilder<HealthPlatformStatus>(
-                            valueListenable: HealthConnectHelper.statusNotifier,
-                            builder: (context, hStatus, _) {
-                              return ValueListenableBuilder<SmartwatchConnectionStatus>(
-                                valueListenable: SmartwatchBleHelper.statusNotifier,
-                                builder: (context, status, _) {
-                                  final isConnected =
-                                      hStatus == HealthPlatformStatus.authorized ||
-                                      status == SmartwatchConnectionStatus.connected;
-                                  if (isConnected) {
-                                    return Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 5, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF10B981)
-                                            .withValues(alpha: 0.15),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: const Text(
-                                        'En vivo',
-                                        style: TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF059669),
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                  return const SizedBox.shrink();
-                                },
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      ValueListenableBuilder<int?>(
-                        valueListenable: SmartwatchBleHelper.liveBpmNotifier,
-                        builder: (context, liveBpm, _) {
-                          final bpm = liveBpm ?? metrics.heartRate;
-                          return Text(
-                            '$bpm bpm',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF0F172A),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
+              Text(
+                'Progreso: ${(progressRatio * 100).toInt()}%',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF64748B),
                 ),
               ),
-              const SizedBox(width: 10),
-
-              // Sueño
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEEF2FF),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: const [
-                          Icon(Icons.nightlight_round,
-                              color: Color(0xFF4338CA), size: 16),
-                          SizedBox(width: 6),
-                          Text(
-                            'Sueño',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF64748B),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        '${metrics.sleepHours.toStringAsFixed(1)}h (${metrics.sleepQuality})',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF0F172A),
-                        ),
-                      ),
-                    ],
-                  ),
+              Text(
+                metrics.steps >= targetGoal
+                    ? '¡Meta alcanzada! 🎉'
+                    : 'Faltan $remainingSteps pasos',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: metrics.steps >= targetGoal
+                      ? const Color(0xFF10B981)
+                      : const Color(0xFF0756A4),
                 ),
               ),
             ],
@@ -2411,7 +2030,7 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
     );
   }
 
-  // --- 5. Configuración de Recordatorio Semanal Antiestrés y Respiración ---
+  // --- Configuración de Recordatorio Semanal Antiestrés y Respiración ---
   Widget _buildWeeklyBreathingReminderCard(HealthMetrics metrics) {
     return Container(
       padding: const EdgeInsets.all(18),

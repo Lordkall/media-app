@@ -348,11 +348,9 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
         const ProfileTab(),
       ];
     } else if (_role == 'admin') {
-      final showHealth = !kIsWeb;
       return [
         AdminHomeTab(
-          onProfileTap: () =>
-              setState(() => _currentIndex = showHealth ? 4 : 3),
+          onProfileTap: () => setState(() => _currentIndex = 3),
           onSearchTap: () => setState(() => _currentIndex = 1),
           onSearchSubmitted: _submitHomeSearch,
           onManageAdsTap: () => Navigator.of(context).push(
@@ -363,14 +361,12 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
         ),
         const AdminSubscriptionsTab(),
         const AdminStatsTab(),
-        if (showHealth) const HealthTab(),
         const ProfileTab(),
       ];
     } else if (_role == 'patient') {
-      final showHealth = !kIsWeb;
       return [
         PatientHomeTab(
-          onProfileTap: () => setState(() => _currentIndex = showHealth ? 5 : 4),
+          onProfileTap: () => setState(() => _currentIndex = 4),
           onSearchTap: () => setState(() => _currentIndex = 2),
           onSearchSubmitted: _submitHomeSearch,
           onViewSchedule: _goToSchedule,
@@ -390,15 +386,13 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
           onViewSchedule: _goToSchedule,
         ),
         const MisCitasTab(),
-        if (showHealth) const HealthTab(),
         const ProfileTab(),
       ];
     } else {
       // doctor
-      final showHealth = !kIsWeb;
       return [
         DoctorHomeTab(
-          onProfileTap: () => setState(() => _currentIndex = showHealth ? 5 : 4),
+          onProfileTap: () => setState(() => _currentIndex = 4),
           onCitasHoyTap: () => setState(() => _currentIndex = 3),
           onSearchTap: () => setState(() => _currentIndex = 2),
           onSearchSubmitted: _submitHomeSearch,
@@ -414,7 +408,6 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
           onViewSchedule: _goToSchedule,
         ),
         MisCitasTab(initialDate: caracasNow()),
-        if (showHealth) const HealthTab(),
         const ProfileTab(),
       ];
     }
@@ -467,26 +460,22 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
             ),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final showHealth = !kIsWeb && (_role == 'patient' || _role == 'doctor' || _role == 'assistant' || _role == 'admin');
-                final navItemCount = showHealth ? 5 : 4;
+                const navItemCount = 4;
                 final compactLayout = constraints.maxWidth < 360;
-                final inset = compactLayout ? 4.0 : 8.0;
+                final inset = compactLayout ? 6.0 : 12.0;
                 final availableWidth = constraints.maxWidth - inset * 2;
-                final minimumIdleWidth = compactLayout ? 32.0 : 36.0;
+                final minimumIdleWidth = compactLayout ? 36.0 : 44.0;
                 final selectedWidth = math.min(
-                  showHealth
-                      ? (compactLayout ? 84.0 : 92.0)
-                      : (_role == 'admin' ? 120.0 : 104.0),
+                  _role == 'admin' ? 120.0 : 108.0,
                   availableWidth - (navItemCount - 1) * minimumIdleWidth,
                 );
                 final idleWidth = math.min(
-                  compactLayout ? 34.0 : 40.0,
+                  compactLayout ? 38.0 : 46.0,
                   (availableWidth - selectedWidth) / (navItemCount - 1),
                 );
                 final doctorHome = _role == 'doctor' || _role == 'assistant';
 
                 if (_role == 'admin') {
-                  final adminProfileIndex = showHealth ? 4 : 3;
                   return Padding(
                     padding: EdgeInsets.symmetric(horizontal: inset),
                     child: Row(
@@ -498,24 +487,14 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
                             selectedWidth, idleWidth, compactLayout),
                         _buildNavItem(Icons.bar_chart_rounded, 'Estadísticas', 2,
                             selectedWidth, idleWidth, compactLayout),
-                        if (showHealth)
-                          _buildNavItem(
-                              Icons.monitor_heart_rounded,
-                              'Salud',
-                              3,
-                              selectedWidth,
-                              idleWidth,
-                              compactLayout,
-                              isHealth: true),
-                        _buildNavItem(Icons.person_outline, 'Perfil',
-                            adminProfileIndex, selectedWidth, idleWidth,
-                            compactLayout),
+                        _buildNavItem(Icons.person_outline, 'Perfil', 3,
+                            selectedWidth, idleWidth, compactLayout),
                       ],
                     ),
                   );
                 }
 
-                final profileIndex = showHealth ? 5 : 4;
+                const profileIndex = 4;
 
                 return Padding(
                   padding: EdgeInsets.symmetric(horizontal: inset),
@@ -540,15 +519,6 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
                           selectedWidth,
                           idleWidth,
                           compactLayout),
-                      if (showHealth)
-                        _buildNavItem(
-                            Icons.monitor_heart_rounded,
-                            'Salud',
-                            4,
-                            selectedWidth,
-                            idleWidth,
-                            compactLayout,
-                            isHealth: true),
                       _buildNavItem(Icons.person_outline, 'Perfil', profileIndex,
                           selectedWidth, idleWidth, compactLayout),
                     ],

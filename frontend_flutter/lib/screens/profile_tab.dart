@@ -15,6 +15,7 @@ import '../widgets/profile_avatar.dart';
 import '../widgets/avatar_sprite.dart';
 import '../core/health_module_helper.dart';
 import '../core/distribution_config.dart';
+import 'health_tab.dart';
 import 'login_screen.dart';
 import 'legal_screens.dart';
 import 'select_plan_screen.dart';
@@ -215,9 +216,25 @@ class _ProfileTabState extends State<ProfileTab> {
     });
   }
 
-  Widget _menuRow(String title, VoidCallback onTap) => ListTile(
+  Widget _menuRow(String title, VoidCallback onTap,
+          {IconData? icon, String? subtitle}) =>
+      ListTile(
+        leading: icon != null
+            ? Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0756A4).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: const Color(0xFF0756A4), size: 20),
+              )
+            : null,
         title: Text(title,
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+        subtitle: subtitle != null
+            ? Text(subtitle,
+                style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)))
+            : null,
         trailing: const Icon(Icons.chevron_right),
         onTap: onTap,
         shape: const Border(bottom: BorderSide(color: Color(0x220B2545))),
@@ -297,6 +314,16 @@ class _ProfileTabState extends State<ProfileTab> {
                           () => _open('Mis Direcciones',
                               _AddressPage(user: _userData ?? const {}))),
                     ]))),
+            if (!kIsWeb)
+              _menuRow(
+                'Módulo de Salud',
+                () => _open(
+                  'Módulo de Salud',
+                  const HealthTab(),
+                ),
+                icon: Icons.health_and_safety_rounded,
+                subtitle: 'Estatura, peso, IMC, hidratación, respiración y pasos',
+              ),
             if (_isDoctor)
               _menuRow(
                   'Datos Laborales',
@@ -1150,30 +1177,6 @@ class _AboutPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       _SettingsPage(title: 'Acerca de Salud Now', children: [
-        if (!kIsWeb) ...[
-          const Padding(
-              padding: EdgeInsets.all(12),
-              child: Text('Módulo de Salud',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))),
-          ValueListenableBuilder<bool>(
-            valueListenable: HealthModuleHelper.isEnabledNotifier,
-            builder: (context, enabled, _) => SwitchListTile.adaptive(
-              title: const Text('Activar módulo de salud',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
-              subtitle: const Text(
-                'Muestra pasos, ritmo cardíaco y sueño en inicio',
-                style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
-              ),
-              secondary:
-                  const Icon(Icons.favorite_rounded, color: Color(0xFFEF4444)),
-              activeColor: const Color(0xFF0756A4),
-              value: enabled,
-              onChanged: (val) => HealthModuleHelper.setEnabled(val),
-              shape:
-                  const Border(bottom: BorderSide(color: Color(0x220B2545))),
-            ),
-          ),
-        ],
         const Padding(
             padding: EdgeInsets.all(12),
             child: Text('Preferencia de Datos',
