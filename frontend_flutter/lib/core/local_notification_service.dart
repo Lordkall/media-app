@@ -176,8 +176,6 @@ class LocalNotificationService {
               ),
             ),
             androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-            uiLocalNotificationDateInterpretation:
-                UILocalNotificationDateInterpretation.absoluteTime,
             payload: '/health',
           );
           slotId++;
@@ -218,8 +216,6 @@ class LocalNotificationService {
             ),
           ),
           androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-          uiLocalNotificationDateInterpretation:
-              UILocalNotificationDateInterpretation.absoluteTime,
           payload: '/health',
         );
       }
@@ -290,8 +286,6 @@ class LocalNotificationService {
           ),
         ),
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
         payload: '/health',
       );
