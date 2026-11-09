@@ -394,6 +394,100 @@ class LocalNotificationService {
     } catch (_) {}
   }
 
+  /// Programa los recordatorios diarios de progreso de pasos a las 10:00 AM, 3:00 PM y 8:00 PM.
+  /// Al usar zonedSchedule con matchDateTimeComponents.time, el sistema operativo (AlarmManager en Android)
+  /// los dispara puntualmente todos los días incluso con la app cerrada.
+  static Future<void> scheduleDailyStepReminders() async {
+    try {
+      const channel = AndroidNotificationChannel(
+        'salud_now_step_reminders',
+        'Recordatorios de Pasos',
+        description: 'Notificaciones de progreso y meta diaria de pasos',
+        importance: Importance.high,
+      );
+      await _plugin
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.createNotificationChannel(channel);
+
+      await cancelStepReminders();
+
+      final now = tz.TZDateTime.now(tz.local);
+
+      final reminders = [
+        (
+          id: 981,
+          hour: 10,
+          minute: 0,
+          title: '🚶‍♂️ Tus pasos de hoy',
+          body:
+              '¡Comienza tu día en movimiento! Revisa tus pasos en el Módulo de Salud.',
+        ),
+        (
+          id: 982,
+          hour: 15,
+          minute: 0,
+          title: '🏃‍♂️ Progreso de pasos',
+          body:
+              '¡Mitad del día! Sigue activo para alcanzar tu meta diaria en el Módulo de Salud.',
+        ),
+        (
+          id: 983,
+          hour: 20,
+          minute: 0,
+          title: '👟 Cierre del día',
+          body:
+              'Revisa tu resumen diario de pasos y bienestar en tu Módulo de Salud.',
+        ),
+      ];
+
+      for (final r in reminders) {
+        var scheduled = tz.TZDateTime(
+          tz.local,
+          now.year,
+          now.month,
+          now.day,
+          r.hour,
+          r.minute,
+        );
+        if (scheduled.isBefore(now)) {
+          scheduled = scheduled.add(const Duration(days: 1));
+        }
+
+        await _plugin.zonedSchedule(
+          r.id,
+          r.title,
+          r.body,
+          scheduled,
+          const NotificationDetails(
+            android: AndroidNotificationDetails(
+              'salud_now_step_reminders',
+              'Recordatorios de Pasos',
+              channelDescription:
+                  'Notificaciones de progreso y meta diaria de pasos',
+              importance: Importance.high,
+              priority: Priority.high,
+              icon: 'ic_stat_salud_now',
+              playSound: true,
+            ),
+            iOS: DarwinNotificationDetails(
+              presentAlert: true,
+              presentBadge: true,
+              presentSound: true,
+            ),
+          ),
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+          matchDateTimeComponents: DateTimeComponents.time,
+          payload: '/health',
+        );
+      }
+    } catch (e) {
+      debugPrint('Error programando recordatorios diarios de pasos: $e');
+    }
+  }
+
   static Future<void> cancelStepReminders() async {
     try {
       await _plugin.cancel(980);

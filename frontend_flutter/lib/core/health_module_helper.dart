@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:pedometer/pedometer.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -109,6 +110,17 @@ class HealthMetrics {
   }
 }
 
+class HealthLifecycleObserver with WidgetsBindingObserver {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      HealthModuleHelper.onAppResumed();
+    } else if (state == AppLifecycleState.paused) {
+      HealthModuleHelper.onAppPaused();
+    }
+  }
+}
+
 class HealthModuleHelper {
   static const String _enabledKey = 'health_module_enabled';
   static const String _heartRateKey = 'health_metric_heart_rate';
@@ -128,8 +140,11 @@ class HealthModuleHelper {
   static const String _weeklyStepsWeekKey = 'health_weekly_steps_week';
   static const String _hardwareBaselineStepsKey =
       'health_hardware_step_baseline';
+  static const String _lastHardwareBootStepsKey =
+      'health_last_hardware_boot_steps';
 
   static String _activeUserId = 'guest';
+  static bool _observerAttached = false;
 
   static String _userKey(String base) => 'user_${_activeUserId}_$base';
 
@@ -158,6 +173,28 @@ class HealthModuleHelper {
       checkMidnightReset();
       _checkDailyStepReminders();
     });
+  }
+
+  /// Se ejecuta automáticamente cuando la app vuelve al primer plano (foreground),
+  /// por ejemplo tras haber estado minimizada o con la pantalla bloqueada por horas.
+  static Future<void> onAppResumed() async {
+    try {
+      await checkMidnightReset();
+      if (isEnabledNotifier.value) {
+        await initializePedometer(forceRestart: true);
+      }
+    } catch (e) {
+      debugPrint('Aviso en onAppResumed de HealthModuleHelper: $e');
+    }
+  }
+
+  /// Se ejecuta automáticamente cuando la app pasa a segundo plano o se bloquea la pantalla.
+  static Future<void> onAppPaused() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(_userKey(_stepsKey), metricsNotifier.value.steps);
+      await prefs.setString(_userKey(_lastDayDateKey), _getTodayStr());
+    } catch (_) {}
   }
 
   /// Verifica las 3 notificaciones diarias de progreso de pasos (Mañana, Tarde y Noche).
@@ -266,15 +303,41 @@ class HealthModuleHelper {
     final savedDate = prefs.getString(_userKey(_lastDayDateKey));
 
     if (savedDate != null && savedDate != todayStr) {
-      // Cruzó las 12:00 AM: reiniciar pasos y agua a 0
+      // Cruzó las 12:00 AM o nuevo día
+
+      // 1. Obtener la última lectura física de hardware registrada ayer
+      final lastRecordedBootSteps =
+          prefs.getInt(_userKey(_lastHardwareBootStepsKey));
+      final previousBaseline =
+          prefs.getInt(_userKey(_hardwareBaselineStepsKey));
+      final previousSteps = prefs.getInt(_userKey(_stepsKey)) ?? 0;
+
       await prefs.setString(_userKey(_lastDayDateKey), todayStr);
-      await prefs.setInt(_userKey(_stepsKey), 0);
       await prefs.setInt(_userKey(_waterMlKey), 0);
-      await prefs.remove(_userKey(_hardwareBaselineStepsKey));
       await prefs.remove(_userKey('health_step_reminder_morning_date'));
       await prefs.remove(_userKey('health_step_reminder_afternoon_date'));
       await prefs.remove(_userKey('health_step_reminder_evening_date'));
       await prefs.remove(_userKey('health_step_goal_celebrated_date'));
+
+      // 2. Establecer la línea base para hoy:
+      // Conservamos el último conteo de hardware de ayer como punto de partida de hoy.
+      // De esta manera, los pasos dados de madrugada o mañana con la app cerrada se cuentan para hoy.
+      int? newTodayBaseline;
+      if (lastRecordedBootSteps != null && lastRecordedBootSteps > 0) {
+        newTodayBaseline = lastRecordedBootSteps;
+      } else if (previousBaseline != null && previousBaseline > 0) {
+        newTodayBaseline = previousBaseline + previousSteps;
+      }
+
+      if (newTodayBaseline != null) {
+        await prefs.setInt(
+            _userKey(_hardwareBaselineStepsKey), newTodayBaseline);
+      } else {
+        await prefs.remove(_userKey(_hardwareBaselineStepsKey));
+      }
+
+      // Reiniciar pasos guardados de hoy a 0 provisionalmente
+      await prefs.setInt(_userKey(_stepsKey), 0);
 
       final now = DateTime.now();
       final mondayStr = _getCurrentWeekMondayStr();
@@ -318,6 +381,10 @@ class HealthModuleHelper {
 
   /// Inicialización global al arrancar la app.
   static Future<void> initialize() async {
+    if (!_observerAttached) {
+      _observerAttached = true;
+      WidgetsBinding.instance.addObserver(HealthLifecycleObserver());
+    }
     _startMidnightTimer();
     final userId = await AuthHelper.getUserId();
     await loadForUser(userId);
@@ -336,12 +403,45 @@ class HealthModuleHelper {
       int st = 0;
       int water = 0;
 
-      if (savedDate == null || savedDate != todayStr) {
-        // Nuevo día o primera vez para este usuario: reiniciar pasos y agua a 0
+      if (savedDate == null) {
+        // Primera vez para este usuario
         await prefs.setString(_userKey(_lastDayDateKey), todayStr);
         await prefs.setInt(_userKey(_stepsKey), 0);
         await prefs.setInt(_userKey(_waterMlKey), 0);
         await prefs.remove(_userKey(_hardwareBaselineStepsKey));
+        await prefs.remove(_userKey(_lastHardwareBootStepsKey));
+        st = 0;
+        water = 0;
+      } else if (savedDate != todayStr) {
+        // Nuevo día: conservar el último registro de hardware de ayer como línea base de hoy
+        final lastRecordedBootSteps =
+            prefs.getInt(_userKey(_lastHardwareBootStepsKey));
+        final previousBaseline =
+            prefs.getInt(_userKey(_hardwareBaselineStepsKey));
+        final previousSteps = prefs.getInt(_userKey(_stepsKey)) ?? 0;
+
+        await prefs.setString(_userKey(_lastDayDateKey), todayStr);
+        await prefs.setInt(_userKey(_stepsKey), 0);
+        await prefs.setInt(_userKey(_waterMlKey), 0);
+        await prefs.remove(_userKey('health_step_reminder_morning_date'));
+        await prefs.remove(_userKey('health_step_reminder_afternoon_date'));
+        await prefs.remove(_userKey('health_step_reminder_evening_date'));
+        await prefs.remove(_userKey('health_step_goal_celebrated_date'));
+
+        int? newTodayBaseline;
+        if (lastRecordedBootSteps != null && lastRecordedBootSteps > 0) {
+          newTodayBaseline = lastRecordedBootSteps;
+        } else if (previousBaseline != null && previousBaseline > 0) {
+          newTodayBaseline = previousBaseline + previousSteps;
+        }
+
+        if (newTodayBaseline != null) {
+          await prefs.setInt(
+              _userKey(_hardwareBaselineStepsKey), newTodayBaseline);
+        } else {
+          await prefs.remove(_userKey(_hardwareBaselineStepsKey));
+        }
+
         st = 0;
         water = 0;
       } else {
@@ -421,7 +521,8 @@ class HealthModuleHelper {
         if (breathingWeekly) {
           await LocalNotificationService.scheduleWeeklyBreathingReminder();
         }
-        unawaited(initializePedometer());
+        await LocalNotificationService.scheduleDailyStepReminders();
+        unawaited(initializePedometer(forceRestart: true));
         unawaited(_checkDailyStepReminders());
         unawaited(_checkStepGoalCelebration(st, stepGoal));
       } else if (!isEnabled && !kIsWeb) {
@@ -456,12 +557,13 @@ class HealthModuleHelper {
   /// Inicializa el sensor de podómetro nativo en Android / iOS y solicita permisos de actividad física.
   /// Mantiene la línea base física guardada para contar pasos con precisión en tiempo real
   /// y acumular exactamente los pasos dados mientras la aplicación estuvo cerrada.
-  static Future<void> initializePedometer() async {
+  static Future<void> initializePedometer({bool forceRestart = false}) async {
     if (kIsWeb) return;
     if (defaultTargetPlatform != TargetPlatform.android &&
         defaultTargetPlatform != TargetPlatform.iOS) {
       return;
     }
+    if (!isEnabledNotifier.value) return;
 
     try {
       var status = await Permission.activityRecognition.status;
@@ -472,6 +574,10 @@ class HealthModuleHelper {
       if (status.isGranted) {
         await checkMidnightReset();
 
+        if (_stepCountSubscription != null && !forceRestart) {
+          return;
+        }
+
         await _stepCountSubscription?.cancel();
         _stepCountSubscription = Pedometer.stepCountStream.listen(
           (StepCount event) async {
@@ -480,7 +586,7 @@ class HealthModuleHelper {
 
             final prefs = await SharedPreferences.getInstance();
             final curSavedDate = prefs.getString(_userKey(_lastDayDateKey));
-            if (curSavedDate != nowDayStr) {
+            if (curSavedDate != null && curSavedDate != nowDayStr) {
               await checkMidnightReset();
             }
 
@@ -496,12 +602,20 @@ class HealthModuleHelper {
             } else if (currentBootSteps < savedBaseline) {
               // El teléfono se reinició (el contador de hardware empezó de 0)
               final lastSteps = prefs.getInt(_userKey(_stepsKey)) ?? 0;
-              savedBaseline = currentBootSteps - lastSteps;
+              if (lastSteps > 0) {
+                savedBaseline = currentBootSteps - lastSteps;
+              } else {
+                savedBaseline = 0;
+              }
               await prefs.setInt(baselineKey, savedBaseline);
             }
 
             final todaySteps =
                 (currentBootSteps - savedBaseline).clamp(0, 100000);
+
+            // Guardamos el último conteo de hardware de forma persistente para transiciones entre días
+            await prefs.setInt(
+                _userKey(_lastHardwareBootStepsKey), currentBootSteps);
 
             // Actualizar métricas en memoria de inmediato para tiempo real sin retrasos
             await updateMetrics(
@@ -545,7 +659,8 @@ class HealthModuleHelper {
               ApiClient.put('/users/me', {'water_reminder_enabled': false}));
         } else {
           // Activar: iniciar podómetro y reprogramar recordatorios según preferencias
-          unawaited(initializePedometer());
+          await LocalNotificationService.scheduleDailyStepReminders();
+          unawaited(initializePedometer(forceRestart: true));
           if (metricsNotifier.value.breathingWeeklyReminderEnabled) {
             await LocalNotificationService.scheduleWeeklyBreathingReminder();
           }
