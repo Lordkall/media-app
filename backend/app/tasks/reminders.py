@@ -256,12 +256,11 @@ async def send_water_reminders_async():
 async def appointment_reminders_loop():
     """
     Bucle en segundo plano que corre periódicamente cada 15 minutos
-    para verificar y enviar los recordatorios de citas y de hidratación.
+    para verificar y enviar los recordatorios de citas.
     """
     while True:
         try:
             await send_appointment_reminders_async()
-            await send_water_reminders_async()
             async with async_session_maker() as session:
                 from app.api.v1.endpoints.appointments import auto_complete_expired_appointments
                 await auto_complete_expired_appointments(session)

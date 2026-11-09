@@ -126,22 +126,20 @@ class HealthModuleHelper {
   static const String _lastDayDateKey = 'health_last_day_date';
   static const String _weeklyStepsKey = 'health_weekly_steps';
   static const String _weeklyStepsWeekKey = 'health_weekly_steps_week';
+  static const String _hardwareBaselineStepsKey =
+      'health_hardware_step_baseline';
 
   static String _activeUserId = 'guest';
-  static bool _waterReminderScheduled = false;
-  static int? _scheduledIntervalHours;
 
   static String _userKey(String base) => 'user_${_activeUserId}_$base';
 
-  /// Default disabled (false) as requested by user.
+  /// Por defecto desactivado (false) según lo indicado por el usuario.
   static final ValueNotifier<bool> isEnabledNotifier =
       ValueNotifier<bool>(false);
   static final ValueNotifier<HealthMetrics> metricsNotifier =
       ValueNotifier<HealthMetrics>(const HealthMetrics());
 
   static StreamSubscription<StepCount>? _stepCountSubscription;
-  static int _initialBootSteps = -1;
-  static int _sessionBaseSteps = 0;
   static Timer? _midnightCheckTimer;
 
   static String _getTodayStr() =>
@@ -163,10 +161,14 @@ class HealthModuleHelper {
   }
 
   /// Verifica las 3 notificaciones diarias de progreso de pasos (Mañana, Tarde y Noche).
+  /// Exclusivamente en la franja permitida de 6:00 AM a 10:00 PM (06:00 a 22:00) y si el módulo está activo.
   static Future<void> _checkDailyStepReminders() async {
     if (kIsWeb || !isEnabledNotifier.value) return;
 
     final now = DateTime.now();
+    // Restricción estricta de horario: entre 6:00 AM y 10:00 PM
+    if (now.hour < 6 || now.hour >= 22) return;
+
     final todayStr = _getTodayStr();
     final steps = metricsNotifier.value.steps;
     final goal = metricsNotifier.value.stepGoal > 0
@@ -212,8 +214,8 @@ class HealthModuleHelper {
         }
       }
 
-      // 3. Noche (8:00 PM - 10:59 PM)
-      if (now.hour >= 20 && now.hour < 23) {
+      // 3. Noche (8:00 PM - 9:59 PM, antes de las 10:00 PM)
+      if (now.hour >= 20 && now.hour < 22) {
         final lastEvening =
             prefs.getString(_userKey('health_step_reminder_evening_date'));
         if (lastEvening != todayStr) {
@@ -233,9 +235,13 @@ class HealthModuleHelper {
   }
 
   /// Notificación push inmediata al alcanzar o superar la meta diaria de pasos.
+  /// Solo se dispara si el módulo está activo y en horario de 6:00 AM a 10:00 PM.
   static Future<void> _checkStepGoalCelebration(int steps, int goal) async {
     if (kIsWeb || !isEnabledNotifier.value || goal <= 0) return;
     if (steps < goal) return;
+
+    final now = DateTime.now();
+    if (now.hour < 6 || now.hour >= 22) return;
 
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -264,8 +270,11 @@ class HealthModuleHelper {
       await prefs.setString(_userKey(_lastDayDateKey), todayStr);
       await prefs.setInt(_userKey(_stepsKey), 0);
       await prefs.setInt(_userKey(_waterMlKey), 0);
-      _initialBootSteps = -1;
-      _sessionBaseSteps = 0;
+      await prefs.remove(_userKey(_hardwareBaselineStepsKey));
+      await prefs.remove(_userKey('health_step_reminder_morning_date'));
+      await prefs.remove(_userKey('health_step_reminder_afternoon_date'));
+      await prefs.remove(_userKey('health_step_reminder_evening_date'));
+      await prefs.remove(_userKey('health_step_goal_celebrated_date'));
 
       final now = DateTime.now();
       final mondayStr = _getCurrentWeekMondayStr();
@@ -301,8 +310,8 @@ class HealthModuleHelper {
           isEnabledNotifier.value) {
         await LocalNotificationService.scheduleWaterReminder(
           intervalHours: metricsNotifier.value.waterReminderIntervalHours,
+          fromTime: DateTime.now(),
         );
-        unawaited(ApiClient.put('/users/me', {'water_reminder_enabled': true}));
       }
     }
   }
@@ -332,15 +341,12 @@ class HealthModuleHelper {
         await prefs.setString(_userKey(_lastDayDateKey), todayStr);
         await prefs.setInt(_userKey(_stepsKey), 0);
         await prefs.setInt(_userKey(_waterMlKey), 0);
-        _initialBootSteps = -1;
-        _sessionBaseSteps = 0;
+        await prefs.remove(_userKey(_hardwareBaselineStepsKey));
         st = 0;
         water = 0;
       } else {
         st = prefs.getInt(_userKey(_stepsKey)) ?? 0;
         water = prefs.getInt(_userKey(_waterMlKey)) ?? 0;
-        _sessionBaseSteps = st;
-        _initialBootSteps = -1;
       }
 
       // Manejo de pasos semanales (Lunes a Domingo)
@@ -405,27 +411,23 @@ class HealthModuleHelper {
         bmiCategory: bmiCategory,
       );
 
-      final scheduledInterval =
-          prefs.getInt(_userKey('health_water_scheduled_interval')) ?? 0;
-      if (reminder &&
-          !kIsWeb &&
-          (scheduledInterval != interval) &&
-          water < goal) {
-        await prefs.setInt(
-            _userKey('health_water_scheduled_interval'), interval);
-        _waterReminderScheduled = true;
-        _scheduledIntervalHours = interval;
-        await LocalNotificationService.scheduleWaterReminder(
-            intervalHours: interval);
-      }
-      if (breathingWeekly && isEnabled && !kIsWeb) {
-        await LocalNotificationService.scheduleWeeklyBreathingReminder();
-      }
-
-      if (isEnabled) {
+      if (isEnabled && !kIsWeb) {
+        if (reminder && water < goal) {
+          await LocalNotificationService.scheduleWaterReminder(
+            intervalHours: interval,
+            fromTime: DateTime.now(),
+          );
+        }
+        if (breathingWeekly) {
+          await LocalNotificationService.scheduleWeeklyBreathingReminder();
+        }
         unawaited(initializePedometer());
         unawaited(_checkDailyStepReminders());
         unawaited(_checkStepGoalCelebration(st, stepGoal));
+      } else if (!isEnabled && !kIsWeb) {
+        await LocalNotificationService.cancelWaterReminder();
+        await LocalNotificationService.cancelWeeklyBreathingReminder();
+        await LocalNotificationService.cancelStepReminders();
       }
     } catch (e) {
       debugPrint('Error al cargar métricas de salud para usuario $_activeUserId: $e');
@@ -437,18 +439,23 @@ class HealthModuleHelper {
     try {
       await _stepCountSubscription?.cancel();
       _stepCountSubscription = null;
-      _initialBootSteps = -1;
-      _sessionBaseSteps = 0;
       _activeUserId = 'guest';
       isEnabledNotifier.value = false;
       metricsNotifier.value = const HealthMetrics(
         waterMilliliters: 0,
         weeklySteps: [0, 0, 0, 0, 0, 0, 0],
       );
+      if (!kIsWeb) {
+        await LocalNotificationService.cancelWaterReminder();
+        await LocalNotificationService.cancelWeeklyBreathingReminder();
+        await LocalNotificationService.cancelStepReminders();
+      }
     } catch (_) {}
   }
 
   /// Inicializa el sensor de podómetro nativo en Android / iOS y solicita permisos de actividad física.
+  /// Mantiene la línea base física guardada para contar pasos con precisión en tiempo real
+  /// y acumular exactamente los pasos dados mientras la aplicación estuvo cerrada.
   static Future<void> initializePedometer() async {
     if (kIsWeb) return;
     if (defaultTargetPlatform != TargetPlatform.android &&
@@ -477,16 +484,26 @@ class HealthModuleHelper {
               await checkMidnightReset();
             }
 
-            if (_initialBootSteps < 0 || currentBootSteps < _initialBootSteps) {
-              _initialBootSteps = currentBootSteps;
-              _sessionBaseSteps = prefs.getInt(_userKey(_stepsKey)) ?? 0;
+            final baselineKey = _userKey(_hardwareBaselineStepsKey);
+            int? savedBaseline = prefs.getInt(baselineKey);
+
+            if (savedBaseline == null) {
+              // Primera lectura del sensor en el día:
+              // Establecemos la línea base de hardware descontando los pasos ya guardados hoy
+              final existingSteps = prefs.getInt(_userKey(_stepsKey)) ?? 0;
+              savedBaseline = currentBootSteps - existingSteps;
+              await prefs.setInt(baselineKey, savedBaseline);
+            } else if (currentBootSteps < savedBaseline) {
+              // El teléfono se reinició (el contador de hardware empezó de 0)
+              final lastSteps = prefs.getInt(_userKey(_stepsKey)) ?? 0;
+              savedBaseline = currentBootSteps - lastSteps;
+              await prefs.setInt(baselineKey, savedBaseline);
             }
 
-            final hardwareDiff =
-                (currentBootSteps - _initialBootSteps).clamp(0, 100000);
             final todaySteps =
-                (_sessionBaseSteps + hardwareDiff).clamp(0, 100000);
+                (currentBootSteps - savedBaseline).clamp(0, 100000);
 
+            // Actualizar métricas en memoria de inmediato para tiempo real sin retrasos
             await updateMetrics(
               heartRate: metricsNotifier.value.heartRate,
               sleepHours: metricsNotifier.value.sleepHours,
@@ -509,26 +526,40 @@ class HealthModuleHelper {
     }
   }
 
+  /// Activa o desactiva el módulo de salud globalmente.
+  /// Si se desactiva, se cancelan de inmediato todas las notificaciones de agua, pasos y respiración.
   static Future<void> setEnabled(bool enabled) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_userKey(_enabledKey), enabled);
+
       if (!kIsWeb) {
-        if (enabled && metricsNotifier.value.breathingWeeklyReminderEnabled) {
-          await LocalNotificationService.scheduleWeeklyBreathingReminder();
-        } else if (!enabled) {
+        if (!enabled) {
+          // Desactivar: cancelar todas las notificaciones del módulo de salud
           await LocalNotificationService.cancelWeeklyBreathingReminder();
           await LocalNotificationService.cancelWaterReminder();
-        }
-        if (enabled) {
+          await LocalNotificationService.cancelStepReminders();
+          await _stepCountSubscription?.cancel();
+          _stepCountSubscription = null;
+          unawaited(
+              ApiClient.put('/users/me', {'water_reminder_enabled': false}));
+        } else {
+          // Activar: iniciar podómetro y reprogramar recordatorios según preferencias
+          unawaited(initializePedometer());
+          if (metricsNotifier.value.breathingWeeklyReminderEnabled) {
+            await LocalNotificationService.scheduleWeeklyBreathingReminder();
+          }
           if (metricsNotifier.value.waterReminderEnabled &&
               metricsNotifier.value.waterMilliliters <
                   metricsNotifier.value.waterGoalMilliliters) {
             await LocalNotificationService.scheduleWaterReminder(
               intervalHours: metricsNotifier.value.waterReminderIntervalHours,
+              fromTime: DateTime.now(),
             );
+            unawaited(
+                ApiClient.put('/users/me', {'water_reminder_enabled': true}));
           }
-          unawaited(initializePedometer());
+          unawaited(_checkDailyStepReminders());
         }
       }
     } catch (_) {}
@@ -536,34 +567,38 @@ class HealthModuleHelper {
   }
 
   static Future<void> updateMetrics({
-    required int heartRate,
-    required double sleepHours,
+    int? heartRate,
+    double? sleepHours,
     int? steps,
   }) async {
+    final hr = heartRate ?? metricsNotifier.value.heartRate;
+    final sl = sleepHours ?? metricsNotifier.value.sleepHours;
     final currentSteps = steps ?? metricsNotifier.value.steps;
-    final quality = HealthMetrics.calculateSleepQuality(sleepHours);
+    final quality = HealthMetrics.calculateSleepQuality(sl);
+
+    final now = DateTime.now();
+    final weekdayIdx = (now.weekday - 1).clamp(0, 6);
+    final updatedWeekly = List<int>.from(metricsNotifier.value.weeklySteps);
+    while (updatedWeekly.length < 7) {
+      updatedWeekly.add(0);
+    }
+    updatedWeekly[weekdayIdx] = currentSteps;
+
+    // Notificar inmediatamente a los oyentes de la UI para actualización instantánea en tiempo real
+    metricsNotifier.value = metricsNotifier.value.copyWith(
+      heartRate: hr,
+      steps: currentSteps,
+      sleepHours: sl,
+      sleepQuality: quality,
+      weeklySteps: updatedWeekly,
+    );
+
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt(_userKey(_heartRateKey), heartRate);
+      await prefs.setInt(_userKey(_heartRateKey), hr);
       if (steps != null) await prefs.setInt(_userKey(_stepsKey), steps);
-      await prefs.setDouble(_userKey(_sleepHoursKey), sleepHours);
-
-      final now = DateTime.now();
-      final weekdayIdx = (now.weekday - 1).clamp(0, 6);
-      final updatedWeekly = List<int>.from(metricsNotifier.value.weeklySteps);
-      while (updatedWeekly.length < 7) {
-        updatedWeekly.add(0);
-      }
-      updatedWeekly[weekdayIdx] = currentSteps;
+      await prefs.setDouble(_userKey(_sleepHoursKey), sl);
       await prefs.setString(_userKey(_weeklyStepsKey), updatedWeekly.join(','));
-
-      metricsNotifier.value = metricsNotifier.value.copyWith(
-        heartRate: heartRate,
-        steps: currentSteps,
-        sleepHours: sleepHours,
-        sleepQuality: quality,
-        weeklySteps: updatedWeekly,
-      );
     } catch (_) {}
   }
 
@@ -578,7 +613,6 @@ class HealthModuleHelper {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setDouble(_userKey(_heightKey), heightCm);
       await prefs.setDouble(_userKey(_weightKey), weightKg);
-      // Sync with user profile on backend
       await ApiClient.put('/users/me', {
         'height_cm': heightCm,
         'weight_kg': weightKg,
@@ -593,6 +627,8 @@ class HealthModuleHelper {
     );
   }
 
+  /// Añade agua (un vaso = 250 ml por defecto).
+  /// Al sumar un vaso de agua, comienza a contar el intervalo elegido para el siguiente recordatorio.
   static Future<void> addWater([int ml = 250]) async {
     final current = metricsNotifier.value.waterMilliliters;
     final goal = metricsNotifier.value.waterGoalMilliliters;
@@ -604,16 +640,22 @@ class HealthModuleHelper {
     metricsNotifier.value =
         metricsNotifier.value.copyWith(waterMilliliters: updated);
 
-    // Al ya tener el máximo de vasos no debe llegar la notificación
     if (updated >= goal) {
+      // Meta de hidratación completada: cancelar recordatorios por el resto del día
       if (!kIsWeb) {
         await LocalNotificationService.cancelWaterReminder();
-        try {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.remove(_userKey('health_water_scheduled_interval'));
-        } catch (_) {}
       }
       unawaited(ApiClient.put('/users/me', {'water_reminder_enabled': false}));
+    } else {
+      // Conteo del intervalo a partir del momento en que bebió agua
+      if (!kIsWeb &&
+          metricsNotifier.value.waterReminderEnabled &&
+          isEnabledNotifier.value) {
+        await LocalNotificationService.scheduleWaterReminder(
+          intervalHours: metricsNotifier.value.waterReminderIntervalHours,
+          fromTime: DateTime.now(),
+        );
+      }
     }
   }
 
@@ -628,13 +670,14 @@ class HealthModuleHelper {
     metricsNotifier.value =
         metricsNotifier.value.copyWith(waterMilliliters: updated);
 
-    // Si baja del máximo y tenía recordatorio activo, reprogramar
+    // Si baja de la meta y el recordatorio está activo, reprogramar con el intervalo
     if (!kIsWeb &&
         updated < goal &&
         metricsNotifier.value.waterReminderEnabled &&
         isEnabledNotifier.value) {
       await LocalNotificationService.scheduleWaterReminder(
         intervalHours: metricsNotifier.value.waterReminderIntervalHours,
+        fromTime: DateTime.now(),
       );
     }
   }
@@ -663,6 +706,7 @@ class HealthModuleHelper {
           isEnabledNotifier.value) {
         await LocalNotificationService.scheduleWaterReminder(
           intervalHours: metricsNotifier.value.waterReminderIntervalHours,
+          fromTime: DateTime.now(),
         );
       }
     }
@@ -678,18 +722,14 @@ class HealthModuleHelper {
       await prefs.setInt(_userKey(_waterIntervalKey), interval);
       if (!kIsWeb) {
         if (enabled &&
+            isEnabledNotifier.value &&
             metricsNotifier.value.waterMilliliters <
                 metricsNotifier.value.waterGoalMilliliters) {
-          _waterReminderScheduled = true;
-          _scheduledIntervalHours = interval;
-          await prefs.setInt(
-              _userKey('health_water_scheduled_interval'), interval);
           await LocalNotificationService.scheduleWaterReminder(
-              intervalHours: interval);
+            intervalHours: interval,
+            fromTime: DateTime.now(),
+          );
         } else {
-          _waterReminderScheduled = false;
-          _scheduledIntervalHours = null;
-          await prefs.remove(_userKey('health_water_scheduled_interval'));
           await LocalNotificationService.cancelWaterReminder();
         }
       }
