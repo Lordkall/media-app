@@ -497,10 +497,24 @@ async def deactivate_subscription(
 ):
     check_admin(current_user)
     
-    sub = await db.scalar(select(Subscription).where(Subscription.doctor_id == doctor_id, Subscription.status == SubscriptionStatus.ACTIVE))
-    if sub:
+    subs = (await db.scalars(select(Subscription).where(
+        Subscription.doctor_id == doctor_id,
+        Subscription.status.in_([SubscriptionStatus.ACTIVE, SubscriptionStatus.GRACE_PERIOD])
+    ))).all()
+    import datetime
+    now = datetime.datetime.now(datetime.timezone.utc)
+    for sub in subs:
         sub.status = SubscriptionStatus.CANCELLED
-        await db.commit()
+        sub.end_date = now
+        sub.grace_end_date = now
+
+    doc = await db.get(Doctor, doctor_id)
+    if doc:
+        doc.is_sponsored = False
+        doc.is_featured = False
+        doc.sponsored_priority = 99
+
+    await db.commit()
     return {"message": "Subscription deactivated"}
 
 @router.post("/clinic_subscriptions/{clinic_id}/activate")

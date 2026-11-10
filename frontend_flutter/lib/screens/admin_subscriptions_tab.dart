@@ -728,48 +728,13 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
                             color: Color(0xFF0B2545))),
                     const SizedBox(height: 6),
                     Text(details,
-                        style: const TextStyle(color: Color(0xFF475569))),
+                        style: const TextStyle(color: Color(0xFF475569), fontSize: 13)),
                     if (plan != 'Sin plan') ...[
                       const SizedBox(height: 4),
                       Text('Días restantes: $daysRemaining',
                           style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               color: Color(0xFF0056B3))),
-                    ],
-                    if (pendingSubId != null) ...[
-                      const SizedBox(height: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                            color: Colors.orange.shade50,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: Colors.orange)),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(children: [
-                              const Icon(Icons.schedule,
-                                  color: Colors.orange, size: 12),
-                              const SizedBox(width: 4),
-                              Text(
-                                  'PAGO PENDIENTE: ${(pendingPlan ?? "").toUpperCase()}',
-                                  style: const TextStyle(
-                                      color: Colors.orange,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 10))
-                            ]),
-                            if (pendingReference != null)
-                              Text('Ref: $pendingReference',
-                                  style: const TextStyle(
-                                      fontSize: 10, color: Colors.brown)),
-                            if (pendingAmountBs != null)
-                              Text('Bs. ${pendingAmountBs.toStringAsFixed(2)}',
-                                  style: const TextStyle(
-                                      fontSize: 10, color: Colors.brown)),
-                          ],
-                        ),
-                      ),
                     ],
                   ],
                 ),
@@ -867,6 +832,59 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
           ),
           // Approve pending payment button (most important action)
           if (pendingSubId != null) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.orange.shade400, width: 1.2),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.schedule, color: Colors.orange, size: 14),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'PAGO PENDIENTE: ${(pendingPlan ?? "").toUpperCase()}',
+                          style: const TextStyle(
+                            color: Colors.orange,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      if (pendingReference != null)
+                        Text(
+                          'Ref: $pendingReference',
+                          style: const TextStyle(fontSize: 11, color: Colors.brown),
+                        ),
+                      if (pendingAmountBs != null)
+                        Text(
+                          'Bs. ${pendingAmountBs.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.brown,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 8),
             ElevatedButton.icon(
               onPressed: () => _updateSub(pendingSubId, 'approve'),

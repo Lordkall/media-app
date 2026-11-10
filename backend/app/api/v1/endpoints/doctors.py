@@ -140,12 +140,13 @@ async def read_doctor_me(
         
     # Check if doctor is VIP (sponsored) within active subscription or grace period
     now_utc = datetime.now(timezone.utc)
+    grace_cutoff = now_utc - timedelta(days=GRACE_PERIOD_DAYS)
     sub = await db.scalar(
         select(Subscription).where(
             Subscription.doctor_id == doc.id,
             Subscription.status.in_([SubscriptionStatus.ACTIVE, SubscriptionStatus.GRACE_PERIOD]),
             Subscription.grace_end_date > now_utc,
-            Subscription.end_date + timedelta(days=GRACE_PERIOD_DAYS) > now_utc,
+            Subscription.end_date > grace_cutoff,
             Subscription.plan == SubscriptionPlan.SPONSORED,
         ).order_by(Subscription.end_date.desc()).limit(1)
     )
@@ -188,12 +189,13 @@ async def update_doctor_me(
     await _attach_current_rating(db, doc)
     
     now_utc = datetime.now(timezone.utc)
+    grace_cutoff = now_utc - timedelta(days=GRACE_PERIOD_DAYS)
     active_vip = await db.scalar(
         select(Subscription.id).where(
             Subscription.doctor_id == doc.id,
             Subscription.status.in_([SubscriptionStatus.ACTIVE, SubscriptionStatus.GRACE_PERIOD]),
             Subscription.grace_end_date > now_utc,
-            Subscription.end_date + timedelta(days=GRACE_PERIOD_DAYS) > now_utc,
+            Subscription.end_date > grace_cutoff,
             Subscription.plan == SubscriptionPlan.SPONSORED,
         ).order_by(Subscription.end_date.desc()).limit(1)
     )
@@ -421,12 +423,13 @@ async def get_public_doctors(db: AsyncSession = Depends(get_db)):
             
         doctor_name = f"{prefix} {user.first_name or ''} {user.last_name or ''}".strip()
         now_utc = datetime.now(timezone.utc)
+        grace_cutoff = now_utc - timedelta(days=GRACE_PERIOD_DAYS)
         active_subscription = await db.scalar(
             select(Subscription).where(
                 Subscription.doctor_id == doc.id,
                 Subscription.status.in_([SubscriptionStatus.ACTIVE, SubscriptionStatus.GRACE_PERIOD]),
                 Subscription.grace_end_date > now_utc,
-                Subscription.end_date + timedelta(days=GRACE_PERIOD_DAYS) > now_utc,
+                Subscription.end_date > grace_cutoff,
             ).order_by(Subscription.end_date.desc()).limit(1)
         )
         has_doctor_plan = active_subscription is not None

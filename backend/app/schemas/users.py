@@ -192,6 +192,7 @@ class UserResponse(BaseModel):
     linked_doctor_id: Optional[int] = None
     assistant_doctor_name: Optional[str] = None
     is_blocked: bool = False
+    water_reminder_enabled: bool = False
 
     @computed_field
     @property

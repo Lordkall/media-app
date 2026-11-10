@@ -248,7 +248,7 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
           _selectedState = userState;
         }
         _doctors = allDocs
-            .where((doc) => doc['plan'] != 'Ninguno')
+            .where((doc) => doc['plan'] == 'Activo')
             .toList();
         _clinics = allClinics;
         _favoritesKey = favoritesKey;

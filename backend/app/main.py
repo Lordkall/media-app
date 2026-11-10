@@ -88,7 +88,8 @@ async def lifespan(app: FastAPI):
             await conn.execute(text("ALTER TABLE users ALTER COLUMN avatar_url TYPE TEXT;"))
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS fcm_token VARCHAR;"))
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS show_whatsapp BOOLEAN NOT NULL DEFAULT TRUE;"))
-            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS water_reminder_enabled BOOLEAN NOT NULL DEFAULT TRUE;"))
+            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS water_reminder_enabled BOOLEAN NOT NULL DEFAULT FALSE;"))
+            await conn.execute(text("ALTER TABLE users ALTER COLUMN water_reminder_enabled SET DEFAULT FALSE;"))
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_water_reminder_date TIMESTAMP WITH TIME ZONE;"))
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS birth_date DATE;"))
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS height_cm NUMERIC(5, 1);"))
@@ -277,6 +278,23 @@ async def lifespan(app: FastAPI):
                     UPDATE subscriptions
                     SET grace_end_date = end_date + INTERVAL '3 days'
                     WHERE grace_end_date > end_date + INTERVAL '3 days';
+                """))
+                await session.execute(text("""
+                    UPDATE subscriptions
+                    SET status = 'expired'
+                    WHERE status IN ('active', 'grace_period')
+                    AND (end_date + INTERVAL '3 days' <= NOW() OR grace_end_date <= NOW());
+                """))
+                await session.execute(text("""
+                    UPDATE doctors
+                    SET is_sponsored = FALSE, is_featured = FALSE, sponsored_priority = 99
+                    WHERE id NOT IN (
+                        SELECT doctor_id FROM subscriptions
+                        WHERE status IN ('active', 'grace_period')
+                        AND doctor_id IS NOT NULL
+                        AND end_date + INTERVAL '3 days' > NOW()
+                    )
+                    AND clinic_id IS NULL;
                 """))
                 await session.commit()
             startup_checks = await SubscriptionService.run_all_checks(session)

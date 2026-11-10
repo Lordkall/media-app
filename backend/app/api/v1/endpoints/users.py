@@ -178,12 +178,13 @@ async def get_current_user(request: Request, token: str = Depends(oauth2_scheme)
                 from app.models.subscriptions import Subscription, SubscriptionStatus
                 from app.core.subscription_service import GRACE_PERIOD_DAYS
                 now_utc = datetime.now(timezone.utc)
+                grace_cutoff = now_utc - timedelta(days=GRACE_PERIOD_DAYS)
                 active_sub = await db.scalar(
                     select(Subscription.id).where(
                         Subscription.doctor_id == doctor.id,
                         Subscription.status.in_([SubscriptionStatus.ACTIVE, SubscriptionStatus.GRACE_PERIOD]),
                         Subscription.grace_end_date > now_utc,
-                        Subscription.end_date + timedelta(days=GRACE_PERIOD_DAYS) > now_utc,
+                        Subscription.end_date > grace_cutoff,
                     ).limit(1)
                 )
                 if not active_sub:

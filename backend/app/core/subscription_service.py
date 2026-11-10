@@ -201,6 +201,7 @@ async def process_grace_periods(session: AsyncSession) -> int:
     Notifica al usuario (doctor o clínica).
     """
     now = _now()
+    grace_cutoff = now - timedelta(days=GRACE_PERIOD_DAYS)
 
     query = (
         select(Subscription)
@@ -212,7 +213,7 @@ async def process_grace_periods(session: AsyncSession) -> int:
             Subscription.status == SubscriptionStatus.ACTIVE,
             Subscription.end_date <= now,
             Subscription.grace_end_date > now,
-            Subscription.end_date + timedelta(days=GRACE_PERIOD_DAYS) > now,
+            Subscription.end_date > grace_cutoff,
         )
     )
     result = await session.execute(query)
@@ -263,6 +264,7 @@ async def revoke_expired_subscriptions(session: AsyncSession) -> int:
     Desactiva flags de patrocinado/destacado en el doctor.
     """
     now = _now()
+    grace_cutoff = now - timedelta(days=GRACE_PERIOD_DAYS)
 
     query = (
         select(Subscription)
@@ -274,7 +276,7 @@ async def revoke_expired_subscriptions(session: AsyncSession) -> int:
             Subscription.status.in_([SubscriptionStatus.GRACE_PERIOD, SubscriptionStatus.ACTIVE]),
             or_(
                 Subscription.grace_end_date <= now,
-                Subscription.end_date + timedelta(days=GRACE_PERIOD_DAYS) <= now,
+                Subscription.end_date <= grace_cutoff,
             ),
         )
     )

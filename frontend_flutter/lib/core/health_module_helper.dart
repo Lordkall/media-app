@@ -34,7 +34,7 @@ class HealthMetrics {
     this.sleepQuality = 'Bueno',
     this.waterMilliliters = 0,
     this.waterGoalMilliliters = 2000,
-    this.waterReminderEnabled = true,
+    this.waterReminderEnabled = false,
     this.waterReminderIntervalHours = 2,
     this.isNativePedometerActive = true,
     this.weeklySteps = const [0, 0, 0, 0, 0, 0, 0],
@@ -482,7 +482,7 @@ class HealthModuleHelper {
       final sl = prefs.getDouble(_userKey(_sleepHoursKey)) ?? 7.3;
       final quality = HealthMetrics.calculateSleepQuality(sl);
       final goal = prefs.getInt(_userKey(_waterGoalKey)) ?? 2000;
-      final reminder = prefs.getBool(_userKey(_waterReminderKey)) ?? true;
+      final reminder = prefs.getBool(_userKey(_waterReminderKey)) ?? false;
       final interval = prefs.getInt(_userKey(_waterIntervalKey)) ?? 2;
       final breathingWeekly =
           prefs.getBool(_userKey(_breathingWeeklyReminderKey)) ?? true;
@@ -643,6 +643,7 @@ class HealthModuleHelper {
   /// Activa o desactiva el módulo de salud globalmente.
   /// Si se desactiva, se cancelan de inmediato todas las notificaciones de agua, pasos y respiración.
   static Future<void> setEnabled(bool enabled) async {
+    isEnabledNotifier.value = enabled;
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_userKey(_enabledKey), enabled);
@@ -658,9 +659,16 @@ class HealthModuleHelper {
           unawaited(
               ApiClient.put('/users/me', {'water_reminder_enabled': false}));
         } else {
+          // Solicitar permiso de reconocimiento de actividad física inmediatamente al activar
+          if (defaultTargetPlatform == TargetPlatform.android ||
+              defaultTargetPlatform == TargetPlatform.iOS) {
+            final permStatus = await Permission.activityRecognition.request();
+            debugPrint('Permiso de actividad física solicitado: $permStatus');
+          }
+
           // Activar: iniciar podómetro y reprogramar recordatorios según preferencias
           await LocalNotificationService.scheduleDailyStepReminders();
-          unawaited(initializePedometer(forceRestart: true));
+          await initializePedometer(forceRestart: true);
           if (metricsNotifier.value.breathingWeeklyReminderEnabled) {
             await LocalNotificationService.scheduleWeeklyBreathingReminder();
           }
@@ -673,12 +681,15 @@ class HealthModuleHelper {
             );
             unawaited(
                 ApiClient.put('/users/me', {'water_reminder_enabled': true}));
+          } else {
+            await LocalNotificationService.cancelWaterReminder();
+            unawaited(
+                ApiClient.put('/users/me', {'water_reminder_enabled': false}));
           }
           unawaited(_checkDailyStepReminders());
         }
       }
     } catch (_) {}
-    isEnabledNotifier.value = enabled;
   }
 
   static Future<void> updateMetrics({

@@ -294,9 +294,9 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
           Switch.adaptive(
             value: isEnabled,
             activeColor: const Color(0xFF0756A4),
-            onChanged: (val) {
+            onChanged: (val) async {
               HapticFeedback.selectionClick();
-              HealthModuleHelper.setEnabled(val);
+              await HealthModuleHelper.setEnabled(val);
             },
           ),
         ],
@@ -357,9 +357,9 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                 ],
               ),
               child: ElevatedButton.icon(
-                onPressed: () {
+                onPressed: () async {
                   HapticFeedback.mediumImpact();
-                  HealthModuleHelper.setEnabled(true);
+                  await HealthModuleHelper.setEnabled(true);
                 },
                 icon: const Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
                 label: const Text(

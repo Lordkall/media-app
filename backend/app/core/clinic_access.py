@@ -11,13 +11,14 @@ from app.core.subscription_service import GRACE_PERIOD_DAYS
 
 async def active_clinic_subscription(db: AsyncSession, clinic_id: int):
     now = datetime.now(timezone.utc)
+    grace_cutoff = now - timedelta(days=GRACE_PERIOD_DAYS)
     return await db.scalar(
         select(Subscription)
         .where(
             Subscription.clinic_id == clinic_id,
             Subscription.status.in_([SubscriptionStatus.ACTIVE, SubscriptionStatus.GRACE_PERIOD]),
             Subscription.grace_end_date > now,
-            Subscription.end_date + timedelta(days=GRACE_PERIOD_DAYS) > now,
+            Subscription.end_date > grace_cutoff,
             Subscription.plan.in_(
                 [SubscriptionPlan.CLINIC_BASIC, SubscriptionPlan.CLINIC_VIP]
             ),
