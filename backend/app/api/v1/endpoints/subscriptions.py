@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, text
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from pydantic import BaseModel
 
@@ -11,6 +11,7 @@ from app.models.doctors import Doctor
 from app.models.subscriptions import Subscription, SubscriptionStatus, SubscriptionPlan
 from app.models.notifications import Notification, NotificationType
 from app.api.v1.endpoints.users import get_current_user
+from app.core.subscription_service import GRACE_PERIOD_DAYS
 
 router = APIRouter()
 
@@ -153,10 +154,34 @@ async def get_my_subscriptions(
     sub_res = await db.execute(
         select(Subscription).where(
             cond_active,
-            Subscription.status == SubscriptionStatus.ACTIVE
-        ).order_by(Subscription.created_at.desc())
+            Subscription.status.in_([SubscriptionStatus.ACTIVE, SubscriptionStatus.GRACE_PERIOD])
+        ).order_by(Subscription.end_date.desc())
     )
     current_sub = sub_res.scalars().first()
+
+    if current_sub:
+        now_utc = datetime.now(timezone.utc)
+        end_d = current_sub.end_date
+        if end_d.tzinfo is None:
+            end_d = end_d.replace(tzinfo=timezone.utc)
+        grace_d = current_sub.grace_end_date
+        if grace_d.tzinfo is None:
+            grace_d = grace_d.replace(tzinfo=timezone.utc)
+
+        # Enforce strict 3 days grace period
+        if now_utc > grace_d or now_utc > end_d + timedelta(days=GRACE_PERIOD_DAYS):
+            current_sub.status = SubscriptionStatus.EXPIRED
+            current_sub.updated_at = now_utc
+            if is_doctor and doc:
+                doc.is_sponsored = False
+                doc.sponsored_priority = 99
+                doc.is_featured = False
+            await db.commit()
+            current_sub = None
+        elif now_utc > end_d and current_sub.status != SubscriptionStatus.GRACE_PERIOD:
+            current_sub.status = SubscriptionStatus.GRACE_PERIOD
+            current_sub.updated_at = now_utc
+            await db.commit()
     
     pend_res = await db.execute(
         select(Subscription).where(
@@ -433,7 +458,7 @@ async def renew_subscription(
             status=SubscriptionStatus.PENDING_APPROVAL,
             start_date=start_date,
             end_date=end_date,
-            grace_end_date=end_date + timedelta(days=5),
+            grace_end_date=end_date + timedelta(days=GRACE_PERIOD_DAYS),
             reference_number=req.reference_number,
             amount_bs=req.amount_bs,
             screenshot_base64=req.screenshot_base64
@@ -549,7 +574,7 @@ async def change_subscription_plan(
         status=SubscriptionStatus.PENDING_APPROVAL,
         start_date=start_date,
         end_date=end_date,
-        grace_end_date=end_date + timedelta(days=5),
+        grace_end_date=end_date + timedelta(days=GRACE_PERIOD_DAYS),
         reference_number=req.reference_number,
         amount_bs=req.amount_bs,
         screenshot_base64=req.screenshot_base64

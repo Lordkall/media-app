@@ -16,11 +16,13 @@ class BrowseDoctorsTab extends StatefulWidget {
       {super.key,
       this.initialSpecialty,
       this.initialQuery = '',
-      this.onViewSchedule});
+      this.onViewSchedule,
+      this.showBackButton = false});
 
   final String? initialSpecialty;
   final String initialQuery;
   final VoidCallback? onViewSchedule;
+  final bool showBackButton;
 
   @override
   State<BrowseDoctorsTab> createState() => _BrowseDoctorsTabState();
@@ -246,8 +248,7 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
           _selectedState = userState;
         }
         _doctors = allDocs
-            .where(
-                (doc) => doc['plan'] != 'Ninguno' || doc['clinic_id'] != null)
+            .where((doc) => doc['plan'] != 'Ninguno')
             .toList();
         _clinics = allClinics;
         _favoritesKey = favoritesKey;
@@ -400,13 +401,31 @@ class _BrowseDoctorsTabState extends State<BrowseDoctorsTab> {
       child: SafeArea(
         child: Column(
           children: [
-            const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Text('Buscar',
-                  style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0B2545))),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+              child: Row(
+                children: [
+                  if (widget.showBackButton) ...[
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                          color: Color(0xFF0B2545)),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                    const SizedBox(width: 4),
+                  ],
+                  Expanded(
+                    child: Text(
+                      widget.showBackButton
+                          ? 'Buscar doctores y clínicas'
+                          : 'Buscar',
+                      style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0B2545)),
+                    ),
+                  ),
+                ],
+              ),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),

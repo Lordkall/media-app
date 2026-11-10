@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,15 +6,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.clinics import Clinic
 from app.models.doctors import Doctor
 from app.models.subscriptions import Subscription, SubscriptionPlan, SubscriptionStatus
+from app.core.subscription_service import GRACE_PERIOD_DAYS
 
 
 async def active_clinic_subscription(db: AsyncSession, clinic_id: int):
+    now = datetime.now(timezone.utc)
     return await db.scalar(
         select(Subscription)
         .where(
             Subscription.clinic_id == clinic_id,
-            Subscription.status == SubscriptionStatus.ACTIVE,
-            Subscription.grace_end_date > datetime.now(timezone.utc),
+            Subscription.status.in_([SubscriptionStatus.ACTIVE, SubscriptionStatus.GRACE_PERIOD]),
+            Subscription.grace_end_date > now,
+            Subscription.end_date + timedelta(days=GRACE_PERIOD_DAYS) > now,
             Subscription.plan.in_(
                 [SubscriptionPlan.CLINIC_BASIC, SubscriptionPlan.CLINIC_VIP]
             ),

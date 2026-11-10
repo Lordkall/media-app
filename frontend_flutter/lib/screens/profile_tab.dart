@@ -350,7 +350,7 @@ class _ProfileTabState extends State<ProfileTab> {
                 'Acerca de Salud Now',
                 () => _open('Acerca de Salud Now',
                     _AboutPage(onOpen: _open, menuRow: _menuRow))),
-            if (_subData != null && _subData!['current'] != null) ...[
+            if ((_userData?['role'] == 'doctor' || _userData?['role'] == 'clinic') && _subData != null) ...[
               const SizedBox(height: 18),
               _buildSubscriptionCard(),
               const SizedBox(height: 18),
@@ -373,30 +373,70 @@ class _ProfileTabState extends State<ProfileTab> {
     return days > 0 ? days : 0;
   }
 
+  int _getGraceDaysRemaining() {
+    final graceDate = DateTime.tryParse(
+        _subData?['current']?['grace_end_date']?.toString() ?? '');
+    if (graceDate == null) return 0;
+    final today = caracasNow();
+    final grace = graceDate.toLocal();
+    final days = DateTime(grace.year, grace.month, grace.day)
+        .difference(DateTime(today.year, today.month, today.day))
+        .inDays;
+    return days > 0 ? days : 0;
+  }
+
   Widget _buildSubscriptionCard() {
-    final rawPlan = _subData?['current']?['plan'] ?? 'Ninguno';
-    final displayPlan = rawPlan == 'sponsored'
-        ? 'VIP'
-        : rawPlan == 'basic'
-            ? 'Básico'
-            : rawPlan == 'featured'
-                ? 'Destacado'
-                : rawPlan == 'clinic_vip'
-                    ? 'VIP de Clínica'
-                    : rawPlan == 'clinic_basic'
-                        ? 'Básico de Clínica'
-                        : rawPlan;
+    final hasCurrent = _subData?['current'] != null;
+    final isGrace = _subData?['current']?['status'] == 'grace_period';
+    final rawPlan = _subData?['current']?['plan'] ?? 'none';
+    final displayPlan = !hasCurrent
+        ? 'Sin suscripción (Vencida)'
+        : isGrace
+            ? (rawPlan == 'sponsored'
+                ? 'VIP (Período de gracia)'
+                : rawPlan == 'featured'
+                    ? 'Destacado (Período de gracia)'
+                    : rawPlan == 'basic'
+                        ? 'Básico (Período de gracia)'
+                        : 'Período de gracia')
+            : rawPlan == 'sponsored'
+                ? 'VIP'
+                : rawPlan == 'basic'
+                    ? 'Básico'
+                    : rawPlan == 'featured'
+                        ? 'Destacado'
+                        : rawPlan == 'clinic_vip'
+                            ? 'VIP de Clínica'
+                            : rawPlan == 'clinic_basic'
+                                ? 'Básico de Clínica'
+                                : rawPlan;
     final isClinicMember = _subData?['is_clinic_member'] == true;
+    final cardBorderColor = !hasCurrent
+        ? const Color(0xFFDC2626)
+        : isGrace
+            ? const Color(0xFFD97706)
+            : const Color(0xFF0056B3);
+    final buttonColor = !hasCurrent
+        ? const Color(0xFFDC2626)
+        : isGrace
+            ? const Color(0xFFD97706)
+            : const Color(0xFF0056B3);
+
+    final buttonLabel = !hasCurrent
+        ? 'Activar o Renovar Suscripción'
+        : isGrace
+            ? 'Renovar Plan (Quedan ${_getGraceDaysRemaining()} días de gracia)'
+            : 'Renovar o Cambiar Plan (Quedan ${_getDaysRemaining()} días)';
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF0056B3), width: 1.5),
+        border: Border.all(color: cardBorderColor, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0056B3).withValues(alpha: 0.08),
+            color: cardBorderColor.withValues(alpha: 0.08),
             blurRadius: 14,
             offset: const Offset(0, 4),
           ),
@@ -407,8 +447,8 @@ class _ProfileTabState extends State<ProfileTab> {
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
-              Text(
+            children: [
+              const Text(
                 'Mi Suscripción',
                 style: TextStyle(
                   fontSize: 18,
@@ -416,7 +456,15 @@ class _ProfileTabState extends State<ProfileTab> {
                   color: Color(0xFF0B2545),
                 ),
               ),
-              Icon(Icons.star_rounded, color: Color(0xFF0056B3), size: 24),
+              Icon(
+                !hasCurrent
+                    ? Icons.warning_amber_rounded
+                    : isGrace
+                        ? Icons.timer_outlined
+                        : Icons.star_rounded,
+                color: cardBorderColor,
+                size: 24,
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -424,13 +472,23 @@ class _ProfileTabState extends State<ProfileTab> {
             isClinicMember
                 ? 'Plan activo: $displayPlan · ${_getDaysRemaining()} días restantes'
                 : 'Plan Actual: $displayPlan',
-            style: const TextStyle(fontSize: 15, color: Color(0xFF475569)),
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: (!hasCurrent || isGrace) ? FontWeight.w600 : FontWeight.normal,
+              color: (!hasCurrent || isGrace) ? cardBorderColor : const Color(0xFF475569),
+            ),
           ),
-          if (!isClinicMember) ...[
+          if (!isClinicMember && hasCurrent) ...[
             const SizedBox(height: 6),
             Text(
-              'Vence: ${_subData?['current']?['end_date']?.toString().split('T')[0] ?? '--'}',
-              style: const TextStyle(fontSize: 14, color: Color(0xFF64748B)),
+              isGrace
+                  ? 'Venció: ${_subData?['current']?['end_date']?.toString().split('T')[0] ?? '--'} (Período de gracia de 3 días activo)'
+                  : 'Vence: ${_subData?['current']?['end_date']?.toString().split('T')[0] ?? '--'}',
+              style: TextStyle(
+                fontSize: 14,
+                color: isGrace ? const Color(0xFFD97706) : const Color(0xFF64748B),
+                fontWeight: isGrace ? FontWeight.w600 : FontWeight.normal,
+              ),
             ),
           ],
           if (!isGooglePlayBuild && !isClinicMember) ...[
@@ -447,13 +505,13 @@ class _ProfileTabState extends State<ProfileTab> {
                   }
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0056B3),
+                  backgroundColor: buttonColor,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                   elevation: 0,
                 ),
                 child: Text(
-                  'Renovar o Cambiar Plan (Quedan ${_getDaysRemaining()} días)',
+                  buttonLabel,
                   style: const TextStyle(
                       color: Colors.white, fontWeight: FontWeight.bold),
                 ),

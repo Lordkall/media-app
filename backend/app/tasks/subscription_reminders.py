@@ -7,18 +7,17 @@ from app.core.subscription_service import SubscriptionService
 
 
 async def subscription_renewal_reminder_loop() -> None:
-    """Check often; the service enforces a 24-hour interval per subscription."""
+    """Check often; the service enforces reminders, grace periods (3 days), and revokes expired subscriptions."""
     while True:
         try:
             async with async_session_maker() as session:
-                sent = await SubscriptionService.check_expiring_subscriptions(session)
-                await session.commit()
-                if sent:
-                    print(f"[SUSCRIPCIONES] Recordatorios enviados: {sent}")
+                res = await SubscriptionService.run_all_checks(session)
+                if any(res.values()):
+                    print(f"[SUSCRIPCIONES] Verificación completada: {res}")
         except asyncio.CancelledError:
             break
         except Exception as exc:
-            print(f"[SUSCRIPCIONES] Error al enviar recordatorios: {exc}")
+            print(f"[SUSCRIPCIONES] Error al verificar suscripciones: {exc}")
 
         try:
             await asyncio.sleep(15 * 60)

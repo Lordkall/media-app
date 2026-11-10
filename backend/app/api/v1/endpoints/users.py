@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
-from datetime import timezone
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 import base64
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -149,51 +149,62 @@ async def get_current_user(request: Request, token: str = Depends(oauth2_scheme)
             )
 
     restricted = False
-    clinic_id = None
+    reason_detail = "Tu suscripción ha vencido. Renueva tu plan para habilitar el acceso a tus servicios."
     if user.role == DatabaseRoleEnum.CLINIC:
         from app.models.clinics import Clinic
         clinic_id = await db.scalar(select(Clinic.id).where(Clinic.user_id == user.id))
-        restricted = True
+        from app.core.clinic_access import active_clinic_subscription
+        if not clinic_id or not await active_clinic_subscription(db, clinic_id):
+            restricted = True
+            reason_detail = "La clínica debe tener un plan activo para habilitar el acceso a sus servicios."
     elif user.role in (DatabaseRoleEnum.DOCTOR, DatabaseRoleEnum.ASSISTANT):
         from app.models.doctors import Doctor
         if user.role == DatabaseRoleEnum.DOCTOR:
             doctor = await db.scalar(select(Doctor).where(Doctor.user_id == user.id))
         else:
             doctor = await db.get(Doctor, user.linked_doctor_id) if user.linked_doctor_id else None
-        if doctor and doctor.clinic_join_status == "pending":
-            restricted = True
-        elif doctor and doctor.clinic_id:
-            clinic_id = doctor.clinic_id
-            restricted = True
+        if doctor:
+            if doctor.clinic_join_status == "pending":
+                restricted = True
+                reason_detail = "La solicitud de afiliación a la clínica está pendiente de aprobación."
+            elif doctor.clinic_id:
+                from app.core.clinic_access import active_clinic_subscription
+                clinic_has_active_plan = bool(await active_clinic_subscription(db, doctor.clinic_id))
+                if not clinic_has_active_plan:
+                    restricted = True
+                    reason_detail = "La clínica debe tener un plan activo para habilitar el acceso a tus servicios."
+            else:
+                # Independent doctor: verify they have an active or grace period subscription
+                from app.models.subscriptions import Subscription, SubscriptionStatus
+                from app.core.subscription_service import GRACE_PERIOD_DAYS
+                now_utc = datetime.now(timezone.utc)
+                active_sub = await db.scalar(
+                    select(Subscription.id).where(
+                        Subscription.doctor_id == doctor.id,
+                        Subscription.status.in_([SubscriptionStatus.ACTIVE, SubscriptionStatus.GRACE_PERIOD]),
+                        Subscription.grace_end_date > now_utc,
+                        Subscription.end_date + timedelta(days=GRACE_PERIOD_DAYS) > now_utc,
+                    ).limit(1)
+                )
+                if not active_sub:
+                    restricted = True
+                    reason_detail = "Tu suscripción ha expirado. Renueva tu plan para habilitar el acceso al sistema."
 
     if restricted:
         request_path = request.url.path
         allowed = (
             request_path == "/api/v1/users/me"
-            or request_path.startswith("/api/v1/subscriptions/")
+            or request_path.startswith("/api/v1/subscriptions")
             or request_path == "/api/v1/doctors/me"
             or request_path == "/api/v1/clinics/me"
+            or request_path.startswith("/api/v1/support")
+            or request_path.startswith("/api/v1/auth")
         )
         if not allowed:
-            from app.core.clinic_access import active_clinic_subscription
-            clinic_has_active_plan = bool(
-                clinic_id
-                and await active_clinic_subscription(db, clinic_id)
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=reason_detail,
             )
-            doctor_pending = False
-            if user.role == DatabaseRoleEnum.DOCTOR:
-                from app.models.doctors import Doctor
-                doctor_pending = await db.scalar(
-                    select(Doctor.id).where(
-                        Doctor.user_id == user.id,
-                        Doctor.clinic_join_status == "pending",
-                    )
-                ) is not None
-            if not clinic_has_active_plan or doctor_pending:
-                raise HTTPException(
-                    status_code=403,
-                    detail="La clínica debe tener un plan activo y aprobar tu afiliación para habilitar el acceso.",
-                )
     return user
 
 @router.get("/me", response_model=UserResponse)

@@ -9,6 +9,7 @@ from app.models.subscriptions import Subscription, SubscriptionStatus, Subscript
 from app.models.notifications import Notification, NotificationType
 from app.models.clinics import Clinic
 from app.api.v1.endpoints.users import get_current_user
+from app.core.subscription_service import GRACE_PERIOD_DAYS
 from typing import List, Dict, Any
 import logging
 
@@ -241,9 +242,15 @@ async def get_all_doctors(
         days_remaining = 0
         if sub and sub.end_date:
             import datetime
-            now = datetime.datetime.utcnow()
+            now_dt = datetime.datetime.utcnow()
             end = sub.end_date.replace(tzinfo=None)
-            days_remaining = (end - now).days if end > now else 0
+            grace = (sub.grace_end_date.replace(tzinfo=None) if sub.grace_end_date else end + datetime.timedelta(days=GRACE_PERIOD_DAYS))
+            effective_grace = min(grace, end + datetime.timedelta(days=GRACE_PERIOD_DAYS))
+            if now_dt > effective_grace:
+                sub = None
+                days_remaining = 0
+            else:
+                days_remaining = (end - now_dt).days if end > now_dt else 0
 
         # Also check for pending approval subscriptions
         pending_sub = await db.scalar(select(Subscription).where(
@@ -251,7 +258,7 @@ async def get_all_doctors(
             Subscription.status == SubscriptionStatus.PENDING_APPROVAL
         ))
 
-        is_vip = (sub is not None and sub.plan in (SubscriptionPlan.SPONSORED, SubscriptionPlan.CLINIC_VIP)) or bool(doc.is_sponsored)
+        is_vip = bool(sub and sub.plan in (SubscriptionPlan.SPONSORED, SubscriptionPlan.CLINIC_VIP))
 
         from app.core.profile_privacy import redact_phone_numbers
         doctors_list.append({
@@ -458,7 +465,7 @@ async def activate_subscription(
         status=SubscriptionStatus.ACTIVE,
         start_date=now,
         end_date=end_date,
-        grace_end_date=end_date + datetime.timedelta(days=5)
+        grace_end_date=end_date + datetime.timedelta(days=GRACE_PERIOD_DAYS)
     )
     db.add(new_sub)
     await sync_doctor_plan_flags(db, doctor_id, new_sub.plan)
@@ -532,7 +539,7 @@ async def activate_clinic_subscription(
         status=SubscriptionStatus.ACTIVE,
         start_date=now,
         end_date=end_date,
-        grace_end_date=end_date + datetime.timedelta(days=5)
+        grace_end_date=end_date + datetime.timedelta(days=GRACE_PERIOD_DAYS)
     )
     db.add(new_sub)
     await db.commit()
@@ -625,9 +632,9 @@ async def approve_subscription(
         if doctor_to_approve:
             doctor_to_approve.is_approved = True
         await sync_doctor_plan_flags(db, sub.doctor_id, sub.plan)
-    # Set grace end date (5 days after end_date)
+    # Set grace end date (3 days after end_date)
     if sub.end_date:
-        sub.grace_end_date = sub.end_date + datetime.timedelta(days=5)
+        sub.grace_end_date = sub.end_date + datetime.timedelta(days=GRACE_PERIOD_DAYS)
     
     # Update notification to approved
     notifs = await db.execute(select(Notification).where(Notification.action_url == f"approve_subscription:{sub.id}"))

@@ -12,8 +12,9 @@ from app.models.subscriptions import Subscription, SubscriptionStatus, Subscript
 from app.schemas.doctors import DoctorResponse, DoctorUpdate, DoctorRatingCreate
 from app.schemas.availability import AvailabilityUpdate
 from app.api.v1.endpoints.users import get_current_user
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
+from app.core.subscription_service import GRACE_PERIOD_DAYS
 
 router = APIRouter()
 
@@ -137,15 +138,17 @@ async def read_doctor_me(
 
     await _attach_current_rating(db, doc)
         
-    # Check if doctor is VIP (sponsored)
-    sub_query = select(Subscription).where(
-        Subscription.doctor_id == doc.id,
-        Subscription.status == SubscriptionStatus.ACTIVE,
-        Subscription.plan == SubscriptionPlan.SPONSORED
+    # Check if doctor is VIP (sponsored) within active subscription or grace period
+    now_utc = datetime.now(timezone.utc)
+    sub = await db.scalar(
+        select(Subscription).where(
+            Subscription.doctor_id == doc.id,
+            Subscription.status.in_([SubscriptionStatus.ACTIVE, SubscriptionStatus.GRACE_PERIOD]),
+            Subscription.grace_end_date > now_utc,
+            Subscription.end_date + timedelta(days=GRACE_PERIOD_DAYS) > now_utc,
+            Subscription.plan == SubscriptionPlan.SPONSORED,
+        ).order_by(Subscription.end_date.desc()).limit(1)
     )
-    sub_result = await db.execute(sub_query)
-    sub = sub_result.scalars().first()
-    
     is_vip = sub is not None
     if not is_vip and doc.clinic_id and (doc.clinic_join_status is None or doc.clinic_join_status == "approved"):
         from app.core.clinic_access import active_clinic_subscription
@@ -184,12 +187,15 @@ async def update_doctor_me(
     await db.refresh(doc)
     await _attach_current_rating(db, doc)
     
+    now_utc = datetime.now(timezone.utc)
     active_vip = await db.scalar(
         select(Subscription.id).where(
             Subscription.doctor_id == doc.id,
-            Subscription.status == SubscriptionStatus.ACTIVE,
+            Subscription.status.in_([SubscriptionStatus.ACTIVE, SubscriptionStatus.GRACE_PERIOD]),
+            Subscription.grace_end_date > now_utc,
+            Subscription.end_date + timedelta(days=GRACE_PERIOD_DAYS) > now_utc,
             Subscription.plan == SubscriptionPlan.SPONSORED,
-        )
+        ).order_by(Subscription.end_date.desc()).limit(1)
     )
     is_vip = active_vip is not None
     if not is_vip and doc.clinic_id and (doc.clinic_join_status is None or doc.clinic_join_status == "approved"):
@@ -414,19 +420,34 @@ async def get_public_doctors(db: AsyncSession = Depends(get_db)):
             avatar = f"data:{user.avatar_content_type or 'image/jpeg'};base64,{user.avatar_data}"
             
         doctor_name = f"{prefix} {user.first_name or ''} {user.last_name or ''}".strip()
-        is_vip = bool(doc.is_sponsored)
-        active_subscription = await db.scalar(select(Subscription).where(
-            Subscription.doctor_id == doc.id,
-            Subscription.status == SubscriptionStatus.ACTIVE,
-        ))
-        if not is_vip:
-            is_vip = bool(active_subscription and active_subscription.plan == SubscriptionPlan.SPONSORED)
-        if not is_vip and doc.clinic_id and doc.clinic_join_status in (None, "approved"):
+        now_utc = datetime.now(timezone.utc)
+        active_subscription = await db.scalar(
+            select(Subscription).where(
+                Subscription.doctor_id == doc.id,
+                Subscription.status.in_([SubscriptionStatus.ACTIVE, SubscriptionStatus.GRACE_PERIOD]),
+                Subscription.grace_end_date > now_utc,
+                Subscription.end_date + timedelta(days=GRACE_PERIOD_DAYS) > now_utc,
+            ).order_by(Subscription.end_date.desc()).limit(1)
+        )
+        has_doctor_plan = active_subscription is not None
+        clinic_sub = None
+        if doc.clinic_id and doc.clinic_join_status in (None, "approved"):
             clinic_sub = await active_clinic_subscription(db, doc.clinic_id)
-            is_vip = bool(clinic_sub and clinic_sub.plan == SubscriptionPlan.CLINIC_VIP)
-        has_active_plan = active_subscription is not None
-        if not has_active_plan and doc.clinic_id and doc.clinic_join_status in (None, "approved"):
-            has_active_plan = await active_clinic_subscription(db, doc.clinic_id) is not None
+        has_clinic_plan = clinic_sub is not None
+        has_active_plan = has_doctor_plan or has_clinic_plan
+
+        # Only doctors with an active subscription or an active clinic membership are public
+        if not has_active_plan:
+            continue
+
+        is_vip = False
+        if has_doctor_plan and active_subscription.plan == SubscriptionPlan.SPONSORED:
+            is_vip = True
+        elif has_clinic_plan and clinic_sub.plan == SubscriptionPlan.CLINIC_VIP:
+            is_vip = True
+        elif doc.is_sponsored and has_active_plan:
+            is_vip = True
+
         average_rating, total_reviews = rating_stats.get(doc.id, (5.0, 0))
         out.append({
             "id": doc.id,
@@ -439,7 +460,7 @@ async def get_public_doctors(db: AsyncSession = Depends(get_db)):
             "last_name": user.last_name,
             "address": doc.clinic_info or user.address,
             "clinic_info": doc.clinic_info,
-            "clinic_id": doc.clinic_id,
+            "clinic_id": doc.clinic_id if has_clinic_plan else None,
             "plan": "Activo" if has_active_plan else "Ninguno",
             "state": user.state,
             "specialties": doc.specialties or [],

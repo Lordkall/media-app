@@ -4,7 +4,7 @@ renovar y revocar suscripciones de doctores.
 """
 from datetime import datetime, timedelta, timezone
 import math
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -48,9 +48,13 @@ class SubscriptionService:
 
     @staticmethod
     async def process_grace_and_expiration(session: AsyncSession):
-        grace_count = await process_grace_periods(session)
         revoked_count = await revoke_expired_subscriptions(session)
+        grace_count = await process_grace_periods(session)
         return grace_count, revoked_count
+
+    @staticmethod
+    async def run_all_checks(session: AsyncSession) -> dict:
+        return await run_all_checks(session)
 
     @staticmethod
     async def renew_subscription(session: AsyncSession, subscription_id: int) -> Subscription:
@@ -193,16 +197,22 @@ async def check_expiring_subscriptions(session: AsyncSession) -> int:
 async def process_grace_periods(session: AsyncSession) -> int:
     """
     Mueve suscripciones ACTIVE vencidas a GRACE_PERIOD.
-    Notifica al doctor.
+    Solo aplica si la suscripción está dentro de los GRACE_PERIOD_DAYS (3 días) de gracia.
+    Notifica al usuario (doctor o clínica).
     """
     now = _now()
 
     query = (
         select(Subscription)
-        .options(joinedload(Subscription.doctor).joinedload(Doctor.user))
+        .options(
+            joinedload(Subscription.doctor).joinedload(Doctor.user),
+            joinedload(Subscription.clinic).joinedload(Clinic.user),
+        )
         .where(
             Subscription.status == SubscriptionStatus.ACTIVE,
             Subscription.end_date <= now,
+            Subscription.grace_end_date > now,
+            Subscription.end_date + timedelta(days=GRACE_PERIOD_DAYS) > now,
         )
     )
     result = await session.execute(query)
@@ -213,18 +223,34 @@ async def process_grace_periods(session: AsyncSession) -> int:
         sub.status = SubscriptionStatus.GRACE_PERIOD
         sub.updated_at = now
 
-        days_grace = (sub.grace_end_date - now).days
+        grace_end = sub.grace_end_date
+        if grace_end.tzinfo is None:
+            grace_end = grace_end.replace(tzinfo=timezone.utc)
+        max_grace_end = sub.end_date
+        if max_grace_end.tzinfo is None:
+            max_grace_end = max_grace_end.replace(tzinfo=timezone.utc)
+        max_grace_end += timedelta(days=GRACE_PERIOD_DAYS)
+        effective_grace_end = min(grace_end, max_grace_end)
 
-        notif = Notification(
-            user_id=sub.doctor.user.id,
-            type=NotificationType.GRACE_PERIOD_WARNING,
-            title="Periodo de gracia activo",
-            message=f"Tu plan {PLAN_LABELS[sub.plan]} ha vencido. Tienes {days_grace} dia(s) para renovar antes de perder tu visibilidad.",
-            is_read=False,
-            action_url="/subscribe",
-            created_at=now,
+        days_grace = max(1, math.ceil((effective_grace_end - now).total_seconds() / 86400))
+        plan_label = PLAN_LABELS.get(sub.plan, str(getattr(sub.plan, "value", sub.plan)))
+
+        recipient = (
+            sub.doctor.user if sub.doctor and sub.doctor.user
+            else sub.clinic.user if sub.clinic and sub.clinic.user
+            else None
         )
-        session.add(notif)
+        if recipient:
+            notif = Notification(
+                user_id=recipient.id,
+                type=NotificationType.GRACE_PERIOD_WARNING,
+                title="Período de gracia activo",
+                message=f"Tu plan {plan_label} ha vencido. Tienes {days_grace} día(s) de gracia para renovar antes de perder el acceso al sistema.",
+                is_read=False,
+                action_url="/subscribe",
+                created_at=now,
+            )
+            session.add(notif)
         count += 1
 
     await session.flush()
@@ -233,17 +259,23 @@ async def process_grace_periods(session: AsyncSession) -> int:
 
 async def revoke_expired_subscriptions(session: AsyncSession) -> int:
     """
-    Revoca suscripciones cuyo periodo de gracia ha terminado.
+    Revoca suscripciones cuyo periodo de gracia (3 días) ha terminado.
     Desactiva flags de patrocinado/destacado en el doctor.
     """
     now = _now()
 
     query = (
         select(Subscription)
-        .options(joinedload(Subscription.doctor).joinedload(Doctor.user))
+        .options(
+            joinedload(Subscription.doctor).joinedload(Doctor.user),
+            joinedload(Subscription.clinic).joinedload(Clinic.user),
+        )
         .where(
-            Subscription.status == SubscriptionStatus.GRACE_PERIOD,
-            Subscription.grace_end_date <= now,
+            Subscription.status.in_([SubscriptionStatus.GRACE_PERIOD, SubscriptionStatus.ACTIVE]),
+            or_(
+                Subscription.grace_end_date <= now,
+                Subscription.end_date + timedelta(days=GRACE_PERIOD_DAYS) <= now,
+            ),
         )
     )
     result = await session.execute(query)
@@ -254,23 +286,36 @@ async def revoke_expired_subscriptions(session: AsyncSession) -> int:
         sub.status = SubscriptionStatus.EXPIRED
         sub.updated_at = now
 
-        doctor = sub.doctor
-        if sub.plan == SubscriptionPlan.SPONSORED:
+        plan_label = PLAN_LABELS.get(sub.plan, str(getattr(sub.plan, "value", sub.plan)))
+
+        if sub.doctor:
+            doctor = sub.doctor
             doctor.is_sponsored = False
             doctor.sponsored_priority = 99
-        elif sub.plan == SubscriptionPlan.FEATURED:
             doctor.is_featured = False
 
-        notif = Notification(
-            user_id=doctor.user.id,
-            type=NotificationType.SUBSCRIPTION_REVOKED,
-            title="Suscripcion revocada",
-            message=f"Tu plan {PLAN_LABELS[sub.plan]} ha sido revocado por falta de pago. Suscribete nuevamente para recuperar tu visibilidad.",
-            is_read=False,
-            action_url="/subscribe",
-            created_at=now,
-        )
-        session.add(notif)
+            if doctor.user:
+                notif = Notification(
+                    user_id=doctor.user.id,
+                    type=NotificationType.SUBSCRIPTION_REVOKED,
+                    title="Suscripción revocada",
+                    message=f"Tu plan {plan_label} ha sido revocado por falta de pago al vencer los {GRACE_PERIOD_DAYS} días de gracia. Renueva tu plan para acceder al sistema.",
+                    is_read=False,
+                    action_url="/subscribe",
+                    created_at=now,
+                )
+                session.add(notif)
+        elif sub.clinic and sub.clinic.user:
+            notif = Notification(
+                user_id=sub.clinic.user.id,
+                type=NotificationType.SUBSCRIPTION_REVOKED,
+                title="Suscripción de clínica revocada",
+                message=f"El plan {plan_label} de tu clínica ha sido revocado por falta de pago al vencer los {GRACE_PERIOD_DAYS} días de gracia. Renueva tu plan para reactivar los servicios de tus especialistas.",
+                is_read=False,
+                action_url="/subscribe",
+                created_at=now,
+            )
+            session.add(notif)
         count += 1
 
     await session.flush()
@@ -338,12 +383,15 @@ async def renew_subscription(session: AsyncSession, subscription_id: int) -> Sub
 
 
 async def get_active_subscription(session: AsyncSession, doctor_id: int):
-    """Obtiene la suscripcion activa o en gracia de un doctor."""
+    """Obtiene la suscripcion activa o en gracia de un doctor (dentro de los 3 días de gracia)."""
+    now = _now()
     query = (
         select(Subscription)
         .where(
             Subscription.doctor_id == doctor_id,
             Subscription.status.in_([SubscriptionStatus.ACTIVE, SubscriptionStatus.GRACE_PERIOD]),
+            Subscription.grace_end_date > now,
+            Subscription.end_date + timedelta(days=GRACE_PERIOD_DAYS) > now,
         )
         .order_by(Subscription.created_at.desc())
         .limit(1)
@@ -355,8 +403,8 @@ async def get_active_subscription(session: AsyncSession, doctor_id: int):
 async def run_all_checks(session: AsyncSession) -> dict:
     """Ejecuta todas las verificaciones de suscripciones."""
     reminders = await check_expiring_subscriptions(session)
-    grace = await process_grace_periods(session)
     revoked = await revoke_expired_subscriptions(session)
+    grace = await process_grace_periods(session)
     await session.commit()
     return {
         "reminders_sent": reminders,

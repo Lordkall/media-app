@@ -267,6 +267,22 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"Doctors migration error: {e}")
 
+    # Startup subscription check & grace period normalization (3 days)
+    try:
+        from app.core.database import async_session_maker
+        from app.core.subscription_service import SubscriptionService
+        async with async_session_maker() as session:
+            if engine.dialect.name == "postgresql":
+                await session.execute(text("""
+                    UPDATE subscriptions
+                    SET grace_end_date = end_date + INTERVAL '3 days'
+                    WHERE grace_end_date > end_date + INTERVAL '3 days';
+                """))
+                await session.commit()
+            startup_checks = await SubscriptionService.run_all_checks(session)
+            print(f"[STARTUP] Chequeo de suscripciones: {startup_checks}")
+    except Exception as e:
+        print(f"[STARTUP] Error en chequeo de suscripciones: {e}")
         
     # Start background tasks
     bcv_task = asyncio.create_task(bcv_updater_loop())

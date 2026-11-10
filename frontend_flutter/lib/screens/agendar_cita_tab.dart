@@ -97,7 +97,6 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
             _allDoctors = docs
                 .where((d) =>
                     d['plan'] != 'Ninguno' ||
-                    d['clinic_id'] != null ||
                     d['id']?.toString() == widget.initialDoctorId?.toString())
                 .toList();
             if (profileState != null && veStates.contains(profileState)) {

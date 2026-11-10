@@ -25,6 +25,9 @@ import 'clinic_account_screens.dart';
 import 'blocked_account_screen.dart';
 import 'admin_ads_screen.dart';
 import 'health_tab.dart';
+import 'select_plan_screen.dart';
+import 'payment_pending_screen.dart';
+import '../core/distribution_config.dart';
 import '../core/health_module_helper.dart';
 import '../widgets/floating_ads_overlay.dart';
 
@@ -296,6 +299,74 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
           );
           return;
         }
+
+        final role = userData['role']?.toString();
+        if (role == 'doctor' || role == 'clinic') {
+          try {
+            final subResp = await ApiClient.get('/subscriptions/me');
+            if (subResp.statusCode == 200) {
+              final subData = jsonDecode(subResp.body);
+              if (subData['is_clinic_member'] == true) {
+                if (subData['clinic_access_blocked'] == true) {
+                  if (!mounted) return;
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(
+                        builder: (_) => const ClinicAccessBlockedScreen()),
+                    (route) => false,
+                  );
+                  return;
+                }
+              } else {
+                final current = subData['current'];
+                final pending = subData['pending'];
+                final isClinic = role == 'clinic';
+
+                if (current != null) {
+                  final graceEnd = DateTime.tryParse(
+                      current['grace_end_date']?.toString() ?? '');
+                  if (graceEnd != null && DateTime.now().isAfter(graceEnd)) {
+                    // Grace period over!
+                    if (!mounted) return;
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(
+                        builder: (_) => isGooglePlayBuild
+                            ? PaymentPendingScreen(isClinic: isClinic)
+                            : SelectPlanScreen(
+                                doctorData: userData, isRenewal: true),
+                      ),
+                      (route) => false,
+                    );
+                    return;
+                  }
+                } else if (pending != null) {
+                  if (!mounted) return;
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          PaymentPendingScreen(isClinic: isClinic),
+                    ),
+                    (route) => false,
+                  );
+                  return;
+                } else {
+                  // No active subscription and no pending payment: expired!
+                  if (!mounted) return;
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(
+                      builder: (_) => isGooglePlayBuild
+                          ? PaymentPendingScreen(isClinic: isClinic)
+                          : SelectPlanScreen(
+                              doctorData: userData, isRenewal: true),
+                    ),
+                    (route) => false,
+                  );
+                  return;
+                }
+              }
+            }
+          } catch (_) {}
+        }
+
         final userId = userData['id']?.toString() ?? await AuthHelper.getUserId();
         await HealthModuleHelper.loadForUser(userId);
       }
@@ -320,11 +391,28 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
     setState(() => _currentIndex = _role == 'clinic' ? 1 : 3);
   }
 
+  void _openAdminDoctorSearch([String query = '']) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          body: BrowseDoctorsTab(
+            initialQuery: query,
+            showBackButton: true,
+          ),
+        ),
+      ),
+    );
+  }
+
   void _submitHomeSearch(String query) {
+    if (_role == 'admin') {
+      _openAdminDoctorSearch(query);
+      return;
+    }
     setState(() {
       _browseSpecialty = null;
       _browseQuery = query;
-      _currentIndex = _role == 'admin' ? 1 : 2;
+      _currentIndex = 2;
     });
   }
 
@@ -351,8 +439,8 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
       return [
         AdminHomeTab(
           onProfileTap: () => setState(() => _currentIndex = 3),
-          onSearchTap: () => setState(() => _currentIndex = 1),
-          onSearchSubmitted: _submitHomeSearch,
+          onSearchTap: () => _openAdminDoctorSearch(),
+          onSearchSubmitted: (query) => _openAdminDoctorSearch(query),
           onManageAdsTap: () => Navigator.of(context).push(
             MaterialPageRoute<void>(
               builder: (_) => const AdminAdsScreen(),
