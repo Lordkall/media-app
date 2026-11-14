@@ -9,8 +9,6 @@ import '../core/identity_document.dart';
 import '../core/api_client.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/home_search_bar.dart';
-import '../widgets/click_assistant_section.dart';
-import '../widgets/wobnimo_mascot.dart';
 import '../widgets/health_today_section.dart';
 
 class AdminHomeTab extends StatefulWidget {
@@ -31,8 +29,6 @@ class AdminHomeTab extends StatefulWidget {
 }
 
 class _AdminHomeTabState extends State<AdminHomeTab> {
-  final GlobalKey<ClickAssistantSectionState> _clickSectionKey =
-      GlobalKey<ClickAssistantSectionState>();
   final ScrollController _homeScrollController = ScrollController();
   Map<String, dynamic>? _userData;
   bool _isLoadingProfile = true;
@@ -123,83 +119,6 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
               onSearch: widget.onSearchSubmitted,
               onTap: widget.onSearchTap,
             ),
-            const SizedBox(height: 12),
-            // Banner de acceso directo al Asistente Virtual Click
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    _homeScrollController.animateTo(
-                      _homeScrollController.position.maxScrollExtent,
-                      duration: const Duration(milliseconds: 500),
-                      curve: Curves.easeOutCubic,
-                    );
-                    _clickSectionKey.currentState?.focusAndScrollToInput();
-                  },
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xFF0056B3), Color(0xFF00A896)],
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color:
-                              const Color(0xFF0056B3).withValues(alpha: 0.25),
-                          blurRadius: 10,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        const WobnimoRobotMascot(
-                          size: 34,
-                          state: WobnimoState.idle,
-                        ),
-                        const SizedBox(width: 10),
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Asistente Virtual Click',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                'Encuentra doctores y agenda citas al instante • Toca aquí',
-                                style: TextStyle(
-                                  color: Color(0xFFE0F2FE),
-                                  fontSize: 10,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(
-                          Icons.arrow_downward_rounded,
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
             const SizedBox(height: 14),
             Expanded(
               child: ListView(
@@ -270,11 +189,6 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
                         ),
                       );
                     }),
-                  const SizedBox(height: 16),
-                  ClickAssistantSection(
-                    key: _clickSectionKey,
-                    onCitaAgendada: _fetchNotifications,
-                  ),
                   const SizedBox(height: 120),
                 ],
               ),

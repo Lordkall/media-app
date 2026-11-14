@@ -16,8 +16,6 @@ import '../widgets/home_search_bar.dart';
 import '../widgets/top_clinics_section.dart';
 import '../widgets/instagram_photo_preview.dart';
 import '../widgets/health_today_section.dart';
-import '../widgets/click_assistant_section.dart';
-import '../widgets/wobnimo_mascot.dart';
 import 'doctor_profile_screen.dart';
 
 class PatientHomeTab extends StatefulWidget {
@@ -48,8 +46,6 @@ class _PatientHomeTabState extends State<PatientHomeTab> {
   Timer? _countdownTimer;
   final ScrollController _topDoctorsController = ScrollController();
   final ScrollController _homeScrollController = ScrollController();
-  final GlobalKey<ClickAssistantSectionState> _clickSectionKey =
-      GlobalKey<ClickAssistantSectionState>();
 
   @override
   void initState() {
@@ -66,31 +62,6 @@ class _PatientHomeTabState extends State<PatientHomeTab> {
     _topDoctorsController.dispose();
     _homeScrollController.dispose();
     super.dispose();
-  }
-
-  void _scrollToClick() {
-    final state = _clickSectionKey.currentState;
-    if (_homeScrollController.hasClients) {
-      _homeScrollController.animateTo(
-        _homeScrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 600),
-        curve: Curves.easeOutCubic,
-      ).then((_) {
-        state?.focusAndScrollToInput();
-      });
-    } else {
-      final ctx = _clickSectionKey.currentContext;
-      if (ctx != null) {
-        Scrollable.ensureVisible(
-          ctx,
-          alignment: 1.0,
-          duration: const Duration(milliseconds: 600),
-          curve: Curves.easeOutCubic,
-        ).then((_) {
-          state?.focusAndScrollToInput();
-        });
-      }
-    }
   }
 
   Future<void> _fetchData() async {
@@ -234,69 +205,6 @@ class _PatientHomeTabState extends State<PatientHomeTab> {
               onSearch: widget.onSearchSubmitted,
               onTap: widget.onSearchTap,
             ),
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: _scrollToClick,
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF003893), Color(0xFF00B4D8)],
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF003893).withValues(alpha: 0.18),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        const WobnimoRobotMascot(
-                          size: 32,
-                          state: WobnimoState.idle,
-                        ),
-                        const SizedBox(width: 10),
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Asistente Virtual Click',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                'Encuentra doctores y agenda citas al instante • Toca aquí',
-                                style: TextStyle(
-                                  color: Color(0xFFE0F2FE),
-                                  fontSize: 10,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(
-                          Icons.arrow_downward_rounded,
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
             const SizedBox(height: 14),
             Expanded(
               child: ListView(
@@ -338,11 +246,6 @@ class _PatientHomeTabState extends State<PatientHomeTab> {
                   _buildTopDoctorsSection(),
                   const SizedBox(height: 24),
                   const TopClinicsSection(),
-                  const SizedBox(height: 24),
-                  ClickAssistantSection(
-                    key: _clickSectionKey,
-                    onCitaAgendada: _fetchData,
-                  ),
                   const SizedBox(height: 120),
                 ],
               ),

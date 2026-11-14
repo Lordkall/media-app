@@ -31,8 +31,15 @@ class ClickMessage {
 
 class ClickAssistantSection extends StatefulWidget {
   final VoidCallback? onCitaAgendada;
+  final VoidCallback? onClose;
+  final VoidCallback? onOpenSupport;
 
-  const ClickAssistantSection({super.key, this.onCitaAgendada});
+  const ClickAssistantSection({
+    super.key,
+    this.onCitaAgendada,
+    this.onClose,
+    this.onOpenSupport,
+  });
 
   @override
   State<ClickAssistantSection> createState() => ClickAssistantSectionState();
@@ -902,13 +909,37 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
                     ],
                   ),
                 ),
+                if (widget.onOpenSupport != null) ...[
+                  IconButton(
+                    icon: const Icon(Icons.support_agent_rounded,
+                        color: Colors.white, size: 22),
+                    tooltip: 'Soporte Técnico',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    onPressed: widget.onOpenSupport,
+                  ),
+                ],
+                if (widget.onClose != null) ...[
+                  const SizedBox(width: 4),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded,
+                        color: Colors.white, size: 22),
+                    tooltip: 'Cerrar',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    onPressed: widget.onClose,
+                  ),
+                ],
               ],
             ),
           ),
 
           // --- Historial del Chat ---
           Container(
-            constraints: const BoxConstraints(minHeight: 120, maxHeight: 220),
+            constraints: BoxConstraints(
+              minHeight: 120,
+              maxHeight: widget.onClose != null ? 300 : 220,
+            ),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             color: const Color(0xFFF8FAFC),
             child: ListView.separated(

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'patient_home_tab.dart';
 import 'doctor_home_tab.dart';
 import 'admin_home_tab.dart';
@@ -31,6 +32,7 @@ import '../core/distribution_config.dart';
 import '../core/health_module_helper.dart';
 import '../widgets/floating_ads_overlay.dart';
 import '../widgets/wobnimo_mascot.dart';
+import '../widgets/click_assistant_section.dart';
 
 class MainDoctorScreen extends StatefulWidget {
   const MainDoctorScreen({super.key});
@@ -513,67 +515,126 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
       body: Stack(
         children: [
           tabs[activeIndex],
-          // Botón flotante de robot para soporte técnico
+          // Botones flotantes: Soporte Técnico (arriba) y Mascota Robot Asistente IA (abajo)
           Positioned(
             bottom: 90,
             right: 16,
-            child: GestureDetector(
-              onTap: () => _showSupportDialog(context),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 4, right: 4),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                // Botón superior: Enviar mensaje directo a Soporte Técnico
+                GestureDetector(
+                  onTap: () => _showSupportDialog(context),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 8, right: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [Color(0xFF0056B3), Color(0xFF003893)],
+                        colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
                       ),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF003893).withValues(alpha: 0.25),
+                          color: Colors.black.withValues(alpha: 0.22),
                           blurRadius: 6,
                           offset: const Offset(0, 2),
                         ),
                       ],
-                    ),
-                    child: const Text(
-                      'Soporte',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        width: 1,
                       ),
                     ),
-                  ),
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white,
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF0056B3).withValues(alpha: 0.28),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.support_agent_rounded,
+                            color: Colors.white, size: 15),
+                        SizedBox(width: 4),
+                        Text(
+                          'Soporte Técnico',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ],
-                      border: Border.all(
-                        color: const Color(0xFF0056B3).withValues(alpha: 0.35),
-                        width: 1.5,
-                      ),
-                    ),
-                    padding: const EdgeInsets.all(4),
-                    child: const WobnimoRobotMascot(
-                      size: 46,
-                      state: WobnimoState.idle,
                     ),
                   ),
-                ],
-              ),
+                ),
+
+                // Botón principal: Robot flotante con burbuja "Asistente IA"
+                GestureDetector(
+                  onTap: () => _openAIAssistantSheet(context),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 4, right: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 9, vertical: 3),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF003893), Color(0xFF00B4D8)],
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF003893).withValues(alpha: 0.3),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Asistente IA',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(width: 3),
+                            Icon(Icons.auto_awesome,
+                                color: Colors.white, size: 10),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        width: 58,
+                        height: 58,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white,
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF003893).withValues(alpha: 0.32),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                          border: Border.all(
+                            color: const Color(0xFF00B4D8).withValues(alpha: 0.65),
+                            width: 2,
+                          ),
+                        ),
+                        padding: const EdgeInsets.all(4),
+                        child: const WobnimoRobotMascot(
+                          size: 48,
+                          state: WobnimoState.idle,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -826,6 +887,55 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
                   const Text('Enviar', style: TextStyle(color: Colors.white)),
             ),
           ],
+        );
+      },
+    );
+  }
+
+  void _openAIAssistantSheet(BuildContext context) {
+    HapticFeedback.lightImpact();
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (bottomCtx) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(bottomCtx).viewInsets.bottom,
+          ),
+          child: Container(
+            margin: EdgeInsets.only(
+              top: MediaQuery.of(bottomCtx).padding.top + 24,
+              left: 10,
+              right: 10,
+              bottom: 12,
+            ),
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(bottomCtx).size.height * 0.86,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.28),
+                  blurRadius: 25,
+                  offset: const Offset(0, -4),
+                ),
+              ],
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: ClickAssistantSection(
+              onClose: () => Navigator.pop(bottomCtx),
+              onOpenSupport: () {
+                Navigator.pop(bottomCtx);
+                _showSupportDialog(context);
+              },
+              onCitaAgendada: () {
+                Navigator.pop(bottomCtx);
+              },
+            ),
+          ),
         );
       },
     );
