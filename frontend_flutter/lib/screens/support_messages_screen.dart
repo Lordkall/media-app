@@ -64,18 +64,68 @@ class _SupportMessagesScreenState extends State<SupportMessagesScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Eliminar chat'),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+        actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+        titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEE2E2),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(Icons.delete_forever_rounded,
+                  color: Color(0xFFEF4444), size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Eliminar chat',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ),
+          ],
+        ),
         content: const Text(
-            '¿Estás seguro de que deseas eliminar este chat de soporte?'),
+          '¿Estás seguro de que deseas eliminar este chat de soporte?',
+          style: TextStyle(
+            fontSize: 14,
+            color: Color(0xFF64748B),
+            height: 1.4,
+          ),
+        ),
         actions: [
-          TextButton(
+          OutlinedButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFF64748B),
+              side: const BorderSide(color: Color(0xFFCBD5E1)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            ),
+            child: const Text('Cancelar',
+                style: TextStyle(fontWeight: FontWeight.w600)),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Eliminar'),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+            ),
+            child: const Text('Eliminar',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold, color: Colors.white)),
           ),
         ],
       ),

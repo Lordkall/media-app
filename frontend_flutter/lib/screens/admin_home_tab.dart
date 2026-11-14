@@ -29,6 +29,30 @@ class AdminHomeTab extends StatefulWidget {
 }
 
 class _AdminHomeTabState extends State<AdminHomeTab> {
+  static String _formatRelativeTime(String? rawDate) {
+    if (rawDate == null || rawDate.isEmpty) return '';
+    try {
+      final parsed = DateTime.parse(rawDate).toLocal();
+      final now = DateTime.now();
+      final diff = now.difference(parsed);
+
+      if (diff.isNegative || diff.inMinutes < 1) {
+        return 'hace 1 min';
+      } else if (diff.inMinutes < 60) {
+        return 'hace ${diff.inMinutes} min';
+      } else if (diff.inHours < 24) {
+        return 'hace ${diff.inHours} h';
+      } else if (diff.inDays < 365) {
+        return 'hace ${diff.inDays} d';
+      } else {
+        final years = (diff.inDays / 365).floor();
+        return 'Hace $years a';
+      }
+    } catch (_) {
+      return rawDate.length >= 10 ? rawDate.substring(0, 10) : rawDate;
+    }
+  }
+
   final ScrollController _homeScrollController = ScrollController();
   Map<String, dynamic>? _userData;
   bool _isLoadingProfile = true;
@@ -180,9 +204,7 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
                           context,
                           title: n['title'] ?? 'Notificación',
                           message: n['message'] ?? '',
-                          time: n['created_at'] != null
-                              ? n['created_at'].substring(0, 10)
-                              : '',
+                          time: _formatRelativeTime(n['created_at']?.toString()),
                           icon: icon,
                           color: color,
                           notification: n,

@@ -79,6 +79,12 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
     'Pediatría este viernes',
   ];
 
+  bool get _isLastSadNoDoctors =>
+      _messages.isNotEmpty &&
+      !_messages.last.isUser &&
+      _messages.last.doctors.isEmpty &&
+      !_messages.last.text.toLowerCase().contains('no te puedo ayudar');
+
   @override
   void initState() {
     super.initState();
@@ -167,24 +173,20 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
             ),
           );
           _isLoading = false;
-          _mascotState = isUnrelated
-              ? WobnimoState.sad
-              : (doctorsList.isNotEmpty
-                  ? WobnimoState.celebrating
-                  : WobnimoState.idle);
+          _mascotState = doctorsList.isNotEmpty
+              ? WobnimoState.celebrating
+              : WobnimoState.sad;
         });
 
         // La animación triste o de festejo dura 6 segundos para que el usuario pueda apreciarla
-        if (isUnrelated || doctorsList.isNotEmpty) {
-          _mascotStateTimer?.cancel();
-          _mascotStateTimer = Timer(const Duration(milliseconds: 6000), () {
-            if (mounted) {
-              setState(() {
-                _mascotState = WobnimoState.idle;
-              });
-            }
-          });
-        }
+        _mascotStateTimer?.cancel();
+        _mascotStateTimer = Timer(const Duration(milliseconds: 6000), () {
+          if (mounted) {
+            setState(() {
+              _mascotState = WobnimoState.idle;
+            });
+          }
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -931,7 +933,7 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
                                       : _mascotState == WobnimoState.thinking
                                           ? 'Pensando... 🧠'
                                           : _mascotState == WobnimoState.sad
-                                              ? 'Lo siento... 😔'
+                                              ? (_isLastSadNoDoctors ? 'Sin turnos 😔' : 'Lo siento... 😔')
                                               : 'Asistente IA',
                                   style: const TextStyle(
                                     color: Colors.white,
@@ -951,7 +953,9 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
                             : _mascotState == WobnimoState.thinking
                                 ? 'Pensando tu consulta médica... 🧠'
                                 : _mascotState == WobnimoState.sad
-                                    ? 'No te puedo ayudar con esa pregunta 😔'
+                                    ? (_isLastSadNoDoctors
+                                        ? 'No encontré turnos disponibles 😔'
+                                        : 'No te puedo ayudar con esa pregunta 😔')
                                     : 'Agenda tus citas médicas al instante',
                         style: TextStyle(
                           color: _mascotState == WobnimoState.celebrating

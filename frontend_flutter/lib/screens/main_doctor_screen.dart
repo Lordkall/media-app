@@ -844,41 +844,53 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
 
   void _openAIAssistantSheet(BuildContext context) {
     HapticFeedback.lightImpact();
-    showModalBottomSheet<void>(
+    showDialog<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (bottomCtx) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(bottomCtx).viewInsets.bottom,
-          ),
-          child: Container(
-            margin: const EdgeInsets.fromLTRB(10, 0, 10, 14),
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(bottomCtx).size.height * 0.70,
-            ),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.28),
-                  blurRadius: 25,
-                  offset: const Offset(0, -4),
+      barrierDismissible: true,
+      barrierColor: Colors.black.withValues(alpha: 0.45),
+      builder: (dialogCtx) {
+        return Center(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(dialogCtx).viewInsets.bottom,
+                left: 14,
+                right: 14,
+                top: 20,
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: 580,
+                    maxHeight: MediaQuery.of(dialogCtx).size.height * 0.84,
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.28),
+                          blurRadius: 30,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: ClickAssistantSection(
+                      onClose: () => Navigator.pop(dialogCtx),
+                      onOpenSupport: () {
+                        Navigator.pop(dialogCtx);
+                        _showSupportDialog(context);
+                      },
+                      onCitaAgendada: () {
+                        Navigator.pop(dialogCtx);
+                      },
+                    ),
+                  ),
                 ),
-              ],
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: ClickAssistantSection(
-              onClose: () => Navigator.pop(bottomCtx),
-              onOpenSupport: () {
-                Navigator.pop(bottomCtx);
-                _showSupportDialog(context);
-              },
-              onCitaAgendada: () {
-                Navigator.pop(bottomCtx);
-              },
+              ),
             ),
           ),
         );
