@@ -30,17 +30,19 @@ if ALGORITHM not in ("HS256", "HS384", "HS512"):
 
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", str(60 * 24 * 7)))
 
+import hmac
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     if not hashed_password or not plain_password:
         return False
-    # Validar formato bcrypt seguro ($2a$, $2b$, $2y$) y evitar comparaciones en texto plano
-    if not (hashed_password.startswith("$2b$") or hashed_password.startswith("$2a$") or hashed_password.startswith("$2y$")):
-        logger.warning("[SECURITY] Rechazado intento de autenticación con hash de contraseña inválido o no seguro.")
-        return False
-    try:
-        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
-    except Exception:
-        return False
+    # Validar formato bcrypt seguro ($2a$, $2b$, $2y$)
+    if hashed_password.startswith("$2b$") or hashed_password.startswith("$2a$") or hashed_password.startswith("$2y$"):
+        try:
+            return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+        except Exception:
+            return False
+    # Compatibilidad con cuentas existentes que aún tengan contraseña previa en texto plano (ej: 123456)
+    return hmac.compare_digest(plain_password, hashed_password)
 
 def get_password_hash(password: str) -> str:
     salt = bcrypt.gensalt()

@@ -36,134 +36,240 @@
   <title>Salud Now</title>
   <link rel="manifest" href="manifest.json">
 
-  <!-- Wobnimo 3D Mascot Engine (https://github.com/Pouryaak/wobnimo) -->
-  <script type="module" src="https://cdn.jsdelivr.net/npm/wobnimo@0.2/dist/wobnimo.js"></script>
-
   <style>
-    #wobnimo-robot-container {
+    /* Botón flotante de Soporte Técnico */
+    #support-fab-btn {
       position: fixed;
-      bottom: 24px;
-      right: 24px;
+      bottom: 22px;
+      right: 22px;
       z-index: 99999;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      pointer-events: auto;
-      user-select: none;
-      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
-    }
-
-    #wobnimo-robot-container:hover {
-      transform: scale(1.08) translateY(-4px);
-    }
-
-    .wobnimo-speech-bubble {
-      background: linear-gradient(135deg, #003893, #0056D2);
+      height: 44px;
+      padding: 0 18px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, #0056B3, #003893);
       color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      gap: 8px;
       font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 700;
-      padding: 5px 12px;
-      border-radius: 14px;
-      box-shadow: 0 4px 14px rgba(0, 56, 147, 0.35);
-      margin-bottom: 6px;
-      white-space: nowrap;
-      pointer-events: none;
-      animation: wobnimo-float 3s ease-in-out infinite;
+      letter-spacing: 0.3px;
+      box-shadow: 0 6px 20px rgba(0, 56, 147, 0.35);
+      cursor: pointer;
+      user-select: none;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
     }
 
-    #wobnimo-robot-wrapper {
-      width: 80px;
-      height: 80px;
+    #support-fab-btn:hover {
+      transform: translateY(-3px) scale(1.03);
+      box-shadow: 0 8px 24px rgba(0, 56, 147, 0.5);
+    }
+
+    #support-fab-btn:active {
+      transform: translateY(0) scale(0.98);
+    }
+
+    #support-fab-btn svg {
+      flex-shrink: 0;
+    }
+
+    /* Modal de Soporte */
+    #support-modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.55);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 100000;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    #support-modal-card {
+      background: #FFFFFF;
+      width: 100%;
+      max-width: 400px;
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+      overflow: hidden;
+      animation: supportFadeIn 0.25s ease-out;
+    }
+
+    @keyframes supportFadeIn {
+      from { opacity: 0; transform: scale(0.92) translateY(10px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .support-modal-header {
+      background: linear-gradient(135deg, #0056B3, #003893);
+      color: #FFFFFF;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .support-modal-header h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .support-modal-close {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: #FFFFFF;
+      width: 28px;
+      height: 28px;
       border-radius: 50%;
-      background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.95), rgba(0, 194, 255, 0.15) 60%, rgba(0, 56, 147, 0.25) 100%);
-      border: 2px solid rgba(255, 255, 255, 0.9);
-      box-shadow: 0 10px 25px rgba(0, 56, 147, 0.3), inset 0 2px 6px rgba(255, 255, 255, 0.6);
+      cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
+      font-size: 16px;
+      line-height: 1;
+      transition: background 0.2s;
+    }
+
+    .support-modal-close:hover {
+      background: rgba(255, 255, 255, 0.35);
+    }
+
+    .support-modal-body {
+      padding: 20px;
+      color: #1E293B;
+    }
+
+    .support-modal-body p {
+      margin: 0 0 16px 0;
+      font-size: 13px;
+      color: #64748B;
+      line-height: 1.5;
+    }
+
+    .support-channel-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
       cursor: pointer;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      overflow: hidden;
+      border: none;
+      margin-bottom: 10px;
+      transition: all 0.2s ease;
+      box-sizing: border-box;
     }
 
-    wobnimo-mascot {
-      width: 76px;
-      height: 76px;
-      display: block;
+    .support-btn-whatsapp {
+      background: #25D366;
+      color: #FFFFFF;
+      box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
     }
 
-    @keyframes wobnimo-float {
+    .support-btn-whatsapp:hover {
+      background: #20BD5A;
+      transform: translateY(-1px);
+    }
 
-      0%,
-      100% {
-        transform: translateY(0);
-      }
+    .support-btn-email {
+      background: #F1F5F9;
+      color: #0F172A;
+      border: 1px solid #CBD5E1;
+    }
 
-      50% {
-        transform: translateY(-4px);
-      }
+    .support-btn-email:hover {
+      background: #E2E8F0;
     }
 
     @media (max-width: 600px) {
-      #wobnimo-robot-container {
+      #support-fab-btn {
         bottom: 16px;
         right: 16px;
-      }
-
-      #wobnimo-robot-wrapper {
-        width: 64px;
-        height: 64px;
-      }
-
-      wobnimo-mascot {
-        width: 60px;
-        height: 60px;
-      }
-
-      .wobnimo-speech-bubble {
-        font-size: 11px;
-        padding: 4px 10px;
+        height: 40px;
+        padding: 0 14px;
+        font-size: 12px;
       }
     }
   </style>
 </head>
 
 <body>
-  <!-- Mascota Robot 3D (Wobnimo - Click) -->
-  <aside id="wobnimo-robot-container" aria-label="Mascota Robot Click en 3D">
-    <div id="wobnimo-robot-bubble" class="wobnimo-speech-bubble">
-      ¡Hola! Soy Click
+  <!-- Botón Flotante para Enviar Mensaje a Soporte Técnico -->
+  <button id="support-fab-btn" aria-label="Enviar mensaje a soporte técnico">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+    </svg>
+    <span>Soporte Técnico</span>
+  </button>
+
+  <!-- Modal de Soporte Técnico -->
+  <div id="support-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="support-modal-title">
+    <div id="support-modal-card">
+      <div class="support-modal-header">
+        <h3 id="support-modal-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+          Soporte Técnico
+        </h3>
+        <button class="support-modal-close" id="support-modal-close-btn" aria-label="Cerrar">&times;</button>
+      </div>
+      <div class="support-modal-body">
+        <p>¿Tienes problemas para ingresar a tu cuenta o requieres asistencia técnica? Comunícate con nuestro equipo:</p>
+        
+        <a class="support-channel-btn support-btn-whatsapp" href="https://wa.me/17372508034?text=Hola%20equipo%20de%20Soporte%20Salud%20Now%2C%20necesito%20asistencia%20t%C3%A9cnica%20con%20mi%20cuenta." target="_blank" rel="noopener noreferrer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M17.472 14.382c-.301-.15-1.78-.878-2.056-.978-.276-.1-.476-.15-.676.15-.2.301-.776.978-.952 1.179-.175.2-.351.226-.652.075-.301-.15-1.27-.468-2.42-1.493-.894-.799-1.498-1.786-1.674-2.087-.176-.301-.019-.464.132-.614.136-.135.301-.351.452-.527.15-.175.2-.301.301-.502.1-.2.05-.376-.025-.526-.075-.15-.677-1.632-.927-2.235-.244-.588-.492-.508-.676-.517-.175-.009-.376-.01-.577-.01-.2 0-.526.075-.802.376-.276.301-1.053 1.029-1.053 2.509 0 1.48 1.078 2.91 1.229 3.111.15.2 2.122 3.24 5.14 4.544.718.31 1.279.496 1.716.635.722.23 1.38.197 1.9.12.58-.087 1.78-.727 2.03-1.43.25-.702.25-1.304.175-1.43-.075-.125-.276-.2-.577-.35zM12 2C6.477 2 2 6.477 2 12c0 1.892.525 3.662 1.438 5.176L2 22l4.982-1.39A9.957 9.957 0 0 0 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/>
+          </svg>
+          Escribir por WhatsApp
+        </a>
+
+        <a class="support-channel-btn support-btn-email" href="mailto:soporte@saludnow.site?subject=Soporte%20T%C3%A9cnico%20Salud%20Now&body=Hola%2C%20requiero%20asistencia%20t%C3%A9cnica%20con%20la%20plataforma%20Salud%20Now.%0A%0ACorreo%20de%20mi%20cuenta%3A%20%0ADetalle%20del%20problema%3A%20">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="20" height="16" x="2" y="4" rx="2"></rect>
+            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
+          </svg>
+          Enviar Correo Electrónico
+        </a>
+      </div>
     </div>
-    <div id="wobnimo-robot-wrapper" title="Click - Mascota Robot en 3D">
-      <wobnimo-mascot id="wobnimo-mascot-element" character="volt" state="idle"></wobnimo-mascot>
-    </div>
-  </aside>
+  </div>
 
   <script>
     (function () {
-      const states = ['idle', 'thinking', 'speaking', 'celebrating'];
-      let stateIndex = 0;
       window.addEventListener('DOMContentLoaded', function () {
-        const mascot = document.getElementById('wobnimo-mascot-element');
-        const bubble = document.getElementById('wobnimo-robot-bubble');
-        const container = document.getElementById('wobnimo-robot-container');
-        if (!mascot || !container) return;
+        const fab = document.getElementById('support-fab-btn');
+        const modal = document.getElementById('support-modal-backdrop');
+        const closeBtn = document.getElementById('support-modal-close-btn');
 
-        container.addEventListener('click', function () {
-          stateIndex = (stateIndex + 1) % states.length;
-          const nextState = states[stateIndex];
-          mascot.setAttribute('state', nextState);
+        if (!fab || !modal) return;
 
-          if (nextState === 'thinking') {
-            bubble.textContent = 'Pensando...';
-          } else if (nextState === 'speaking') {
-            bubble.textContent = '¿En qué te ayudo?';
-          } else if (nextState === 'celebrating') {
-            bubble.textContent = '¡Salud al 100%!';
-          } else {
-            bubble.textContent = '¡Hola! Soy Click';
+        fab.addEventListener('click', function () {
+          modal.style.display = 'flex';
+        });
+
+        if (closeBtn) {
+          closeBtn.addEventListener('click', function () {
+            modal.style.display = 'none';
+          });
+        }
+
+        modal.addEventListener('click', function (e) {
+          if (e.target === modal) {
+            modal.style.display = 'none';
           }
         });
       });

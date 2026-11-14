@@ -34,6 +34,13 @@ async def login_for_access_token(request: Request,
             headers={"WWW-Authenticate": "Bearer"},
         )
         
+    # Migración transparente de contraseñas previas a bcrypt seguro
+    if not (user.hashed_password.startswith("$2b$") or user.hashed_password.startswith("$2a$") or user.hashed_password.startswith("$2y$")):
+        from app.core.security import get_password_hash
+        user.hashed_password = get_password_hash(form_data.password)
+        db.add(user)
+        await db.commit()
+        
     from app.models.users import RoleEnum
     
     if user.role == RoleEnum.ASSISTANT:
