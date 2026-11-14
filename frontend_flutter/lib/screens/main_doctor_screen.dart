@@ -30,6 +30,7 @@ import 'payment_pending_screen.dart';
 import '../core/distribution_config.dart';
 import '../core/health_module_helper.dart';
 import '../widgets/floating_ads_overlay.dart';
+import '../widgets/wobnimo_mascot.dart';
 
 class MainDoctorScreen extends StatefulWidget {
   const MainDoctorScreen({super.key});
@@ -512,21 +513,69 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
       body: Stack(
         children: [
           tabs[activeIndex],
-          // Botón flotante de soporte
+          // Botón flotante de robot para soporte técnico
           Positioned(
-              bottom: 90,
-              right: 16,
-              child: FloatingActionButton(
-                heroTag: 'supportFAB',
-                backgroundColor: const Color(0xFF0056B3),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15)),
-                onPressed: () {
-                  _showSupportDialog(context);
-                },
-                child: const Icon(Icons.support_agent, color: Colors.white),
+            bottom: 90,
+            right: 16,
+            child: GestureDetector(
+              onTap: () => _showSupportDialog(context),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 4, right: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF0056B3), Color(0xFF003893)],
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF003893).withValues(alpha: 0.25),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Text(
+                      'Soporte',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF0056B3).withValues(alpha: 0.28),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                      border: Border.all(
+                        color: const Color(0xFF0056B3).withValues(alpha: 0.35),
+                        width: 1.5,
+                      ),
+                    ),
+                    padding: const EdgeInsets.all(4),
+                    child: const WobnimoRobotMascot(
+                      size: 46,
+                      state: WobnimoState.idle,
+                    ),
+                  ),
+                ],
               ),
             ),
+          ),
         ],
       ),
       bottomNavigationBar: SafeArea(
