@@ -1560,15 +1560,17 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Medidas Corporales & IMC',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0F172A),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Medidas Corporales & IMC',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F172A),
+                        ),
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       'Visible para tu médico en consulta',
@@ -1616,136 +1618,181 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
           Row(
             children: [
               Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => _openBodyMetricsSheet(context, metrics, focusWeight: false),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: Column(
-                    children: [
-                      const Icon(Icons.height_rounded, color: Color(0xFF0756A4), size: 20),
-                      const SizedBox(height: 6),
-                      const Text(
-                        'Altura',
-                        style: TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
                       ),
-                      const SizedBox(height: 2),
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          height != null ? '${height.toStringAsFixed(0)} cm' : '--',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF0F172A),
+                      child: Column(
+                        children: [
+                          const Icon(Icons.height_rounded, color: Color(0xFF0756A4), size: 20),
+                          const SizedBox(height: 6),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Text(
+                                'Altura',
+                                style: TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                              ),
+                              SizedBox(width: 3),
+                              Icon(Icons.edit_outlined, size: 11, color: Color(0xFF94A3B8)),
+                            ],
                           ),
-                        ),
+                          const SizedBox(height: 2),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              height != null ? '${height.toStringAsFixed(0)} cm' : '--',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF0F172A),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => _openBodyMetricsSheet(context, metrics, focusWeight: true),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: Column(
-                    children: [
-                      const Icon(Icons.monitor_weight_outlined, color: Color(0xFF0756A4), size: 20),
-                      const SizedBox(height: 6),
-                      const Text(
-                        'Peso',
-                        style: TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
                       ),
-                      const SizedBox(height: 2),
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          weight != null ? '${weight.toStringAsFixed(1)} kg' : '--',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF0F172A),
+                      child: Column(
+                        children: [
+                          const Icon(Icons.monitor_weight_outlined, color: Color(0xFF0756A4), size: 20),
+                          const SizedBox(height: 6),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Text(
+                                'Peso',
+                                style: TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                              ),
+                              SizedBox(width: 3),
+                              Icon(Icons.edit_outlined, size: 11, color: Color(0xFF94A3B8)),
+                            ],
                           ),
-                        ),
+                          const SizedBox(height: 2),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              weight != null ? '${weight.toStringAsFixed(1)} kg' : '--',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF0F172A),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => _openBodyMetricsSheet(context, metrics),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: Column(
-                    children: [
-                      const Icon(Icons.speed_rounded, color: Color(0xFF0756A4), size: 20),
-                      const SizedBox(height: 6),
-                      const Text(
-                        'IMC',
-                        style: TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
                       ),
-                      const SizedBox(height: 2),
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          bmi != null ? bmi.toStringAsFixed(1) : '--',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF0F172A),
+                      child: Column(
+                        children: [
+                          const Icon(Icons.speed_rounded, color: Color(0xFF0756A4), size: 20),
+                          const SizedBox(height: 6),
+                          const Text(
+                            'IMC',
+                            style: TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
                           ),
-                        ),
+                          const SizedBox(height: 2),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              bmi != null ? bmi.toStringAsFixed(1) : '--',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF0F172A),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: categoryColor.withValues(alpha: 0.1),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => _openBodyMetricsSheet(context, metrics),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: categoryColor.withValues(alpha: 0.25)),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  bmi != null && bmi >= 18.5 && bmi < 25.0
-                      ? Icons.check_circle_rounded
-                      : Icons.info_outline_rounded,
-                  color: categoryColor,
-                  size: 18,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: categoryColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: categoryColor.withValues(alpha: 0.25)),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    bmi != null
-                        ? 'Estado: $category (IMC ${bmi.toStringAsFixed(1)} kg/m²)'
-                        : 'Ingresa tu altura y peso para calcular tu IMC',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
+                child: Row(
+                  children: [
+                    Icon(
+                      bmi != null && bmi >= 18.5 && bmi < 25.0
+                          ? Icons.check_circle_rounded
+                          : Icons.info_outline_rounded,
                       color: categoryColor,
+                      size: 18,
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        bmi != null
+                            ? 'Estado: $category (IMC ${bmi.toStringAsFixed(1)} kg/m²)'
+                            : 'Ingresa tu altura y peso para calcular tu IMC',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: categoryColor,
+                        ),
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Color(0xFF94A3B8)),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ],
@@ -1753,7 +1800,7 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
     );
   }
 
-  void _openBodyMetricsSheet(BuildContext context, HealthMetrics metrics) {
+  void _openBodyMetricsSheet(BuildContext context, HealthMetrics metrics, {bool focusWeight = false}) {
     final heightCtrl = TextEditingController(
       text: metrics.heightCm != null ? metrics.heightCm!.toStringAsFixed(0) : '',
     );
@@ -1835,6 +1882,7 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                   const SizedBox(height: 20),
                   TextField(
                     controller: heightCtrl,
+                    autofocus: !focusWeight,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
@@ -1856,6 +1904,7 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                   const SizedBox(height: 14),
                   TextField(
                     controller: weightCtrl,
+                    autofocus: focusWeight,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
