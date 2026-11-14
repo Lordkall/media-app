@@ -147,8 +147,12 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
 
       final answer = data['mensaje_respuesta']?.toString() ??
           'Aquí tienes los resultados encontrados:';
-      final doctorsList =
-          (data['doctores'] ?? data['doctors']) as List<dynamic>? ?? [];
+      final bool isUnrelated = data['es_fuera_de_tema'] == true ||
+          answer.toLowerCase().contains('no te puedo ayudar en este momento con esa pregunta') ||
+          answer.toLowerCase().contains('no te puedo ayudar');
+      final doctorsList = isUnrelated
+          ? <dynamic>[]
+          : ((data['doctores'] ?? data['doctors']) as List<dynamic>? ?? []);
 
       if (mounted) {
         setState(() {
@@ -157,24 +161,30 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
               isUser: false,
               text: answer,
               doctors: doctorsList,
-              specialty: data['especialidad']?.toString(),
-              startDate: data['fecha_inicio']?.toString(),
-              endDate: data['fecha_fin']?.toString(),
+              specialty: isUnrelated ? null : data['especialidad']?.toString(),
+              startDate: isUnrelated ? null : data['fecha_inicio']?.toString(),
+              endDate: isUnrelated ? null : data['fecha_fin']?.toString(),
             ),
           );
           _isLoading = false;
-          _mascotState = WobnimoState.celebrating;
+          _mascotState = isUnrelated
+              ? WobnimoState.sad
+              : (doctorsList.isNotEmpty
+                  ? WobnimoState.celebrating
+                  : WobnimoState.idle);
         });
 
-        // La animación de festejo dura 6 segundos para que el usuario pueda apreciarla
-        _mascotStateTimer?.cancel();
-        _mascotStateTimer = Timer(const Duration(milliseconds: 6000), () {
-          if (mounted) {
-            setState(() {
-              _mascotState = WobnimoState.idle;
-            });
-          }
-        });
+        // La animación triste o de festejo dura 6 segundos para que el usuario pueda apreciarla
+        if (isUnrelated || doctorsList.isNotEmpty) {
+          _mascotStateTimer?.cancel();
+          _mascotStateTimer = Timer(const Duration(milliseconds: 6000), () {
+            if (mounted) {
+              setState(() {
+                _mascotState = WobnimoState.idle;
+              });
+            }
+          });
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -224,8 +234,26 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
   }
 
   Future<Map<String, dynamic>> _localAssistantSearch(String query) async {
-    final clean = query.toLowerCase();
+    final clean = query.toLowerCase().trim();
     final now = DateTime.now();
+
+    // 0. Filtrado de seguridad y pertinencia (claves, admin, hack, fuera de tema)
+    final sensitiveKeywords = [
+      'clave', 'password', 'contraseña', 'contrasena', 'token', 'credencial',
+      'usuario admin', 'admin', 'administrador', 'root', 'hack', 'inyeccion',
+      'sql', 'base de datos', 'source code', 'codigo fuente', 'código fuente',
+      'servidor', 'terminal', 'prompt', 'bypass'
+    ];
+    for (final kw in sensitiveKeywords) {
+      if (clean.contains(kw)) {
+        return {
+          'mensaje_respuesta': 'No te puedo ayudar en este momento con esa pregunta',
+          'doctores': [],
+          'especialidad': null,
+          'es_fuera_de_tema': true,
+        };
+      }
+    }
 
     // 1. Detectar si el usuario pide explícitamente medicina general
     final bool isExplicitGeneral = clean.contains('general') ||
@@ -405,9 +433,26 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
       }
     }
 
-    // Si no se detectó una especialidad clara y tampoco se solicitó explícitamente medicina general,
-    // evitamos asumir "Medicina General" por defecto y le pedimos aclaración con sugerencias.
+    // Si no se detectó una especialidad médica clara
     if (detectedSpecialty == null && !isExplicitGeneral) {
+      final medicalTerms = [
+        'cita', 'citas', 'turno', 'turnos', 'doctor', 'doctora', 'doctores',
+        'médico', 'medico', 'médicos', 'medicos', 'especialista', 'clínica',
+        'clinica', 'hospital', 'agendar', 'apartar', 'consultorio', 'consulta',
+        'salud', 'dolor', 'enfermo', 'enfermedad', 'síntoma', 'sintoma',
+        'fiebre', 'tos', 'gripe', 'presion', 'presión', 'receta', 'examen',
+        'laboratorio', 'paciente', 'medicina', 'hola', 'saludos', 'ayuda'
+      ];
+      final bool hasMedicalIntent = medicalTerms.any((term) => clean.contains(term));
+      if (!hasMedicalIntent) {
+        return {
+          'mensaje_respuesta': 'No te puedo ayudar en este momento con esa pregunta',
+          'doctores': [],
+          'especialidad': null,
+          'es_fuera_de_tema': true,
+        };
+      }
+
       return {
         'mensaje_respuesta':
             'No logré identificar la especialidad médica en tu consulta. '
@@ -416,6 +461,7 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
             'Escríbeme la especialidad médica que necesitas y con gusto te busco los turnos libres.',
         'doctores': [],
         'especialidad': null,
+        'es_fuera_de_tema': false,
       };
     }
 
@@ -775,11 +821,14 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
         ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // --- Encabezado interactivo con la mascota Click ---
           Container(
-            padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+            padding: widget.onClose != null
+                ? const EdgeInsets.fromLTRB(16, 12, 16, 12)
+                : const EdgeInsets.fromLTRB(18, 16, 18, 14),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
@@ -797,7 +846,7 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
               children: [
                 // Mascota Robot 3D (Wobnimo Volt)
                 WobnimoRobotMascot(
-                  size: 64,
+                  size: widget.onClose != null ? 50 : 64,
                   state: _mascotState,
                   onTap: () {
                     HapticFeedback.mediumImpact();
@@ -843,14 +892,18 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
                                   ? const Color(0xFF10B981).withValues(alpha: 0.35)
                                   : _mascotState == WobnimoState.thinking
                                       ? const Color(0xFFFFB703).withValues(alpha: 0.35)
-                                      : Colors.white.withValues(alpha: 0.2),
+                                      : _mascotState == WobnimoState.sad
+                                          ? const Color(0xFF6366F1).withValues(alpha: 0.35)
+                                          : Colors.white.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
                                 color: _mascotState == WobnimoState.celebrating
                                     ? const Color(0xFF34D399)
                                     : _mascotState == WobnimoState.thinking
                                         ? const Color(0xFFFDE047)
-                                        : Colors.transparent,
+                                        : _mascotState == WobnimoState.sad
+                                            ? const Color(0xFFA5B4FC)
+                                            : Colors.transparent,
                                 width: 1,
                               ),
                             ),
@@ -865,7 +918,9 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
                                         ? const Color(0xFF34D399)
                                         : _mascotState == WobnimoState.thinking
                                             ? const Color(0xFFFDE047)
-                                            : const Color(0xFF10B981),
+                                            : _mascotState == WobnimoState.sad
+                                                ? const Color(0xFFA5B4FC)
+                                                : const Color(0xFF10B981),
                                     shape: BoxShape.circle,
                                   ),
                                 ),
@@ -875,7 +930,9 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
                                       ? '¡Festejo! 🎉'
                                       : _mascotState == WobnimoState.thinking
                                           ? 'Pensando... 🧠'
-                                          : 'Asistente IA',
+                                          : _mascotState == WobnimoState.sad
+                                              ? 'Lo siento... 😔'
+                                              : 'Asistente IA',
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 10,
@@ -893,14 +950,18 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
                             ? '¡Turnos encontrados con éxito! 🎉'
                             : _mascotState == WobnimoState.thinking
                                 ? 'Pensando tu consulta médica... 🧠'
-                                : 'Agenda tus citas médicas al instante',
+                                : _mascotState == WobnimoState.sad
+                                    ? 'No te puedo ayudar con esa pregunta 😔'
+                                    : 'Agenda tus citas médicas al instante',
                         style: TextStyle(
                           color: _mascotState == WobnimoState.celebrating
                               ? const Color(0xFF86EFAC)
                               : _mascotState == WobnimoState.thinking
                                   ? const Color(0xFFFDE047)
-                                  : const Color(0xFFE0F2FE),
-                          fontSize: 12,
+                                  : _mascotState == WobnimoState.sad
+                                      ? const Color(0xFFC7D2FE)
+                                      : const Color(0xFFE0F2FE),
+                          fontSize: widget.onClose != null ? 11 : 12,
                           fontWeight: _mascotState != WobnimoState.idle
                               ? FontWeight.bold
                               : FontWeight.w500,
@@ -935,30 +996,32 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
           ),
 
           // --- Historial del Chat ---
-          Container(
-            constraints: BoxConstraints(
-              minHeight: 120,
-              maxHeight: widget.onClose != null ? 300 : 220,
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            color: const Color(0xFFF8FAFC),
-            child: ListView.separated(
-              controller: _scrollController,
-              shrinkWrap: true,
-              physics: const BouncingScrollPhysics(),
-              itemCount: _messages.length + (_isLoading ? 1 : 0),
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                if (index == _messages.length && _isLoading) {
-                  return _buildLoadingBubble(brightCyan);
-                }
-                final msg = _messages[index];
-                final isLast = index == _messages.length - 1;
-                return msg.isUser
-                    ? _buildUserBubble(msg, primaryBlue)
-                    : _buildAssistantBubble(msg, primaryBlue, brightCyan,
-                        isLast: isLast);
-              },
+          Flexible(
+            child: Container(
+              constraints: BoxConstraints(
+                maxHeight: widget.onClose != null ? 240 : 200,
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              color: const Color(0xFFF8FAFC),
+              child: ListView.separated(
+                controller: _scrollController,
+                shrinkWrap: true,
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                physics: const BouncingScrollPhysics(),
+                itemCount: _messages.length + (_isLoading ? 1 : 0),
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (context, index) {
+                  if (index == _messages.length && _isLoading) {
+                    return _buildLoadingBubble(brightCyan);
+                  }
+                  final msg = _messages[index];
+                  final isLast = index == _messages.length - 1;
+                  return msg.isUser
+                      ? _buildUserBubble(msg, primaryBlue)
+                      : _buildAssistantBubble(msg, primaryBlue, brightCyan,
+                          isLast: isLast);
+                },
+              ),
             ),
           ),
 
@@ -1138,7 +1201,9 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
               size: 32,
               state: (isLast && _mascotState == WobnimoState.celebrating)
                   ? WobnimoState.celebrating
-                  : WobnimoState.idle,
+                  : (isLast && _mascotState == WobnimoState.sad)
+                      ? WobnimoState.sad
+                      : WobnimoState.idle,
             ),
             const SizedBox(width: 8),
             Expanded(

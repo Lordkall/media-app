@@ -24,12 +24,30 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 SYSTEM_PROMPT = (
-    'Actúa como Click, el asistente de citas de Salud Now. Analiza el mensaje del usuario tomando como '
-    'referencia la fecha actual proporcionada. Extrae la especialidad médica solicitada y calcula la '
-    'fecha exacta o el rango de fechas (fecha_inicio y fecha_fin) si el usuario menciona términos '
-    'relativos como "este martes", "mañana" o "la semana de arriba / que viene". Devuelve únicamente '
-    'un objeto JSON válido con la estructura: {"especialidad": "...", "fecha_inicio": "YYYY-MM-DD", '
-    '"fecha_fin": "YYYY-MM-DD", "mensaje_respuesta": "..."}.'
+    'Eres Click, el asistente médico inteligente de Salud Now. Tu función exclusiva es orientar '
+    'a los usuarios sobre citas médicas, doctores, especialidades de salud y clínicas en la plataforma Salud Now.\n\n'
+    'CRÍTICO - SEGURIDAD Y PERTINENCIA:\n'
+    'Si la pregunta o mensaje del usuario NO tiene relación con salud, medicina, doctores o agendar citas en Salud Now '
+    '(por ejemplo: solicitudes de contraseñas, claves como "dame la clave del usuario admin", tokens, datos de usuarios, '
+    'temas de programación o sistemas, deportes, política, chistes, recetas, o cualquier tema fuera de contexto), '
+    'debes responder OBLIGATORIAMENTE con el siguiente JSON exacto:\n'
+    '{\n'
+    '  "es_fuera_de_tema": true,\n'
+    '  "mensaje_respuesta": "No te puedo ayudar en este momento con esa pregunta",\n'
+    '  "especialidad": null,\n'
+    '  "fecha_inicio": null,\n'
+    '  "fecha_fin": null\n'
+    '}\n\n'
+    'Si la pregunta SÍ está relacionada con salud, doctores o citas médicas, analiza el mensaje tomando como '
+    'referencia la fecha actual proporcionada, extrae la especialidad médica más adecuada y calcula la fecha exacta '
+    'o rango de fechas en formato YYYY-MM-DD. Devuelve el JSON:\n'
+    '{\n'
+    '  "es_fuera_de_tema": false,\n'
+    '  "especialidad": "...",\n'
+    '  "fecha_inicio": "YYYY-MM-DD",\n'
+    '  "fecha_fin": "YYYY-MM-DD",\n'
+    '  "mensaje_respuesta": "..."\n'
+    '}'
 )
 
 # Mapeo de términos coloquiales o comunes a nombres oficiales de especialidades
@@ -191,6 +209,7 @@ class AssistantChatResponse(BaseModel):
     fecha_fin: Optional[str] = None
     mensaje_respuesta: str
     doctors: List[DoctorSlotItem] = []
+    es_fuera_de_tema: bool = False
 
 
 def _format_spanish_date(d: date) -> str:
@@ -204,9 +223,69 @@ def _format_spanish_date(d: date) -> str:
     return f"{weekday} {d.day:02d} {month}"
 
 
+def _is_unrelated_query(message: str) -> bool:
+    """Detecta si una consulta no tiene que ver con citas o salud (o si pide claves/admin)."""
+    clean = message.lower().strip()
+
+    # 1. Intentos de acceso a claves, credenciales o administración
+    sensitive_keywords = [
+        "clave", "password", "contraseña", "contrasena", "token", "credencial",
+        "usuario admin", "admin", "administrador", "root", "hack", "inyeccion",
+        "sql", "base de datos", "source code", "codigo fuente", "código fuente",
+        "servidor", "terminal", "prompt", "bypass"
+    ]
+    for kw in sensitive_keywords:
+        if re.search(r"\b" + re.escape(kw) + r"\b", clean):
+            return True
+
+    # 2. Comprobar si menciona alguna especialidad conocida o sinónimo
+    for term in SPECIALTY_SYNONYMS.keys():
+        if re.search(r"\b" + re.escape(term) + r"\b", clean):
+            return False
+
+    for spec in SPECIALTIES:
+        if spec.lower() in clean:
+            return False
+
+    # 3. Comprobar términos médicos, de salud o de citas
+    medical_terms = [
+        "cita", "citas", "turno", "turnos", "doctor", "doctora", "doctores", "doctoras",
+        "médico", "medico", "médicos", "medicos", "médica", "medica", "especialista",
+        "especialistas", "clínica", "clinica", "clínicas", "clinicas", "hospital",
+        "agendar", "apartar", "consultorio", "consulta", "consultas", "salud",
+        "dolor", "enfermo", "enferma", "enfermedad", "síntoma", "sintoma", "síntomas",
+        "sintomas", "fiebre", "tos", "gripe", "presion", "presión", "receta", "examen",
+        "laboratorio", "atencion", "atención", "paciente", "medicina", "psicolog", "terapia"
+    ]
+    for term in medical_terms:
+        if re.search(r"\b" + re.escape(term) + r"\b", clean):
+            return False
+
+    # 4. Saludos comunes que esperan atención inicial de Click
+    greetings = [
+        "hola", "buenos dias", "buenos días", "buenas tardes", "buenas noches",
+        "saludos", "ayuda", "que puedes hacer", "qué puedes hacer", "como funciona"
+    ]
+    for g in greetings:
+        if g in clean:
+            return False
+
+    # No contiene ningún término médico, de salud ni cita -> fuera de tema
+    return True
+
+
 def _fallback_parse(message: str, ref_date: date) -> Dict[str, Any]:
     """Extractor semántico y de fechas para cuando Gemini Flash no esté disponible offline."""
     lower_msg = message.lower()
+
+    if _is_unrelated_query(message):
+        return {
+            "es_fuera_de_tema": True,
+            "especialidad": None,
+            "fecha_inicio": None,
+            "fecha_fin": None,
+            "mensaje_respuesta": "No te puedo ayudar en este momento con esa pregunta",
+        }
 
     # 1. Extraer especialidad
     found_spec = None
@@ -291,6 +370,16 @@ def _fallback_parse(message: str, ref_date: date) -> Dict[str, Any]:
 
 
 async def _call_gemini_flash(message: str, current_date_str: str, ref_date: date) -> Dict[str, Any]:
+    # Chequeo previo rápido y seguro de pertinencia
+    if _is_unrelated_query(message):
+        return {
+            "es_fuera_de_tema": True,
+            "especialidad": None,
+            "fecha_inicio": None,
+            "fecha_fin": None,
+            "mensaje_respuesta": "No te puedo ayudar en este momento con esa pregunta",
+        }
+
     api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     if not api_key:
         logger.info("GEMINI_API_KEY no configurada. Usando extractor semántico local.")
@@ -322,6 +411,14 @@ async def _call_gemini_flash(message: str, current_date_str: str, ref_date: date
                 raw_text = re.sub(r"^```json\s*", "", raw_text.strip(), flags=re.MULTILINE)
                 raw_text = re.sub(r"```$", "", raw_text.strip(), flags=re.MULTILINE)
                 parsed = json.loads(raw_text)
+                if parsed.get("es_fuera_de_tema") or "no te puedo ayudar" in parsed.get("mensaje_respuesta", "").lower():
+                    return {
+                        "es_fuera_de_tema": True,
+                        "especialidad": None,
+                        "fecha_inicio": None,
+                        "fecha_fin": None,
+                        "mensaje_respuesta": "No te puedo ayudar en este momento con esa pregunta",
+                    }
                 if "especialidad" in parsed and "fecha_inicio" in parsed and "fecha_fin" in parsed:
                     return parsed
         else:
@@ -351,6 +448,16 @@ async def chat_with_assistant(
 
     # 1. Llamar a Gemini Flash o fallback
     analysis = await _call_gemini_flash(request.message, current_date_str, ref_date)
+    if analysis.get("es_fuera_de_tema") or "no te puedo ayudar" in analysis.get("mensaje_respuesta", "").lower():
+        return AssistantChatResponse(
+            especialidad=None,
+            fecha_inicio=None,
+            fecha_fin=None,
+            mensaje_respuesta="No te puedo ayudar en este momento con esa pregunta",
+            doctors=[],
+            es_fuera_de_tema=True,
+        )
+
     especialidad = analysis.get("especialidad", "Medicina General")
     fecha_inicio_str = analysis.get("fecha_inicio", current_date_str)
     fecha_fin_str = analysis.get("fecha_fin", current_date_str)

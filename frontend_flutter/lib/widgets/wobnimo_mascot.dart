@@ -7,6 +7,7 @@ enum WobnimoState {
   thinking,
   speaking,
   celebrating,
+  sad,
 }
 
 /// Mascota robot inteligente 3D interactiva para Salud Now.
@@ -171,6 +172,10 @@ class _WobnimoRobotMascotState extends State<WobnimoRobotMascot>
             yOffset += _celebrateBounceAnimation.value;
             tiltAngle =
                 math.sin(_celebrateBounceController.value * math.pi) * 0.16;
+          } else if (widget.state == WobnimoState.sad) {
+            // Cabeza gacha, caída con desánimo y leve respiración melancólica
+            yOffset += 4.5 + (math.sin(_floatController.value * math.pi) * 1.5);
+            tiltAngle = 0.09 + (math.sin(_floatController.value * math.pi) * 0.03);
           } else {
             // Flotación normal
             tiltAngle = math.sin(_floatController.value * math.pi) * 0.05;
@@ -192,6 +197,14 @@ class _WobnimoRobotMascotState extends State<WobnimoRobotMascot>
                 color: const Color(0xFFFFB703).withValues(alpha: 0.65),
                 blurRadius: s * 0.40,
                 spreadRadius: s * 0.10,
+              ),
+            ];
+          } else if (widget.state == WobnimoState.sad) {
+            auraShadow = [
+              BoxShadow(
+                color: const Color(0xFF6366F1).withValues(alpha: 0.45),
+                blurRadius: s * 0.35,
+                spreadRadius: s * 0.06,
               ),
             ];
           }
@@ -316,6 +329,8 @@ class _WobnimoRobotPainter extends CustomPainter {
       glowColor = const Color(0xFFFFB703); // Amarillo/Ámbar pensando
     } else if (state == WobnimoState.celebrating) {
       glowColor = const Color(0xFF10B981); // Verde esmeralda fiesta
+    } else if (state == WobnimoState.sad) {
+      glowColor = const Color(0xFF818CF8); // Azul índigo suave melancólico
     } else {
       glowColor = const Color(0xFF00E5FF); // Cian eléctrico Volt
     }
@@ -324,7 +339,9 @@ class _WobnimoRobotPainter extends CustomPainter {
         ? (0.7 + 0.3 * math.sin(scanProgress * math.pi * 4).abs())
         : (state == WobnimoState.celebrating)
             ? 1.15
-            : pulse;
+            : (state == WobnimoState.sad)
+                ? (0.65 + 0.15 * pulse)
+                : pulse;
 
     final Paint antennaGlow = Paint()
       ..color = glowColor.withValues(alpha: 0.75 * antennaPulse)
@@ -438,7 +455,9 @@ class _WobnimoRobotPainter extends CustomPainter {
         ? const Color(0xFF10B981) // Verde esmeralda intenso
         : (state == WobnimoState.thinking)
             ? const Color(0xFFFFB703) // Ámbar analítico
-            : const Color(0xFF38BDF8); // Azul cian LED
+            : (state == WobnimoState.sad)
+                ? const Color(0xFF818CF8) // Azul índigo melancólico suave
+                : const Color(0xFF38BDF8); // Azul cian LED
 
     if (state == WobnimoState.celebrating) {
       // Ojos felices en arco curvo (^  ^) llamativos para festejo
@@ -462,6 +481,48 @@ class _WobnimoRobotPainter extends CustomPainter {
         canvas.drawPath(happyPath, happyGlow);
         canvas.drawPath(happyPath, happyEyePaint);
       }
+    } else if (state == WobnimoState.sad) {
+      // Ojos caídos / tristes en arco hacia abajo (∩ ∩) con mirada apenada
+      final Paint sadGlow = Paint()
+        ..color = eyeColor.withValues(alpha: 0.75 * pulse)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = w * 0.075
+        ..strokeCap = StrokeCap.round
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, w * 0.05);
+
+      final Paint sadEyePaint = Paint()
+        ..color = eyeColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = w * 0.05
+        ..strokeCap = StrokeCap.round;
+
+      for (final double eyeX in [leftEyeX, rightEyeX]) {
+        final Path sadPath = Path();
+        sadPath.moveTo(eyeX - eyeRadius * 0.85, eyeY + eyeRadius * 0.15);
+        sadPath.quadraticBezierTo(
+            eyeX, eyeY - eyeRadius * 0.75, eyeX + eyeRadius * 0.85, eyeY + eyeRadius * 0.15);
+        canvas.drawPath(sadPath, sadGlow);
+        canvas.drawPath(sadPath, sadEyePaint);
+      }
+
+      // Pequeña lágrima LED digital brillante deslizándose bajo el ojo izquierdo
+      final double tearY = eyeY + eyeRadius * 0.85 + (pulse * w * 0.05);
+      final Paint tearGlow = Paint()
+        ..color = const Color(0xFF38BDF8).withValues(alpha: 0.85)
+        ..style = PaintingStyle.fill
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, w * 0.035);
+      final Paint tearPaint = Paint()
+        ..color = const Color(0xFFBAE6FD)
+        ..style = PaintingStyle.fill;
+
+      final Path tearPath = Path();
+      tearPath.moveTo(leftEyeX + eyeRadius * 0.35, tearY - w * 0.035);
+      tearPath.quadraticBezierTo(
+          leftEyeX + eyeRadius * 0.65, tearY + w * 0.03, leftEyeX + eyeRadius * 0.35, tearY + w * 0.045);
+      tearPath.quadraticBezierTo(
+          leftEyeX + eyeRadius * 0.05, tearY + w * 0.03, leftEyeX + eyeRadius * 0.35, tearY - w * 0.035);
+      canvas.drawPath(tearPath, tearGlow);
+      canvas.drawPath(tearPath, tearPaint);
     } else {
       // Ojos circulares normales o pensando con parpadeo
       final Paint eyeGlowPaint = Paint()
@@ -517,6 +578,11 @@ class _WobnimoRobotPainter extends CustomPainter {
         ..color = eyeColor
         ..style = PaintingStyle.fill;
       canvas.drawCircle(Offset(center.dx, h * 0.66), w * 0.045, oMouth);
+    } else if (state == WobnimoState.sad) {
+      // Boca triste hacia abajo (curva invertida / pucherito triste)
+      mouthPath.moveTo(center.dx - w * 0.10, h * 0.72);
+      mouthPath.quadraticBezierTo(center.dx, h * 0.64, center.dx + w * 0.10, h * 0.72);
+      canvas.drawPath(mouthPath, mouthPaint);
     } else {
       // Sonrisa amable habitual de Click
       mouthPath.moveTo(center.dx - w * 0.09, h * 0.66);

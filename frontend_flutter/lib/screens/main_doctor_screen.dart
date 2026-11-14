@@ -515,64 +515,16 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
       body: Stack(
         children: [
           tabs[activeIndex],
-          // Botones flotantes: Soporte Técnico (arriba) y Mascota Robot Asistente IA (abajo)
+          // Botón flotante: Mascota Robot Asistente IA
           Positioned(
             bottom: 90,
             right: 16,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                // Botón superior: Enviar mensaje directo a Soporte Técnico
-                GestureDetector(
-                  onTap: () => _showSupportDialog(context),
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 8, right: 2),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.22),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.18),
-                        width: 1,
-                      ),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.support_agent_rounded,
-                            color: Colors.white, size: 15),
-                        SizedBox(width: 4),
-                        Text(
-                          'Soporte Técnico',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // Botón principal: Robot flotante con burbuja "Asistente IA"
-                GestureDetector(
-                  onTap: () => _openAIAssistantSheet(context),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
+            child: GestureDetector(
+              onTap: () => _openAIAssistantSheet(context),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
                       Container(
                         margin: const EdgeInsets.only(bottom: 4, right: 4),
                         padding: const EdgeInsets.symmetric(
@@ -634,8 +586,6 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
                     ],
                   ),
                 ),
-              ],
-            ),
           ),
         ],
       ),
@@ -904,14 +854,9 @@ class _MainDoctorScreenState extends State<MainDoctorScreen> {
             bottom: MediaQuery.of(bottomCtx).viewInsets.bottom,
           ),
           child: Container(
-            margin: EdgeInsets.only(
-              top: MediaQuery.of(bottomCtx).padding.top + 24,
-              left: 10,
-              right: 10,
-              bottom: 12,
-            ),
+            margin: const EdgeInsets.fromLTRB(10, 0, 10, 14),
             constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(bottomCtx).size.height * 0.86,
+              maxHeight: MediaQuery.of(bottomCtx).size.height * 0.70,
             ),
             decoration: BoxDecoration(
               color: Colors.white,
