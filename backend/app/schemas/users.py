@@ -41,6 +41,20 @@ class UserCreate(BaseModel):
     accept_terms: bool
     accept_privacy: bool
 
+    @field_validator("password")
+    @classmethod
+    def validate_password_strength(cls, password: str) -> str:
+        if (
+            len(password) < 6
+            or not re.search(r"[A-Z]", password)
+            or not re.search(r"[a-zA-Z]", password)
+            or not re.search(r"[0-9]", password)
+        ):
+            raise ValueError(
+                "La contraseña debe tener letras, números, al menos una mayúscula y un mínimo de 6 caracteres"
+            )
+        return password
+
     @field_validator("first_name", "last_name")
     @classmethod
     def validate_person_name(cls, value: str) -> str:

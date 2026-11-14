@@ -326,10 +326,19 @@ app = FastAPI(title="MedIA Backend", version="1.0.0", lifespan=lifespan)
 from app.core.firebase import init_firebase
 init_firebase()
 
+is_production = os.getenv("ENVIRONMENT", "development").lower() in ("production", "prod")
+
 cors_origins_env = os.getenv("ALLOWED_ORIGINS", "")
 if cors_origins_env.strip():
     allowed_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()]
+elif is_production:
+    # En producción solo se admiten dominios autorizados
+    allowed_origins = [
+        "https://saludnow.site",
+        "https://www.saludnow.site",
+    ]
 else:
+    # Entornos locales / desarrollo
     allowed_origins = [
         "https://saludnow.site",
         "https://www.saludnow.site",

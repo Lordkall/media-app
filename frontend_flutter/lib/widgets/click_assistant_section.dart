@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
@@ -8,6 +9,7 @@ import '../core/api_client.dart';
 import '../screens/agendar_cita_tab.dart';
 import '../screens/doctor_profile_screen.dart';
 import 'profile_avatar.dart';
+import 'wobnimo_mascot.dart';
 
 class ClickMessage {
   final bool isUser;
@@ -59,6 +61,8 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
   }
 
   bool _isLoading = false;
+  WobnimoState _mascotState = WobnimoState.idle;
+  Timer? _mascotStateTimer;
   final List<ClickMessage> _messages = [];
 
   final List<String> _suggestions = [
@@ -90,7 +94,7 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
       ClickMessage(
         isUser: false,
         text:
-            '¡Hola! Soy **Click**, tu asistente médico inteligente de Salud Now 🤖\n\n'
+            '¡Hola! Soy **Click**, tu asistente médico inteligente de Salud Now\n\n'
             'Dime qué especialista necesitas o para qué fecha '
             '(ej: *"Quiero una cita con un odontólogo este martes"* o *"¿Qué doctores de ginecología hay la semana que viene?"*) '
             'y encontraré turnos libres para agendar tu cita en un click!',
@@ -100,6 +104,7 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
 
   @override
   void dispose() {
+    _mascotStateTimer?.cancel();
     _floatAnimController.dispose();
     _textController.dispose();
     _scrollController.dispose();
@@ -114,18 +119,29 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
     _textController.clear();
     HapticFeedback.lightImpact();
 
+    _mascotStateTimer?.cancel();
     setState(() {
       _messages.add(ClickMessage(isUser: true, text: query));
       _isLoading = true;
+      _mascotState = WobnimoState.thinking;
     });
 
     _scrollToBottom();
 
     try {
+      final stopwatch = Stopwatch()..start();
       final data = await _processQuery(query);
+
+      // Garantizar que la reacción de 'pensando' se aprecie claramente (al menos 1.5 segundos)
+      final remaining = 1500 - stopwatch.elapsedMilliseconds;
+      if (remaining > 0) {
+        await Future.delayed(Duration(milliseconds: remaining));
+      }
+
       final answer = data['mensaje_respuesta']?.toString() ??
           'Aquí tienes los resultados encontrados:';
-      final doctorsList = data['doctors'] as List<dynamic>? ?? [];
+      final doctorsList =
+          (data['doctores'] ?? data['doctors']) as List<dynamic>? ?? [];
 
       if (mounted) {
         setState(() {
@@ -140,6 +156,17 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
             ),
           );
           _isLoading = false;
+          _mascotState = WobnimoState.celebrating;
+        });
+
+        // La animación de festejo dura 6 segundos para que el usuario pueda apreciarla
+        _mascotStateTimer?.cancel();
+        _mascotStateTimer = Timer(const Duration(milliseconds: 6000), () {
+          if (mounted) {
+            setState(() {
+              _mascotState = WobnimoState.idle;
+            });
+          }
         });
       }
     } catch (e) {
@@ -153,6 +180,7 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
             ),
           );
           _isLoading = false;
+          _mascotState = WobnimoState.idle;
         });
       }
     }
@@ -208,9 +236,13 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
 
     if (clean.contains('hematol') || clean.contains('sangre')) {
       detectedSpecialty = 'Hematología';
-    } else if (clean.contains('cardio') ||
+    } else if (clean.contains('cardi') ||
+        clean.contains('cardilog') ||
+        clean.contains('cardio') ||
         clean.contains('corazon') ||
-        clean.contains('corazón')) {
+        clean.contains('corazón') ||
+        clean.contains('cardíac') ||
+        clean.contains('cardiac')) {
       detectedSpecialty = 'Cardiología';
     } else if (clean.contains('odont') ||
         clean.contains('dent') ||
@@ -352,18 +384,35 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
     // 3. Fallback inteligente: capturar cualquier sufijo médico común (-ólogo, -iatra, etc.)
     if (detectedSpecialty == null && !isExplicitGeneral) {
       final match = RegExp(
-        r'\b([a-záéíóúñ]+(ólog[oa]s?|olog[oa]s?|iatras?|iatr[íi]as?|olog[íi]as?))\b',
+        r'\b([a-záéíóúñ]+(ólog[oa]s?|olog[oa]s?|ilog[oa]s?|ílog[oa]s?|iatras?|iatr[íi]as?|olog[íi]as?))\b',
         caseSensitive: false,
       ).firstMatch(clean);
       if (match != null) {
         String word = match.group(1)!;
         word = word[0].toUpperCase() + word.substring(1).toLowerCase();
-        detectedSpecialty = word;
+        if (word.toLowerCase().contains('cardi')) {
+          detectedSpecialty = 'Cardiología';
+        } else {
+          detectedSpecialty = word;
+        }
       }
     }
 
-    final bool isGeneralRequest =
-        isExplicitGeneral || detectedSpecialty == null;
+    // Si no se detectó una especialidad clara y tampoco se solicitó explícitamente medicina general,
+    // evitamos asumir "Medicina General" por defecto y le pedimos aclaración con sugerencias.
+    if (detectedSpecialty == null && !isExplicitGeneral) {
+      return {
+        'mensaje_respuesta':
+            'No logré identificar la especialidad médica en tu consulta. '
+            '¿Buscas citas con **Cardiología**, **Pediatría**, **Ginecología y Obstetricia**, '
+            '**Odontología**, **Dermatología** o **Medicina General**?\n\n'
+            'Escríbeme la especialidad médica que necesitas y con gusto te busco los turnos libres.',
+        'doctores': [],
+        'especialidad': null,
+      };
+    }
+
+    final bool isGeneralRequest = isExplicitGeneral;
     final String specialty = detectedSpecialty ?? 'Medicina General';
 
     // 2. Detectar día / fecha
@@ -739,41 +788,25 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
             ),
             child: Row(
               children: [
-                // Mascota Click con animación flotante
-                AnimatedBuilder(
-                  animation: _floatAnimation,
-                  builder: (context, child) {
-                    return Transform.translate(
-                      offset: Offset(0, _floatAnimation.value),
-                      child: child,
-                    );
+                // Mascota Robot 3D (Wobnimo Volt)
+                WobnimoRobotMascot(
+                  size: 64,
+                  state: _mascotState,
+                  onTap: () {
+                    HapticFeedback.mediumImpact();
+                    setState(() {
+                      _mascotState = WobnimoState.celebrating;
+                    });
+                    _mascotStateTimer?.cancel();
+                    _mascotStateTimer =
+                        Timer(const Duration(milliseconds: 6000), () {
+                      if (mounted) {
+                        setState(() {
+                          _mascotState = WobnimoState.idle;
+                        });
+                      }
+                    });
                   },
-                  child: Container(
-                    width: 58,
-                    height: 58,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: brightCyan.withValues(alpha: 0.6),
-                          blurRadius: 12,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: ClipOval(
-                      child: Image.asset(
-                        'assets/click_mascot.jpg',
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: brightCyan,
-                          child: const Icon(Icons.smart_toy_rounded,
-                              color: Colors.white, size: 32),
-                        ),
-                      ),
-                    ),
-                  ),
                 ),
                 const SizedBox(width: 14),
 
@@ -794,12 +827,25 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Container(
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.2),
+                              color: _mascotState == WobnimoState.celebrating
+                                  ? const Color(0xFF10B981).withValues(alpha: 0.35)
+                                  : _mascotState == WobnimoState.thinking
+                                      ? const Color(0xFFFFB703).withValues(alpha: 0.35)
+                                      : Colors.white.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: _mascotState == WobnimoState.celebrating
+                                    ? const Color(0xFF34D399)
+                                    : _mascotState == WobnimoState.thinking
+                                        ? const Color(0xFFFDE047)
+                                        : Colors.transparent,
+                                width: 1,
+                              ),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -807,15 +853,23 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
                                 Container(
                                   width: 6,
                                   height: 6,
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFF10B981),
+                                  decoration: BoxDecoration(
+                                    color: _mascotState == WobnimoState.celebrating
+                                        ? const Color(0xFF34D399)
+                                        : _mascotState == WobnimoState.thinking
+                                            ? const Color(0xFFFDE047)
+                                            : const Color(0xFF10B981),
                                     shape: BoxShape.circle,
                                   ),
                                 ),
                                 const SizedBox(width: 4),
-                                const Text(
-                                  'Asistente IA',
-                                  style: TextStyle(
+                                Text(
+                                  _mascotState == WobnimoState.celebrating
+                                      ? '¡Festejo! 🎉'
+                                      : _mascotState == WobnimoState.thinking
+                                          ? 'Pensando... 🧠'
+                                          : 'Asistente IA',
+                                  style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
@@ -827,12 +881,22 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
                         ],
                       ),
                       const SizedBox(height: 3),
-                      const Text(
-                        'Agenda tus citas médicas al instante',
+                      Text(
+                        _mascotState == WobnimoState.celebrating
+                            ? '¡Turnos encontrados con éxito! 🎉'
+                            : _mascotState == WobnimoState.thinking
+                                ? 'Pensando tu consulta médica... 🧠'
+                                : 'Agenda tus citas médicas al instante',
                         style: TextStyle(
-                          color: Color(0xFFE0F2FE),
+                          color: _mascotState == WobnimoState.celebrating
+                              ? const Color(0xFF86EFAC)
+                              : _mascotState == WobnimoState.thinking
+                                  ? const Color(0xFFFDE047)
+                                  : const Color(0xFFE0F2FE),
                           fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                          fontWeight: _mascotState != WobnimoState.idle
+                              ? FontWeight.bold
+                              : FontWeight.w500,
                         ),
                       ),
                     ],
@@ -844,7 +908,7 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
 
           // --- Historial del Chat ---
           Container(
-            constraints: const BoxConstraints(minHeight: 180, maxHeight: 380),
+            constraints: const BoxConstraints(minHeight: 120, maxHeight: 220),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             color: const Color(0xFFF8FAFC),
             child: ListView.separated(
@@ -858,9 +922,11 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
                   return _buildLoadingBubble(brightCyan);
                 }
                 final msg = _messages[index];
+                final isLast = index == _messages.length - 1;
                 return msg.isUser
                     ? _buildUserBubble(msg, primaryBlue)
-                    : _buildAssistantBubble(msg, primaryBlue, brightCyan);
+                    : _buildAssistantBubble(msg, primaryBlue, brightCyan,
+                        isLast: isLast);
               },
             ),
           ),
@@ -1029,30 +1095,19 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
   }
 
   Widget _buildAssistantBubble(
-      ClickMessage msg, Color primaryBlue, Color brightCyan) {
+      ClickMessage msg, Color primaryBlue, Color brightCyan,
+      {bool isLast = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: brightCyan, width: 1.5),
-              ),
-              child: ClipOval(
-                child: Image.asset(
-                  'assets/click_mascot.jpg',
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const Icon(
-                      Icons.smart_toy_rounded,
-                      color: Color(0xFF003893),
-                      size: 18),
-                ),
-              ),
+            WobnimoRobotMascot(
+              size: 32,
+              state: (isLast && _mascotState == WobnimoState.celebrating)
+                  ? WobnimoState.celebrating
+                  : WobnimoState.idle,
             ),
             const SizedBox(width: 8),
             Expanded(
@@ -1290,47 +1345,60 @@ class ClickAssistantSectionState extends State<ClickAssistantSection>
   Widget _buildLoadingBubble(Color brightCyan) {
     return Align(
       alignment: Alignment.centerLeft,
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 320),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: brightCyan.withValues(alpha: 0.3)),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF0B2545).withValues(alpha: 0.04),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 14,
-              height: 14,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: brightCyan,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const WobnimoRobotMascot(
+            size: 34,
+            state: WobnimoState.thinking,
+          ),
+          const SizedBox(width: 8),
+          Container(
+            constraints: const BoxConstraints(maxWidth: 270),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: const Color(0xFFFFB703).withValues(alpha: 0.6),
+                width: 1.5,
               ),
-            ),
-            const SizedBox(width: 10),
-            const Flexible(
-              child: Text(
-                'Buscando especialistas disponibles...',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFF64748B),
-                  fontStyle: FontStyle.italic,
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFFFB703).withValues(alpha: 0.12),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
+              ],
             ),
-          ],
-        ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Color(0xFFFFB703),
+                  ),
+                ),
+                SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    'Pensando y buscando turnos...',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFFB45309),
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -10,6 +10,7 @@ import '../core/api_client.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/home_search_bar.dart';
 import '../widgets/click_assistant_section.dart';
+import '../widgets/wobnimo_mascot.dart';
 import '../widgets/health_today_section.dart';
 
 class AdminHomeTab extends StatefulWidget {
@@ -161,24 +162,9 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
                     ),
                     child: Row(
                       children: [
-                        Container(
-                          width: 34,
-                          height: 34,
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                          child: ClipOval(
-                            child: Image.asset(
-                              'assets/images/asistente.png',
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const Icon(
-                                Icons.smart_toy_rounded,
-                                color: Color(0xFF0056B3),
-                                size: 20,
-                              ),
-                            ),
-                          ),
+                        const WobnimoRobotMascot(
+                          size: 34,
+                          state: WobnimoState.idle,
                         ),
                         const SizedBox(width: 10),
                         const Expanded(
@@ -186,7 +172,7 @@ class _AdminHomeTabState extends State<AdminHomeTab> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Asistente Virtual Click 🤖',
+                                'Asistente Virtual Click',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 12,

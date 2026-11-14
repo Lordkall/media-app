@@ -157,6 +157,11 @@ class HealthModuleHelper {
   static StreamSubscription<StepCount>? _stepCountSubscription;
   static Timer? _midnightCheckTimer;
 
+  /// Indica si ya se ha recibido al menos una lectura física real del hardware
+  /// de podómetro durante la sesión actual (o si el dispositivo no cuenta con sensor).
+  /// Esto evita notificaciones prematuras con 0 pasos al abrir la app tras haber caminado.
+  static bool _hasReceivedInitialHardwareSteps = false;
+
   static String _getTodayStr() =>
       DateTime.now().toIso8601String().substring(0, 10);
 
@@ -181,6 +186,7 @@ class HealthModuleHelper {
     try {
       await checkMidnightReset();
       if (isEnabledNotifier.value) {
+        _hasReceivedInitialHardwareSteps = false;
         await initializePedometer(forceRestart: true);
       }
     } catch (e) {
@@ -201,6 +207,14 @@ class HealthModuleHelper {
   /// Exclusivamente en la franja permitida de 6:00 AM a 10:00 PM (06:00 a 22:00) y si el módulo está activo.
   static Future<void> _checkDailyStepReminders() async {
     if (kIsWeb || !isEnabledNotifier.value) return;
+
+    // Si aún no hemos sincronizado la primera lectura del sensor físico de hardware,
+    // evitamos disparar una notificación con pasos en cero o desactualizados.
+    if (!_hasReceivedInitialHardwareSteps &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS)) {
+      return;
+    }
 
     final now = DateTime.now();
     // Restricción estricta de horario: entre 6:00 AM y 10:00 PM
@@ -304,6 +318,7 @@ class HealthModuleHelper {
 
     if (savedDate != null && savedDate != todayStr) {
       // Cruzó las 12:00 AM o nuevo día
+      _hasReceivedInitialHardwareSteps = false;
 
       // 1. Obtener la última lectura física de hardware registrada ayer
       final lastRecordedBootSteps =
@@ -523,7 +538,14 @@ class HealthModuleHelper {
         }
         await LocalNotificationService.scheduleDailyStepReminders();
         unawaited(initializePedometer(forceRestart: true));
-        unawaited(_checkDailyStepReminders());
+        // Permitimos que el sensor físico actualice los pasos antes de chequear recordatorios.
+        // Como respaldo de seguridad para dispositivos lentos o sin sensor, se ejecuta tras 4 segundos.
+        Future.delayed(const Duration(seconds: 4), () {
+          if (!_hasReceivedInitialHardwareSteps) {
+            _hasReceivedInitialHardwareSteps = true;
+            _checkDailyStepReminders();
+          }
+        });
         unawaited(_checkStepGoalCelebration(st, stepGoal));
       } else if (!isEnabled && !kIsWeb) {
         await LocalNotificationService.cancelWaterReminder();
@@ -540,6 +562,7 @@ class HealthModuleHelper {
     try {
       await _stepCountSubscription?.cancel();
       _stepCountSubscription = null;
+      _hasReceivedInitialHardwareSteps = false;
       _activeUserId = 'guest';
       isEnabledNotifier.value = false;
       metricsNotifier.value = const HealthMetrics(
@@ -569,6 +592,9 @@ class HealthModuleHelper {
       var status = await Permission.activityRecognition.status;
       if (!status.isGranted) {
         status = await Permission.activityRecognition.request();
+      }
+      if (!status.isGranted) {
+        _hasReceivedInitialHardwareSteps = true;
       }
 
       if (status.isGranted) {
@@ -612,6 +638,7 @@ class HealthModuleHelper {
 
             final todaySteps =
                 (currentBootSteps - savedBaseline).clamp(0, 100000);
+            _hasReceivedInitialHardwareSteps = true;
 
             // Guardamos el último conteo de hardware de forma persistente para transiciones entre días
             await prefs.setInt(
@@ -627,8 +654,12 @@ class HealthModuleHelper {
               todaySteps,
               metricsNotifier.value.stepGoal,
             );
+            // Ahora que los pasos están sincronizados y actualizados con la lectura real del sensor,
+            // verificamos si corresponde el recordatorio de pasos.
+            await _checkDailyStepReminders();
           },
           onError: (error) {
+            _hasReceivedInitialHardwareSteps = true;
             debugPrint(
                 'Aviso: Sensor de podómetro no disponible en este dispositivo: $error');
           },

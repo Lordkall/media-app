@@ -1,5 +1,7 @@
 import time
 import logging
+import ipaddress
+import os
 from collections import defaultdict
 from fastapi import Request, HTTPException, status
 
@@ -34,11 +36,41 @@ class InMemoryRateLimiter:
 limiter = InMemoryRateLimiter()
 
 def get_client_ip(request: Request) -> str:
-    # Handle reverse proxies (e.g., Railway / Cloudflare / Nginx)
+    """Extrae y valida de forma segura la IP real del cliente evitando spoofing."""
+    direct_ip = request.client.host if request.client else "unknown"
+
+    # 1. Cloudflare header si está presente
+    cf_connecting_ip = request.headers.get("cf-connecting-ip")
+    if cf_connecting_ip:
+        cleaned = cf_connecting_ip.strip()
+        try:
+            ipaddress.ip_address(cleaned)
+            return cleaned
+        except ValueError:
+            pass
+
+    # 2. X-Real-IP
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip:
+        cleaned = real_ip.strip()
+        try:
+            ipaddress.ip_address(cleaned)
+            return cleaned
+        except ValueError:
+            pass
+
+    # 3. X-Forwarded-For con validación de formato IP estricta
     forwarded = request.headers.get("x-forwarded-for")
     if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
+        parts = [p.strip() for p in forwarded.split(",") if p.strip()]
+        for candidate in parts:
+            try:
+                ip_obj = ipaddress.ip_address(candidate)
+                return str(ip_obj)
+            except ValueError:
+                continue
+
+    return direct_ip
 
 def rate_limit_login(request: Request):
     ip = get_client_ip(request)
@@ -54,6 +86,14 @@ def rate_limit_password_reset(request: Request):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Demasiadas solicitudes de recuperación. Por favor espera unos minutos.",
+        )
+
+def rate_limit_password_confirm(request: Request):
+    ip = get_client_ip(request)
+    if not limiter.is_allowed(ip, "password_confirm", max_requests=5, window_seconds=300):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Demasiados intentos de restablecimiento de contraseña. Por favor espera unos minutos.",
         )
 
 def rate_limit_register(request: Request):

@@ -33,9 +33,36 @@ class AuthHelper {
     }
   }
 
-  static Future<String?> getRole() async {
+  static bool isTokenExpired(String? token) {
+    if (token == null || token.isEmpty) return true;
+    final decoded = decodeToken(token);
+    if (decoded == null) return true;
+    final exp = decoded['exp'];
+    if (exp == null) return false;
+    try {
+      final int expSeconds = exp is int ? exp : int.parse(exp.toString());
+      final expiryTime = DateTime.fromMillisecondsSinceEpoch(expSeconds * 1000, isUtc: true);
+      // Margen de 30 segundos para evitar fallos en peticiones en curso
+      return DateTime.now().toUtc().isAfter(expiryTime.subtract(const Duration(seconds: 30)));
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<String?> getValidAccessToken() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access_token');
+    if (token == null) return null;
+    if (isTokenExpired(token)) {
+      debugPrint('[AuthHelper] Token expirado detectado en cliente, eliminando.');
+      await prefs.remove('access_token');
+      return null;
+    }
+    return token;
+  }
+
+  static Future<String?> getRole() async {
+    final token = await getValidAccessToken();
     if (token == null) return null;
 
     final decoded = decodeToken(token);
@@ -43,8 +70,7 @@ class AuthHelper {
   }
 
   static Future<String?> getUserId() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('access_token');
+    final token = await getValidAccessToken();
     return getUserIdFromToken(token);
   }
 

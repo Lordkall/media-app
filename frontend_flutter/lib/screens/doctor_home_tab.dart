@@ -14,6 +14,7 @@ import '../widgets/home_search_bar.dart';
 import '../widgets/top_clinics_section.dart';
 import '../widgets/health_today_section.dart';
 import '../widgets/click_assistant_section.dart';
+import '../widgets/wobnimo_mascot.dart';
 import '../screens/doctor_profile_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'select_plan_screen.dart';
@@ -672,24 +673,9 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
                     ),
                     child: Row(
                       children: [
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 1.5),
-                          ),
-                          child: ClipOval(
-                            child: Image.asset(
-                              'assets/click_mascot.jpg',
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const Icon(
-                                Icons.smart_toy_rounded,
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                            ),
-                          ),
+                        const WobnimoRobotMascot(
+                          size: 32,
+                          state: WobnimoState.idle,
                         ),
                         const SizedBox(width: 10),
                         const Expanded(
@@ -697,7 +683,7 @@ class _DoctorHomeTabState extends State<DoctorHomeTab> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Asistente Virtual Click 🤖',
+                                'Asistente Virtual Click',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 12,

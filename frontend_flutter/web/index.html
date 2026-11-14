@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <!--
     If you are serving your web app in a path other than the root, change the
@@ -30,12 +31,144 @@
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="icon" type="image/png" href="favicon.png" />
 
   <title>Salud Now</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Wobnimo 3D Mascot Engine (https://github.com/Pouryaak/wobnimo) -->
+  <script type="module" src="https://cdn.jsdelivr.net/npm/wobnimo@0.2/dist/wobnimo.js"></script>
+
+  <style>
+    #wobnimo-robot-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      pointer-events: auto;
+      user-select: none;
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
+    }
+
+    #wobnimo-robot-container:hover {
+      transform: scale(1.08) translateY(-4px);
+    }
+
+    .wobnimo-speech-bubble {
+      background: linear-gradient(135deg, #003893, #0056D2);
+      color: #FFFFFF;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 5px 12px;
+      border-radius: 14px;
+      box-shadow: 0 4px 14px rgba(0, 56, 147, 0.35);
+      margin-bottom: 6px;
+      white-space: nowrap;
+      pointer-events: none;
+      animation: wobnimo-float 3s ease-in-out infinite;
+    }
+
+    #wobnimo-robot-wrapper {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.95), rgba(0, 194, 255, 0.15) 60%, rgba(0, 56, 147, 0.25) 100%);
+      border: 2px solid rgba(255, 255, 255, 0.9);
+      box-shadow: 0 10px 25px rgba(0, 56, 147, 0.3), inset 0 2px 6px rgba(255, 255, 255, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      overflow: hidden;
+    }
+
+    wobnimo-mascot {
+      width: 76px;
+      height: 76px;
+      display: block;
+    }
+
+    @keyframes wobnimo-float {
+
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(-4px);
+      }
+    }
+
+    @media (max-width: 600px) {
+      #wobnimo-robot-container {
+        bottom: 16px;
+        right: 16px;
+      }
+
+      #wobnimo-robot-wrapper {
+        width: 64px;
+        height: 64px;
+      }
+
+      wobnimo-mascot {
+        width: 60px;
+        height: 60px;
+      }
+
+      .wobnimo-speech-bubble {
+        font-size: 11px;
+        padding: 4px 10px;
+      }
+    }
+  </style>
 </head>
+
 <body>
+  <!-- Mascota Robot 3D (Wobnimo - Click) -->
+  <aside id="wobnimo-robot-container" aria-label="Mascota Robot Click en 3D">
+    <div id="wobnimo-robot-bubble" class="wobnimo-speech-bubble">
+      ¡Hola! Soy Click
+    </div>
+    <div id="wobnimo-robot-wrapper" title="Click - Mascota Robot en 3D">
+      <wobnimo-mascot id="wobnimo-mascot-element" character="volt" state="idle"></wobnimo-mascot>
+    </div>
+  </aside>
+
+  <script>
+    (function () {
+      const states = ['idle', 'thinking', 'speaking', 'celebrating'];
+      let stateIndex = 0;
+      window.addEventListener('DOMContentLoaded', function () {
+        const mascot = document.getElementById('wobnimo-mascot-element');
+        const bubble = document.getElementById('wobnimo-robot-bubble');
+        const container = document.getElementById('wobnimo-robot-container');
+        if (!mascot || !container) return;
+
+        container.addEventListener('click', function () {
+          stateIndex = (stateIndex + 1) % states.length;
+          const nextState = states[stateIndex];
+          mascot.setAttribute('state', nextState);
+
+          if (nextState === 'thinking') {
+            bubble.textContent = 'Pensando...';
+          } else if (nextState === 'speaking') {
+            bubble.textContent = '¿En qué te ayudo?';
+          } else if (nextState === 'celebrating') {
+            bubble.textContent = '¡Salud al 100%!';
+          } else {
+            bubble.textContent = '¡Hola! Soy Click';
+          }
+        });
+      });
+    })();
+  </script>
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader
@@ -46,4 +179,5 @@
   -->
   <script src="flutter_bootstrap.js" async></script>
 </body>
+
 </html>

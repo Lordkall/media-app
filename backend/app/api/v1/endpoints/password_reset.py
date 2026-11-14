@@ -11,7 +11,7 @@ from app.models.password_reset import PasswordResetToken
 from app.core.security import get_password_hash
 from app.schemas.password_reset import PasswordResetRequest, PasswordResetConfirm
 from app.services.email import send_reset_email
-from app.core.rate_limit import rate_limit_password_reset
+from app.core.rate_limit import rate_limit_password_reset, rate_limit_password_confirm
 
 router = APIRouter()
 
@@ -46,7 +46,7 @@ async def request_password_reset(
 
     return {"message": "Si el correo está registrado, recibirás un enlace de recuperación pronto."}
 
-@router.post("/confirm", status_code=status.HTTP_200_OK)
+@router.post("/confirm", status_code=status.HTTP_200_OK, dependencies=[Depends(rate_limit_password_confirm)])
 async def confirm_password_reset(
     payload: PasswordResetConfirm, 
     db: AsyncSession = Depends(get_db)
