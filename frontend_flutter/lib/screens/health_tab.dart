@@ -27,6 +27,9 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
   // Selected day index in weekly bar chart (default today)
   int _selectedDayIndex = 0;
   bool _savingBloodType = false;
+  Timer? _webWaterReminder;
+  Timer? _webBreathingReminder;
+  (bool, int, int, int)? _webWaterSettings;
 
   Future<void> _saveBloodType(String? value) async {
     setState(() => _savingBloodType = true);
@@ -50,7 +53,12 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     _selectedDayIndex = (DateTime.now().weekday - 1).clamp(0, 6);
-    HealthModuleHelper.initializePedometer();
+    if (kIsWeb) {
+      HealthModuleHelper.metricsNotifier.addListener(_refreshWebReminders);
+      _refreshWebReminders();
+    } else {
+      HealthModuleHelper.initializePedometer();
+    }
 
     _waterWaveController = AnimationController(
       vsync: this,
@@ -89,7 +97,60 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
   void dispose() {
     _waterWaveController.dispose();
     _breathingController.dispose();
+    if (kIsWeb) {
+      HealthModuleHelper.metricsNotifier.removeListener(_refreshWebReminders);
+      _webWaterReminder?.cancel();
+      _webBreathingReminder?.cancel();
+    }
     super.dispose();
+  }
+
+  void _refreshWebReminders() {
+    final metrics = HealthModuleHelper.metricsNotifier.value;
+    final settings = (
+      metrics.waterReminderEnabled,
+      metrics.waterReminderIntervalHours,
+      metrics.waterMilliliters,
+      metrics.waterGoalMilliliters,
+    );
+    if (settings != _webWaterSettings) {
+      _webWaterSettings = settings;
+      _webWaterReminder?.cancel();
+      if (metrics.waterReminderEnabled &&
+          metrics.waterMilliliters < metrics.waterGoalMilliliters) {
+        _webWaterReminder = Timer.periodic(
+          Duration(hours: metrics.waterReminderIntervalHours),
+          (_) => _showWebReminder('Es hora de tomar agua.'),
+        );
+      }
+    }
+
+    if (!metrics.breathingWeeklyReminderEnabled) {
+      _webBreathingReminder?.cancel();
+      _webBreathingReminder = null;
+    } else if (_webBreathingReminder == null) {
+      _scheduleWebBreathingReminder();
+    }
+  }
+
+  void _scheduleWebBreathingReminder() {
+    final now = DateTime.now();
+    final daysUntilWednesday = (DateTime.wednesday - now.weekday) % 7;
+    var next = DateTime(now.year, now.month, now.day + daysUntilWednesday, 11);
+    if (!next.isAfter(now)) {
+      next = DateTime(next.year, next.month, next.day + 7, 11);
+    }
+    _webBreathingReminder = Timer(next.difference(now), () {
+      _showWebReminder('Tómate una pausa para hacer respiraciones guiadas.');
+      _scheduleWebBreathingReminder();
+    });
+  }
+
+  void _showWebReminder(String message) {
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   void _toggleBreathing() {
@@ -130,27 +191,9 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    if (kIsWeb) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Módulo de Salud')),
-        body: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: ValueListenableBuilder<HealthMetrics>(
-                valueListenable: HealthModuleHelper.metricsNotifier,
-                builder: (context, metrics, _) => Card(
-                  child: _buildBloodTypeSelector(metrics),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
+    final horizontalPadding = kIsWeb
+        ? math.max(20.0, (MediaQuery.sizeOf(context).width - 680) / 2)
+        : 20.0;
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
@@ -167,7 +210,7 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                     // Header con título y switch de activación
                     SliverToBoxAdapter(
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                        padding: EdgeInsets.fromLTRB(horizontalPadding, 16, horizontalPadding, 8),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -200,7 +243,9 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                                       ),
                                       SizedBox(height: 2),
                                       Text(
-                                        'Estatura, peso, IMC, hidratación y pasos',
+                                        kIsWeb
+                                              ? 'Medidas, hidratación y respiración'
+                                              : 'Estatura, peso, IMC, hidratación y pasos',
                                         style: TextStyle(
                                           fontSize: 13,
                                           color: Color(0xFF64748B),
@@ -225,23 +270,23 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 16),
-
-                            // Switch Card: Activar módulo de salud
-                            _buildActivationSwitchCard(isEnabled),
+                            if (!kIsWeb) ...[
+                              const SizedBox(height: 16),
+                              _buildActivationSwitchCard(isEnabled),
+                            ],
                           ],
                         ),
                       ),
                     ),
 
-                    if (!isEnabled)
+                    if (!kIsWeb && !isEnabled)
                       SliverFillRemaining(
                         hasScrollBody: false,
                         child: _buildDisabledState(context),
                       )
                     else
                       SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
+                        padding: EdgeInsets.fromLTRB(horizontalPadding, 12, horizontalPadding, 40),
                         sliver: SliverList(
                           delegate: SliverChildListDelegate([
                             // 1. Medidas Corporales & IMC (Estatura, Peso, IMC)
@@ -256,9 +301,10 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                             _buildBreathingCard(),
                             const SizedBox(height: 18),
 
-                            // 4. Tarjeta de Pasos en la Semana (Azul gradiente)
-                            _buildWeeklyStepsCard(metrics),
-                            const SizedBox(height: 18),
+                            if (!kIsWeb) ...[
+                              _buildWeeklyStepsCard(metrics),
+                              const SizedBox(height: 18),
+                            ],
 
                             // 5. Configuración de Recordatorio Semanal Antiestrés
                             _buildWeeklyBreathingReminderCard(metrics),
@@ -1441,7 +1487,9 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                 ),
                 SizedBox(height: 2),
                 Text(
-                  'Recibe una notificación push cada semana recordando hacer respiraciones guiadas y pausar el estrés.',
+                  kIsWeb
+                      ? 'Cada miércoles a las 11:00 a. m. mientras tengas abierto el módulo.'
+                      : 'Recibe una notificación push cada semana recordando hacer respiraciones guiadas y pausar el estrés.',
                   style: TextStyle(
                     fontSize: 11,
                     color: Color(0xFF64748B),
@@ -1519,6 +1567,10 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
               ),
             ],
           ),
+          if (kIsWeb) ...[
+            const SizedBox(height: 6),
+            const Text('Recibe avisos mientras tengas abierto el módulo.'),
+          ],
           if (metrics.waterReminderEnabled) ...[
             const SizedBox(height: 10),
             const Text(
@@ -1862,6 +1914,7 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
 
     double? liveHeight = metrics.heightCm;
     double? liveWeight = metrics.weightKg;
+    bool saving = false;
 
     showModalBottomSheet<void>(
       context: context,
@@ -1937,11 +1990,11 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                     autofocus: !focusWeight,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                      FilteringTextInputFormatter.allow(RegExp(r'^\d*[.,]?\d*')),
                     ],
                     onChanged: (val) {
                       setModalState(() {
-                        liveHeight = double.tryParse(val.trim());
+                        liveHeight = double.tryParse(val.trim().replaceAll(',', '.'));
                       });
                     },
                     decoration: InputDecoration(
@@ -1959,11 +2012,11 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                     autofocus: focusWeight,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                      FilteringTextInputFormatter.allow(RegExp(r'^\d*[.,]?\d*')),
                     ],
                     onChanged: (val) {
                       setModalState(() {
-                        liveWeight = double.tryParse(val.trim());
+                        liveWeight = double.tryParse(val.trim().replaceAll(',', '.'));
                       });
                     },
                     decoration: InputDecoration(
@@ -2041,34 +2094,42 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                         ),
                         elevation: 0,
                       ),
-                      onPressed: () async {
-                        final h = double.tryParse(heightCtrl.text.trim());
-                        final w = double.tryParse(weightCtrl.text.trim());
-                        if (h == null || h <= 40 || h > 260) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Por favor ingresa una estatura válida en centímetros (ej: 170).')),
-                          );
-                          return;
-                        }
-                        if (w == null || w <= 10 || w > 350) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Por favor ingresa un peso válido en kilogramos (ej: 70.5).')),
-                          );
-                          return;
-                        }
+                      onPressed: saving
+                          ? null
+                          : () async {
+                              final h = double.tryParse(heightCtrl.text.trim().replaceAll(',', '.'));
+                              final w = double.tryParse(weightCtrl.text.trim().replaceAll(',', '.'));
+                              final messenger = ScaffoldMessenger.of(context);
+                              if (h == null || !h.isFinite || h <= 40 || h > 260) {
+                                messenger.showSnackBar(const SnackBar(
+                                  content: Text('Ingresa una estatura válida en centímetros.'),
+                                ));
+                                return;
+                              }
+                              if (w == null || !w.isFinite || w <= 10 || w > 350) {
+                                messenger.showSnackBar(const SnackBar(
+                                  content: Text('Ingresa un peso válido en kilogramos.'),
+                                ));
+                                return;
+                              }
 
-                        HapticFeedback.mediumImpact();
-                        await HealthModuleHelper.updateBodyMetrics(heightCm: h, weightKg: w);
-                        if (context.mounted) {
-                          Navigator.pop(bottomCtx);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              backgroundColor: Color(0xFF10B981),
-                              content: Text('Medidas e IMC actualizados exitosamente.'),
-                            ),
-                          );
-                        }
-                      },
+                              setModalState(() => saving = true);
+                              try {
+                                await HealthModuleHelper.updateBodyMetrics(heightCm: h, weightKg: w);
+                                if (!bottomCtx.mounted || !context.mounted) return;
+                                Navigator.pop(bottomCtx);
+                                messenger.showSnackBar(const SnackBar(
+                                  content: Text('Medidas e IMC actualizados exitosamente.'),
+                                ));
+                              } catch (_) {
+                                if (!bottomCtx.mounted || !context.mounted) return;
+                                setModalState(() => saving = false);
+                                messenger.showSnackBar(SnackBar(
+                                  backgroundColor: Theme.of(context).colorScheme.error,
+                                  content: const Text('No se pudieron guardar las medidas.'),
+                                ));
+                              }
+                            },
                       child: const Text(
                         'Guardar medidas',
                         style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),

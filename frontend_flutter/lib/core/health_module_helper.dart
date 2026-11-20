@@ -536,7 +536,7 @@ class HealthModuleHelper {
         bmi: bmi,
         bmiCategory: bmiCategory,
       );
-      unawaited(_loadBloodType(prefs));
+      unawaited(_loadBodyMetrics(prefs));
 
       if (isEnabled && !kIsWeb) {
         if (reminder && water < goal) {
@@ -779,7 +779,7 @@ class HealthModuleHelper {
         : null;
   }
 
-  static Future<void> _loadBloodType(SharedPreferences prefs) async {
+  static Future<void> _loadBodyMetrics(SharedPreferences prefs) async {
     final generation = _accountGeneration;
     final revision = _bodyRevision;
     final token = _accountToken(prefs, _activeUserId);
@@ -794,17 +794,26 @@ class HealthModuleHelper {
         return;
       }
       final profile = jsonDecode(response.body) as Map;
-      if (!profile.containsKey('blood_type')) return;
+      final current = metricsNotifier.value;
+      final height = (profile['height_cm'] as num?)?.toDouble() ?? current.heightCm;
+      final weight = (profile['weight_kg'] as num?)?.toDouble() ?? current.weightKg;
       final bloodType = profile['blood_type'] as String?;
+      final bmi = HealthMetrics.calculateBMI(height, weight);
       final key = _userKey(_bloodTypeKey);
-      metricsNotifier.value = metricsNotifier.value.copyWith(
+      metricsNotifier.value = current.copyWith(
+        heightCm: height,
+        weightKg: weight,
+        bmi: bmi,
+        bmiCategory: HealthMetrics.getBMICategory(bmi),
         bloodType: bloodType,
-        clearBloodType: bloodType == null,
+        clearBloodType: profile.containsKey('blood_type') && bloodType == null,
       );
-      if (bloodType == null) {
-        await prefs.remove(key);
-      } else {
-        await prefs.setString(key, bloodType);
+      if (profile.containsKey('blood_type')) {
+        if (bloodType == null) {
+          await prefs.remove(key);
+        } else {
+          await prefs.setString(key, bloodType);
+        }
       }
     } catch (_) {
       // Keep the last value for this account if the profile request fails.
@@ -851,25 +860,39 @@ class HealthModuleHelper {
     required double heightCm,
     required double weightKg,
   }) async {
-    final bmi = HealthMetrics.calculateBMI(heightCm, weightKg);
-    final bmiCat = HealthMetrics.getBMICategory(bmi);
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setDouble(_userKey(_heightKey), heightCm);
-      await prefs.setDouble(_userKey(_weightKey), weightKg);
-      await ApiClient.put('/users/me', {
-        'height_cm': heightCm,
-        'weight_kg': weightKg,
-      });
-    } catch (_) {}
-
+    final generation = _accountGeneration;
+    final prefs = await SharedPreferences.getInstance();
+    if (generation != _accountGeneration) return;
+    final token = _accountToken(prefs, _activeUserId);
+    if (token == null) throw StateError('Se requiere una sesión activa.');
+    final heightKey = _userKey(_heightKey);
+    final weightKey = _userKey(_weightKey);
+    final response = await ApiClient.put(
+      '/users/me',
+      {'height_cm': heightCm, 'weight_kg': weightKg},
+      accessToken: token,
+    ).timeout(const Duration(seconds: 10));
+    if (response.statusCode != 200) {
+      throw StateError('El servidor no guardó las medidas.');
+    }
+    final profile = jsonDecode(response.body) as Map;
+    final height = (profile['height_cm'] as num).toDouble();
+    final weight = (profile['weight_kg'] as num).toDouble();
+    if (generation != _accountGeneration) return;
+    _bodyRevision++;
+    final bmi = HealthMetrics.calculateBMI(height, weight);
     metricsNotifier.value = metricsNotifier.value.copyWith(
-      heightCm: heightCm,
-      weightKg: weightKg,
+      heightCm: height,
+      weightKg: weight,
       bmi: bmi,
-      bmiCategory: bmiCat,
+      bmiCategory: HealthMetrics.getBMICategory(bmi),
     );
+    try {
+      await prefs.setDouble(heightKey, height);
+      await prefs.setDouble(weightKey, weight);
+    } catch (_) {
+      // The server has already confirmed the update.
+    }
   }
 
   /// Añade agua (un vaso = 250 ml por defecto).
@@ -889,8 +912,8 @@ class HealthModuleHelper {
       // Meta de hidratación completada: cancelar recordatorios por el resto del día
       if (!kIsWeb) {
         await LocalNotificationService.cancelWaterReminder();
+        unawaited(ApiClient.put('/users/me', {'water_reminder_enabled': false}));
       }
-      unawaited(ApiClient.put('/users/me', {'water_reminder_enabled': false}));
     } else {
       // Conteo del intervalo a partir del momento en que bebió agua
       if (!kIsWeb &&
@@ -978,9 +1001,11 @@ class HealthModuleHelper {
           await LocalNotificationService.cancelWaterReminder();
         }
       }
-      try {
-        await ApiClient.put('/users/me', {'water_reminder_enabled': enabled});
-      } catch (_) {}
+      if (!kIsWeb) {
+        try {
+          await ApiClient.put('/users/me', {'water_reminder_enabled': enabled});
+        } catch (_) {}
+      }
     } catch (_) {}
     metricsNotifier.value = metricsNotifier.value.copyWith(
       waterReminderEnabled: enabled,

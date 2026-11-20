@@ -321,7 +321,7 @@ class _ProfileTabState extends State<ProfileTab> {
               () => _open('Módulo de Salud', const HealthTab()),
               icon: Icons.health_and_safety_rounded,
               subtitle: kIsWeb
-                  ? 'Tipo de sangre'
+                  ? 'Estatura, peso, IMC, hidratación y respiración'
                   : 'Estatura, peso, IMC, hidratación, respiración y pasos',
             ),
             if (_isDoctor)
