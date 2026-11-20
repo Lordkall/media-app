@@ -200,9 +200,9 @@ class _ProfileTabState extends State<ProfileTab> {
     }
   }
 
-  void _open(String title, Widget page) {
+  void _open(String title, Widget page, {VoidCallback? onSuccess}) {
     Navigator.of(context)
-        .push(PageRouteBuilder<void>(
+        .push(PageRouteBuilder<Object?>(
       pageBuilder: (_, animation, __) => page,
       transitionsBuilder: (_, animation, __, child) => SlideTransition(
         position: Tween<Offset>(begin: const Offset(0.08, 0), end: Offset.zero)
@@ -211,8 +211,10 @@ class _ProfileTabState extends State<ProfileTab> {
         child: FadeTransition(opacity: animation, child: child),
       ),
     ))
-        .then((_) {
-      if (mounted) _fetchData();
+        .then((success) {
+      if (!mounted) return;
+      if (success == true) onSuccess?.call();
+      _fetchData();
     });
   }
 
@@ -345,7 +347,17 @@ class _ProfileTabState extends State<ProfileTab> {
                   () => _open('Datos de la clínica',
                       _ClinicDataPage(user: _userData ?? const {}))),
             _menuRow('Seguridad de tu cuenta',
-                () => _open('Seguridad de tu cuenta', const _SecurityPage())),
+                () => _open(
+                      'Seguridad de tu cuenta',
+                      const _SecurityPage(),
+                      onSuccess: () {
+                        ScaffoldMessenger.of(context)
+                          ..clearSnackBars()
+                          ..showSnackBar(const SnackBar(
+                            content: Text('Contraseña cambiada con éxito'),
+                          ));
+                      },
+                    )),
             _menuRow(
                 'Acerca de Salud Now',
                 () => _open('Acerca de Salud Now',
@@ -1129,10 +1141,14 @@ class _SecurityPageState extends State<SecurityPage> {
             title: const Text('Cambiar clave de seguridad',
                 style: TextStyle(fontWeight: FontWeight.w500, fontSize: 16)),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const _ChangePasswordPage()))),
+            onTap: () async {
+              final changed = await Navigator.of(context).push<bool>(
+                MaterialPageRoute(builder: (_) => const _ChangePasswordPage()),
+              );
+              if (context.mounted && changed == true) {
+                Navigator.of(context).pop(true);
+              }
+            }),
         const Divider(height: 1),
         if (!kIsWeb)
           _isLoading
@@ -1188,6 +1204,58 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
   }
 
   @override
+  void dispose() {
+    current.dispose();
+    next.dispose();
+    repeat.dispose();
+    super.dispose();
+  }
+
+  Future<void> _changePassword() async {
+    final password = next.text;
+    if (password != repeat.text ||
+        password.length < 6 ||
+        !RegExp(r'[A-Z]').hasMatch(password) ||
+        !RegExp(r'[0-9]').hasMatch(password)) {
+      _showError('La nueva contraseña no cumple los requisitos o no coincide.');
+      return;
+    }
+
+    setState(() => busy = true);
+    try {
+      final response = await ApiClient.put('/users/me/password', {
+        'current_password': current.text,
+        'new_password': password,
+      }).timeout(const Duration(seconds: 15));
+      if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
+
+      if (response.statusCode == 200) {
+        FocusScope.of(context).unfocus();
+        current.clear();
+        next.clear();
+        repeat.clear();
+        Navigator.of(context).pop(true);
+        return;
+      }
+      _showError(response.statusCode == 400
+          ? 'La contraseña actual es incorrecta.'
+          : 'No se pudo cambiar la contraseña.');
+    } catch (_) {
+      if (mounted && ModalRoute.of(context)?.isCurrent == true) {
+        _showError('No se pudo confirmar el cambio de contraseña.');
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) =>
       _SettingsPage(title: 'Cambiar contraseña', children: [
         _pwdField('Contraseña actual', current, _obs1,
@@ -1199,31 +1267,7 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
         const Text(
             'Debe tener al menos 6 caracteres, letras, números y una mayúscula.'),
         FilledButton(
-            onPressed: busy
-                ? null
-                : () async {
-                    final p = next.text;
-                    if (p != repeat.text ||
-                        p.length < 6 ||
-                        !RegExp(r'[A-Z]').hasMatch(p) ||
-                        !RegExp(r'[a-zA-Z]').hasMatch(p) ||
-                        !RegExp(r'[0-9]').hasMatch(p)) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                          content: Text(
-                              'La nueva contraseña no cumple los requisitos o no coincide.')));
-                      return;
-                    }
-                    setState(() => busy = true);
-                    final r = await ApiClient.put('/users/me/password',
-                        {'current_password': current.text, 'new_password': p});
-                    if (context.mounted) {
-                      setState(() => busy = false);
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text(r.statusCode == 200
-                              ? 'Contraseña actualizada.'
-                              : 'La contraseña actual es incorrecta.')));
-                    }
-                  },
+            onPressed: busy ? null : _changePassword,
             child: const Text('Actualizar contraseña')),
       ]);
 }
