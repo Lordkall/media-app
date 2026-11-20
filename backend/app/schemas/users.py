@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator, computed_field
-from typing import Optional
+from typing import Literal, Optional
 from enum import Enum
 from datetime import date
 from app.core.demographics import local_today
@@ -141,6 +141,9 @@ class UserCreate(BaseModel):
             raise ValueError("Debe aceptar los términos y la política de privacidad")
         return accepted
 
+BloodType = Literal["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
+
+
 class UserUpdate(BaseModel):
     first_name: Optional[str] = Field(default=None, min_length=1, max_length=60)
     last_name: Optional[str] = Field(default=None, min_length=1, max_length=60)
@@ -151,6 +154,7 @@ class UserUpdate(BaseModel):
     birth_date: Optional[date] = None
     height_cm: Optional[float] = None
     weight_kg: Optional[float] = None
+    blood_type: Optional[BloodType] = None
     avatar_url: Optional[str] = None
     fcm_token: Optional[str] = None
     show_whatsapp: Optional[bool] = None
@@ -202,6 +206,7 @@ class UserResponse(BaseModel):
     birth_date: Optional[date] = None
     height_cm: Optional[float] = None
     weight_kg: Optional[float] = None
+    blood_type: Optional[BloodType] = None
     avatar_url: Optional[str] = None
     linked_doctor_id: Optional[int] = None
     assistant_doctor_name: Optional[str] = None

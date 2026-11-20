@@ -6,10 +6,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ApiClient {
   static const String baseUrl = 'https://saludnow.site/api/v1';
 
-  static Future<Map<String, String>> _getHeaders() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('access_token');
-
+  static Future<Map<String, String>> _getHeaders({String? accessToken}) async {
+    final token = accessToken ??
+        (await SharedPreferences.getInstance()).getString('access_token');
     return {
       'Content-Type': 'application/json',
       if (token != null) 'Authorization': 'Bearer $token',
@@ -46,17 +45,18 @@ class ApiClient {
     );
   }
 
-  static Future<http.Response> get(String endpoint) async {
+  static Future<http.Response> get(String endpoint,
+      {String? accessToken}) async {
     final url = Uri.parse('$baseUrl$endpoint');
-    final headers = await _getHeaders();
+    final headers = await _getHeaders(accessToken: accessToken);
 
     return await http.get(url, headers: headers);
   }
 
-  static Future<http.Response> put(
-      String endpoint, Map<String, dynamic> body) async {
+  static Future<http.Response> put(String endpoint, Map<String, dynamic> body,
+      {String? accessToken}) async {
     final url = Uri.parse('$baseUrl$endpoint');
-    final headers = await _getHeaders();
+    final headers = await _getHeaders(accessToken: accessToken);
 
     return await http.put(
       url,

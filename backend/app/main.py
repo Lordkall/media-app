@@ -66,6 +66,10 @@ async def appointment_history_cleanup_loop():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Commit the profile migration independently of the remaining startup migrations.
+    async with engine.begin() as conn:
+        await conn.execute(text("ALTER TABLE IF EXISTS users ADD COLUMN IF NOT EXISTS blood_type VARCHAR(3);"))
+
     # Migration on startup
     try:
         async with engine.begin() as conn:

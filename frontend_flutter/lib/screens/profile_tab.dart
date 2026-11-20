@@ -316,16 +316,14 @@ class _ProfileTabState extends State<ProfileTab> {
                           () => _open('Mis Direcciones',
                               _AddressPage(user: _userData ?? const {}))),
                     ]))),
-            if (!kIsWeb)
-              _menuRow(
-                'Módulo de Salud',
-                () => _open(
-                  'Módulo de Salud',
-                  const HealthTab(),
-                ),
-                icon: Icons.health_and_safety_rounded,
-                subtitle: 'Estatura, peso, IMC, hidratación, respiración y pasos',
-              ),
+            _menuRow(
+              'Módulo de Salud',
+              () => _open('Módulo de Salud', const HealthTab()),
+              icon: Icons.health_and_safety_rounded,
+              subtitle: kIsWeb
+                  ? 'Tipo de sangre'
+                  : 'Estatura, peso, IMC, hidratación, respiración y pasos',
+            ),
             if (_isDoctor)
               _menuRow(
                   'Datos Laborales',

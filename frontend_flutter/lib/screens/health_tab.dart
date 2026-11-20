@@ -26,6 +26,25 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
 
   // Selected day index in weekly bar chart (default today)
   int _selectedDayIndex = 0;
+  bool _savingBloodType = false;
+
+  Future<void> _saveBloodType(String? value) async {
+    setState(() => _savingBloodType = true);
+    try {
+      await HealthModuleHelper.updateBloodType(value);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Theme.of(context).colorScheme.error,
+            content: const Text('No se pudo guardar el tipo de sangre.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _savingBloodType = false);
+    }
+  }
 
   @override
   void initState() {
@@ -88,14 +107,45 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
     });
   }
 
+  Widget _buildBloodTypeSelector(HealthMetrics metrics) =>
+      PopupMenuButton<String>(
+        enabled: !_savingBloodType,
+        initialValue: metrics.bloodType ?? '',
+        onSelected: (value) => _saveBloodType(value.isEmpty ? null : value),
+        itemBuilder: (_) => [
+          for (final type in ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'])
+            PopupMenuItem(value: type, child: Text(type)),
+          const PopupMenuItem(value: '', child: Text('Sin registrar')),
+        ],
+        child: ListTile(
+          leading: const Icon(
+            Icons.bloodtype_outlined, color: Color(0xFF0756A4)),
+          title: const Text('Tipo de sangre'),
+          subtitle: Text(_savingBloodType
+              ? 'Guardando…'
+              : metrics.bloodType ?? 'Sin registrar'),
+          trailing: const Icon(Icons.arrow_drop_down),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
     if (kIsWeb) {
-      return const Scaffold(
-        body: Center(
-          child: Text(
-            'El módulo de salud está disponible exclusivamente en la aplicación móvil.',
-            style: TextStyle(fontSize: 16, color: Colors.grey),
+      return Scaffold(
+        appBar: AppBar(title: const Text('Módulo de Salud')),
+        body: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: ValueListenableBuilder<HealthMetrics>(
+                valueListenable: HealthModuleHelper.metricsNotifier,
+                builder: (context, metrics, _) => Card(
+                  child: _buildBloodTypeSelector(metrics),
+                ),
+              ),
+            ),
           ),
         ),
       );
@@ -1754,6 +1804,8 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
               ),
             ],
           ),
+          const SizedBox(height: 14),
+          _buildBloodTypeSelector(metrics),
           const SizedBox(height: 14),
           Material(
             color: Colors.transparent,

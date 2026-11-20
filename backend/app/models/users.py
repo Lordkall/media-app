@@ -28,6 +28,7 @@ class User(Base):
     gender: Mapped[Optional[str]] = mapped_column(String(20), default="No Especificado")
     birth_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     height_cm: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    blood_type: Mapped[Optional[str]] = mapped_column(String(3), nullable=True)
     weight_kg: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     last_weekly_schedule_reminder_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     avatar_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

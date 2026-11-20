@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:pedometer/pedometer.dart';
@@ -22,6 +23,7 @@ class HealthMetrics {
   final List<int> weeklySteps; // Mon-Sun daily steps (7 days, starts at [0,0,0,0,0,0,0])
   final bool breathingWeeklyReminderEnabled; // weekly breathing & anti-stress reminder
   final double? heightCm; // e.g. 170.0 cm
+  final String? bloodType;
   final double? weightKg; // e.g. 70.0 kg
   final double? bmi; // Body Mass Index (calculated automatically)
   final String bmiCategory; // "Bajo peso", "Normal", "Sobrepeso", "Obesidad"
@@ -41,6 +43,7 @@ class HealthMetrics {
     this.breathingWeeklyReminderEnabled = true,
     this.heightCm,
     this.weightKg,
+    this.bloodType,
     this.bmi,
     this.bmiCategory = 'Sin registrar',
   });
@@ -60,6 +63,8 @@ class HealthMetrics {
     bool? breathingWeeklyReminderEnabled,
     double? heightCm,
     double? weightKg,
+    String? bloodType,
+    bool clearBloodType = false,
     double? bmi,
     String? bmiCategory,
   }) {
@@ -81,6 +86,7 @@ class HealthMetrics {
           breathingWeeklyReminderEnabled ?? this.breathingWeeklyReminderEnabled,
       heightCm: heightCm ?? this.heightCm,
       weightKg: weightKg ?? this.weightKg,
+      bloodType: clearBloodType ? null : bloodType ?? this.bloodType,
       bmi: bmi ?? this.bmi,
       bmiCategory: bmiCategory ?? this.bmiCategory,
     );
@@ -143,7 +149,10 @@ class HealthModuleHelper {
   static const String _lastHardwareBootStepsKey =
       'health_last_hardware_boot_steps';
 
+  static const String _bloodTypeKey = 'health_blood_type';
   static String _activeUserId = 'guest';
+  static int _accountGeneration = 0;
+  static int _bodyRevision = 0;
   static bool _observerAttached = false;
 
   static String _userKey(String base) => 'user_${_activeUserId}_$base';
@@ -408,6 +417,7 @@ class HealthModuleHelper {
   /// Carga las métricas aisladas para el usuario activo (paciente, doctor o invitado).
   static Future<void> loadForUser(String? userId) async {
     final newUserId = (userId != null && userId.isNotEmpty) ? userId : 'guest';
+    _accountGeneration++;
     _activeUserId = newUserId;
 
     try {
@@ -522,9 +532,11 @@ class HealthModuleHelper {
         breathingWeeklyReminderEnabled: breathingWeekly,
         heightCm: height,
         weightKg: weight,
+        bloodType: prefs.getString(_userKey(_bloodTypeKey)),
         bmi: bmi,
         bmiCategory: bmiCategory,
       );
+      unawaited(_loadBloodType(prefs));
 
       if (isEnabled && !kIsWeb) {
         if (reminder && water < goal) {
@@ -559,6 +571,7 @@ class HealthModuleHelper {
 
   /// Limpia suscripciones y reinicia estado al cerrar sesión.
   static Future<void> onLogout() async {
+    _accountGeneration++;
     try {
       await _stepCountSubscription?.cancel();
       _stepCountSubscription = null;
@@ -757,6 +770,81 @@ class HealthModuleHelper {
       await prefs.setDouble(_userKey(_sleepHoursKey), sl);
       await prefs.setString(_userKey(_weeklyStepsKey), updatedWeekly.join(','));
     } catch (_) {}
+  }
+
+  static String? _accountToken(SharedPreferences prefs, String user) {
+    final token = prefs.getString('access_token');
+    return user != 'guest' && AuthHelper.getUserIdFromToken(token) == user
+        ? token
+        : null;
+  }
+
+  static Future<void> _loadBloodType(SharedPreferences prefs) async {
+    final generation = _accountGeneration;
+    final revision = _bodyRevision;
+    final token = _accountToken(prefs, _activeUserId);
+    if (token == null) return;
+
+    try {
+      final response = await ApiClient.get('/users/me', accessToken: token)
+          .timeout(const Duration(seconds: 10));
+      if (response.statusCode != 200 ||
+          generation != _accountGeneration ||
+          revision != _bodyRevision) {
+        return;
+      }
+      final profile = jsonDecode(response.body) as Map;
+      if (!profile.containsKey('blood_type')) return;
+      final bloodType = profile['blood_type'] as String?;
+      final key = _userKey(_bloodTypeKey);
+      metricsNotifier.value = metricsNotifier.value.copyWith(
+        bloodType: bloodType,
+        clearBloodType: bloodType == null,
+      );
+      if (bloodType == null) {
+        await prefs.remove(key);
+      } else {
+        await prefs.setString(key, bloodType);
+      }
+    } catch (_) {
+      // Keep the last value for this account if the profile request fails.
+    }
+  }
+
+  static Future<void> updateBloodType(String? bloodType) async {
+    final generation = _accountGeneration;
+    final prefs = await SharedPreferences.getInstance();
+    final token = _accountToken(prefs, _activeUserId);
+    if (token == null) throw StateError('Se requiere una sesión activa.');
+    final key = _userKey(_bloodTypeKey);
+    final response = await ApiClient.put(
+      '/users/me',
+      {'blood_type': bloodType},
+      accessToken: token,
+    ).timeout(const Duration(seconds: 10));
+    if (response.statusCode != 200) {
+      throw StateError('El servidor no guardó el tipo de sangre.');
+    }
+    final profile = jsonDecode(response.body) as Map;
+    if (!profile.containsKey('blood_type') ||
+        profile['blood_type'] != bloodType) {
+      throw StateError('El servidor no guardó el tipo de sangre.');
+    }
+    if (generation != _accountGeneration) return;
+    _bodyRevision++;
+    metricsNotifier.value = metricsNotifier.value.copyWith(
+      bloodType: bloodType,
+      clearBloodType: bloodType == null,
+    );
+    try {
+      if (bloodType == null) {
+        await prefs.remove(key);
+      } else {
+        await prefs.setString(key, bloodType);
+      }
+    } catch (_) {
+      // The server has already confirmed the update.
+    }
   }
 
   static Future<void> updateBodyMetrics({
