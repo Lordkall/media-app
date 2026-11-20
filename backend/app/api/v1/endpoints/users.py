@@ -256,12 +256,12 @@ async def update_users_me(
         parts = avatar_url.split(":")
         role = current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role)
         expected_role = "patient" if role == "admin" else role
-        avatar_counts = {"patient": 15, "doctor": 15, "assistant": 15, "clinic": 6}
+        # Each avatar sheet in AvatarCatalog has 6 columns and 3 rows.
+        preset_indices = {str(index) for index in range(18)}
         if (
             len(parts) != 3
             or parts[1] != expected_role
-            or not parts[2].isdigit()
-            or int(parts[2]) >= avatar_counts.get(expected_role, 0)
+            or parts[2] not in preset_indices
         ):
             raise HTTPException(status_code=400, detail="El avatar no corresponde a tu tipo de cuenta.")
     for field, value in update_data.items():
