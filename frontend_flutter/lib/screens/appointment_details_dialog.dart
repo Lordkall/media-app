@@ -116,6 +116,11 @@ Future<void> showAppointmentDetailsDialog(
                 ]),
               ),
               const SizedBox(height: 16),
+              if (isDoctor && appt['is_first_visit'] == true) ...[
+                _detail(Icons.person_add_outlined, 'Primera consulta',
+                    'Sin consultas previas registradas con este paciente.'),
+                const SizedBox(height: 12),
+              ],
               _detail(Icons.calendar_today, 'Fecha',
                   appt['date']?.toString() ?? ''),
               const SizedBox(height: 12),

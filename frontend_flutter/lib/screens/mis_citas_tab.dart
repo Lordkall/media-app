@@ -305,6 +305,11 @@ class _MisCitasTabState extends State<MisCitasTab> {
                   ),
                 ),
                 const SizedBox(height: 16),
+                if (isDoctor && appt['is_first_visit'] == true) ...[
+                  _buildDetailRow(Icons.person_add_outlined, 'Primera consulta',
+                      'Sin consultas previas registradas con este paciente.'),
+                  const SizedBox(height: 12),
+                ],
                 _buildDetailRow(Icons.calendar_today, 'Fecha', date),
                 const SizedBox(height: 12),
                 _buildDetailRow(

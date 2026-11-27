@@ -37,9 +37,8 @@ class LocalNotificationService {
         NotificationNavigation.open(response.payload);
       },
     );
-    final androidImplementation = _plugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+    final androidImplementation = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
     await androidImplementation?.createNotificationChannel(_channel);
     await androidImplementation?.requestNotificationsPermission();
     await androidImplementation?.requestExactAlarmsPermission();
@@ -258,8 +257,8 @@ class LocalNotificationService {
         11,
         0,
       );
-      while (scheduled.weekday != DateTime.wednesday ||
-          scheduled.isBefore(now)) {
+      while (
+          scheduled.weekday != DateTime.wednesday || scheduled.isBefore(now)) {
         scheduled = scheduled.add(const Duration(days: 1));
       }
 
@@ -345,58 +344,7 @@ class LocalNotificationService {
     } catch (_) {}
   }
 
-  /// Notificaciones Push periódicas de progreso de pasos (solo entre 6:00 AM y 10:00 PM).
-  static Future<void> showStepProgressReminder({
-    required int notificationId,
-    required String title,
-    required int steps,
-    required int goal,
-    required String message,
-  }) async {
-    final now = DateTime.now();
-    if (now.hour < 6 || now.hour >= 22) return;
-
-    try {
-      const channel = AndroidNotificationChannel(
-        'salud_now_step_reminders',
-        'Recordatorios de Pasos',
-        description: 'Notificaciones de progreso y meta diaria de pasos',
-        importance: Importance.high,
-      );
-      await _plugin
-          .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>()
-          ?.createNotificationChannel(channel);
-
-      await _plugin.show(
-        notificationId,
-        title,
-        message,
-        const NotificationDetails(
-          android: AndroidNotificationDetails(
-            'salud_now_step_reminders',
-            'Recordatorios de Pasos',
-            channelDescription:
-                'Notificaciones de progreso y meta diaria de pasos',
-            importance: Importance.high,
-            priority: Priority.high,
-            icon: 'ic_stat_salud_now',
-            playSound: true,
-          ),
-          iOS: DarwinNotificationDetails(
-            presentAlert: true,
-            presentBadge: true,
-            presentSound: true,
-          ),
-        ),
-        payload: '/health',
-      );
-    } catch (_) {}
-  }
-
-  /// Programa los recordatorios diarios de progreso de pasos a las 10:00 AM, 3:00 PM y 8:00 PM.
-  /// Al usar zonedSchedule con matchDateTimeComponents.time, el sistema operativo (AlarmManager en Android)
-  /// los dispara puntualmente todos los días incluso con la app cerrada.
+  /// Programa los avisos de pasos en horario de Caracas.
   static Future<void> scheduleDailyStepReminders() async {
     try {
       const channel = AndroidNotificationChannel(
@@ -412,7 +360,11 @@ class LocalNotificationService {
 
       await cancelStepReminders();
 
-      final now = tz.TZDateTime.now(tz.local);
+      final location = tz.getLocation('America/Caracas');
+      final now = tz.TZDateTime.now(location);
+      final android = _plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      final canScheduleExact = await android?.canScheduleExactNotifications();
 
       final reminders = [
         (
@@ -425,7 +377,7 @@ class LocalNotificationService {
         ),
         (
           id: 982,
-          hour: 15,
+          hour: 12,
           minute: 0,
           title: '🏃‍♂️ Progreso de pasos',
           body:
@@ -443,7 +395,7 @@ class LocalNotificationService {
 
       for (final r in reminders) {
         var scheduled = tz.TZDateTime(
-          tz.local,
+          location,
           now.year,
           now.month,
           now.day,
@@ -476,7 +428,9 @@ class LocalNotificationService {
               presentSound: true,
             ),
           ),
-          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          androidScheduleMode: canScheduleExact == false
+              ? AndroidScheduleMode.inexactAllowWhileIdle
+              : AndroidScheduleMode.exactAllowWhileIdle,
           matchDateTimeComponents: DateTimeComponents.time,
           payload: '/health',
         );

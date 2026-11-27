@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:pedometer/pedometer.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -21,8 +23,10 @@ class HealthMetrics {
   final int waterReminderIntervalHours; // e.g. 2 hours
   final bool isNativePedometerActive; // steps tracked natively
   final int stepGoal; // daily goal (default: 10000)
-  final List<int> weeklySteps; // Mon-Sun daily steps (7 days, starts at [0,0,0,0,0,0,0])
-  final bool breathingWeeklyReminderEnabled; // weekly breathing & anti-stress reminder
+  final List<int>
+      weeklySteps; // Mon-Sun daily steps (7 days, starts at [0,0,0,0,0,0,0])
+  final bool
+      breathingWeeklyReminderEnabled; // weekly breathing & anti-stress reminder
   final double? heightCm; // e.g. 170.0 cm
   final String? bloodType;
   final double? weightKg; // e.g. 70.0 kg
@@ -94,7 +98,10 @@ class HealthMetrics {
   }
 
   static double? calculateBMI(double? heightCm, double? weightKg) {
-    if (heightCm == null || weightKg == null || heightCm <= 0 || weightKg <= 0) {
+    if (heightCm == null ||
+        weightKg == null ||
+        heightCm <= 0 ||
+        weightKg <= 0) {
       return null;
     }
     final meters = heightCm / 100.0;
@@ -131,7 +138,10 @@ class HealthLifecycleObserver with WidgetsBindingObserver {
 class HealthModuleHelper {
   static const String _enabledKey = 'health_module_enabled';
   static const String _heartRateKey = 'health_metric_heart_rate';
-  static const String _stepsKey = 'health_metric_steps';
+  static const String _stepsKey = 'health_daily_steps_v2';
+  static const String _remoteStepsKey = 'health_synced_steps';
+  static const String _pendingStepsKey = 'health_pending_steps';
+  static const String _sensorOwnerKey = 'health_sensor_owner_v2';
   static const String _stepGoalKey = 'health_metric_step_goal';
   static const String _sleepHoursKey = 'health_metric_sleep_hours';
   static const String _waterMlKey = 'health_metric_water_ml';
@@ -145,15 +155,10 @@ class HealthModuleHelper {
   static const String _lastDayDateKey = 'health_last_day_date';
   static const String _weeklyStepsKey = 'health_weekly_steps';
   static const String _weeklyStepsWeekKey = 'health_weekly_steps_week';
-  static const String _hardwareBaselineStepsKey =
-      'health_hardware_step_baseline';
-  static const String _lastHardwareBootStepsKey =
-      'health_last_hardware_boot_steps';
-
+  static const String _sensorReadingKey = 'health_sensor_reading_v2';
   static const String _bloodTypeKey = 'health_blood_type';
+
   static String _activeUserId = 'guest';
-  static int _accountGeneration = 0;
-  static int _bodyRevision = 0;
   static bool _observerAttached = false;
 
   static String _userKey(String base) => 'user_${_activeUserId}_$base';
@@ -167,133 +172,145 @@ class HealthModuleHelper {
   static StreamSubscription<StepCount>? _stepCountSubscription;
   static Timer? _midnightCheckTimer;
 
-  /// Indica si ya se ha recibido al menos una lectura física real del hardware
-  /// de podómetro durante la sesión actual (o si el dispositivo no cuenta con sensor).
-  /// Esto evita notificaciones prematuras con 0 pasos al abrir la app tras haber caminado.
-  static bool _hasReceivedInitialHardwareSteps = false;
+  static const _backgroundSteps = MethodChannel('salud_now/background_steps');
+  static const _recordedStepsKey = 'health_background_steps';
+  static Future<void> _recordingQueue = Future<void>.value();
+  static bool _recordingPending = false;
 
-  static String _getTodayStr() =>
-      DateTime.now().toIso8601String().substring(0, 10);
+  static bool get _hasAndroidRecorder =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+  static Future<void> _trackingQueue = Future<void>.value();
+  static int _sensorGeneration = 0;
+  static int _accountGeneration = 0;
+  static int _bodyRevision = 0;
+  static bool _loaded = false;
+  static final Set<String> _syncingUsers = {};
+
+  static Future<void> _track(Future<void> Function() operation) {
+    final result = _trackingQueue.then((_) => operation());
+    _trackingQueue = result.catchError((Object error) {
+      debugPrint('Error actualizando el registro de pasos: $error');
+    });
+    return _trackingQueue;
+  }
+
+  static String _dayKey(DateTime date) =>
+      date.toIso8601String().substring(0, 10);
+
+  static String _getTodayStr() => _dayKey(DateTime.now());
 
   static String _getCurrentWeekMondayStr() {
     final now = DateTime.now();
-    final monday = DateTime(now.year, now.month, now.day)
-        .subtract(Duration(days: now.weekday - 1));
-    return monday.toIso8601String().substring(0, 10);
+    return _dayKey(DateTime(now.year, now.month, now.day - now.weekday + 1));
+  }
+
+  static String _dailyKey(String key, String day) => _userKey('${key}_$day');
+
+  static int _deviceTotal(SharedPreferences prefs, String day) => math.max(
+        prefs.getInt(_dailyKey(_stepsKey, day)) ?? 0,
+        prefs.getInt(_dailyKey(_recordedStepsKey, day)) ?? 0,
+      );
+
+  static int _dailyTotal(SharedPreferences prefs, String day) => math.max(
+        _deviceTotal(prefs, day),
+        prefs.getInt(_dailyKey(_remoteStepsKey, day)) ?? 0,
+      );
+
+  static Future<void> _refreshBackgroundSteps({bool history = false}) {
+    if (!_hasAndroidRecorder ||
+        !_loaded ||
+        _activeUserId == 'guest' ||
+        !isEnabledNotifier.value ||
+        (_recordingPending && !history)) {
+      return Future<void>.value();
+    }
+    final account = _activeUserId;
+    final generation = _accountGeneration;
+    _recordingPending = true;
+    final result = _recordingQueue.then((_) async {
+      if (generation != _accountGeneration ||
+          !isEnabledNotifier.value ||
+          !(await Permission.activityRecognition.status).isGranted) return;
+      final prefs = await SharedPreferences.getInstance();
+      if (_accountToken(prefs, account) == null) return;
+      final today = _getTodayStr();
+      final totals = await _backgroundSteps.invokeMapMethod<String, int>(
+        'refresh',
+        {
+          'account': account,
+          'seed': _deviceTotal(prefs, today),
+          'history': history
+        },
+      ).timeout(const Duration(seconds: 8));
+      if (totals == null || totals.isEmpty) return;
+
+      await _track(() async {
+        if (generation != _accountGeneration || !isEnabledNotifier.value)
+          return;
+        await _resetDay();
+        final before = metricsNotifier.value.steps;
+        for (final entry in totals.entries) {
+          final key = _dailyKey(_recordedStepsKey, entry.key);
+          final value = entry.value.clamp(0, 100000);
+          if (value <= (prefs.getInt(key) ?? 0)) continue;
+          await prefs.setInt(key, value);
+          await prefs.setInt(_dailyKey(_pendingStepsKey, entry.key),
+              _deviceTotal(prefs, entry.key));
+        }
+        final steps = _dailyTotal(prefs, _getTodayStr());
+        metricsNotifier.value = metricsNotifier.value.copyWith(
+          steps: steps,
+          weeklySteps: _readWeek(prefs, _getCurrentWeekMondayStr()),
+        );
+        if (steps > before) {
+          await _checkStepGoalCelebration(
+              steps, metricsNotifier.value.stepGoal);
+        }
+      });
+    }).catchError((Object error) {
+      debugPrint('No se pudo leer el registro de pasos en segundo plano.');
+    }).whenComplete(() {
+      _recordingPending = false;
+    });
+    _recordingQueue = result;
+    return result;
+  }
+
+  static Future<void> _stopBackgroundSteps(String? account) {
+    if (!_hasAndroidRecorder) return Future<void>.value();
+    _recordingQueue = _recordingQueue.then((_) async {
+      try {
+        await _backgroundSteps.invokeMethod<void>(
+            'stop', {'account': account}).timeout(const Duration(seconds: 5));
+      } catch (_) {
+        debugPrint('No se pudo detener el registro de pasos en segundo plano.');
+      }
+    });
+    return _recordingQueue;
   }
 
   static void _startMidnightTimer() {
     _midnightCheckTimer?.cancel();
-    _midnightCheckTimer = Timer.periodic(const Duration(minutes: 1), (_) {
-      checkMidnightReset();
-      _checkDailyStepReminders();
+    _midnightCheckTimer = Timer.periodic(const Duration(minutes: 1), (_) async {
+      await _track(_resetDay);
+      await _refreshBackgroundSteps();
+      unawaited(_syncSteps());
     });
   }
 
-  /// Se ejecuta automáticamente cuando la app vuelve al primer plano (foreground),
-  /// por ejemplo tras haber estado minimizada o con la pantalla bloqueada por horas.
   static Future<void> onAppResumed() async {
     unawaited(_refreshMedicationReminders());
-    try {
-      await checkMidnightReset();
-      if (isEnabledNotifier.value) {
-        _hasReceivedInitialHardwareSteps = false;
-        await initializePedometer(forceRestart: true);
-      }
-    } catch (e) {
-      debugPrint('Aviso en onAppResumed de HealthModuleHelper: $e');
+    await _track(_resetDay);
+    unawaited(_syncSteps(refresh: true));
+    if (isEnabledNotifier.value) {
+      await initializePedometer(forceRestart: true);
     }
   }
 
-  /// Se ejecuta automáticamente cuando la app pasa a segundo plano o se bloquea la pantalla.
   static Future<void> onAppPaused() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt(_userKey(_stepsKey), metricsNotifier.value.steps);
-      await prefs.setString(_userKey(_lastDayDateKey), _getTodayStr());
-    } catch (_) {}
-  }
-
-  /// Verifica las 3 notificaciones diarias de progreso de pasos (Mañana, Tarde y Noche).
-  /// Exclusivamente en la franja permitida de 6:00 AM a 10:00 PM (06:00 a 22:00) y si el módulo está activo.
-  static Future<void> _checkDailyStepReminders() async {
-    if (kIsWeb || !isEnabledNotifier.value) return;
-
-    // Si aún no hemos sincronizado la primera lectura del sensor físico de hardware,
-    // evitamos disparar una notificación con pasos en cero o desactualizados.
-    if (!_hasReceivedInitialHardwareSteps &&
-        (defaultTargetPlatform == TargetPlatform.android ||
-            defaultTargetPlatform == TargetPlatform.iOS)) {
-      return;
-    }
-
-    final now = DateTime.now();
-    // Restricción estricta de horario: entre 6:00 AM y 10:00 PM
-    if (now.hour < 6 || now.hour >= 22) return;
-
-    final todayStr = _getTodayStr();
-    final steps = metricsNotifier.value.steps;
-    final goal = metricsNotifier.value.stepGoal > 0
-        ? metricsNotifier.value.stepGoal
-        : 10000;
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-
-      // 1. Mañana (10:00 AM - 1:59 PM)
-      if (now.hour >= 10 && now.hour < 14) {
-        final lastMorning =
-            prefs.getString(_userKey('health_step_reminder_morning_date'));
-        if (lastMorning != todayStr) {
-          await prefs.setString(
-              _userKey('health_step_reminder_morning_date'), todayStr);
-          await LocalNotificationService.showStepProgressReminder(
-            notificationId: 981,
-            title: '🚶‍♂️ Tus pasos de hoy',
-            steps: steps,
-            goal: goal,
-            message:
-                '¡Comienza tu día en movimiento! Llevas $steps de $goal pasos dados.',
-          );
-        }
-      }
-
-      // 2. Tarde (3:00 PM - 6:59 PM)
-      if (now.hour >= 15 && now.hour < 19) {
-        final lastAfternoon =
-            prefs.getString(_userKey('health_step_reminder_afternoon_date'));
-        if (lastAfternoon != todayStr) {
-          await prefs.setString(
-              _userKey('health_step_reminder_afternoon_date'), todayStr);
-          await LocalNotificationService.showStepProgressReminder(
-            notificationId: 982,
-            title: '🏃‍♂️ Progreso de pasos',
-            steps: steps,
-            goal: goal,
-            message:
-                '¡Mitad del día! Llevas $steps de $goal pasos dados. ¡Sigue activo para alcanzar tu meta!',
-          );
-        }
-      }
-
-      // 3. Noche (8:00 PM - 9:59 PM, antes de las 10:00 PM)
-      if (now.hour >= 20 && now.hour < 22) {
-        final lastEvening =
-            prefs.getString(_userKey('health_step_reminder_evening_date'));
-        if (lastEvening != todayStr) {
-          await prefs.setString(
-              _userKey('health_step_reminder_evening_date'), todayStr);
-          await LocalNotificationService.showStepProgressReminder(
-            notificationId: 983,
-            title: '👟 Cierre del día',
-            steps: steps,
-            goal: goal,
-            message:
-                'Llevas $steps de $goal pasos caminados hoy. ¡Revisa tu resumen diario en el Módulo de Salud!',
-          );
-        }
-      }
-    } catch (_) {}
+    await _trackingQueue;
+    unawaited(_syncSteps());
   }
 
   /// Notificación push inmediata al alcanzar o superar la meta diaria de pasos.
@@ -321,88 +338,154 @@ class HealthModuleHelper {
     } catch (_) {}
   }
 
-  /// Verifica si ha pasado la medianoche (12:00 am) y reinicia agua y pasos a 0.
-  static Future<void> checkMidnightReset() async {
-    final todayStr = _getTodayStr();
+  static List<int> _readWeek(SharedPreferences prefs, String monday) {
+    final saved = prefs.getString(_userKey(_weeklyStepsWeekKey)) == monday
+        ? prefs.getString(_userKey(_weeklyStepsKey))?.split(',')
+        : null;
+    final start = DateTime.parse(monday);
+    final today = _getTodayStr();
+    return List.generate(7, (index) {
+      final day = _dayKey(DateTime(start.year, start.month, start.day + index));
+      final count = _dailyTotal(prefs, day);
+      if (count > 0 ||
+          day.compareTo(today) >= 0 ||
+          saved == null ||
+          index >= saved.length) {
+        return count;
+      }
+      return (int.tryParse(saved[index]) ?? 0).clamp(0, 100000);
+    });
+  }
+
+  static Future<void> _resetDay() async {
+    if (!_loaded) return;
     final prefs = await SharedPreferences.getInstance();
-    final savedDate = prefs.getString(_userKey(_lastDayDateKey));
+    final now = DateTime.now();
+    final today = _dayKey(now);
+    if (prefs.getString(_userKey(_lastDayDateKey)) == today) return;
 
-    if (savedDate != null && savedDate != todayStr) {
-      // Cruzó las 12:00 AM o nuevo día
-      _hasReceivedInitialHardwareSteps = false;
+    final weekly = _readWeek(prefs, _getCurrentWeekMondayStr());
+    await prefs.setInt(_userKey(_waterMlKey), 0);
+    await prefs.setString(_userKey(_lastDayDateKey), today);
 
-      // 1. Obtener la última lectura física de hardware registrada ayer
-      final lastRecordedBootSteps =
-          prefs.getInt(_userKey(_lastHardwareBootStepsKey));
-      final previousBaseline =
-          prefs.getInt(_userKey(_hardwareBaselineStepsKey));
-      final previousSteps = prefs.getInt(_userKey(_stepsKey)) ?? 0;
-
-      await prefs.setString(_userKey(_lastDayDateKey), todayStr);
-      await prefs.setInt(_userKey(_waterMlKey), 0);
-      await prefs.remove(_userKey('health_step_reminder_morning_date'));
-      await prefs.remove(_userKey('health_step_reminder_afternoon_date'));
-      await prefs.remove(_userKey('health_step_reminder_evening_date'));
-      await prefs.remove(_userKey('health_step_goal_celebrated_date'));
-
-      // 2. Establecer la línea base para hoy:
-      // Conservamos el último conteo de hardware de ayer como punto de partida de hoy.
-      // De esta manera, los pasos dados de madrugada o mañana con la app cerrada se cuentan para hoy.
-      int? newTodayBaseline;
-      if (lastRecordedBootSteps != null && lastRecordedBootSteps > 0) {
-        newTodayBaseline = lastRecordedBootSteps;
-      } else if (previousBaseline != null && previousBaseline > 0) {
-        newTodayBaseline = previousBaseline + previousSteps;
-      }
-
-      if (newTodayBaseline != null) {
-        await prefs.setInt(
-            _userKey(_hardwareBaselineStepsKey), newTodayBaseline);
-      } else {
-        await prefs.remove(_userKey(_hardwareBaselineStepsKey));
-      }
-
-      // Reiniciar pasos guardados de hoy a 0 provisionalmente
-      await prefs.setInt(_userKey(_stepsKey), 0);
-
-      final now = DateTime.now();
-      final mondayStr = _getCurrentWeekMondayStr();
-      final savedWeek = prefs.getString(_userKey(_weeklyStepsWeekKey));
-
-      List<int> updatedWeekly;
-      if (savedWeek != mondayStr) {
-        updatedWeekly = [0, 0, 0, 0, 0, 0, 0];
-        await prefs.setString(_userKey(_weeklyStepsWeekKey), mondayStr);
-      } else {
-        final raw = prefs.getString(_userKey(_weeklyStepsKey));
-        if (raw != null && raw.isNotEmpty) {
-          updatedWeekly =
-              raw.split(',').map((e) => int.tryParse(e) ?? 0).toList();
-          while (updatedWeekly.length < 7) {
-            updatedWeekly.add(0);
-          }
-        } else {
-          updatedWeekly = [0, 0, 0, 0, 0, 0, 0];
-        }
-      }
-      final todayWeekdayIdx = (now.weekday - 1).clamp(0, 6);
-      updatedWeekly[todayWeekdayIdx] = 0;
-      await prefs.setString(_userKey(_weeklyStepsKey), updatedWeekly.join(','));
-
-      metricsNotifier.value = metricsNotifier.value.copyWith(
-        steps: 0,
-        waterMilliliters: 0,
-        weeklySteps: updatedWeekly,
+    metricsNotifier.value = metricsNotifier.value.copyWith(
+      steps: weekly[now.weekday - 1],
+      waterMilliliters: 0,
+      weeklySteps: weekly,
+    );
+    if (!kIsWeb &&
+        metricsNotifier.value.waterReminderEnabled &&
+        isEnabledNotifier.value) {
+      await LocalNotificationService.scheduleWaterReminder(
+        intervalHours: metricsNotifier.value.waterReminderIntervalHours,
+        fromTime: now,
       );
-      if (!kIsWeb &&
-          metricsNotifier.value.waterReminderEnabled &&
-          isEnabledNotifier.value) {
-        await LocalNotificationService.scheduleWaterReminder(
-          intervalHours: metricsNotifier.value.waterReminderIntervalHours,
-          fromTime: DateTime.now(),
+    }
+  }
+
+  static String? _accountToken(SharedPreferences prefs, String user) {
+    final token = prefs.getString('access_token');
+    return user != 'guest' && AuthHelper.getUserIdFromToken(token) == user
+        ? token
+        : null;
+  }
+
+  static Future<void> _syncSteps({bool refresh = false}) async {
+    final user = _activeUserId;
+    final generation = _accountGeneration;
+    if (kIsWeb || !_loaded || user == 'guest' || !_syncingUsers.add(user)) {
+      return;
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = _accountToken(prefs, user);
+      if (token == null) return;
+      final prefix = 'user_${user}_${_pendingStepsKey}_';
+      final keys = prefs
+          .getKeys()
+          .where((key) => key.startsWith(prefix))
+          .toList()
+        ..sort();
+      final totals = {
+        for (final key in keys.take(100))
+          key.substring(prefix.length): prefs.getInt(key) ?? 0,
+      };
+      if (!refresh && totals.isEmpty) return;
+      final monday = _getCurrentWeekMondayStr();
+      final response = await ApiClient.put(
+        '/users/me/steps',
+        {'week_start': monday, 'totals': totals},
+        accessToken: token,
+      ).timeout(const Duration(seconds: 10));
+      if (response.statusCode != 200) return;
+      final remote = Map<String, int>.from(jsonDecode(response.body) as Map);
+      await _track(() async {
+        for (final entry in totals.entries) {
+          final key = '$prefix${entry.key}';
+          if (prefs.getInt(key) == entry.value) await prefs.remove(key);
+        }
+        if (generation != _accountGeneration) return;
+        await _cacheSyncedSteps(prefs, remote);
+        if (monday != _getCurrentWeekMondayStr()) return;
+        await _resetDay();
+        final weekly = _readWeek(prefs, monday);
+        metricsNotifier.value = metricsNotifier.value.copyWith(
+          steps: _dailyTotal(prefs, _getTodayStr()),
+          weeklySteps: weekly,
         );
+      });
+    } catch (error) {
+      debugPrint('No se pudo sincronizar el historial de pasos: $error');
+    } finally {
+      _syncingUsers.remove(user);
+    }
+  }
+
+  static Future<void> _cacheSyncedSteps(
+    SharedPreferences prefs,
+    Map<String, int> remote,
+  ) async {
+    for (final entry in remote.entries) {
+      final key = _dailyKey(_remoteStepsKey, entry.key);
+      if (entry.value > (prefs.getInt(key) ?? 0)) {
+        await prefs.setInt(key, entry.value);
       }
     }
+  }
+
+  static Future<List<int>> loadStepWeek(DateTime start) async {
+    final monday = _dayKey(start);
+    final generation = _accountGeneration;
+    final prefs = await SharedPreferences.getInstance();
+    if (generation != _accountGeneration) {
+      throw StateError('La cuenta cambió.');
+    }
+    final token = _accountToken(prefs, _activeUserId);
+    if (token != null) {
+      try {
+        final response = await ApiClient.get(
+          '/users/me/steps?week_start=$monday',
+          accessToken: token,
+        ).timeout(const Duration(seconds: 10));
+        if (response.statusCode != 200) {
+          throw StateError('Historial no disponible.');
+        }
+        final remote = Map<String, int>.from(jsonDecode(response.body) as Map);
+        await _track(() async {
+          if (generation == _accountGeneration) {
+            await _cacheSyncedSteps(prefs, remote);
+          }
+        });
+      } catch (_) {
+        if (generation != _accountGeneration ||
+            _readWeek(prefs, monday).every((total) => total == 0)) {
+          rethrow;
+        }
+      }
+    }
+    if (generation != _accountGeneration) throw StateError('La cuenta cambió.');
+    return _readWeek(prefs, monday);
   }
 
   /// Inicialización global al arrancar la app.
@@ -420,7 +503,8 @@ class HealthModuleHelper {
     try {
       await MedicationReminderService.refresh();
     } catch (_) {
-      debugPrint('No se pudieron reprogramar los recordatorios de medicamentos.');
+      debugPrint(
+          'No se pudieron reprogramar los recordatorios de medicamentos.');
     }
   }
 
@@ -433,275 +517,226 @@ class HealthModuleHelper {
   }
 
   /// Carga las métricas aisladas para el usuario activo (paciente, doctor o invitado).
-  static Future<void> loadForUser(String? userId) async {
-    final newUserId = (userId != null && userId.isNotEmpty) ? userId : 'guest';
-    _accountGeneration++;
-    _activeUserId = newUserId;
-    await _loadMedicationReminders(newUserId);
+  static Future<void> loadForUser(String? userId) => _track(() async {
+        final newUserId =
+            (userId != null && userId.isNotEmpty) ? userId : 'guest';
+        if (_loaded && _activeUserId == newUserId) return;
+        await _loadMedicationReminders(userId);
 
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final todayStr = _getTodayStr();
-      final savedDate = prefs.getString(_userKey(_lastDayDateKey));
-
-      int st = 0;
-      int water = 0;
-
-      if (savedDate == null) {
-        // Primera vez para este usuario
-        await prefs.setString(_userKey(_lastDayDateKey), todayStr);
-        await prefs.setInt(_userKey(_stepsKey), 0);
-        await prefs.setInt(_userKey(_waterMlKey), 0);
-        await prefs.remove(_userKey(_hardwareBaselineStepsKey));
-        await prefs.remove(_userKey(_lastHardwareBootStepsKey));
-        st = 0;
-        water = 0;
-      } else if (savedDate != todayStr) {
-        // Nuevo día: conservar el último registro de hardware de ayer como línea base de hoy
-        final lastRecordedBootSteps =
-            prefs.getInt(_userKey(_lastHardwareBootStepsKey));
-        final previousBaseline =
-            prefs.getInt(_userKey(_hardwareBaselineStepsKey));
-        final previousSteps = prefs.getInt(_userKey(_stepsKey)) ?? 0;
-
-        await prefs.setString(_userKey(_lastDayDateKey), todayStr);
-        await prefs.setInt(_userKey(_stepsKey), 0);
-        await prefs.setInt(_userKey(_waterMlKey), 0);
-        await prefs.remove(_userKey('health_step_reminder_morning_date'));
-        await prefs.remove(_userKey('health_step_reminder_afternoon_date'));
-        await prefs.remove(_userKey('health_step_reminder_evening_date'));
-        await prefs.remove(_userKey('health_step_goal_celebrated_date'));
-
-        int? newTodayBaseline;
-        if (lastRecordedBootSteps != null && lastRecordedBootSteps > 0) {
-          newTodayBaseline = lastRecordedBootSteps;
-        } else if (previousBaseline != null && previousBaseline > 0) {
-          newTodayBaseline = previousBaseline + previousSteps;
-        }
-
-        if (newTodayBaseline != null) {
-          await prefs.setInt(
-              _userKey(_hardwareBaselineStepsKey), newTodayBaseline);
-        } else {
-          await prefs.remove(_userKey(_hardwareBaselineStepsKey));
-        }
-
-        st = 0;
-        water = 0;
-      } else {
-        st = prefs.getInt(_userKey(_stepsKey)) ?? 0;
-        water = prefs.getInt(_userKey(_waterMlKey)) ?? 0;
-      }
-
-      // Manejo de pasos semanales (Lunes a Domingo)
-      final now = DateTime.now();
-      final mondayStr = _getCurrentWeekMondayStr();
-      final savedWeek = prefs.getString(_userKey(_weeklyStepsWeekKey));
-
-      List<int> weekly;
-      if (savedWeek != mondayStr) {
-        weekly = [0, 0, 0, 0, 0, 0, 0];
-        weekly[(now.weekday - 1).clamp(0, 6)] = st;
-        await prefs.setString(_userKey(_weeklyStepsWeekKey), mondayStr);
-        await prefs.setString(_userKey(_weeklyStepsKey), weekly.join(','));
-      } else {
-        final raw = prefs.getString(_userKey(_weeklyStepsKey));
-        if (raw != null && raw.isNotEmpty) {
-          weekly = raw.split(',').map((e) => int.tryParse(e) ?? 0).toList();
-          while (weekly.length < 7) {
-            weekly.add(0);
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await _stopPedometer();
+          if (_loaded && _activeUserId != newUserId) {
+            unawaited(_stopBackgroundSteps(_activeUserId));
+            await prefs.remove(_userKey(_sensorReadingKey));
+            await prefs.remove(_sensorOwnerKey);
           }
-        } else {
-          weekly = [0, 0, 0, 0, 0, 0, 0];
-        }
-        weekly[(now.weekday - 1).clamp(0, 6)] = st;
-        await prefs.setString(_userKey(_weeklyStepsKey), weekly.join(','));
-      }
+          _activeUserId = newUserId;
+          _accountGeneration++;
+          _loaded = true;
+          final now = DateTime.now();
+          final today = _dayKey(now);
+          final monday = _getCurrentWeekMondayStr();
+          final st = _dailyTotal(prefs, today);
+          final water = prefs.getString(_userKey(_lastDayDateKey)) == today
+              ? prefs.getInt(_userKey(_waterMlKey)) ?? 0
+              : 0;
+          final weekly = _readWeek(prefs, monday);
+          weekly[now.weekday - 1] = st;
+          await prefs.setInt(_userKey(_waterMlKey), water);
+          await prefs.setString(_userKey(_lastDayDateKey), today);
+          await prefs.setString(_userKey(_weeklyStepsWeekKey), monday);
+          await prefs.setString(_userKey(_weeklyStepsKey), weekly.join(','));
 
-      final isEnabled = prefs.getBool(_userKey(_enabledKey)) ?? false;
-      isEnabledNotifier.value = isEnabled;
+          final isEnabled = prefs.getBool(_userKey(_enabledKey)) ?? false;
+          isEnabledNotifier.value = isEnabled;
+          if (!isEnabled || newUserId == 'guest')
+            unawaited(_stopBackgroundSteps(null));
 
-      final hr = prefs.getInt(_userKey(_heartRateKey)) ?? 72;
-      final stepGoal = prefs.getInt(_userKey(_stepGoalKey)) ?? 10000;
-      final sl = prefs.getDouble(_userKey(_sleepHoursKey)) ?? 7.3;
-      final quality = HealthMetrics.calculateSleepQuality(sl);
-      final goal = prefs.getInt(_userKey(_waterGoalKey)) ?? 2000;
-      final reminder = prefs.getBool(_userKey(_waterReminderKey)) ?? false;
-      final interval = prefs.getInt(_userKey(_waterIntervalKey)) ?? 2;
-      final breathingWeekly =
-          prefs.getBool(_userKey(_breathingWeeklyReminderKey)) ?? true;
+          final hr = prefs.getInt(_userKey(_heartRateKey)) ?? 72;
+          final stepGoal = prefs.getInt(_userKey(_stepGoalKey)) ?? 10000;
+          final sl = prefs.getDouble(_userKey(_sleepHoursKey)) ?? 7.3;
+          final quality = HealthMetrics.calculateSleepQuality(sl);
+          final goal = prefs.getInt(_userKey(_waterGoalKey)) ?? 2000;
+          final reminder = prefs.getBool(_userKey(_waterReminderKey)) ?? false;
+          final interval = prefs.getInt(_userKey(_waterIntervalKey)) ?? 2;
+          final breathingWeekly =
+              prefs.getBool(_userKey(_breathingWeeklyReminderKey)) ?? true;
 
-      final height = prefs.getDouble(_userKey(_heightKey));
-      final weight = prefs.getDouble(_userKey(_weightKey));
-      final bmi = HealthMetrics.calculateBMI(height, weight);
-      final bmiCategory = HealthMetrics.getBMICategory(bmi);
+          final height = prefs.getDouble(_userKey(_heightKey));
+          final weight = prefs.getDouble(_userKey(_weightKey));
+          final bmi = HealthMetrics.calculateBMI(height, weight);
+          final bmiCategory = HealthMetrics.getBMICategory(bmi);
 
-      metricsNotifier.value = HealthMetrics(
-        heartRate: hr,
-        steps: st,
-        stepGoal: stepGoal,
-        sleepHours: sl,
-        sleepQuality: quality,
-        waterMilliliters: water,
-        waterGoalMilliliters: goal,
-        waterReminderEnabled: reminder,
-        waterReminderIntervalHours: interval,
-        isNativePedometerActive: true,
-        weeklySteps: weekly,
-        breathingWeeklyReminderEnabled: breathingWeekly,
-        heightCm: height,
-        weightKg: weight,
-        bloodType: prefs.getString(_userKey(_bloodTypeKey)),
-        bmi: bmi,
-        bmiCategory: bmiCategory,
-      );
-      unawaited(_loadBodyMetrics(prefs));
-
-      if (isEnabled && !kIsWeb) {
-        if (reminder && water < goal) {
-          await LocalNotificationService.scheduleWaterReminder(
-            intervalHours: interval,
-            fromTime: DateTime.now(),
+          metricsNotifier.value = HealthMetrics(
+            heartRate: hr,
+            steps: st,
+            stepGoal: stepGoal,
+            sleepHours: sl,
+            sleepQuality: quality,
+            waterMilliliters: water,
+            waterGoalMilliliters: goal,
+            waterReminderEnabled: reminder,
+            waterReminderIntervalHours: interval,
+            isNativePedometerActive: true,
+            weeklySteps: weekly,
+            breathingWeeklyReminderEnabled: breathingWeekly,
+            heightCm: height,
+            weightKg: weight,
+            bloodType: prefs.getString(_userKey(_bloodTypeKey)),
+            bmi: bmi,
+            bmiCategory: bmiCategory,
           );
-        }
-        if (breathingWeekly) {
-          await LocalNotificationService.scheduleWeeklyBreathingReminder();
-        }
-        await LocalNotificationService.scheduleDailyStepReminders();
-        unawaited(initializePedometer(forceRestart: true));
-        // Permitimos que el sensor físico actualice los pasos antes de chequear recordatorios.
-        // Como respaldo de seguridad para dispositivos lentos o sin sensor, se ejecuta tras 4 segundos.
-        Future.delayed(const Duration(seconds: 4), () {
-          if (!_hasReceivedInitialHardwareSteps) {
-            _hasReceivedInitialHardwareSteps = true;
-            _checkDailyStepReminders();
+
+          if (isEnabled && !kIsWeb) {
+            if (reminder && water < goal) {
+              await LocalNotificationService.scheduleWaterReminder(
+                intervalHours: interval,
+                fromTime: DateTime.now(),
+              );
+            }
+            if (breathingWeekly) {
+              await LocalNotificationService.scheduleWeeklyBreathingReminder();
+            }
+            await LocalNotificationService.scheduleDailyStepReminders();
+            unawaited(initializePedometer());
+          } else if (!isEnabled && !kIsWeb) {
+            await LocalNotificationService.cancelWaterReminder();
+            await LocalNotificationService.cancelWeeklyBreathingReminder();
+            await LocalNotificationService.cancelStepReminders();
           }
-        });
-        unawaited(_checkStepGoalCelebration(st, stepGoal));
-      } else if (!isEnabled && !kIsWeb) {
-        await LocalNotificationService.cancelWaterReminder();
-        await LocalNotificationService.cancelWeeklyBreathingReminder();
-        await LocalNotificationService.cancelStepReminders();
-      }
-    } catch (e) {
-      debugPrint('Error al cargar métricas de salud para usuario $_activeUserId: $e');
-    }
+          unawaited(_syncSteps(refresh: true));
+          unawaited(_loadBodyMetrics());
+        } catch (e) {
+          debugPrint(
+              'Error al cargar métricas de salud para usuario $_activeUserId: $e');
+        }
+      });
+
+  static Future<void> _stopPedometer() async {
+    _sensorGeneration++;
+    final subscription = _stepCountSubscription;
+    _stepCountSubscription = null;
+    await subscription?.cancel();
   }
 
-  /// Limpia suscripciones y reinicia estado al cerrar sesión.
   static Future<void> onLogout() async {
     await _loadMedicationReminders(null);
-    _accountGeneration++;
-    try {
-      await _stepCountSubscription?.cancel();
-      _stepCountSubscription = null;
-      _hasReceivedInitialHardwareSteps = false;
-      _activeUserId = 'guest';
+    await _refreshBackgroundSteps(history: true);
+    final account = _activeUserId;
+    await _track(() async {
       isEnabledNotifier.value = false;
-      metricsNotifier.value = const HealthMetrics(
-        waterMilliliters: 0,
-        weeklySteps: [0, 0, 0, 0, 0, 0, 0],
-      );
+      await _stopPedometer();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_userKey(_sensorReadingKey));
+      await prefs.remove(_sensorOwnerKey);
+    });
+    await _stopBackgroundSteps(account);
+    await _syncSteps();
+    await _track(() async {
+      _accountGeneration++;
+      _activeUserId = 'guest';
+      _loaded = false;
+      isEnabledNotifier.value = false;
+      metricsNotifier.value = const HealthMetrics();
       if (!kIsWeb) {
         await LocalNotificationService.cancelWaterReminder();
         await LocalNotificationService.cancelWeeklyBreathingReminder();
         await LocalNotificationService.cancelStepReminders();
       }
-    } catch (_) {}
+    });
   }
 
-  /// Inicializa el sensor de podómetro nativo en Android / iOS y solicita permisos de actividad física.
-  /// Mantiene la línea base física guardada para contar pasos con precisión en tiempo real
-  /// y acumular exactamente los pasos dados mientras la aplicación estuvo cerrada.
   static Future<void> initializePedometer({bool forceRestart = false}) async {
-    if (kIsWeb) return;
-    if (defaultTargetPlatform != TargetPlatform.android &&
-        defaultTargetPlatform != TargetPlatform.iOS) {
+    if (kIsWeb ||
+        (defaultTargetPlatform != TargetPlatform.android &&
+            defaultTargetPlatform != TargetPlatform.iOS) ||
+        !isEnabledNotifier.value) {
       return;
     }
-    if (!isEnabledNotifier.value) return;
 
+    final account = _accountGeneration;
     try {
-      var status = await Permission.activityRecognition.status;
-      if (!status.isGranted) {
-        status = await Permission.activityRecognition.request();
-      }
-      if (!status.isGranted) {
-        _hasReceivedInitialHardwareSteps = true;
-      }
-
-      if (status.isGranted) {
-        await checkMidnightReset();
-
-        if (_stepCountSubscription != null && !forceRestart) {
-          return;
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        var status = await Permission.activityRecognition.status;
+        if (!status.isGranted) {
+          status = await Permission.activityRecognition.request();
         }
-
-        await _stepCountSubscription?.cancel();
-        _stepCountSubscription = Pedometer.stepCountStream.listen(
-          (StepCount event) async {
-            final nowDayStr = _getTodayStr();
-            final currentBootSteps = event.steps;
-
-            final prefs = await SharedPreferences.getInstance();
-            final curSavedDate = prefs.getString(_userKey(_lastDayDateKey));
-            if (curSavedDate != null && curSavedDate != nowDayStr) {
-              await checkMidnightReset();
-            }
-
-            final baselineKey = _userKey(_hardwareBaselineStepsKey);
-            int? savedBaseline = prefs.getInt(baselineKey);
-
-            if (savedBaseline == null) {
-              // Primera lectura del sensor en el día:
-              // Establecemos la línea base de hardware descontando los pasos ya guardados hoy
-              final existingSteps = prefs.getInt(_userKey(_stepsKey)) ?? 0;
-              savedBaseline = currentBootSteps - existingSteps;
-              await prefs.setInt(baselineKey, savedBaseline);
-            } else if (currentBootSteps < savedBaseline) {
-              // El teléfono se reinició (el contador de hardware empezó de 0)
-              final lastSteps = prefs.getInt(_userKey(_stepsKey)) ?? 0;
-              if (lastSteps > 0) {
-                savedBaseline = currentBootSteps - lastSteps;
-              } else {
-                savedBaseline = 0;
-              }
-              await prefs.setInt(baselineKey, savedBaseline);
-            }
-
-            final todaySteps =
-                (currentBootSteps - savedBaseline).clamp(0, 100000);
-            _hasReceivedInitialHardwareSteps = true;
-
-            // Guardamos el último conteo de hardware de forma persistente para transiciones entre días
-            await prefs.setInt(
-                _userKey(_lastHardwareBootStepsKey), currentBootSteps);
-
-            // Actualizar métricas en memoria de inmediato para tiempo real sin retrasos
-            await updateMetrics(
-              heartRate: metricsNotifier.value.heartRate,
-              sleepHours: metricsNotifier.value.sleepHours,
-              steps: todaySteps,
-            );
-            await _checkStepGoalCelebration(
-              todaySteps,
-              metricsNotifier.value.stepGoal,
-            );
-            // Ahora que los pasos están sincronizados y actualizados con la lectura real del sensor,
-            // verificamos si corresponde el recordatorio de pasos.
-            await _checkDailyStepReminders();
-          },
-          onError: (error) {
-            _hasReceivedInitialHardwareSteps = true;
-            debugPrint(
-                'Aviso: Sensor de podómetro no disponible en este dispositivo: $error');
-          },
-          cancelOnError: false,
-        );
+        if (!status.isGranted) return;
+        if (account == _accountGeneration) {
+          unawaited(
+              _refreshBackgroundSteps(history: true).then((_) => _syncSteps()));
+        }
       }
-    } catch (e) {
-      debugPrint('Aviso inicializando sensor de podómetro: $e');
+
+      await _track(() async {
+        if (account != _accountGeneration || !isEnabledNotifier.value) return;
+        if (_stepCountSubscription != null && !forceRestart) return;
+        await _stopPedometer();
+        final generation = _sensorGeneration;
+        _stepCountSubscription = Pedometer.stepCountStream.listen(
+          (event) => unawaited(_track(() async {
+            if (generation != _sensorGeneration || !isEnabledNotifier.value) {
+              return;
+            }
+            await _recordReading(event);
+          })),
+          onError: (Object error) {
+            debugPrint('Sensor de podómetro no disponible: $error');
+          },
+        );
+      });
+    } catch (error) {
+      debugPrint('Aviso inicializando sensor de podómetro: $error');
     }
+  }
+
+  static Future<void> _recordReading(StepCount event) async {
+    await _resetDay();
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+    final today = _dayKey(now);
+    final sensorKey = _userKey(_sensorReadingKey);
+    if (_dayKey(event.timeStamp) != today) return;
+    final reading = event.steps;
+    final old = prefs.getString(sensorKey)?.split(':');
+    final previous = old != null &&
+            old.length == 2 &&
+            old.first == today &&
+            prefs.getString(_sensorOwnerKey) == _activeUserId
+        ? int.tryParse(old.last)
+        : null;
+
+    // El sensor entrega un acumulado. Un cambio de día, de cuenta o un
+    // reinicio del contador requiere una nueva lectura de referencia.
+    if (previous == null || reading < previous) {
+      await prefs.setString(sensorKey, '$today:$reading');
+      await prefs.setString(_sensorOwnerKey, _activeUserId);
+      return;
+    }
+    if (reading == previous) return;
+
+    final stepsKey = _dailyKey(_stepsKey, today);
+    final localSteps =
+        ((prefs.getInt(stepsKey) ?? 0) + reading - previous).clamp(0, 100000);
+    await Future.wait([
+      prefs.setString(sensorKey, '$today:$reading'),
+      prefs.setInt(stepsKey, localSteps),
+      if (_activeUserId != 'guest')
+        prefs.setInt(
+          _dailyKey(_pendingStepsKey, today),
+          math.max(localSteps,
+              prefs.getInt(_dailyKey(_recordedStepsKey, today)) ?? 0),
+        ),
+    ]);
+    final steps = _dailyTotal(prefs, today);
+    if (steps == metricsNotifier.value.steps) return;
+    final weekly = _readWeek(prefs, _getCurrentWeekMondayStr());
+    metricsNotifier.value = metricsNotifier.value.copyWith(
+      steps: steps,
+      weeklySteps: weekly,
+    );
+    await _checkStepGoalCelebration(steps, metricsNotifier.value.stepGoal);
   }
 
   /// Activa o desactiva el módulo de salud globalmente.
@@ -714,22 +749,19 @@ class HealthModuleHelper {
 
       if (!kIsWeb) {
         if (!enabled) {
+          unawaited(_stopBackgroundSteps(_activeUserId));
           // Desactivar: cancelar todas las notificaciones del módulo de salud
           await LocalNotificationService.cancelWeeklyBreathingReminder();
           await LocalNotificationService.cancelWaterReminder();
           await LocalNotificationService.cancelStepReminders();
-          await _stepCountSubscription?.cancel();
-          _stepCountSubscription = null;
+          await _track(() async {
+            await _stopPedometer();
+            await prefs.remove(_userKey(_sensorReadingKey));
+            await prefs.remove(_sensorOwnerKey);
+          });
           unawaited(
               ApiClient.put('/users/me', {'water_reminder_enabled': false}));
         } else {
-          // Solicitar permiso de reconocimiento de actividad física inmediatamente al activar
-          if (defaultTargetPlatform == TargetPlatform.android ||
-              defaultTargetPlatform == TargetPlatform.iOS) {
-            final permStatus = await Permission.activityRecognition.request();
-            debugPrint('Permiso de actividad física solicitado: $permStatus');
-          }
-
           // Activar: iniciar podómetro y reprogramar recordatorios según preferencias
           await LocalNotificationService.scheduleDailyStepReminders();
           await initializePedometer(forceRestart: true);
@@ -750,61 +782,17 @@ class HealthModuleHelper {
             unawaited(
                 ApiClient.put('/users/me', {'water_reminder_enabled': false}));
           }
-          unawaited(_checkDailyStepReminders());
         }
       }
     } catch (_) {}
   }
 
-  static Future<void> updateMetrics({
-    int? heartRate,
-    double? sleepHours,
-    int? steps,
-  }) async {
-    final hr = heartRate ?? metricsNotifier.value.heartRate;
-    final sl = sleepHours ?? metricsNotifier.value.sleepHours;
-    final currentSteps = steps ?? metricsNotifier.value.steps;
-    final quality = HealthMetrics.calculateSleepQuality(sl);
-
-    final now = DateTime.now();
-    final weekdayIdx = (now.weekday - 1).clamp(0, 6);
-    final updatedWeekly = List<int>.from(metricsNotifier.value.weeklySteps);
-    while (updatedWeekly.length < 7) {
-      updatedWeekly.add(0);
-    }
-    updatedWeekly[weekdayIdx] = currentSteps;
-
-    // Notificar inmediatamente a los oyentes de la UI para actualización instantánea en tiempo real
-    metricsNotifier.value = metricsNotifier.value.copyWith(
-      heartRate: hr,
-      steps: currentSteps,
-      sleepHours: sl,
-      sleepQuality: quality,
-      weeklySteps: updatedWeekly,
-    );
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt(_userKey(_heartRateKey), hr);
-      if (steps != null) await prefs.setInt(_userKey(_stepsKey), steps);
-      await prefs.setDouble(_userKey(_sleepHoursKey), sl);
-      await prefs.setString(_userKey(_weeklyStepsKey), updatedWeekly.join(','));
-    } catch (_) {}
-  }
-
-  static String? _accountToken(SharedPreferences prefs, String user) {
-    final token = prefs.getString('access_token');
-    return user != 'guest' && AuthHelper.getUserIdFromToken(token) == user
-        ? token
-        : null;
-  }
-
-  static Future<void> _loadBodyMetrics(SharedPreferences prefs) async {
+  static Future<void> _loadBodyMetrics() async {
     final generation = _accountGeneration;
     final revision = _bodyRevision;
+    final prefs = await SharedPreferences.getInstance();
     final token = _accountToken(prefs, _activeUserId);
     if (token == null) return;
-
     try {
       final response = await ApiClient.get('/users/me', accessToken: token)
           .timeout(const Duration(seconds: 10));
@@ -813,13 +801,22 @@ class HealthModuleHelper {
           revision != _bodyRevision) {
         return;
       }
-      final profile = jsonDecode(response.body) as Map;
+      final profile = jsonDecode(response.body) as Map<String, dynamic>;
       final current = metricsNotifier.value;
-      final height = (profile['height_cm'] as num?)?.toDouble() ?? current.heightCm;
-      final weight = (profile['weight_kg'] as num?)?.toDouble() ?? current.weightKg;
+      final height =
+          (profile['height_cm'] as num?)?.toDouble() ?? current.heightCm;
+      final weight =
+          (profile['weight_kg'] as num?)?.toDouble() ?? current.weightKg;
       final bloodType = profile['blood_type'] as String?;
       final bmi = HealthMetrics.calculateBMI(height, weight);
       final key = _userKey(_bloodTypeKey);
+      if (profile.containsKey('blood_type')) {
+        if (bloodType == null) {
+          unawaited(prefs.remove(key));
+        } else {
+          unawaited(prefs.setString(key, bloodType));
+        }
+      }
       metricsNotifier.value = current.copyWith(
         heightCm: height,
         weightKg: weight,
@@ -828,15 +825,8 @@ class HealthModuleHelper {
         bloodType: bloodType,
         clearBloodType: profile.containsKey('blood_type') && bloodType == null,
       );
-      if (profile.containsKey('blood_type')) {
-        if (bloodType == null) {
-          await prefs.remove(key);
-        } else {
-          await prefs.setString(key, bloodType);
-        }
-      }
-    } catch (_) {
-      // Keep the last value for this account if the profile request fails.
+    } catch (error) {
+      debugPrint('No se pudieron cargar los datos de salud: $error');
     }
   }
 
@@ -932,7 +922,8 @@ class HealthModuleHelper {
       // Meta de hidratación completada: cancelar recordatorios por el resto del día
       if (!kIsWeb) {
         await LocalNotificationService.cancelWaterReminder();
-        unawaited(ApiClient.put('/users/me', {'water_reminder_enabled': false}));
+        unawaited(
+            ApiClient.put('/users/me', {'water_reminder_enabled': false}));
       }
     } else {
       // Conteo del intervalo a partir del momento en que bebió agua

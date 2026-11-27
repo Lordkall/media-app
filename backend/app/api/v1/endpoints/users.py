@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 import base64
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import delete, or_, select, update
+from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy.dialects.postgresql import insert
 from app.core.database import get_db
-from app.models.users import User, RoleEnum as DatabaseRoleEnum
-from app.schemas.users import UserResponse, UserUpdate, PasswordChange
+from app.models.users import DailyStepCount, User, RoleEnum as DatabaseRoleEnum
+from app.schemas.users import PasswordChange, StepSync, UserResponse, UserUpdate
 
 # ... (the rest is unchanged below, but the import was at line 6, I should replace line 6)
 from app.api.v1.endpoints.auth import router as auth_router # just to import something if needed, but we'll use Depends
@@ -271,6 +272,53 @@ async def update_users_me(
     await db.commit()
     await db.refresh(current_user)
     return current_user
+
+async def read_step_week(db: AsyncSession, user_id: int, week_start: date) -> dict[str, int]:
+    totals = await db.execute(
+        select(DailyStepCount.day, DailyStepCount.steps).where(
+            DailyStepCount.user_id == user_id,
+            DailyStepCount.day >= week_start,
+            DailyStepCount.day <= week_start + timedelta(days=6),
+        )
+    )
+    return {day.isoformat(): steps for day, steps in totals}
+
+
+def validate_step_week(week_start: date) -> None:
+    if week_start.weekday() != 0 or week_start > date.max - timedelta(days=6):
+        raise HTTPException(status_code=422, detail="La semana debe comenzar un lunes.")
+
+
+@router.get("/me/steps")
+async def get_daily_steps(
+    week_start: date,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    validate_step_week(week_start)
+    return await read_step_week(db, current_user.id, week_start)
+
+
+@router.put("/me/steps")
+async def sync_daily_steps(
+    payload: StepSync,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    validate_step_week(payload.week_start)
+    if payload.totals:
+        insert_totals = insert(DailyStepCount).values([
+            {"user_id": current_user.id, "day": day, "steps": steps}
+            for day, steps in sorted(payload.totals.items())
+        ])
+        await db.execute(insert_totals.on_conflict_do_update(
+            index_elements=[DailyStepCount.user_id, DailyStepCount.day],
+            set_={"steps": func.greatest(DailyStepCount.steps, insert_totals.excluded.steps)},
+        ))
+    result = await read_step_week(db, current_user.id, payload.week_start)
+    await db.commit()
+    return result
+
 
 @router.put("/me/password")
 async def update_password_me(

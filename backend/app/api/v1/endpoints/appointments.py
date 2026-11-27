@@ -599,6 +599,31 @@ async def get_my_appointments(
     result = await db.execute(query)
     appointments = result.scalars().all()
 
+    first_visit_ids: set[int] = set()
+    if current_user.role == RoleEnum.DOCTOR:
+        upcoming_visits = [
+            appt for appt in appointments
+            if appt.status == AppointmentStatus.SCHEDULED
+            and appt.patient_id is not None
+            and not appt.is_for_dependent
+        ]
+        if upcoming_visits:
+            patient_ids = {appt.patient_id for appt in upcoming_visits}
+            prior_patients = set(await db.scalars(
+                select(DoctorPatientHistory.patient_id).where(
+                    DoctorPatientHistory.doctor_id == doctor_id,
+                    DoctorPatientHistory.patient_id.in_(patient_ids),
+                )
+            ))
+            prior_patients.update(
+                appt.patient_id for appt in appointments
+                if appt.status == AppointmentStatus.COMPLETED
+            )
+            first_visit_ids = {
+                appt.id for appt in upcoming_visits
+                if appt.patient_id not in prior_patients
+            }
+
     vip_by_doctor: dict[int, bool] = {}
     from app.models.subscriptions import Subscription, SubscriptionStatus, SubscriptionPlan
     from app.core.clinic_access import active_clinic_subscription
@@ -728,6 +753,7 @@ async def get_my_appointments(
 
         out.append({
             "id": appt.id,
+            **({"is_first_visit": True} if appt.id in first_visit_ids else {}),
             "patient_id": appt.patient_id,
             "doctor_id": appt.doctor_id,
             "doctor_name": display_name,

@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../core/api_client.dart';
 import '../widgets/profile_avatar.dart';
@@ -662,6 +663,105 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
     );
   }
 
+  Future<List<dynamic>> _loadReceipts(String role, int ownerId) async {
+    final response = await ApiClient.get('/admin/payment-receipts/$role/$ownerId')
+        .timeout(const Duration(seconds: 15));
+    if (response.statusCode != 200) throw StateError('No se pudo cargar el historial.');
+    return jsonDecode(response.body) as List<dynamic>;
+  }
+
+  Future<Uint8List> _loadReceipt(int id) async {
+    final response = await ApiClient.get('/admin/payment-receipts/$id')
+        .timeout(const Duration(seconds: 15));
+    if (response.statusCode != 200) throw StateError('Comprobante no disponible.');
+    return base64Decode((jsonDecode(response.body) as Map)['screenshot_base64'] as String);
+  }
+
+  void _showReceipts(String role, int ownerId) {
+    final receipts = _loadReceipts(role, ownerId);
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Comprobantes de pago'),
+        content: SizedBox(
+          width: 420,
+          child: FutureBuilder<List<dynamic>>(
+            future: receipts,
+            builder: (context, snapshot) {
+              if (snapshot.hasError) return const Text('No se pudieron cargar los comprobantes.');
+              if (!snapshot.hasData) return const LinearProgressIndicator();
+              final items = snapshot.data!;
+              if (items.isEmpty) return const Text('Aún no hay capturas de pago.');
+              return SizedBox(
+                height: 280,
+                child: ListView.builder(
+                  itemCount: items.length,
+                  itemBuilder: (context, index) {
+                    final receipt = items[index] as Map<String, dynamic>;
+                    final date = DateTime.tryParse(receipt['created_at'] as String? ?? '');
+                    final dateLabel = date == null
+                        ? ''
+                        : MaterialLocalizations.of(context).formatCompactDate(date.toLocal());
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.receipt_long_outlined),
+                      title: Text('Referencia ${receipt['reference'] ?? 'sin registrar'}'),
+                      subtitle: Text([
+                        if (dateLabel.isNotEmpty) dateLabel,
+                        if (receipt['amount_bs'] case final num amount)
+                          'Bs. ${amount.toStringAsFixed(2)}',
+                      ].join(' · ')),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () =>
+                          _showReceipt(dialogContext, receipt['id'] as int),
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showReceipt(BuildContext context, int id) {
+    final receipt = _loadReceipt(id);
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Captura de pago'),
+        content: SizedBox(
+          width: 480,
+          child: FutureBuilder<Uint8List>(
+            future: receipt,
+            builder: (context, snapshot) {
+              if (snapshot.hasError) return const Text('No se pudo abrir la captura.');
+              if (!snapshot.hasData) return const LinearProgressIndicator();
+              return Image.memory(
+                snapshot.data!,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const Text('No se pudo abrir la captura.'),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSubCard(
     int targetId,
     int userId,
@@ -829,6 +929,11 @@ class _AdminSubscriptionsTabState extends State<AdminSubscriptionsTab> {
                 ],
               ),
             ],
+          ),
+          TextButton.icon(
+            onPressed: () => _showReceipts(role, targetId),
+            icon: const Icon(Icons.receipt_long_outlined),
+            label: const Text('Ver comprobantes'),
           ),
           // Approve pending payment button (most important action)
           if (pendingSubId != null) ...[

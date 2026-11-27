@@ -12,6 +12,21 @@ import org.json.JSONArray
 class MainActivity : FlutterFragmentActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        val stepRecording = BackgroundStepRecording(applicationContext)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "salud_now/background_steps")
+            .setMethodCallHandler { call, result ->
+                val account = call.argument<String>("account")
+                when {
+                    call.method == "stop" -> stepRecording.stop(account, result)
+                    call.method != "refresh" -> result.notImplemented()
+                    account.isNullOrEmpty() ->
+                        result.error("step_recording", "Se requiere una cuenta activa.", null)
+                    else -> stepRecording.refresh(
+                        account, call.argument<Int>("seed") ?: 0,
+                        call.argument<Boolean>("history") ?: false, result,
+                    )
+                }
+            }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "salud_now/medication_reminders")
             .setMethodCallHandler { call, result ->
                 try {

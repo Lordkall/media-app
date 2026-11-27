@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import delete, func, select, update, or_
 from app.core.database import get_db
@@ -10,7 +10,7 @@ from app.models.notifications import Notification, NotificationType
 from app.models.clinics import Clinic
 from app.api.v1.endpoints.users import get_current_user
 from app.core.subscription_service import GRACE_PERIOD_DAYS
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Literal
 import logging
 
 router = APIRouter()
@@ -589,6 +589,46 @@ async def deactivate_clinic_subscription(
         sub.status = SubscriptionStatus.CANCELLED
         await db.commit()
     return {"message": "Subscription deactivated"}
+
+@router.get("/payment-receipts/{owner_kind}/{owner_id}")
+async def list_payment_receipts(
+    owner_kind: Literal["doctor", "clinic"],
+    owner_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    check_admin(current_user)
+    owner_column = Subscription.doctor_id if owner_kind == "doctor" else Subscription.clinic_id
+    receipts = await db.execute(
+        select(Subscription.id, Subscription.reference_number, Subscription.amount_bs,
+               Subscription.created_at)
+        .where(owner_column == owner_id,
+               Subscription.screenshot_base64.is_not(None),
+               Subscription.screenshot_base64 != "")
+        .order_by(Subscription.created_at.desc(), Subscription.id.desc())
+    )
+    return [
+        {"id": sub_id, "reference": reference, "amount_bs": amount, "created_at": created_at}
+        for sub_id, reference, amount, created_at in receipts
+    ]
+
+
+@router.get("/payment-receipts/{sub_id}")
+async def get_payment_receipt(
+    sub_id: int,
+    response: Response,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    check_admin(current_user)
+    screenshot = await db.scalar(
+        select(Subscription.screenshot_base64).where(Subscription.id == sub_id)
+    )
+    if not screenshot:
+        raise HTTPException(status_code=404, detail="Comprobante no disponible.")
+    response.headers["Cache-Control"] = "no-store"
+    return {"screenshot_base64": screenshot}
+
 
 @router.post("/subscriptions/{sub_id}/approve")
 async def approve_subscription(

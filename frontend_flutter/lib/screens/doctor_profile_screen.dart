@@ -56,6 +56,8 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
   int? _selectedTurnNumber;
   String? _selectedReason;
   final _pricePreview = GlobalKey<AppointmentPricePreviewState>();
+  Map<String, dynamic>? _quotedPrice;
+  DateTime? _firstAvailableDate;
   bool _isSubmittingBooking = false;
   final _customReasonController = TextEditingController();
   bool _bookingForDependent = false;
@@ -329,6 +331,16 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
       }).toList()
         ..sort((a, b) => a['date'].toString().compareTo(b['date'].toString()));
 
+      if (result.isNotEmpty && mounted) {
+        final firstDate = DateTime.parse(result.first['date'].toString());
+        _firstAvailableDate = firstDate;
+        final initialDate = _selectedBookingDate ?? firstDate;
+        final doctorId = int.tryParse(_doctor['id']?.toString() ?? '');
+        if (doctorId != null && _selectedReason == null) {
+          _prefetchConsultationQuote(doctorId, initialDate);
+        }
+      }
+
       if (_selectedBookingDate != null && mounted) {
         final targetKey = _dateKey(_selectedBookingDate!);
         final idx =
@@ -352,6 +364,24 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
     } catch (_) {
       return [];
     }
+  }
+
+  Future<void> _prefetchConsultationQuote(int doctorId, DateTime date) async {
+    try {
+      final endpoint = appointmentPriceEndpoint(
+        doctorId: doctorId,
+        date: _dateKey(date),
+        reason: 'Consulta',
+      );
+      final response = await ApiClient.get(endpoint);
+      if (response.statusCode != 200 || !mounted || _selectedReason != null) {
+        return;
+      }
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      setState(() {
+        _quotedPrice = {...data, 'endpoint': endpoint};
+      });
+    } catch (_) {}
   }
 
   List<Map<String, dynamic>> _availableSlots(Map<String, dynamic> day) =>
@@ -655,6 +685,11 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                           : options.first['turn_number']
                                               as int?;
                                     });
+                                    if (_selectedReason == null &&
+                                        doctorId != null) {
+                                      _prefetchConsultationQuote(
+                                          doctorId, date);
+                                    }
                                   },
                                 );
                               },
@@ -735,6 +770,10 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                           date: _dateKey(selectedDate),
                           reason: reason,
                         ),
+                        onPriceChanged: (quote) {
+                          if (!mounted) return;
+                          setState(() => _quotedPrice = quote);
+                        },
                       ),
                     ],
                   ],
@@ -1098,30 +1137,128 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
           child: Row(
             children: [
               Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Consulta',
-                        style: TextStyle(color: Color(0xFF64748B))),
-                    Text(
-                      appointmentPriceLabel((consultationFee * 100).round()),
-                      style: const TextStyle(
-                        color: Color(0xFF0B2545),
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    if (_bcvRate != null && consultationFee > 0)
-                      Text(
-                        'Bs. ${(consultationFee * _bcvRate!).toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          color: Color(0xFF0056B3),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
+                child: Builder(
+                  builder: (context) {
+                    final doctorId =
+                        int.tryParse(_doctor['id']?.toString() ?? '');
+                    final activeReason = _selectedReason ?? 'Consulta';
+                    final activeDate =
+                        _selectedBookingDate ?? _firstAvailableDate;
+                    final expectedEndpoint =
+                        (doctorId != null && activeDate != null)
+                            ? appointmentPriceEndpoint(
+                                doctorId: doctorId,
+                                date: _dateKey(activeDate),
+                                reason: activeReason,
+                              )
+                            : null;
+                    final hasMatchingQuote = _quotedPrice != null &&
+                        expectedEndpoint != null &&
+                        _quotedPrice!['endpoint'] == expectedEndpoint;
+
+                    final defaultCents = (consultationFee * 100).round();
+                    final totalCents = hasMatchingQuote &&
+                            _quotedPrice!['total_cents'] is int
+                        ? _quotedPrice!['total_cents'] as int
+                        : defaultCents;
+                    final baseCents =
+                        hasMatchingQuote && _quotedPrice!['base_cents'] is int
+                            ? _quotedPrice!['base_cents'] as int
+                            : totalCents;
+                    final discountPercent = hasMatchingQuote &&
+                            _quotedPrice!['discount_percent'] is int
+                        ? _quotedPrice!['discount_percent'] as int
+                        : 0;
+
+                    final reasonLabel =
+                        appointmentReasons[activeReason] ?? activeReason;
+                    final hasDiscount = discountPercent > 0;
+                    final isFree = totalCents == 0;
+                    final highlightPrice = hasDiscount || isFree;
+
+                    return AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      child: Align(
+                        key: ValueKey(
+                            '$reasonLabel-$totalCents-$discountPercent'),
+                        alignment: Alignment.centerLeft,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 6,
+                              runSpacing: 2,
+                              children: [
+                                Text(
+                                  reasonLabel,
+                                  style: const TextStyle(
+                                    color: Color(0xFF475569),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                if (hasDiscount)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 7, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF059669),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                      '-$discountPercent% DTO',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 8,
+                              children: [
+                                Text(
+                                  appointmentPriceLabel(totalCents),
+                                  style: TextStyle(
+                                    color: highlightPrice
+                                        ? const Color(0xFF059669)
+                                        : const Color(0xFF0B2545),
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                                if (hasDiscount || (isFree && baseCents > 0))
+                                  Text(
+                                    priceInUsd(baseCents),
+                                    style: const TextStyle(
+                                      color: Color(0xFF94A3B8),
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      decoration: TextDecoration.lineThrough,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            if (_bcvRate != null && totalCents > 0)
+                              Text(
+                                'Bs. ${((totalCents / 100.0) * _bcvRate!).toStringAsFixed(2)}',
+                                style: const TextStyle(
+                                  color: Color(0xFF0056B3),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                          ],
                         ),
                       ),
-                  ],
+                    );
+                  },
                 ),
               ),
               const SizedBox(width: 12),

@@ -51,3 +51,13 @@ class User(Base):
     patient_profile: Mapped[Optional["Patient"]] = relationship(back_populates="user")
     clinic_profile: Mapped[Optional["Clinic"]] = relationship(back_populates="user", foreign_keys="[Clinic.user_id]")
     notifications: Mapped[List["Notification"]] = relationship(back_populates="user")
+
+
+class DailyStepCount(Base):
+    __tablename__ = "daily_step_counts"
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    day: Mapped[date] = mapped_column(Date, primary_key=True)
+    steps: Mapped[int] = mapped_column(nullable=False)

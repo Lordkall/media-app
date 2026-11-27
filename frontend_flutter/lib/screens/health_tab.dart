@@ -32,6 +32,38 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
   Timer? _webWaterReminder;
   Timer? _webBreathingReminder;
   (bool, int, int, int)? _webWaterSettings;
+  DateTime? _historyWeek;
+  List<int>? _historySteps;
+  bool _loadingHistory = false;
+
+  void _changeStepWeek(int direction) {
+    final now = DateTime.now();
+    final currentWeek = DateTime(now.year, now.month, now.day - now.weekday + 1);
+    final start = _historyWeek ?? currentWeek;
+    final next = DateTime(start.year, start.month, start.day + direction * 7);
+    setState(() {
+      _historyWeek = next.isBefore(currentWeek) ? next : null;
+      _historySteps = null;
+      _loadingHistory = _historyWeek != null;
+      _selectedDayIndex = _historyWeek == null ? now.weekday - 1 : 6;
+    });
+    if (_historyWeek != null) unawaited(_loadStepWeek(next));
+  }
+
+  Future<void> _loadStepWeek(DateTime week) async {
+    try {
+      final steps = await HealthModuleHelper.loadStepWeek(week);
+      if (mounted && _historyWeek == week) {
+        setState(() => _historySteps = steps);
+      }
+    } catch (_) {
+      // La tarjeta muestra una opción para reintentar.
+    } finally {
+      if (mounted && _historyWeek == week) {
+        setState(() => _loadingHistory = false);
+      }
+    }
+  }
 
   Future<void> _saveBloodType(String? value) async {
     setState(() => _savingBloodType = true);
@@ -1195,7 +1227,13 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
 
   // --- 3. Tarjeta de Pasos en la Semana (Azul Gradiente) ---
   Widget _buildWeeklyStepsCard(HealthMetrics metrics) {
-    final weekly = metrics.weeklySteps;
+    final historyWeek = _historyWeek;
+    final weekly = historyWeek == null
+        ? metrics.weeklySteps
+        : _historySteps ?? const <int>[];
+    final end = historyWeek == null ? null : DateTime(
+      historyWeek.year, historyWeek.month, historyWeek.day + 6,
+    );
     // Días de la semana: L, M, M, J, V, S, D
     const dayLabels = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
@@ -1283,66 +1321,91 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
           ),
           const SizedBox(height: 18),
 
-          // Sub-encabezado: Historial semanal
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
-              Text(
-                'Historial de la semana',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF64748B),
+            children: [
+              IconButton(
+                onPressed: () => _changeStepWeek(-1),
+                tooltip: 'Semana anterior',
+                icon: const Icon(Icons.chevron_left),
+              ),
+              Flexible(
+                child: Text(
+                  historyWeek == null || end == null
+                      ? 'Esta semana'
+                      : '${historyWeek.day}/${historyWeek.month}/${historyWeek.year}'
+                          ' – ${end.day}/${end.month}/${end.year}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF64748B),
+                  ),
                 ),
               ),
-              Text(
-                'Lunes a Domingo',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Color(0xFF94A3B8),
-                ),
+              IconButton(
+                onPressed: historyWeek == null ? null : () => _changeStepWeek(1),
+                tooltip: 'Semana siguiente',
+                icon: const Icon(Icons.chevron_right),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-
-          // Gráfico de 7 barras verticales redondeadas en Azul Gradiente
-          SizedBox(
-            height: 140,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: List.generate(7, (index) {
-                final daySteps = index < weekly.length ? weekly[index] : 0;
-                final isSelected = index == _selectedDayIndex;
-                final fraction = maxSteps > 0
-                    ? (daySteps / maxSteps).clamp(daySteps > 0 ? 0.16 : 0.08, 1.0)
-                    : 0.08;
-
-                return GestureDetector(
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    setState(() => _selectedDayIndex = index);
+          if (_loadingHistory)
+            const SizedBox(
+              height: 140,
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (historyWeek != null && _historySteps == null)
+            SizedBox(
+              height: 140,
+              child: Center(
+                child: TextButton(
+                  onPressed: () {
+                    setState(() => _loadingHistory = true);
+                    unawaited(_loadStepWeek(historyWeek));
                   },
-                  behavior: HitTestBehavior.opaque,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      // Etiqueta flotante con la cantidad exacta de pasos (ej: "32 pasos", "0 pasos")
-                      if (isSelected) ...[
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            '$daySteps pasos',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF0756A4),
+                  child: const Text('Reintentar cargar el historial'),
+                ),
+              ),
+            )
+          else
+            // Gráfico de 7 barras verticales redondeadas en Azul Gradiente
+            SizedBox(
+              height: 140,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: List.generate(7, (index) {
+                  final daySteps = index < weekly.length ? weekly[index] : 0;
+                  final isSelected = index == _selectedDayIndex;
+                  final fraction = maxSteps > 0
+                      ? (daySteps / maxSteps).clamp(daySteps > 0 ? 0.16 : 0.08, 1.0)
+                      : 0.08;
+
+                  return GestureDetector(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _selectedDayIndex = index);
+                    },
+                    behavior: HitTestBehavior.opaque,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        // Etiqueta flotante con la cantidad exacta de pasos (ej: "32 pasos", "0 pasos")
+                        if (isSelected) ...[
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              '$daySteps pasos',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF0756A4),
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                      ] else ...[
+                          const SizedBox(height: 4),
+                        ] else ...[
                         const SizedBox(height: 18),
                       ],
 

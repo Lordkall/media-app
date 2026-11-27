@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator, computed_field
-from typing import Literal, Optional
+from typing import Annotated, Literal, Optional
 from enum import Enum
 from datetime import date
 from app.core.demographics import local_today
@@ -142,6 +142,11 @@ class UserCreate(BaseModel):
         return accepted
 
 BloodType = Literal["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
+
+
+class StepSync(BaseModel):
+    week_start: date
+    totals: dict[date, Annotated[int, Field(strict=True, ge=0, le=100000)]] = Field(max_length=100)
 
 
 class UserUpdate(BaseModel):
