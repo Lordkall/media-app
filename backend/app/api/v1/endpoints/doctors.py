@@ -221,7 +221,7 @@ async def get_appointment_price(
     category: AppointmentCategory,
     db: AsyncSession = Depends(get_db),
 ):
-    doctor = await db.scalar(select(Doctor).where(Doctor.id == doctor_id, Doctor.is_approved.is_(True)))
+    doctor = await db.get(Doctor, doctor_id)
     if doctor is None:
         raise HTTPException(status_code=404, detail="Médico no encontrado")
     return appointment_price(doctor, category, appointment_date)
