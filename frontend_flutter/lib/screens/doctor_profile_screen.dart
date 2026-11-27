@@ -1182,6 +1182,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                         key: ValueKey(
                             '$reasonLabel-$totalCents-$discountPercent'),
                         alignment: Alignment.centerLeft,
+                        heightFactor: 1.0,
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
