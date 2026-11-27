@@ -82,6 +82,8 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSAlarmKitUsageDescription</key>
+	<string>Salud Now usa las alarmas para avisarte cuándo tomar tus medicamentos.</string>
 	<key>NSMotionUsageDescription</key>
 	<string>Salud Now utiliza el sensor de movimiento y podómetro nativo de tu iPhone para contar tus pasos diarios.</string>
 	<key>NSHealthShareUsageDescription</key>

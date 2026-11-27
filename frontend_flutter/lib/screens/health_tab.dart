@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../core/health_module_helper.dart';
+import '../core/medication_reminders.dart';
+import '../widgets/medication_reminders_card.dart';
 
 class HealthTab extends StatefulWidget {
   const HealthTab({super.key});
@@ -292,6 +294,10 @@ class _HealthTabState extends State<HealthTab> with TickerProviderStateMixin {
                             // 1. Medidas Corporales & IMC (Estatura, Peso, IMC)
                             _buildBodyMetricsCard(context, metrics),
                             const SizedBox(height: 18),
+                            if (MedicationReminderService.supported) ...[
+                              const MedicationRemindersCard(),
+                              const SizedBox(height: 18),
+                            ],
 
                             // 2. Tarjeta de Hidratación (Azul gradiente)
                             _buildHydrationCard(metrics),

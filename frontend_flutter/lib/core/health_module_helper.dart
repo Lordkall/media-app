@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'api_client.dart';
 import 'auth_helper.dart';
 import 'local_notification_service.dart';
+import 'medication_reminders.dart';
 
 class HealthMetrics {
   final int heartRate; // bpm (default: 72)
@@ -192,6 +193,7 @@ class HealthModuleHelper {
   /// Se ejecuta automáticamente cuando la app vuelve al primer plano (foreground),
   /// por ejemplo tras haber estado minimizada o con la pantalla bloqueada por horas.
   static Future<void> onAppResumed() async {
+    unawaited(_refreshMedicationReminders());
     try {
       await checkMidnightReset();
       if (isEnabledNotifier.value) {
@@ -414,11 +416,28 @@ class HealthModuleHelper {
     await loadForUser(userId);
   }
 
+  static Future<void> _refreshMedicationReminders() async {
+    try {
+      await MedicationReminderService.refresh();
+    } catch (_) {
+      debugPrint('No se pudieron reprogramar los recordatorios de medicamentos.');
+    }
+  }
+
+  static Future<void> _loadMedicationReminders(String? userId) async {
+    try {
+      await MedicationReminderService.activate(userId);
+    } catch (_) {
+      debugPrint('No se pudieron cargar los recordatorios de medicamentos.');
+    }
+  }
+
   /// Carga las métricas aisladas para el usuario activo (paciente, doctor o invitado).
   static Future<void> loadForUser(String? userId) async {
     final newUserId = (userId != null && userId.isNotEmpty) ? userId : 'guest';
     _accountGeneration++;
     _activeUserId = newUserId;
+    await _loadMedicationReminders(newUserId);
 
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -571,6 +590,7 @@ class HealthModuleHelper {
 
   /// Limpia suscripciones y reinicia estado al cerrar sesión.
   static Future<void> onLogout() async {
+    await _loadMedicationReminders(null);
     _accountGeneration++;
     try {
       await _stepCountSubscription?.cancel();
