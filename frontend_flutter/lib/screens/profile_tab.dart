@@ -13,6 +13,7 @@ import '../models/avatar_catalog.dart';
 import '../models/ve_catalogs.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/avatar_sprite.dart';
+import '../widgets/settings_ui.dart';
 import '../core/health_module_helper.dart';
 import '../core/distribution_config.dart';
 import 'health_tab.dart';
@@ -303,14 +304,38 @@ class _ProfileTabState extends State<ProfileTab> {
                 () => _open(
                     'Tus Datos',
                     _ProfileMenu(title: 'Tus Datos', children: [
-                      _menuRow(
-                          'Información Personal',
-                          () => _open('Información Personal',
-                              _PersonalInfoPage(user: _userData ?? const {}))),
-                      _menuRow(
-                          'Mis Direcciones',
-                          () => _open('Mis Direcciones',
-                              _AddressPage(user: _userData ?? const {}))),
+                      const SettingsBanner(
+                        icon: Icons.manage_accounts_rounded,
+                        title: 'Administra tu información',
+                        subtitle:
+                            'Mantén actualizados tus datos personales y direcciones de contacto.',
+                      ),
+                      const SizedBox(height: 16),
+                      SettingsCard(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 6),
+                        child: Column(
+                          children: [
+                            _menuRow(
+                              'Información Personal',
+                              () => _open(
+                                  'Información Personal',
+                                  _PersonalInfoPage(
+                                      user: _userData ?? const {})),
+                              icon: Icons.person_outline_rounded,
+                              subtitle:
+                                  'Nombre, contacto, fecha de nacimiento y WhatsApp',
+                            ),
+                            _menuRow(
+                              'Mis Direcciones',
+                              () => _open('Mis Direcciones',
+                                  _AddressPage(user: _userData ?? const {})),
+                              icon: Icons.location_on_outlined,
+                              subtitle: 'Estado y dirección de residencia',
+                            ),
+                          ],
+                        ),
+                      ),
                     ]))),
             _menuRow(
               'Módulo de Salud',
@@ -640,11 +665,9 @@ class _SettingsPage extends StatelessWidget {
   final String title;
   final List<Widget> children;
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: Text(title), backgroundColor: Colors.transparent),
-        body: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            children: children),
+  Widget build(BuildContext context) => SettingsScaffold(
+        title: title,
+        children: children,
       );
 }
 
@@ -662,10 +685,24 @@ class _PersonalInfoPageState extends State<_PersonalInfoPage> {
       TextEditingController(text: widget.user['last_name']?.toString());
   late final phone =
       TextEditingController(text: widget.user['phone']?.toString());
+  late final _docController = TextEditingController(
+      text: formatIdentityDocument(widget.user['identity_document']));
+  late final _emailController =
+      TextEditingController(text: widget.user['email']?.toString());
   bool saving = false;
   late bool showWhatsapp = widget.user['show_whatsapp'] != false;
   late DateTime? birthDate =
       DateTime.tryParse(widget.user['birth_date']?.toString() ?? '');
+
+  @override
+  void dispose() {
+    name.dispose();
+    surname.dispose();
+    phone.dispose();
+    _docController.dispose();
+    _emailController.dispose();
+    super.dispose();
+  }
 
   int? get _age {
     final value = birthDate;
@@ -676,85 +713,240 @@ class _PersonalInfoPageState extends State<_PersonalInfoPage> {
     return today.year - value.year - (beforeBirthday ? 1 : 0);
   }
 
+  Future<void> _pickBirthDate() async {
+    final today = DateTime.now();
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: birthDate ?? DateTime(today.year - 18, today.month, today.day),
+      firstDate: DateTime(1900),
+      lastDate: today,
+      helpText: 'Fecha de nacimiento',
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: const ColorScheme.light(
+            primary: Color(0xFF0056B3),
+            onPrimary: Colors.white,
+            surface: Colors.white,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (selected != null) setState(() => birthDate = selected);
+  }
+
   @override
-  Widget build(BuildContext context) =>
-      _SettingsPage(title: 'Información Personal', children: [
-        _field('Nombres', name, maxLength: 60),
-        _field('Apellidos', surname, maxLength: 60),
-        _field(
-            'Cédula / RIF',
-            TextEditingController(
-                text: formatIdentityDocument(widget.user['identity_document'])),
-            enabled: false),
-        _field('Teléfono de contacto', phone, type: TextInputType.phone),
-        if (widget.user['role']?.toString() == 'patient' ||
-            widget.user['role']?.toString() == 'doctor')
-          OutlinedButton.icon(
-            onPressed: saving
-                ? null
-                : () async {
-                    final today = DateTime.now();
-                    final selected = await showDatePicker(
-                      context: context,
-                      initialDate: birthDate ??
-                          DateTime(today.year - 18, today.month, today.day),
-                      firstDate: DateTime(1900),
-                      lastDate: today,
-                      helpText: 'Fecha de nacimiento',
-                    );
-                    if (selected != null) setState(() => birthDate = selected);
-                  },
-            icon: const Icon(Icons.cake_outlined),
-            label: Text(birthDate == null
-                ? 'Fecha de nacimiento'
-                : 'Nacimiento: ${birthDate!.day.toString().padLeft(2, '0')}/${birthDate!.month.toString().padLeft(2, '0')}/${birthDate!.year}'),
-          ),
-        if ((widget.user['role']?.toString() == 'patient' ||
-                widget.user['role']?.toString() == 'doctor') &&
-            _age != null)
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Text('Edad actual: $_age años'),
+  Widget build(BuildContext context) {
+    final role = widget.user['role']?.toString();
+    final showBirthDate = role == 'patient' || role == 'doctor';
+
+    return _SettingsPage(title: 'Información Personal', children: [
+      const SettingsBanner(
+        icon: Icons.badge_rounded,
+        title: 'Tus datos personales',
+        subtitle:
+            'Mantén al día tu nombre, teléfono y datos de identificación en Salud Now.',
+      ),
+      const SizedBox(height: 16),
+      SettingsCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SettingsSectionHeader(
+              icon: Icons.person_rounded,
+              iconColor: Color(0xFF0056B3),
+              iconBg: Color(0xFFE0EAFC),
+              title: 'Identidad y contacto',
+              subtitle: 'Información principal vinculada a tu cuenta.',
             ),
+            const SizedBox(height: 18),
+            _field('Nombres', name,
+                maxLength: 60, icon: Icons.person_outline_rounded),
+            _field('Apellidos', surname,
+                maxLength: 60, icon: Icons.person_outline_rounded),
+            _field('Cédula / RIF', _docController,
+                enabled: false, icon: Icons.credit_card_rounded),
+            _field('Teléfono de contacto', phone,
+                type: TextInputType.phone, icon: Icons.phone_outlined),
+            _field('Correo electrónico', _emailController,
+                enabled: false, icon: Icons.email_outlined),
+          ],
+        ),
+      ),
+      if (showBirthDate) ...[
+        const SizedBox(height: 16),
+        SettingsCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SettingsSectionHeader(
+                icon: Icons.cake_rounded,
+                iconColor: Color(0xFFDB2777),
+                iconBg: Color(0xFFFCE7F3),
+                title: 'Fecha de nacimiento',
+                subtitle: 'Nos ayuda a personalizar tu atención médica.',
+              ),
+              const SizedBox(height: 16),
+              InkWell(
+                onTap: saving ? null : _pickBirthDate,
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0F9FF),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFBAE6FD)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.cake_outlined,
+                          color: Color(0xFF0056B3), size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Fecha seleccionada',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF64748B),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              birthDate == null
+                                  ? 'Seleccionar fecha de nacimiento'
+                                  : '${birthDate!.day.toString().padLeft(2, '0')}/${birthDate!.month.toString().padLeft(2, '0')}/${birthDate!.year}',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF0B2545),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (_age != null)
+                        Container(
+                          margin: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 9, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE0EAFC),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '$_age años',
+                            style: const TextStyle(
+                              color: Color(0xFF0056B3),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0056B3),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          birthDate == null ? 'Elegir' : 'Cambiar',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-        if (widget.user['role']?.toString() == 'doctor')
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Mostrar mi WhatsApp en mi perfil y citas'),
-            subtitle: const Text(
-                'Si lo desactivas, se ocultará tu número y el botón de WhatsApp.'),
-            value: showWhatsapp,
-            onChanged:
-                saving ? null : (value) => setState(() => showWhatsapp = value),
+        ),
+      ],
+      if (role == 'doctor') ...[
+        const SizedBox(height: 16),
+        SettingsCard(
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD1FAE5),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.chat_rounded,
+                  color: Color(0xFF059669),
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Mostrar mi WhatsApp en perfil y citas',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0B2545),
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Si lo desactivas, se ocultará tu número y el botón de WhatsApp.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch.adaptive(
+                activeThumbColor: const Color(0xFF059669),
+                value: showWhatsapp,
+                onChanged: saving
+                    ? null
+                    : (value) => setState(() => showWhatsapp = value),
+              ),
+            ],
           ),
-        _field('Correo electrónico',
-            TextEditingController(text: widget.user['email']?.toString()),
-            enabled: false),
-        FilledButton(
-            onPressed: saving
-                ? null
-                : () async {
-                    setState(() => saving = true);
-                    final response = await ApiClient.put('/users/me', {
-                      'first_name': name.text.trim(),
-                      'last_name': surname.text.trim(),
-                      'phone': phone.text.trim(),
-                      'birth_date':
-                          birthDate?.toIso8601String().split('T').first,
-                      'show_whatsapp': showWhatsapp,
-                    });
-                    if (context.mounted) {
-                      setState(() => saving = false);
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text(response.statusCode == 200
-                              ? 'Información guardada.'
-                              : 'No se pudo guardar.')));
-                    }
-                  },
-            child: const Text('Guardar cambios')),
-      ]);
+        ),
+      ],
+      const SizedBox(height: 24),
+      SettingsGradientButton(
+        label: saving ? 'Guardando…' : 'Guardar cambios',
+        loading: saving,
+        onPressed: () async {
+          setState(() => saving = true);
+          final response = await ApiClient.put('/users/me', {
+            'first_name': name.text.trim(),
+            'last_name': surname.text.trim(),
+            'phone': phone.text.trim(),
+            'birth_date': birthDate?.toIso8601String().split('T').first,
+            'show_whatsapp': showWhatsapp,
+          });
+          if (context.mounted) {
+            setState(() => saving = false);
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(response.statusCode == 200
+                    ? 'Información guardada.'
+                    : 'No se pudo guardar.')));
+          }
+        },
+      ),
+    ]);
+  }
 }
 
 class _AddressPage extends StatefulWidget {
@@ -770,33 +962,77 @@ class _AddressPageState extends State<_AddressPage> {
       : null;
   late final address =
       TextEditingController(text: widget.user['address']?.toString());
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    address.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) =>
       _SettingsPage(title: 'Mis Direcciones', children: [
-        DropdownButtonFormField<String>(
-          initialValue: _selectedState,
-          decoration: const InputDecoration(
-              labelText: 'Estado', border: OutlineInputBorder()),
-          items: veStates
-              .map(
-                  (value) => DropdownMenuItem(value: value, child: Text(value)))
-              .toList(),
-          onChanged: (value) => setState(() => _selectedState = value),
+        const SettingsBanner(
+          icon: Icons.location_on_rounded,
+          title: 'Tus direcciones registradas',
+          subtitle:
+              'Indica tu estado y dirección actual para ubicarte mejor en Salud Now.',
         ),
-        const SizedBox(height: 14),
-        _field('Dirección', address, lines: 3),
-        FilledButton(
-            onPressed: () async {
-              final r = await ApiClient.put('/users/me',
-                  {'state': _selectedState, 'address': address.text.trim()});
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text(r.statusCode == 200
-                        ? 'Dirección guardada.'
-                        : 'No se pudo guardar.')));
-              }
-            },
-            child: const Text('Guardar cambios')),
+        const SizedBox(height: 16),
+        SettingsCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SettingsSectionHeader(
+                icon: Icons.map_rounded,
+                iconColor: Color(0xFF0056B3),
+                iconBg: Color(0xFFE0EAFC),
+                title: 'Ubicación de residencia',
+                subtitle: 'Selecciona tu estado y detalla tu dirección.',
+              ),
+              const SizedBox(height: 18),
+              DropdownButtonFormField<String>(
+                initialValue: _selectedState,
+                decoration: settingsInputDecoration(
+                  label: 'Estado',
+                  icon: Icons.location_city_rounded,
+                ),
+                items: veStates
+                    .map((value) =>
+                        DropdownMenuItem(value: value, child: Text(value)))
+                    .toList(),
+                onChanged:
+                    _saving ? null : (v) => setState(() => _selectedState = v),
+              ),
+              const SizedBox(height: 14),
+              _field(
+                'Dirección',
+                address,
+                lines: 3,
+                icon: Icons.home_work_outlined,
+                enabled: !_saving,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        SettingsGradientButton(
+          label: _saving ? 'Guardando…' : 'Guardar cambios',
+          loading: _saving,
+          onPressed: () async {
+            setState(() => _saving = true);
+            final r = await ApiClient.put('/users/me',
+                {'state': _selectedState, 'address': address.text.trim()});
+            if (context.mounted) {
+              setState(() => _saving = false);
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(r.statusCode == 200
+                      ? 'Dirección guardada.'
+                      : 'No se pudo guardar.')));
+            }
+          },
+        ),
       ]);
 }
 
@@ -816,127 +1052,226 @@ class _DoctorDataPageState extends State<_DoctorDataPage> {
       TextEditingController(text: widget.doctor['clinic_info']?.toString());
   late final yearsExperience = TextEditingController(
       text: (widget.doctor['years_experience'] ?? 0).toString());
+  late final _licenseController = TextEditingController(
+      text: widget.doctor['medical_license_number']?.toString() ??
+          'No registrada');
   late List<String> specialties =
       (widget.doctor['specialties'] as List? ?? const [])
           .map((value) => value.toString())
           .toSet()
           .take(5)
           .toList();
+  bool _saving = false;
 
   @override
   void dispose() {
     _specialtySearch.dispose();
     _specialtyFocusNode.dispose();
+    bio.dispose();
+    location.dispose();
     yearsExperience.dispose();
+    _licenseController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) =>
       _SettingsPage(title: 'Datos Laborales', children: [
-        _field(
-            'Matrícula sanitaria',
-            TextEditingController(
-                text: widget.doctor['medical_license_number']?.toString() ??
-                    'No registrada'),
-            enabled: false),
-        _field('Biografía', bio, lines: 4, maxLength: 120),
-        _field('Años de experiencia', yearsExperience,
-            type: TextInputType.number, maxLength: 2),
-        Autocomplete<String>(
-          textEditingController: _specialtySearch,
-          focusNode: _specialtyFocusNode,
-          optionsBuilder: (value) => medicalSpecialties.where((item) =>
-              item.toLowerCase().contains(value.text.trim().toLowerCase()) &&
-              !specialties.contains(item)),
-          onSelected: (value) {
-            _specialtySearch.clear();
-            if (specialties.length >= 5) {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Máximo 5 especialidades permitidas')));
-              return;
-            }
-            setState(() => specialties.add(value));
-          },
-          fieldViewBuilder: (context, controller, focusNode, onSubmitted) =>
-              TextField(
-            controller: controller,
-            focusNode: focusNode,
-            inputFormatters: [
-              FilteringTextInputFormatter.deny(RegExp(r'[0-9]')),
+        const SettingsBanner(
+          icon: Icons.work_rounded,
+          title: 'Tu perfil profesional',
+          subtitle:
+              'Destaca tu trayectoria, especialidades y ubicación de consultorio ante tus pacientes.',
+        ),
+        const SizedBox(height: 16),
+        SettingsCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SettingsSectionHeader(
+                icon: Icons.workspace_premium_rounded,
+                iconColor: Color(0xFF0056B3),
+                iconBg: Color(0xFFE0EAFC),
+                title: 'Trayectoria y credenciales',
+                subtitle: 'Información visible en tu perfil médico público.',
+              ),
+              const SizedBox(height: 18),
+              _field(
+                'Matrícula sanitaria',
+                _licenseController,
+                enabled: false,
+                icon: Icons.verified_user_outlined,
+              ),
+              _field(
+                'Años de experiencia',
+                yearsExperience,
+                type: TextInputType.number,
+                maxLength: 2,
+                icon: Icons.timeline_rounded,
+                enabled: !_saving,
+              ),
+              _field(
+                'Biografía',
+                bio,
+                lines: 4,
+                maxLength: 120,
+                icon: Icons.description_outlined,
+                enabled: !_saving,
+              ),
             ],
-            decoration: const InputDecoration(
-              labelText: 'Buscar especialidad',
-              prefixIcon: Icon(Icons.search),
-              border: OutlineInputBorder(),
-            ),
           ),
         ),
         const SizedBox(height: 16),
-        if (specialties.isNotEmpty)
-          Wrap(
-            spacing: 8,
-            children: specialties
-                .map((specialty) => Chip(
-                      label: Text(specialty),
-                      onDeleted: () =>
-                          setState(() => specialties.remove(specialty)),
-                    ))
-                .toList(),
-          ),
-        const SizedBox(height: 16),
-        _field('Ubicación de consultorio', location, lines: 2),
-        FilledButton(
-            onPressed: () async {
-              final parsedExperience =
-                  int.tryParse(yearsExperience.text.trim());
-              if (parsedExperience == null || parsedExperience > 80) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content:
-                        Text('Ingresa entre 0 y 80 años de experiencia.')));
-                return;
-              }
-              final r = await ApiClient.put('/doctors/me', {
-                'bio': bio.text.trim(),
-                'years_experience': parsedExperience,
-                'clinic_info': location.text.trim(),
-                'specialties': specialties
-              });
-              if (context.mounted) {
-                var experienceSynced = false;
-                if (r.statusCode == 200) {
-                  final prefs = await SharedPreferences.getInstance();
-                  if (!mounted) return;
-                  final doctorId =
-                      int.tryParse(widget.doctor['id']?.toString() ?? '');
-                  if (doctorId != null) {
-                    final cacheKey = 'doctor_years_experience_$doctorId';
-                    var savedExperienceFromServer = -1;
-                    try {
-                      final body = jsonDecode(r.body);
-                      savedExperienceFromServer =
-                          (body['years_experience'] as num?)?.toInt() ?? -1;
-                    } catch (_) {}
-                    experienceSynced =
-                        savedExperienceFromServer == parsedExperience;
-                    if (experienceSynced) {
-                      await prefs.remove(cacheKey);
-                    } else {
-                      await prefs.setInt(cacheKey, parsedExperience);
-                    }
+        SettingsCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SettingsSectionHeader(
+                icon: Icons.medical_services_rounded,
+                iconColor: Color(0xFF059669),
+                iconBg: Color(0xFFD1FAE5),
+                title: 'Especialidades médicas',
+                subtitle: 'Agrega hasta 5 especialidades en las que atiendes.',
+              ),
+              const SizedBox(height: 16),
+              Autocomplete<String>(
+                textEditingController: _specialtySearch,
+                focusNode: _specialtyFocusNode,
+                optionsBuilder: (value) => medicalSpecialties.where((item) =>
+                    item
+                        .toLowerCase()
+                        .contains(value.text.trim().toLowerCase()) &&
+                    !specialties.contains(item)),
+                onSelected: (value) {
+                  _specialtySearch.clear();
+                  if (specialties.length >= 5) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                        content: Text('Máximo 5 especialidades permitidas')));
+                    return;
                   }
-                  widget.doctor['years_experience'] = parsedExperience;
+                  setState(() => specialties.add(value));
+                },
+                fieldViewBuilder:
+                    (context, controller, focusNode, onSubmitted) => TextField(
+                  controller: controller,
+                  focusNode: focusNode,
+                  enabled: !_saving,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.deny(RegExp(r'[0-9]')),
+                  ],
+                  decoration: settingsInputDecoration(
+                    label: 'Buscar especialidad',
+                    icon: Icons.search_rounded,
+                    enabled: !_saving,
+                  ),
+                ),
+              ),
+              if (specialties.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: specialties
+                      .map((specialty) => Chip(
+                            backgroundColor: const Color(0xFFE0EAFC),
+                            side: const BorderSide(color: Color(0xFFBFDBFE)),
+                            label: Text(
+                              specialty,
+                              style: const TextStyle(
+                                color: Color(0xFF0B2545),
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                              ),
+                            ),
+                            deleteIconColor: const Color(0xFF0056B3),
+                            onDeleted: _saving
+                                ? null
+                                : () =>
+                                    setState(() => specialties.remove(specialty)),
+                          ))
+                      .toList(),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        SettingsCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SettingsSectionHeader(
+                icon: Icons.local_hospital_rounded,
+                iconColor: Color(0xFF6D28D9),
+                iconBg: Color(0xFFEDE9FE),
+                title: 'Consultorio',
+                subtitle: 'Dirección o centro médico donde pasas consulta.',
+              ),
+              const SizedBox(height: 16),
+              _field(
+                'Ubicación de consultorio',
+                location,
+                lines: 2,
+                icon: Icons.place_outlined,
+                enabled: !_saving,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        SettingsGradientButton(
+          label: _saving ? 'Guardando…' : 'Guardar cambios',
+          loading: _saving,
+          onPressed: () async {
+            final parsedExperience = int.tryParse(yearsExperience.text.trim());
+            if (parsedExperience == null || parsedExperience > 80) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                  content: Text('Ingresa entre 0 y 80 años de experiencia.')));
+              return;
+            }
+            setState(() => _saving = true);
+            final r = await ApiClient.put('/doctors/me', {
+              'bio': bio.text.trim(),
+              'years_experience': parsedExperience,
+              'clinic_info': location.text.trim(),
+              'specialties': specialties
+            });
+            if (context.mounted) {
+              setState(() => _saving = false);
+              var experienceSynced = false;
+              if (r.statusCode == 200) {
+                final prefs = await SharedPreferences.getInstance();
+                if (!mounted) return;
+                final doctorId =
+                    int.tryParse(widget.doctor['id']?.toString() ?? '');
+                if (doctorId != null) {
+                  final cacheKey = 'doctor_years_experience_$doctorId';
+                  var savedExperienceFromServer = -1;
+                  try {
+                    final body = jsonDecode(r.body);
+                    savedExperienceFromServer =
+                        (body['years_experience'] as num?)?.toInt() ?? -1;
+                  } catch (_) {}
+                  experienceSynced =
+                      savedExperienceFromServer == parsedExperience;
+                  if (experienceSynced) {
+                    await prefs.remove(cacheKey);
+                  } else {
+                    await prefs.setInt(cacheKey, parsedExperience);
+                  }
                 }
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text(r.statusCode == 200
-                        ? experienceSynced
-                            ? 'Datos laborales guardados.'
-                            : 'Datos guardados en este dispositivo; el servidor aún no sincroniza la experiencia.'
-                        : 'No se pudieron guardar.')));
+                widget.doctor['years_experience'] = parsedExperience;
               }
-            },
-            child: const Text('Guardar cambios')),
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(r.statusCode == 200
+                      ? experienceSynced
+                          ? 'Datos laborales guardados.'
+                          : 'Datos guardados en este dispositivo; el servidor aún no sincroniza la experiencia.'
+                      : 'No se pudieron guardar.')));
+            }
+          },
+        ),
       ]);
 }
 
@@ -955,10 +1290,22 @@ class _ClinicDataPageState extends State<_ClinicDataPage> {
   late final phone2 = TextEditingController();
   late final phone =
       TextEditingController(text: widget.user['phone']?.toString());
+  bool _saving = false;
+
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    description.dispose();
+    location.dispose();
+    specialties.dispose();
+    phone2.dispose();
+    phone.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -975,36 +1322,61 @@ class _ClinicDataPageState extends State<_ClinicDataPage> {
   @override
   Widget build(BuildContext context) =>
       _SettingsPage(title: 'Datos de la clínica', children: [
-        _field('Descripción', description, lines: 4),
-        _field('Ubicación', location, lines: 2),
-        _field('Especialidades (separadas por coma)', specialties),
-        _field('Número de contacto', phone,
-            type: TextInputType.phone, maxLength: 11),
-        _field('Segundo número de contacto', phone2,
-            type: TextInputType.phone, maxLength: 11),
-        FilledButton(
-            onPressed: () async {
-              final u = await ApiClient.put('/users/me', {
-                'address': location.text.trim(),
-                'phone': phone.text.trim()
-              });
-              final c = await ApiClient.put('/clinics/me', {
-                'description': description.text.trim(),
-                'specialties': specialties.text
-                    .split(',')
-                    .map((v) => v.trim())
-                    .where((v) => v.isNotEmpty)
-                    .toList(),
-                'contact_phone_2': phone2.text.trim()
-              });
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text(u.statusCode == 200 && c.statusCode == 200
-                        ? 'Datos guardados.'
-                        : 'No se pudieron guardar los datos.')));
-              }
-            },
-            child: const Text('Guardar cambios')),
+        const SettingsBanner(
+          icon: Icons.local_hospital_rounded,
+          title: 'Información de tu clínica',
+          subtitle:
+              'Actualiza la descripción, especialidades y teléfonos de atención.',
+        ),
+        const SizedBox(height: 16),
+        SettingsCard(
+          child: Column(
+            children: [
+              _field('Descripción', description,
+                  lines: 4, icon: Icons.description_outlined, enabled: !_saving),
+              _field('Ubicación', location,
+                  lines: 2, icon: Icons.place_outlined, enabled: !_saving),
+              _field('Especialidades (separadas por coma)', specialties,
+                  icon: Icons.medical_services_outlined, enabled: !_saving),
+              _field('Número de contacto', phone,
+                  type: TextInputType.phone,
+                  maxLength: 11,
+                  icon: Icons.phone_outlined,
+                  enabled: !_saving),
+              _field('Segundo número de contacto', phone2,
+                  type: TextInputType.phone,
+                  maxLength: 11,
+                  icon: Icons.phone_in_talk_outlined,
+                  enabled: !_saving),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        SettingsGradientButton(
+          label: _saving ? 'Guardando…' : 'Guardar cambios',
+          loading: _saving,
+          onPressed: () async {
+            setState(() => _saving = true);
+            final u = await ApiClient.put('/users/me',
+                {'address': location.text.trim(), 'phone': phone.text.trim()});
+            final c = await ApiClient.put('/clinics/me', {
+              'description': description.text.trim(),
+              'specialties': specialties.text
+                  .split(',')
+                  .map((v) => v.trim())
+                  .where((v) => v.isNotEmpty)
+                  .toList(),
+              'contact_phone_2': phone2.text.trim()
+            });
+            if (context.mounted) {
+              setState(() => _saving = false);
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(u.statusCode == 200 && c.statusCode == 200
+                      ? 'Datos guardados.'
+                      : 'No se pudieron guardar los datos.')));
+            }
+          },
+        ),
       ]);
 }
 
@@ -1114,12 +1486,52 @@ class _SecurityPageState extends State<SecurityPage> {
 
   @override
   Widget build(BuildContext context) =>
-      _SettingsPage(title: 'Seguridad', children: [
-        ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Cambiar clave de seguridad',
-                style: TextStyle(fontWeight: FontWeight.w500, fontSize: 16)),
-            trailing: const Icon(Icons.chevron_right),
+      _SettingsPage(title: 'Seguridad de tu cuenta', children: [
+        const SettingsBanner(
+          icon: Icons.shield_rounded,
+          title: 'Protección de tu cuenta',
+          subtitle:
+              'Administra tu contraseña de acceso y métodos de autenticación.',
+        ),
+        const SizedBox(height: 16),
+        SettingsCard(
+          padding: const EdgeInsets.all(6),
+          child: ListTile(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            leading: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE0EAFC),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(
+                Icons.key_rounded,
+                color: Color(0xFF0056B3),
+                size: 22,
+              ),
+            ),
+            title: const Text(
+              'Cambiar clave de seguridad',
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 15,
+                color: Color(0xFF0B2545),
+              ),
+            ),
+            subtitle: const Text(
+              'Actualiza tu contraseña periódicamente para mayor protección.',
+              style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+            ),
+            trailing: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.chevron_right_rounded,
+                  color: Color(0xFF0056B3)),
+            ),
             onTap: () async {
               final changed = await Navigator.of(context).push<bool>(
                 MaterialPageRoute(builder: (_) => const _ChangePasswordPage()),
@@ -1127,25 +1539,70 @@ class _SecurityPageState extends State<SecurityPage> {
               if (context.mounted && changed == true) {
                 Navigator.of(context).pop(true);
               }
-            }),
-        const Divider(height: 1),
-        if (!kIsWeb)
-          _isLoading
-              ? const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(12),
-                    child: CircularProgressIndicator(),
+            },
+          ),
+        ),
+        if (!kIsWeb) ...[
+          const SizedBox(height: 16),
+          SettingsCard(
+            child: _isLoading
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(12),
+                      child: CircularProgressIndicator(),
+                    ),
+                  )
+                : Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: _biometricsEnabled
+                              ? const Color(0xFFD1FAE5)
+                              : const Color(0xFFEDE9FE),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Icon(
+                          Icons.fingerprint_rounded,
+                          color: _biometricsEnabled
+                              ? const Color(0xFF059669)
+                              : const Color(0xFF6D28D9),
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Usar datos biométricos',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF0B2545),
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'Inicia sesión rápidamente con huella o rostro.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF64748B),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Switch.adaptive(
+                        activeThumbColor: const Color(0xFF059669),
+                        value: _biometricsEnabled,
+                        onChanged: _toggleBiometrics,
+                      ),
+                    ],
                   ),
-                )
-              : SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Usar datos biométricos',
-                      style:
-                          TextStyle(fontWeight: FontWeight.w500, fontSize: 16)),
-                  subtitle: const Text('Aumenta la seguridad de la app.'),
-                  value: _biometricsEnabled,
-                  onChanged: _toggleBiometrics,
-                ),
+          ),
+        ],
       ]);
 }
 
@@ -1166,24 +1623,51 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
   bool _obs2 = true;
   bool _obs3 = true;
 
+  @override
+  void initState() {
+    super.initState();
+    next.addListener(_onPwdChanged);
+    repeat.addListener(_onPwdChanged);
+  }
+
+  void _onPwdChanged() {
+    if (mounted) setState(() {});
+  }
+
   Widget _pwdField(
       String label, TextEditingController c, bool obs, VoidCallback toggle) {
     return Padding(
-        padding: const EdgeInsets.only(bottom: 14),
-        child: TextField(
-            controller: c,
-            obscureText: obs,
-            decoration: InputDecoration(
-                labelText: label,
-                border: const OutlineInputBorder(),
-                suffixIcon: IconButton(
-                  icon: Icon(obs ? Icons.visibility_off : Icons.visibility),
-                  onPressed: toggle,
-                ))));
+      padding: const EdgeInsets.only(bottom: 14),
+      child: TextField(
+        controller: c,
+        enabled: !busy,
+        obscureText: obs,
+        style: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          color: Color(0xFF0F172A),
+        ),
+        decoration: settingsInputDecoration(
+          label: label,
+          icon: Icons.lock_outline_rounded,
+          enabled: !busy,
+          suffixIcon: IconButton(
+            icon: Icon(
+              obs ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+              color: const Color(0xFF64748B),
+              size: 20,
+            ),
+            onPressed: toggle,
+          ),
+        ),
+      ),
+    );
   }
 
   @override
   void dispose() {
+    next.removeListener(_onPwdChanged);
+    repeat.removeListener(_onPwdChanged);
     current.dispose();
     next.dispose();
     repeat.dispose();
@@ -1234,21 +1718,101 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
     );
   }
 
+  Widget _reqRow(bool met, String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          Icon(
+            met ? Icons.check_circle_rounded : Icons.radio_button_unchecked,
+            size: 16,
+            color: met ? const Color(0xFF059669) : const Color(0xFF94A3B8),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: met ? FontWeight.w700 : FontWeight.w500,
+              color: met ? const Color(0xFF065F46) : const Color(0xFF64748B),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
-  Widget build(BuildContext context) =>
-      _SettingsPage(title: 'Cambiar contraseña', children: [
-        _pwdField('Contraseña actual', current, _obs1,
-            () => setState(() => _obs1 = !_obs1)),
-        _pwdField('Nueva contraseña', next, _obs2,
-            () => setState(() => _obs2 = !_obs2)),
-        _pwdField('Repetir nueva contraseña', repeat, _obs3,
-            () => setState(() => _obs3 = !_obs3)),
-        const Text(
-            'Debe tener al menos 6 caracteres, letras, números y una mayúscula.'),
-        FilledButton(
-            onPressed: busy ? null : _changePassword,
-            child: const Text('Actualizar contraseña')),
-      ]);
+  Widget build(BuildContext context) {
+    final pwd = next.text;
+    final hasLen = pwd.length >= 6;
+    final hasUpper = RegExp(r'[A-Z]').hasMatch(pwd);
+    final hasNum = RegExp(r'[0-9]').hasMatch(pwd);
+    final matches = pwd.isNotEmpty && pwd == repeat.text;
+
+    return _SettingsPage(title: 'Cambiar contraseña', children: [
+      const SettingsBanner(
+        icon: Icons.lock_reset_rounded,
+        title: 'Actualiza tu contraseña',
+        subtitle:
+            'Elige una clave segura para mantener protegida tu cuenta en Salud Now.',
+      ),
+      const SizedBox(height: 16),
+      SettingsCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SettingsSectionHeader(
+              icon: Icons.password_rounded,
+              iconColor: Color(0xFF0056B3),
+              iconBg: Color(0xFFE0EAFC),
+              title: 'Credenciales de acceso',
+              subtitle: 'Ingresa tu contraseña actual y define la nueva.',
+            ),
+            const SizedBox(height: 18),
+            _pwdField('Contraseña actual', current, _obs1,
+                () => setState(() => _obs1 = !_obs1)),
+            _pwdField('Nueva contraseña', next, _obs2,
+                () => setState(() => _obs2 = !_obs2)),
+            _pwdField('Repetir nueva contraseña', repeat, _obs3,
+                () => setState(() => _obs3 = !_obs3)),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Requisitos de seguridad:',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF0B2545),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  _reqRow(hasLen, 'Mínimo 6 caracteres'),
+                  _reqRow(hasUpper, 'Al menos una letra mayúscula'),
+                  _reqRow(hasNum, 'Al menos un número'),
+                  _reqRow(matches, 'Las contraseñas coinciden'),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 24),
+      SettingsGradientButton(
+        label: busy ? 'Actualizando…' : 'Actualizar contraseña',
+        loading: busy,
+        onPressed: busy ? null : _changePassword,
+      ),
+    ]);
+  }
 }
 
 class _AboutPage extends StatelessWidget {
@@ -1258,29 +1822,68 @@ class _AboutPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       _SettingsPage(title: 'Acerca de Salud Now', children: [
-        const Padding(
-            padding: EdgeInsets.all(12),
-            child: Text('Preferencia de Datos',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))),
-        menuRow(
-            'Política de Privacidad',
-            () =>
-                onOpen('Política de Privacidad', const PrivacyPolicyScreen())),
-        menuRow(
-            'Cookies', () => onOpen('Cookies', const CookiesPolicyScreen())),
-        const Padding(
-            padding: EdgeInsets.all(12),
-            child: Text('Información Legal',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))),
-        menuRow(
-            'Términos y Condiciones',
-            () => onOpen(
-                'Términos y Condiciones', const TermsAndConditionsScreen())),
-        ListTile(
-            leading: const Icon(Icons.delete_outline, color: Colors.red),
-            title: const Text('Eliminar Cuenta de Salud Now',
-                style: TextStyle(color: Colors.red)),
-            onTap: () => _confirmDelete(context)),
+        const SettingsBanner(
+          icon: Icons.info_outline_rounded,
+          title: 'Salud Now',
+          subtitle: 'Políticas, condiciones de uso y gestión de cuenta.',
+        ),
+        const SizedBox(height: 16),
+        SettingsCard(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(12, 6, 12, 4),
+                child: Text(
+                  'Preferencia de Datos',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF0B2545),
+                  ),
+                ),
+              ),
+              menuRow(
+                  'Política de Privacidad',
+                  () => onOpen(
+                      'Política de Privacidad', const PrivacyPolicyScreen())),
+              menuRow('Cookies',
+                  () => onOpen('Cookies', const CookiesPolicyScreen())),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        SettingsCard(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(12, 6, 12, 4),
+                child: Text(
+                  'Información Legal',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF0B2545),
+                  ),
+                ),
+              ),
+              menuRow(
+                  'Términos y Condiciones',
+                  () => onOpen('Términos y Condiciones',
+                      const TermsAndConditionsScreen())),
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: Colors.red),
+                title: const Text('Eliminar Cuenta de Salud Now',
+                    style: TextStyle(
+                        color: Colors.red, fontWeight: FontWeight.w600)),
+                onTap: () => _confirmDelete(context),
+              ),
+            ],
+          ),
+        ),
       ]);
   Future<void> _confirmDelete(BuildContext context) async {
     final yes = await showDialog<bool>(
@@ -1318,25 +1921,39 @@ class _AboutPage extends StatelessWidget {
   }
 }
 
-Widget _field(String label, TextEditingController controller,
-        {TextInputType? type,
-        int lines = 1,
-        bool secret = false,
-        bool enabled = true,
-        int? maxLength}) =>
+Widget _field(
+  String label,
+  TextEditingController controller, {
+  TextInputType? type,
+  int lines = 1,
+  bool secret = false,
+  bool enabled = true,
+  int? maxLength,
+  IconData icon = Icons.edit_outlined,
+}) =>
     Padding(
-        padding: const EdgeInsets.only(bottom: 14),
-        child: TextField(
-            controller: controller,
-            keyboardType: type,
-            maxLines: secret ? 1 : lines,
-            obscureText: secret,
-            enabled: enabled,
-            maxLength: maxLength,
-            inputFormatters: label == 'Nombres' || label == 'Apellidos'
-                ? [FilteringTextInputFormatter.deny(RegExp(r'[0-9]'))]
-                : label == 'Años de experiencia'
-                    ? [FilteringTextInputFormatter.digitsOnly]
-                    : null,
-            decoration: InputDecoration(
-                labelText: label, border: const OutlineInputBorder())));
+      padding: const EdgeInsets.only(bottom: 14),
+      child: TextField(
+        controller: controller,
+        keyboardType: type,
+        maxLines: secret ? 1 : lines,
+        obscureText: secret,
+        enabled: enabled,
+        maxLength: maxLength,
+        style: TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          color: enabled ? const Color(0xFF0F172A) : const Color(0xFF64748B),
+        ),
+        inputFormatters: label == 'Nombres' || label == 'Apellidos'
+            ? [FilteringTextInputFormatter.deny(RegExp(r'[0-9]'))]
+            : label == 'Años de experiencia'
+                ? [FilteringTextInputFormatter.digitsOnly]
+                : null,
+        decoration: settingsInputDecoration(
+          label: label,
+          icon: icon,
+          enabled: enabled,
+        ),
+      ),
+    );

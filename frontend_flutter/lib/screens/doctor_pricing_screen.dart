@@ -97,17 +97,18 @@ class _DoctorPricingScreenState extends State<DoctorPricingScreen> {
     final today = DateUtils.dateOnly(caracasNow());
     final previous = _offerDates;
     final last = DateTime(today.year + 5, today.month, today.day);
-    final dates = await showDateRangePicker(
+    final dates = await showDialog<DateTimeRange>(
       context: context,
-      firstDate: today,
-      lastDate: last,
-      currentDate: today,
-      initialDateRange: previous != null &&
-              !previous.start.isBefore(today) &&
-              !previous.end.isAfter(last)
-          ? previous
-          : null,
-      helpText: 'Vigencia de la oferta',
+      barrierColor: Colors.black.withValues(alpha: 0.45),
+      builder: (_) => _OfferDateRangeDialog(
+        firstDate: today,
+        lastDate: last,
+        initialRange: previous != null &&
+                !previous.start.isBefore(today) &&
+                !previous.end.isAfter(last)
+            ? previous
+            : null,
+      ),
     );
     if (dates != null && mounted) setState(() => _offerDates = dates);
   }
@@ -971,6 +972,588 @@ class _DoctorPricingScreenState extends State<DoctorPricingScreen> {
                     ),
                   ),
                 ),
+    );
+  }
+}
+
+class _OfferDateRangeDialog extends StatefulWidget {
+  const _OfferDateRangeDialog({
+    required this.firstDate,
+    required this.lastDate,
+    this.initialRange,
+  });
+
+  final DateTime firstDate;
+  final DateTime lastDate;
+  final DateTimeRange? initialRange;
+
+  @override
+  State<_OfferDateRangeDialog> createState() => _OfferDateRangeDialogState();
+}
+
+class _OfferDateRangeDialogState extends State<_OfferDateRangeDialog> {
+  static const _months = [
+    'Enero',
+    'Febrero',
+    'Marzo',
+    'Abril',
+    'Mayo',
+    'Junio',
+    'Julio',
+    'Agosto',
+    'Septiembre',
+    'Octubre',
+    'Noviembre',
+    'Diciembre',
+  ];
+  static const _shortMonths = [
+    'ene',
+    'feb',
+    'mar',
+    'abr',
+    'may',
+    'jun',
+    'jul',
+    'ago',
+    'sep',
+    'oct',
+    'nov',
+    'dic',
+  ];
+  static const _weekdays = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+
+  late DateTime _start;
+  late DateTime _end;
+  late DateTime _displayedMonth;
+  bool _selectingEnd = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initialRange;
+    _start = DateUtils.dateOnly(initial?.start ?? widget.firstDate);
+    _end = DateUtils.dateOnly(initial?.end ?? widget.firstDate);
+    _displayedMonth = DateTime(_start.year, _start.month);
+  }
+
+  String _shortDate(DateTime date) =>
+      '${date.day} ${_shortMonths[date.month - 1]} ${date.year}';
+
+  int get _daysCount => _end.difference(_start).inDays + 1;
+
+  bool get _canGoPrevMonth {
+    final firstMonth = DateTime(widget.firstDate.year, widget.firstDate.month);
+    return _displayedMonth.isAfter(firstMonth);
+  }
+
+  bool get _canGoNextMonth {
+    final lastMonth = DateTime(widget.lastDate.year, widget.lastDate.month);
+    return _displayedMonth.isBefore(lastMonth);
+  }
+
+  void _applyPresetDays(int days) {
+    final start = widget.firstDate;
+    var end = start.add(Duration(days: days - 1));
+    if (end.isAfter(widget.lastDate)) end = widget.lastDate;
+    setState(() {
+      _start = start;
+      _end = end;
+      _displayedMonth = DateTime(start.year, start.month);
+      _selectingEnd = false;
+    });
+  }
+
+  void _applyPresetOneMonth() {
+    final start = widget.firstDate;
+    var end = DateTime(start.year, start.month + 1, start.day);
+    if (end.isAfter(widget.lastDate)) end = widget.lastDate;
+    setState(() {
+      _start = start;
+      _end = end;
+      _displayedMonth = DateTime(start.year, start.month);
+      _selectingEnd = false;
+    });
+  }
+
+  void _onTapDay(DateTime day) {
+    setState(() {
+      if (!_selectingEnd) {
+        _start = day;
+        _end = day;
+        _selectingEnd = true;
+      } else {
+        if (day.isBefore(_start)) {
+          _start = day;
+          _end = day;
+          _selectingEnd = true;
+        } else {
+          _end = day;
+          _selectingEnd = false;
+        }
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final daysInMonth = DateUtils.getDaysInMonth(
+        _displayedMonth.year, _displayedMonth.month);
+    final firstOfMonth = DateTime(_displayedMonth.year, _displayedMonth.month);
+    final leadingBlanks = firstOfMonth.weekday - 1;
+    final totalCells = ((leadingBlanks + daysInMonth + 6) ~/ 7) * 7;
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(26),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF0B2545).withValues(alpha: 0.25),
+                blurRadius: 28,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Cabecera degradada
+                Container(
+                  padding: const EdgeInsets.fromLTRB(18, 16, 12, 16),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF003893), Color(0xFF0077B6)],
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.date_range_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          const Expanded(
+                            child: Text(
+                              'Vigencia de la oferta',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(context),
+                            icon: const Icon(Icons.close_rounded,
+                                color: Colors.white),
+                            tooltip: 'Cerrar',
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.22),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'DESDE',
+                                    style: TextStyle(
+                                      color: Color(0xFFBAE6FD),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    _shortDate(_start),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 6),
+                              child: Icon(Icons.arrow_forward_rounded,
+                                  color: Colors.white70, size: 18),
+                            ),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'HASTA',
+                                    style: TextStyle(
+                                      color: Color(0xFFBAE6FD),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    _shortDate(_end),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 9, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF10B981),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '$_daysCount ${_daysCount == 1 ? 'día' : 'días'}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Accesos rápidos de duración
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            _presetChip(
+                                'Solo hoy', 1, () => _applyPresetDays(1)),
+                            const SizedBox(width: 6),
+                            _presetChip('3 días', 3, () => _applyPresetDays(3)),
+                            const SizedBox(width: 6),
+                            _presetChip('7 días', 7, () => _applyPresetDays(7)),
+                            const SizedBox(width: 6),
+                            _presetChip(
+                                '15 días', 15, () => _applyPresetDays(15)),
+                            const SizedBox(width: 6),
+                            _presetChip('1 mes', -1, _applyPresetOneMonth),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Navegación del mes
+                      Row(
+                        children: [
+                          IconButton(
+                            onPressed: _canGoPrevMonth
+                                ? () => setState(() {
+                                      _displayedMonth = DateTime(
+                                        _displayedMonth.year,
+                                        _displayedMonth.month - 1,
+                                      );
+                                    })
+                                : null,
+                            icon: const Icon(Icons.chevron_left_rounded),
+                            style: IconButton.styleFrom(
+                              backgroundColor: const Color(0xFFF1F5F9),
+                              foregroundColor: const Color(0xFF0B2545),
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              '${_months[_displayedMonth.month - 1]} ${_displayedMonth.year}',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF0B2545),
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: _canGoNextMonth
+                                ? () => setState(() {
+                                      _displayedMonth = DateTime(
+                                        _displayedMonth.year,
+                                        _displayedMonth.month + 1,
+                                      );
+                                    })
+                                : null,
+                            icon: const Icon(Icons.chevron_right_rounded),
+                            style: IconButton.styleFrom(
+                              backgroundColor: const Color(0xFFF1F5F9),
+                              foregroundColor: const Color(0xFF0B2545),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Días de la semana
+                      Row(
+                        children: _weekdays
+                            .map((w) => Expanded(
+                                  child: Center(
+                                    child: Text(
+                                      w,
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF64748B),
+                                      ),
+                                    ),
+                                  ),
+                                ))
+                            .toList(),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Cuadrícula de días
+                      GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 7,
+                          mainAxisSpacing: 4,
+                          childAspectRatio: 1.15,
+                        ),
+                        itemCount: totalCells,
+                        itemBuilder: (context, index) {
+                          final dayNum = index - leadingBlanks + 1;
+                          if (dayNum < 1 || dayNum > daysInMonth) {
+                            return const SizedBox.shrink();
+                          }
+                          final day = DateTime(_displayedMonth.year,
+                              _displayedMonth.month, dayNum);
+                          final disabled = day.isBefore(widget.firstDate) ||
+                              day.isAfter(widget.lastDate);
+                          final isStart = DateUtils.isSameDay(day, _start);
+                          final isEnd = DateUtils.isSameDay(day, _end);
+                          final isSameSingle =
+                              DateUtils.isSameDay(_start, _end);
+                          final inRange =
+                              day.isAfter(_start) && day.isBefore(_end);
+                          final isToday =
+                              DateUtils.isSameDay(day, widget.firstDate);
+
+                          return GestureDetector(
+                            onTap: disabled ? null : () => _onTapDay(day),
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                if (!isSameSingle &&
+                                    (inRange || isStart || isEnd))
+                                  Positioned.fill(
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Container(
+                                            color: (inRange || isEnd)
+                                                ? const Color(0xFFDBEAFE)
+                                                : Colors.transparent,
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: Container(
+                                            color: (inRange || isStart)
+                                                ? const Color(0xFFDBEAFE)
+                                                : Colors.transparent,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                Container(
+                                  width: 34,
+                                  height: 34,
+                                  decoration: BoxDecoration(
+                                    color: isStart
+                                        ? const Color(0xFF0056B3)
+                                        : isEnd
+                                            ? const Color(0xFF059669)
+                                            : Colors.transparent,
+                                    shape: BoxShape.circle,
+                                    border: isToday && !isStart && !isEnd
+                                        ? Border.all(
+                                            color: const Color(0xFF0056B3),
+                                            width: 1.5,
+                                          )
+                                        : null,
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    '$dayNum',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: (isStart || isEnd || inRange)
+                                          ? FontWeight.w800
+                                          : FontWeight.w600,
+                                      color: disabled
+                                          ? const Color(0xFFCBD5E1)
+                                          : (isStart || isEnd)
+                                              ? Colors.white
+                                              : const Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+
+                      const SizedBox(height: 12),
+                      Text(
+                        _selectingEnd
+                            ? 'Toca la fecha de fin de la oferta'
+                            : 'Toca un día para cambiar el rango o elige un atajo arriba',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF64748B),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Acciones del modal
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFF64748B),
+                                side:
+                                    const BorderSide(color: Color(0xFFCBD5E1)),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14)),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 13),
+                              ),
+                              child: const Text(
+                                'Cancelar',
+                                style: TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            flex: 2,
+                            child: SizedBox(
+                              height: 46,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      Color(0xFF0056B3),
+                                      Color(0xFF0A3D78)
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: ElevatedButton.icon(
+                                  onPressed: () => Navigator.pop(
+                                    context,
+                                    DateTimeRange(start: _start, end: _end),
+                                  ),
+                                  icon: const Icon(Icons.check_rounded,
+                                      size: 18),
+                                  label: const Text(
+                                    'Aplicar fechas',
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.w800),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.transparent,
+                                    shadowColor: Colors.transparent,
+                                    surfaceTintColor: Colors.transparent,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _presetChip(String label, int days, VoidCallback onTap) {
+    final isSelected = days == -1
+        ? DateUtils.isSameDay(_start, widget.firstDate) &&
+            _daysCount >= 28 &&
+            _daysCount <= 31
+        : DateUtils.isSameDay(_start, widget.firstDate) && _daysCount == days;
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      selectedColor: const Color(0xFF0056B3),
+      backgroundColor: const Color(0xFFF1F5F9),
+      side: BorderSide(
+        color: isSelected ? const Color(0xFF0056B3) : const Color(0xFFE2E8F0),
+      ),
+      labelStyle: TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        color: isSelected ? Colors.white : const Color(0xFF334155),
+      ),
+      onSelected: (_) => onTap(),
     );
   }
 }
