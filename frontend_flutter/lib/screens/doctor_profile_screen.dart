@@ -6,11 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/api_client.dart';
+import '../core/appointment_pricing.dart';
 import '../core/auth_helper.dart';
 import '../core/profile_image_helper.dart';
 import '../models/avatar_catalog.dart';
 import '../models/ve_catalogs.dart';
 import '../widgets/avatar_sprite.dart';
+import '../widgets/appointment_price_preview.dart';
 import '../widgets/instagram_photo_preview.dart';
 import 'appointment_success_screen.dart';
 
@@ -53,6 +55,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
   DateTime? _selectedBookingDate;
   int? _selectedTurnNumber;
   String? _selectedReason;
+  final _pricePreview = GlobalKey<AppointmentPricePreviewState>();
   bool _isSubmittingBooking = false;
   final _customReasonController = TextEditingController();
   bool _bookingForDependent = false;
@@ -146,7 +149,9 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
     try {
       final currentUserId = await AuthHelper.getUserId();
       final doctorUserId = _doctor['user_id']?.toString();
-      if (currentUserId != null && doctorUserId != null && currentUserId == doctorUserId) {
+      if (currentUserId != null &&
+          doctorUserId != null &&
+          currentUserId == doctorUserId) {
         if (mounted) {
           setState(() {
             _isSelf = true;
@@ -218,7 +223,8 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
       );
       if (!mounted) return;
       final data = jsonDecode(response.body);
-      if ((response.statusCode == 200 || response.statusCode == 201) && data is Map) {
+      if ((response.statusCode == 200 || response.statusCode == 201) &&
+          data is Map) {
         setState(() {
           _averageRating =
               (data['rating'] as num?)?.toDouble() ?? stars.toDouble();
@@ -251,8 +257,9 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
       return;
     }
     if (_myDoctorRating != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ya calificaste a este doctor con $_myDoctorRating estrella(s).')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              'Ya calificaste a este doctor con $_myDoctorRating estrella(s).')));
       return;
     }
     var selectedStars = 5;
@@ -324,11 +331,13 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
 
       if (_selectedBookingDate != null && mounted) {
         final targetKey = _dateKey(_selectedBookingDate!);
-        final idx = result.indexWhere((d) => d['date']?.toString() == targetKey);
+        final idx =
+            result.indexWhere((d) => d['date']?.toString() == targetKey);
         if (idx > 0) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (_bookingDaysController.hasClients) {
-              final offset = (idx * 86.0).clamp(0.0, _bookingDaysController.position.maxScrollExtent);
+              final offset = (idx * 86.0)
+                  .clamp(0.0, _bookingDaysController.position.maxScrollExtent);
               _bookingDaysController.animateTo(
                 offset,
                 duration: const Duration(milliseconds: 300),
@@ -353,18 +362,32 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
           .toList();
 
   Future<void> _bookAppointment(List<Map<String, dynamic>> days) async {
-    if (_isSubmittingBooking) return;
-    final date = _selectedBookingDate;
-    if (_selectedReason == null) {
+    if (!mounted || _isSubmittingBooking) return;
+    final selectedReason = _selectedReason;
+    if (selectedReason == null) {
       _showBookingMessage('Selecciona el motivo de la cita.');
       return;
     }
-    if (_selectedReason == 'Otros' &&
+    if (selectedReason == 'Otros' &&
         _customReasonController.text.trim().isEmpty) {
       _showBookingMessage('Describe brevemente el motivo de la cita.');
       return;
     }
-    if (date == null || _selectedTurnNumber == null) {
+    if (days.isEmpty) {
+      _showBookingMessage('Selecciona un día y un turno disponible.');
+      return;
+    }
+    final date =
+        _selectedBookingDate ?? DateTime.parse(days.first['date'].toString());
+    final dateKey = _dateKey(date);
+    final day = days.firstWhere(
+      (item) => item['date']?.toString() == dateKey,
+      orElse: () => <String, dynamic>{},
+    );
+    final slots = _availableSlots(day);
+    final turn = _selectedTurnNumber ??
+        (slots.isEmpty ? null : slots.first['turn_number'] as int?);
+    if (turn == null || !slots.any((item) => item['turn_number'] == turn)) {
       _showBookingMessage('Selecciona un día y un turno disponible.');
       return;
     }
@@ -376,14 +399,26 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
       return;
     }
 
-    final reason = _selectedReason == 'Otros'
+    final reason = selectedReason == 'Otros'
         ? _customReasonController.text.trim()
-        : _selectedReason!;
+        : selectedReason;
+    final doctorId = int.tryParse(_doctor['id'].toString());
+    if (doctorId == null) return;
+    final expectedPrice = _pricePreview.currentState?.totalFor(
+      appointmentPriceEndpoint(
+          doctorId: doctorId, date: dateKey, reason: selectedReason),
+    );
+    if (expectedPrice == null) {
+      _showBookingMessage('Espera a que se muestre el precio de la cita.');
+      return;
+    }
     final request = <String, dynamic>{
-      'doctor_id': int.tryParse(_doctor['id'].toString()),
-      'appointment_date': _dateKey(date),
-      'turn_number': _selectedTurnNumber,
+      'doctor_id': doctorId,
+      'appointment_date': dateKey,
+      'turn_number': turn,
       'appointment_reason': reason,
+      'appointment_category': appointmentCategories[selectedReason],
+      'expected_price_cents': expectedPrice,
       'is_for_dependent': _bookingForDependent,
       if (_bookingForDependent) ...{
         'dependent_name': _dependentNameController.text.trim(),
@@ -395,10 +430,11 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
 
     try {
       setState(() => _isSubmittingBooking = true);
-      if (!await _confirmSameDayAppointment(_dateKey(date))) return;
+      if (!await _confirmSameDayAppointment(dateKey)) return;
       final response = await ApiClient.post('/appointments/', request);
       if (!mounted) return;
       if (response.statusCode != 201) {
+        if (response.statusCode == 409) _pricePreview.currentState?.refresh();
         var message = 'No se pudo agendar la cita.';
         try {
           message = jsonDecode(response.body)['detail']?.toString() ?? message;
@@ -407,19 +443,14 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
         return;
       }
 
-      final matchingDay = days.firstWhere(
-        (item) => item['date']?.toString() == _dateKey(date),
-        orElse: () => <String, dynamic>{},
-      );
-      final slot = _availableSlots(matchingDay).firstWhere(
-        (item) => item['turn_number'] == _selectedTurnNumber,
-        orElse: () => <String, dynamic>{},
-      );
+      final slot = slots.firstWhere((item) => item['turn_number'] == turn);
+      final created = jsonDecode(response.body) as Map<String, dynamic>;
       final specialties = _doctor['specialties'] as List<dynamic>? ?? [];
       final appointment = <String, dynamic>{
-        'date': _dateKey(date),
+        'date': dateKey,
         'time_block': slot['time_block'] ?? 'Hora por confirmar',
-        'turn_number': _selectedTurnNumber,
+        'turn_number': turn,
+        'price': created['price'],
         'doctor_name': 'Dr. ${_doctor['first_name']} ${_doctor['last_name']}',
         'doctor_specialty':
             specialties.isEmpty ? 'Especialista' : specialties.first,
@@ -498,9 +529,9 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
     final preset = AvatarCatalog.parse(imageUrl);
     final defaultAvatar = imageUrl == null || imageUrl.trim().isEmpty;
     final doctorName =
-        'Dr. ${_doctor['first_name'] ?? ''} ${_doctor['last_name'] ?? ''}'.trim();
-    final specialties =
-        (_doctor['specialties'] as List<dynamic>?)?.join(', ');
+        'Dr. ${_doctor['first_name'] ?? ''} ${_doctor['last_name'] ?? ''}'
+            .trim();
+    final specialties = (_doctor['specialties'] as List<dynamic>?)?.join(', ');
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onLongPress: () {
@@ -576,6 +607,8 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
           final slots = _availableSlots(selectedDay);
           final selectedTurn = _selectedTurnNumber ??
               (slots.isEmpty ? null : slots.first['turn_number'] as int?);
+          final doctorId = int.tryParse(_doctor['id'].toString());
+          final reason = _selectedReason;
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -672,18 +705,13 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                 child: Column(
                   children: [
                     DropdownButtonFormField<String>(
-                      value: _selectedReason,
+                      initialValue: _selectedReason,
                       decoration:
                           _bookingFieldDecoration('Selecciona un motivo'),
-                      items: const [
-                        DropdownMenuItem(
-                            value: 'Consulta', child: Text('Consulta')),
-                        DropdownMenuItem(
-                            value: 'Entrega de examenes',
-                            child: Text('Entrega de exámenes')),
-                        DropdownMenuItem(value: 'Cura', child: Text('Cura')),
-                        DropdownMenuItem(
-                            value: 'Otros', child: Text('Otro motivo')),
+                      items: [
+                        for (final option in appointmentReasons.entries)
+                          DropdownMenuItem(
+                              value: option.key, child: Text(option.value)),
                       ],
                       onChanged: (value) => setState(() {
                         _selectedReason = value;
@@ -696,6 +724,17 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                         controller: _customReasonController,
                         decoration:
                             _bookingFieldDecoration('Describe el motivo'),
+                      ),
+                    ],
+                    if (doctorId != null && reason != null) ...[
+                      const SizedBox(height: 14),
+                      AppointmentPricePreview(
+                        key: _pricePreview,
+                        endpoint: appointmentPriceEndpoint(
+                          doctorId: doctorId,
+                          date: _dateKey(selectedDate),
+                          reason: reason,
+                        ),
                       ),
                     ],
                   ],
@@ -1066,14 +1105,14 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                     const Text('Consulta',
                         style: TextStyle(color: Color(0xFF64748B))),
                     Text(
-                      '\$${consultationFee.toStringAsFixed(0)}',
+                      appointmentPriceLabel((consultationFee * 100).round()),
                       style: const TextStyle(
                         color: Color(0xFF0B2545),
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    if (_bcvRate != null)
+                    if (_bcvRate != null && consultationFee > 0)
                       Text(
                         'Bs. ${(consultationFee * _bcvRate!).toStringAsFixed(2)}',
                         style: const TextStyle(

@@ -9,7 +9,9 @@ from app.models.users import User, RoleEnum
 from app.models.appointments import Appointment, AppointmentStatus
 from app.models.doctor_ratings import DoctorPatientHistory
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from app.schemas.appointments import AppointmentCreate, AppointmentResponse
+from app.schemas.appointments import AppointmentCreate, AppointmentPrice, AppointmentResponse
+from app.schemas.doctors import AppointmentCategory
+from app.core.appointment_pricing import appointment_price, category_for_reason
 from datetime import datetime, timedelta, date as date_type
 from zoneinfo import ZoneInfo
 from app.models.doctors import Doctor, Availability
@@ -39,6 +41,7 @@ class ManualAppointmentCreate(BaseModel):
     patient_last_name: str = Field(min_length=1, max_length=60)
     patient_phone: str = Field(min_length=5, max_length=30)
     appointment_reason: str = Field(min_length=1, max_length=500)
+    expected_price_cents: int | None = Field(default=None, ge=0)
     patient_birth_date: date_type | None = None
     patient_gender: str | None = Field(default=None, max_length=30)
 
@@ -136,6 +139,25 @@ async def get_manual_slots(
             slots.append({"turn_number": turn, "time_block": _slot_label(start_minutes, turn, duration)})
     return {"date": appointment_date.isoformat(), "slot_duration_minutes": duration, "slots": slots}
 
+@router.get("/manual/appointment-price", response_model=AppointmentPrice)
+async def get_manual_appointment_price(
+    appointment_date: date_type,
+    category: AppointmentCategory,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    doctor = await _staff_doctor(current_user, db)
+    return appointment_price(doctor, category, appointment_date)
+
+
+def _check_expected_price(price: AppointmentPrice, expected_price_cents: int | None) -> None:
+    if expected_price_cents is not None and expected_price_cents != price.total_cents:
+        raise HTTPException(
+            status_code=409,
+            detail="El precio de la cita cambió. Revisa el precio actualizado y vuelve a confirmar.",
+        )
+
+
 @router.post("/manual", status_code=status.HTTP_201_CREATED)
 async def create_manual_appointment(
     payload: ManualAppointmentCreate,
@@ -150,6 +172,7 @@ async def create_manual_appointment(
             # protects the slot if another writer does not take this lock.
             doctor = await db.scalar(
                 select(Doctor).where(Doctor.id == doctor.id).with_for_update()
+                .execution_options(populate_existing=True)
             )
             availability = await db.scalar(
                 select(Availability).where(
@@ -187,6 +210,10 @@ async def create_manual_appointment(
                     status_code=409,
                     detail="Ese horario acaba de ser reservado; actualiza los turnos",
                 )
+            price = appointment_price(
+                doctor, category_for_reason(payload.appointment_reason), payload.appointment_date
+            )
+            _check_expected_price(price, payload.expected_price_cents)
             appointment = Appointment(
                 doctor_id=doctor.id,
                 patient_id=None,
@@ -200,6 +227,7 @@ async def create_manual_appointment(
                 manual_patient_birth_date=payload.patient_birth_date,
                 manual_patient_gender=payload.patient_gender,
                 appointment_reason=payload.appointment_reason,
+                price=price.model_dump(),
                 booking_source="manual",
                 status=AppointmentStatus.SCHEDULED,
             )
@@ -214,6 +242,7 @@ async def create_manual_appointment(
         "date": appointment.appointment_date.isoformat(),
         "turn_number": appointment.turn_number,
         "time_block": _slot_label(start_minutes, appointment.turn_number, duration),
+        "price": appointment.price,
         "status": appointment.status.value,
     }
 
@@ -287,6 +316,13 @@ async def create_appointment(
             raise HTTPException(status_code=409, detail="Ese horario ya fue reservado")
 
         selected_reason = (appointment_in.appointment_reason or appointment_in.reason or "Consulta").strip() or "Consulta"
+        category = category_for_reason(selected_reason)
+        if appointment_in.appointment_category:
+            if appointment_in.appointment_category != "other" and appointment_in.appointment_category != category:
+                raise HTTPException(status_code=422, detail="El motivo de la cita no coincide con la categoría.")
+            category = appointment_in.appointment_category
+        price = appointment_price(doctor_record, category, req_date)
+        _check_expected_price(price, appointment_in.expected_price_cents)
 
         new_appointment = Appointment(
             patient_id=current_patient_id,
@@ -296,6 +332,7 @@ async def create_appointment(
             appointment_start_minutes=start_of_turn,
             appointment_duration_minutes=duration,
             appointment_reason=selected_reason,
+            price=price.model_dump(),
             is_for_dependent=appointment_in.is_for_dependent,
             dependent_name=appointment_in.dependent_name.strip() if appointment_in.dependent_name else None,
             dependent_birth_date=appointment_in.dependent_birth_date,
@@ -714,6 +751,7 @@ async def get_my_appointments(
             "time_block": time_block,
             "status": appt.status.value,
             "date": appt.appointment_date.isoformat(),
+            "price": appt.price,
             "turn_number": appt.turn_number,
             "booking_source": appt.booking_source,
             "appointment_reason": appt.appointment_reason or (pat.medical_history if pat else "Consulta Médica"),

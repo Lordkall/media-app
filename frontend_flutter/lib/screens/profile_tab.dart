@@ -19,6 +19,7 @@ import 'health_tab.dart';
 import 'login_screen.dart';
 import 'legal_screens.dart';
 import 'select_plan_screen.dart';
+import 'doctor_pricing_screen.dart';
 
 class ProfileTab extends StatefulWidget {
   const ProfileTab({super.key});
@@ -29,7 +30,6 @@ class ProfileTab extends StatefulWidget {
 
 class _ProfileTabState extends State<ProfileTab> {
   final _address = TextEditingController();
-  final _fee = TextEditingController();
   final _bio = TextEditingController();
   final _clinicInfo = TextEditingController();
 
@@ -38,7 +38,6 @@ class _ProfileTabState extends State<ProfileTab> {
   List<String> _specialties = [];
   bool _isLoading = true;
   bool _isSaving = false;
-  bool _showFeeInVes = false;
   String? _medicalLicenseNumber;
   int _yearsExperience = 0;
   int? _doctorId;
@@ -54,7 +53,6 @@ class _ProfileTabState extends State<ProfileTab> {
   @override
   void dispose() {
     _address.dispose();
-    _fee.dispose();
     _bio.dispose();
     _clinicInfo.dispose();
     super.dispose();
@@ -90,12 +88,10 @@ class _ProfileTabState extends State<ProfileTab> {
       }
       if (!mounted) return;
       _address.text = user['address']?.toString() ?? '';
-      _fee.text = doctor?['consultation_fee']?.toString() ?? '';
       _bio.text = doctor?['bio']?.toString() ?? '';
       _clinicInfo.text = doctor?['clinic_info']?.toString() ?? '';
       _specialties =
           List<String>.from(doctor?['specialties'] ?? const <String>[]);
-      _showFeeInVes = doctor?['show_fee_in_ves'] == true;
       _medicalLicenseNumber = doctor?['medical_license_number']?.toString();
       _yearsExperience = (doctor?['years_experience'] as num?)?.toInt() ?? 0;
       _doctorId = int.tryParse(doctor?['id']?.toString() ?? '');
@@ -331,14 +327,18 @@ class _ProfileTabState extends State<ProfileTab> {
                       'Datos Laborales',
                       _DoctorDataPage(doctor: {
                         'bio': _bio.text,
-                        'consultation_fee': _fee.text,
                         'specialties': _specialties,
                         'clinic_info': _clinicInfo.text,
-                        'show_fee_in_ves': _showFeeInVes,
                         'medical_license_number': _medicalLicenseNumber,
                         'years_experience': _yearsExperience,
                         'id': _doctorId,
                       }))),
+            if (_isDoctor)
+              _menuRow(
+                'Tarifas y ofertas',
+                () => _open('Tarifas y ofertas', const DoctorPricingScreen()),
+                icon: Icons.sell_outlined,
+              ),
             if (_userData?['role'] == 'clinic')
               _menuRow(
                   'Datos de la clínica',
@@ -812,13 +812,10 @@ class _DoctorDataPageState extends State<_DoctorDataPage> {
   final FocusNode _specialtyFocusNode = FocusNode();
   late final bio =
       TextEditingController(text: widget.doctor['bio']?.toString());
-  late final fee = TextEditingController(
-      text: widget.doctor['consultation_fee']?.toString());
   late final location =
       TextEditingController(text: widget.doctor['clinic_info']?.toString());
   late final yearsExperience = TextEditingController(
       text: (widget.doctor['years_experience'] ?? 0).toString());
-  late bool showFeeInVes = widget.doctor['show_fee_in_ves'] == true;
   late List<String> specialties =
       (widget.doctor['specialties'] as List? ?? const [])
           .map((value) => value.toString())
@@ -888,16 +885,6 @@ class _DoctorDataPageState extends State<_DoctorDataPage> {
                 .toList(),
           ),
         const SizedBox(height: 16),
-        _field('Precio de la consulta', fee,
-            type: const TextInputType.numberWithOptions(decimal: true)),
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Mostrar conversión a bolívares'),
-          subtitle: const Text(
-              'Presentar el precio en USD y su equivalente con la tasa BCV del día.'),
-          value: showFeeInVes,
-          onChanged: (value) => setState(() => showFeeInVes = value),
-        ),
         _field('Ubicación de consultorio', location, lines: 2),
         FilledButton(
             onPressed: () async {
@@ -911,9 +898,6 @@ class _DoctorDataPageState extends State<_DoctorDataPage> {
               }
               final r = await ApiClient.put('/doctors/me', {
                 'bio': bio.text.trim(),
-                'consultation_fee':
-                    double.tryParse(fee.text.replaceAll(',', '.')),
-                'show_fee_in_ves': showFeeInVes,
                 'years_experience': parsedExperience,
                 'clinic_info': location.text.trim(),
                 'specialties': specialties
@@ -941,9 +925,6 @@ class _DoctorDataPageState extends State<_DoctorDataPage> {
                       await prefs.setInt(cacheKey, parsedExperience);
                     }
                   }
-                  widget.doctor['show_fee_in_ves'] = showFeeInVes;
-                  widget.doctor['consultation_fee'] =
-                      double.tryParse(fee.text.replaceAll(',', '.'));
                   widget.doctor['years_experience'] = parsedExperience;
                 }
                 if (!context.mounted) return;

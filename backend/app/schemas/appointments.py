@@ -2,13 +2,20 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from datetime import date
 from typing import Optional
 from app.core.demographics import local_today
+from app.schemas.doctors import AppointmentCategory
+
+
+class AppointmentPrice(BaseModel):
+    base_cents: int
+    total_cents: int
+    discount_percent: int = 0
 
 class AppointmentBase(BaseModel):
     doctor_id: int
     appointment_date: date
     turn_number: int = Field(gt=0)
-    appointment_reason: Optional[str] = None
-    reason: Optional[str] = None
+    appointment_reason: Optional[str] = Field(default=None, max_length=500)
+    reason: Optional[str] = Field(default=None, max_length=500)
     is_for_dependent: bool = False
     dependent_name: Optional[str] = Field(default=None, max_length=120)
     dependent_birth_date: Optional[date] = None
@@ -45,7 +52,8 @@ class AppointmentBase(BaseModel):
         return self
 
 class AppointmentCreate(AppointmentBase):
-    pass
+    appointment_category: AppointmentCategory | None = None
+    expected_price_cents: int | None = Field(default=None, ge=0)
 
 class AppointmentResponse(AppointmentBase):
     id: int
@@ -53,5 +61,6 @@ class AppointmentResponse(AppointmentBase):
     turn_number: int
     status: str
     appointment_reason: Optional[str] = None
+    price: AppointmentPrice | None = None
 
     model_config = ConfigDict(from_attributes=True)

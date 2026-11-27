@@ -1,5 +1,5 @@
 from datetime import datetime, date
-from sqlalchemy import ForeignKey, DateTime, Date, Enum, Integer, String, Boolean
+from sqlalchemy import ForeignKey, DateTime, Date, Enum, Integer, String, Boolean, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base
 import enum
@@ -27,6 +27,7 @@ class Appointment(Base):
     manual_patient_birth_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     manual_patient_gender: Mapped[str | None] = mapped_column(String(30), nullable=True)
     appointment_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    price: Mapped[dict | None] = mapped_column(JSON(none_as_null=True), nullable=True)
     is_for_dependent: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     dependent_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     dependent_birth_date: Mapped[date | None] = mapped_column(Date, nullable=True)

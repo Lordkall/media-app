@@ -66,9 +66,15 @@ async def appointment_history_cleanup_loop():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Commit the profile migration independently of the remaining startup migrations.
+    # Commit these migrations independently of the remaining startup migrations.
     async with engine.begin() as conn:
         await conn.execute(text("ALTER TABLE IF EXISTS users ADD COLUMN IF NOT EXISTS blood_type VARCHAR(3);"))
+        await conn.execute(text(
+            "ALTER TABLE IF EXISTS doctors ADD COLUMN IF NOT EXISTS exam_delivery_fee NUMERIC(12,2), "
+            "ADD COLUMN IF NOT EXISTS wound_care_fee NUMERIC(12,2), "
+            "ADD COLUMN IF NOT EXISTS appointment_offer JSON;"
+        ))
+        await conn.execute(text("ALTER TABLE IF EXISTS appointments ADD COLUMN IF NOT EXISTS price JSON;"))
 
     # Migration on startup
     try:

@@ -1,11 +1,31 @@
-from pydantic import BaseModel, Field, field_validator
-from typing import List, Optional
+from pydantic import BaseModel, Field, field_validator, model_validator
+from typing import Annotated, List, Literal, Optional
 from datetime import date
+from decimal import Decimal
+
+AppointmentCategory = Literal["consultation", "exam_delivery", "wound_care", "other"]
+AppointmentFee = Annotated[Decimal, Field(ge=0, max_digits=12, decimal_places=2)]
+
+
+class AppointmentOffer(BaseModel):
+    starts_on: date
+    ends_on: date
+    percent: int = Field(ge=1, le=100)
+    category: Literal["all", "consultation", "exam_delivery", "wound_care", "other"]
+
+    @model_validator(mode="after")
+    def validate_dates(self):
+        if self.ends_on < self.starts_on:
+            raise ValueError("La fecha final debe ser igual o posterior a la inicial")
+        return self
 
 class DoctorUpdate(BaseModel):
     bio: Optional[str] = Field(default=None, max_length=120)
     clinic_info: Optional[str] = None
-    consultation_fee: Optional[float] = None
+    consultation_fee: AppointmentFee | None = None
+    exam_delivery_fee: AppointmentFee | None = None
+    wound_care_fee: AppointmentFee | None = None
+    appointment_offer: AppointmentOffer | None = None
     show_fee_in_ves: Optional[bool] = None
     specialties: Optional[List[str]] = Field(default=None, max_length=5)
     max_patients_per_day: Optional[int] = None
@@ -31,6 +51,9 @@ class DoctorResponse(BaseModel):
     is_featured: bool
     is_sponsored: bool
     consultation_fee: Optional[float]
+    exam_delivery_fee: AppointmentFee | None = None
+    wound_care_fee: AppointmentFee | None = None
+    appointment_offer: AppointmentOffer | None = None
     show_fee_in_ves: bool = False
     medical_license_number: Optional[str] = None
     rating: float

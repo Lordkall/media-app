@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../core/api_client.dart';
+import '../core/appointment_pricing.dart';
 import 'dart:convert';
 import 'package:table_calendar/table_calendar.dart';
 import '../models/ve_catalogs.dart';
 import '../widgets/profile_avatar.dart';
+import '../widgets/appointment_price_preview.dart';
 import '../widgets/instagram_photo_preview.dart';
 import 'appointment_success_screen.dart';
 
@@ -51,6 +53,8 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
 
   List<dynamic> _allDoctors = [];
   bool _isLoading = true;
+  bool _isBooking = false;
+  final _pricePreview = GlobalKey<AppointmentPricePreviewState>();
   List<dynamic> _doctorAvailabilityInfo = [];
   DateTime _selectedDate = caracasNow();
 
@@ -66,9 +70,8 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
     if (widget.initialSpecialty != null) {
       _selectedEspecialidad = widget.initialSpecialty;
     }
-    const validMotivos = ['Consulta', 'Entrega de examenes', 'Cura', 'Otros'];
     if (widget.initialMotivo != null) {
-      if (validMotivos.contains(widget.initialMotivo)) {
+      if (appointmentReasons.containsKey(widget.initialMotivo)) {
         _selectedMotivo = widget.initialMotivo;
       } else {
         _selectedMotivo = 'Consulta';
@@ -404,6 +407,15 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
       return const Center(child: CircularProgressIndicator());
     }
 
+    final reason = _selectedMotivo;
+    final doctorId = _selectedDoctorId;
+    final priceEndpoint = doctorId == null || reason == null
+        ? null
+        : appointmentPriceEndpoint(
+            doctorId: doctorId,
+            date: _dateKey(_selectedDate),
+            reason: reason,
+          );
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -532,10 +544,10 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                 title: 'Motivo de la cita',
                 child: _buildDropdown(
                   hint: 'Selecciona un motivo',
-                  value: ['Consulta', 'Entrega de examenes', 'Cura', 'Otros'].contains(_selectedMotivo)
+                  value: appointmentReasons.containsKey(_selectedMotivo)
                       ? _selectedMotivo
                       : 'Consulta',
-                  items: ['Consulta', 'Entrega de examenes', 'Cura', 'Otros'],
+                  items: appointmentReasons.keys.toList(),
                   onChanged: (val) => setState(() {
                     _selectedMotivo = val;
                     if (val != 'Otros') _customMotivoController.clear();
@@ -545,10 +557,10 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
             else
               _buildDropdown(
                 hint: 'Motivo de Cita',
-                value: ['Consulta', 'Entrega de examenes', 'Cura', 'Otros'].contains(_selectedMotivo)
+                value: appointmentReasons.containsKey(_selectedMotivo)
                     ? _selectedMotivo
                     : 'Consulta',
-                items: ['Consulta', 'Entrega de examenes', 'Cura', 'Otros'],
+                items: appointmentReasons.keys.toList(),
                 onChanged: (val) => setState(() {
                   _selectedMotivo = val;
                   if (val != 'Otros') _customMotivoController.clear();
@@ -832,6 +844,11 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                 }).toList(),
                 onChanged: (turn) => setState(() => _selectedTurnNumber = turn),
               ),
+            if (priceEndpoint != null && _availableSlots.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              AppointmentPricePreview(
+                  key: _pricePreview, endpoint: priceEndpoint),
+            ],
             const SizedBox(height: 24),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -847,155 +864,198 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: ElevatedButton.icon(
-                    onPressed: () async {
-                      if (_selectedDoctorId == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content:
-                                    Text('Por favor selecciona un médico.')));
-                        return;
-                      }
-                      if (_selectedMotivo == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text(
-                                  'Por favor selecciona el motivo de la cita.')),
-                        );
-                        return;
-                      }
-                      if (_selectedTurnNumber == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content:
-                                    Text('Selecciona un turno disponible.')));
-                        return;
-                      }
-                      if (_bookingForDependent &&
-                          (_dependentNameController.text.trim().isEmpty ||
-                              _dependentBirthDate == null ||
-                              _dependentRelationship == null)) {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                            content: Text(
-                                'Completa el nombre, nacimiento y parentesco del paciente.')));
-                        return;
-                      }
-
-                      final doc = _findDoctor(_selectedDoctorId);
-                      if (doc == null || doc['id'] == null) return;
-
-                      final String motivoFinal = (_selectedMotivo == 'Otros' &&
-                              _customMotivoController.text.trim().isNotEmpty)
-                          ? _customMotivoController.text.trim()
-                          : (_selectedMotivo ?? 'Consulta');
-
-                      final appointmentDate = _dateKey(_selectedDate);
-                      if (!await _confirmSameDayAppointment(
-                          doc['id'] as int, appointmentDate)) {
-                        return;
-                      }
-
-                      final reqBody = {
-                        "doctor_id": doc['id'],
-                        "appointment_date": appointmentDate,
-                        "turn_number": _selectedTurnNumber,
-                        "appointment_reason": motivoFinal,
-                        "is_for_dependent": _bookingForDependent,
-                        if (_bookingForDependent) ...{
-                          "dependent_name":
-                              _dependentNameController.text.trim(),
-                          "dependent_birth_date":
-                              _dateKey(_dependentBirthDate!),
-                          "dependent_relationship": _dependentRelationship,
-                          "dependent_gender": _dependentGender,
-                        },
-                      };
-
-                      try {
-                        final response =
-                            await ApiClient.post('/appointments/', reqBody);
-                        if (!context.mounted) return;
-                        if (response.statusCode == 201) {
-                          Map<String, dynamic>? appointmentDetails;
-                          try {
-                            final created = jsonDecode(response.body)
-                                as Map<String, dynamic>;
-                            final createdId = created['id']?.toString();
-                            final listResponse =
-                                await ApiClient.get('/appointments/my');
-                            final decoded = jsonDecode(listResponse.body);
-                            final appointments = decoded is List
-                                ? decoded
-                                : (decoded is Map && decoded['items'] is List
-                                    ? decoded['items'] as List
-                                    : <dynamic>[]);
-                            for (final item in appointments) {
-                              if (item is Map &&
-                                  item['id']?.toString() == createdId) {
-                                appointmentDetails =
-                                    Map<String, dynamic>.from(item);
-                                break;
-                              }
+                    onPressed: _isBooking
+                        ? null
+                        : () async {
+                            if (_selectedDoctorId == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content: Text(
+                                          'Por favor selecciona un médico.')));
+                              return;
                             }
-                          } catch (_) {}
-                          final selectedSlot = _availableSlots
-                              .where((slot) =>
-                                  slot['turn_number'] == _selectedTurnNumber)
-                              .toList();
-                          final successAppointment = appointmentDetails ??
-                              <String, dynamic>{
-                                'date': appointmentDate,
-                                'time_block': selectedSlot.isEmpty
-                                    ? 'Hora pendiente'
-                                    : selectedSlot.first['time_block'],
-                                'turn_number': _selectedTurnNumber,
-                              };
-                          final successAction = await Navigator.of(
-                            context,
-                            rootNavigator: true,
-                          ).push<AppointmentSuccessAction>(
-                            MaterialPageRoute<AppointmentSuccessAction>(
-                              builder: (_) => AppointmentSuccessScreen(
-                                doctor: doc,
-                                appointment: successAppointment,
+                            if (_selectedMotivo == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text(
+                                        'Por favor selecciona el motivo de la cita.')),
+                              );
+                              return;
+                            }
+                            if (_selectedTurnNumber == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content: Text(
+                                          'Selecciona un turno disponible.')));
+                              return;
+                            }
+                            if (_bookingForDependent &&
+                                (_dependentNameController.text.trim().isEmpty ||
+                                    _dependentBirthDate == null ||
+                                    _dependentRelationship == null)) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content: Text(
+                                          'Completa el nombre, nacimiento y parentesco del paciente.')));
+                              return;
+                            }
+
+                            final doc = _findDoctor(_selectedDoctorId);
+                            if (doc == null || doc['id'] == null) return;
+                            final turn = _selectedTurnNumber;
+                            final appointmentDate = _dateKey(_selectedDate);
+                            final chosenReason = _selectedMotivo!;
+                            final expectedPrice =
+                                _pricePreview.currentState?.totalFor(
+                              appointmentPriceEndpoint(
+                                doctorId: _selectedDoctorId,
+                                date: appointmentDate,
+                                reason: chosenReason,
                               ),
-                            ),
-                          );
-                          if (!context.mounted) return;
-                          setState(() {
-                            _selectedEspecialidad = null;
-                            _allSpecialtiesSelected = false;
-                            _selectedDoctorId = null;
-                            _selectedMotivo = null;
-                            _customMotivoController.clear();
-                            _dependentNameController.clear();
-                            _bookingForDependent = false;
-                            _dependentBirthDate = null;
-                            _dependentRelationship = null;
-                            _dependentGender = null;
-                            _selectedTurnNumber = null;
-                          });
-                          if (successAction ==
-                              AppointmentSuccessAction.viewSchedule) {
-                            (widget.onVerAgenda ?? widget.onCitaAgendada)
-                                ?.call();
-                          } else {
-                            widget.onCitaAgendada?.call();
-                          }
-                        } else {
-                          var errorMessage = 'No se pudo agendar la cita.';
-                          try {
-                            errorMessage = jsonDecode(response.body)['detail']
-                                    ?.toString() ??
-                                errorMessage;
-                          } catch (_) {}
-                          ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(errorMessage)));
-                        }
-                      } catch (e) {
-                        ScaffoldMessenger.of(context)
-                            .showSnackBar(SnackBar(content: Text('Error: $e')));
-                      }
-                    },
+                            );
+                            if (expectedPrice == null) {
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(const SnackBar(
+                                content: Text(
+                                    'Espera a que se muestre el precio de la cita.'),
+                              ));
+                              return;
+                            }
+
+                            final String motivoFinal =
+                                (_selectedMotivo == 'Otros' &&
+                                        _customMotivoController.text
+                                            .trim()
+                                            .isNotEmpty)
+                                    ? _customMotivoController.text.trim()
+                                    : (_selectedMotivo ?? 'Consulta');
+
+                            final reqBody = {
+                              "doctor_id": doc['id'],
+                              "appointment_date": appointmentDate,
+                              "turn_number": turn,
+                              "appointment_reason": motivoFinal,
+                              "appointment_category":
+                                  appointmentCategories[chosenReason],
+                              "expected_price_cents": expectedPrice,
+                              "is_for_dependent": _bookingForDependent,
+                              if (_bookingForDependent) ...{
+                                "dependent_name":
+                                    _dependentNameController.text.trim(),
+                                "dependent_birth_date":
+                                    _dateKey(_dependentBirthDate!),
+                                "dependent_relationship":
+                                    _dependentRelationship,
+                                "dependent_gender": _dependentGender,
+                              },
+                            };
+
+                            try {
+                              setState(() => _isBooking = true);
+                              if (!await _confirmSameDayAppointment(
+                                  doc['id'] as int, appointmentDate)) {
+                                return;
+                              }
+                              final response = await ApiClient.post(
+                                  '/appointments/', reqBody);
+                              if (!context.mounted) return;
+                              if (response.statusCode == 201) {
+                                final created = jsonDecode(response.body)
+                                    as Map<String, dynamic>;
+                                Map<String, dynamic>? appointmentDetails;
+                                try {
+                                  final createdId = created['id']?.toString();
+                                  final listResponse =
+                                      await ApiClient.get('/appointments/my');
+                                  final decoded = jsonDecode(listResponse.body);
+                                  final appointments = decoded is List
+                                      ? decoded
+                                      : (decoded is Map &&
+                                              decoded['items'] is List
+                                          ? decoded['items'] as List
+                                          : <dynamic>[]);
+                                  for (final item in appointments) {
+                                    if (item is Map &&
+                                        item['id']?.toString() == createdId) {
+                                      appointmentDetails =
+                                          Map<String, dynamic>.from(item);
+                                      break;
+                                    }
+                                  }
+                                } catch (_) {}
+                                final selectedSlot = _availableSlots
+                                    .where(
+                                        (slot) => slot['turn_number'] == turn)
+                                    .toList();
+                                final successAppointment = appointmentDetails ??
+                                    <String, dynamic>{
+                                      'date': appointmentDate,
+                                      'time_block': selectedSlot.isEmpty
+                                          ? 'Hora pendiente'
+                                          : selectedSlot.first['time_block'],
+                                      'turn_number': turn,
+                                      'price': created['price'],
+                                    };
+                                if (!context.mounted) return;
+                                final successAction = await Navigator.of(
+                                  context,
+                                  rootNavigator: true,
+                                ).push<AppointmentSuccessAction>(
+                                  MaterialPageRoute<AppointmentSuccessAction>(
+                                    builder: (_) => AppointmentSuccessScreen(
+                                      doctor: doc,
+                                      appointment: successAppointment,
+                                    ),
+                                  ),
+                                );
+                                if (!context.mounted) return;
+                                setState(() {
+                                  _selectedEspecialidad = null;
+                                  _allSpecialtiesSelected = false;
+                                  _selectedDoctorId = null;
+                                  _selectedMotivo = null;
+                                  _customMotivoController.clear();
+                                  _dependentNameController.clear();
+                                  _bookingForDependent = false;
+                                  _dependentBirthDate = null;
+                                  _dependentRelationship = null;
+                                  _dependentGender = null;
+                                  _selectedTurnNumber = null;
+                                });
+                                if (successAction ==
+                                    AppointmentSuccessAction.viewSchedule) {
+                                  (widget.onVerAgenda ?? widget.onCitaAgendada)
+                                      ?.call();
+                                } else {
+                                  widget.onCitaAgendada?.call();
+                                }
+                              } else {
+                                if (response.statusCode == 409) {
+                                  _pricePreview.currentState?.refresh();
+                                }
+                                var errorMessage =
+                                    'No se pudo agendar la cita.';
+                                try {
+                                  errorMessage =
+                                      jsonDecode(response.body)['detail']
+                                              ?.toString() ??
+                                          errorMessage;
+                                } catch (_) {}
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(errorMessage)));
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content: Text(
+                                          'No se pudo conectar para agendar.')),
+                                );
+                              }
+                            } finally {
+                              if (mounted) setState(() => _isBooking = false);
+                            }
+                          },
                     icon: const Icon(Icons.check_circle, color: Colors.white),
                     label: const Text('Confirmar Cita',
                         style: TextStyle(
@@ -1161,8 +1221,8 @@ class _AgendarCitaTabState extends State<AgendarCitaTab> {
           items: items.map((String item) {
             return DropdownMenuItem<String>(
               value: item,
-              child:
-                  Text(item, style: const TextStyle(color: Color(0xFF0B2545))),
+              child: Text(appointmentReasons[item] ?? item,
+                  style: const TextStyle(color: Color(0xFF0B2545))),
             );
           }).toList(),
           onChanged: onChanged,

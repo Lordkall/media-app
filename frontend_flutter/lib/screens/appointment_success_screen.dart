@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../core/appointment_pricing.dart';
 import '../widgets/profile_avatar.dart';
 
 enum AppointmentSuccessAction { viewSchedule, home }
@@ -259,6 +260,7 @@ class _AppointmentSuccessScreenState extends State<AppointmentSuccessScreen>
   }
 
   Widget _appointmentCard(String? avatarUrl) {
+    final price = savedAppointmentPrice(widget.appointment);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
@@ -305,6 +307,7 @@ class _AppointmentSuccessScreenState extends State<AppointmentSuccessScreen>
                   children: [
                     _detail(Icons.calendar_month_outlined, _dateLabel),
                     _detail(Icons.access_time, _timeLabel),
+                    if (price != null) _detail(Icons.payments_outlined, price),
                   ],
                 ),
               ],
@@ -332,7 +335,6 @@ class _AppointmentSuccessScreenState extends State<AppointmentSuccessScreen>
       ],
     );
   }
-
 }
 
 class _CheckmarkPainter extends CustomPainter {

@@ -1,9 +1,10 @@
-from sqlalchemy import String, ForeignKey, Text, Boolean, Integer, Float, Date
+from sqlalchemy import String, ForeignKey, Text, Boolean, Integer, Float, Date, Numeric, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import ARRAY
 from app.models.base import Base
 from typing import List, Optional
 from datetime import date
+from decimal import Decimal
 
 SPECIALTIES = sorted([
     "Alergología",
@@ -85,6 +86,9 @@ class Doctor(Base):
 
     # Métricas
     consultation_fee: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    exam_delivery_fee: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    wound_care_fee: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    appointment_offer: Mapped[dict | None] = mapped_column(JSON(none_as_null=True), nullable=True)
     show_fee_in_ves: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     rating: Mapped[float] = mapped_column(Float, default=5.0, nullable=False)
     total_reviews: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

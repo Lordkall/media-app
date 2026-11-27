@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/appointment_pricing.dart';
 import '../core/health_module_helper.dart';
 import '../widgets/profile_avatar.dart';
 
@@ -28,6 +29,7 @@ Future<void> showAppointmentDetailsDialog(
           ? Colors.green.shade600
           : (isCancelled ? Colors.red.shade400 : Colors.blueGrey));
   final avatarUrl = appt['doctor_avatar']?.toString();
+  final price = savedAppointmentPrice(appt);
 
   await showDialog<void>(
     context: context,
@@ -119,6 +121,10 @@ Future<void> showAppointmentDetailsDialog(
               const SizedBox(height: 12),
               _detail(Icons.access_time, 'Hora estimada / Bloque',
                   appt['time_block']?.toString() ?? 'Hora pendiente'),
+              if (price != null) ...[
+                const SizedBox(height: 12),
+                _detail(Icons.payments_outlined, 'Precio acordado', price),
+              ],
               if ((appt['doctor_location']?.toString().trim().isNotEmpty ??
                       false) &&
                   !isDoctor) ...[

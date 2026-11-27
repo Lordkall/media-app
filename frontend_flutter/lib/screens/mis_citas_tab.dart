@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
 import '../core/api_client.dart';
+import '../core/appointment_pricing.dart';
 import '../core/auth_helper.dart';
 import '../core/health_module_helper.dart';
 import '../widgets/profile_avatar.dart';
@@ -185,6 +186,7 @@ class _MisCitasTabState extends State<MisCitasTab> {
     final location = appt['doctor_location']?.toString() ?? '';
     final reason = appt['appointment_reason']?.toString() ??
         (appt['reason']?.toString() ?? 'Consulta Médica');
+    final price = savedAppointmentPrice(appt);
     final rawStatus = (appt['status'] ?? 'scheduled').toString().toLowerCase().trim();
     final isCompleted = rawStatus == 'completed' || rawStatus == 'completada';
     final isScheduled = rawStatus == 'scheduled' || rawStatus == 'programada';
@@ -307,6 +309,10 @@ class _MisCitasTabState extends State<MisCitasTab> {
                 const SizedBox(height: 12),
                 _buildDetailRow(
                     Icons.access_time, 'Hora estimada / Bloque', time),
+                if (price != null) ...[
+                  const SizedBox(height: 12),
+                  _buildDetailRow(Icons.payments_outlined, 'Precio acordado', price),
+                ],
                 if (location.trim().isNotEmpty) ...[
                   const SizedBox(height: 12),
                   _buildDetailRow(

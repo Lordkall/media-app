@@ -4,7 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 
 import '../core/api_client.dart';
+import '../core/appointment_pricing.dart';
 import '../models/ve_catalogs.dart';
+import '../widgets/appointment_price_preview.dart';
 
 class ManualAppointmentSheet extends StatefulWidget {
   const ManualAppointmentSheet({super.key});
@@ -19,7 +21,7 @@ class _ManualAppointmentSheetState extends State<ManualAppointmentSheet> {
   final _lastName = TextEditingController();
   final _phone = TextEditingController();
   String? _reason;
-  static const _reasons = ['Consulta', 'Entrega de examenes', 'Cura', 'Otros'];
+  final _pricePreview = GlobalKey<AppointmentPricePreviewState>();
   DateTime? _date;
   DateTime? _patientBirthDate;
   String? _patientGender;
@@ -92,6 +94,15 @@ class _ManualAppointmentSheetState extends State<ManualAppointmentSheet> {
           content: Text('Selecciona la fecha y un turno disponible.')));
       return;
     }
+    final expectedPrice = _pricePreview.currentState?.totalFor(
+      appointmentPriceEndpoint(date: _formatDate(_date!), reason: _reason!),
+    );
+    if (expectedPrice == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Espera a que se muestre el precio de la cita.'),
+      ));
+      return;
+    }
     setState(() => _saving = true);
     try {
       final response = await ApiClient.post('/appointments/manual', {
@@ -105,10 +116,12 @@ class _ManualAppointmentSheetState extends State<ManualAppointmentSheet> {
             : '${_patientBirthDate!.year}-${_patientBirthDate!.month.toString().padLeft(2, '0')}-${_patientBirthDate!.day.toString().padLeft(2, '0')}',
         'patient_gender': _patientGender,
         'appointment_reason': _reason!,
+        'expected_price_cents': expectedPrice,
       });
       if (response.statusCode == 201) {
         if (mounted) Navigator.of(context).pop(true);
       } else {
+        if (response.statusCode == 409) _pricePreview.currentState?.refresh();
         throw Exception(_detail(response.body));
       }
     } catch (error) {
@@ -232,10 +245,11 @@ class _ManualAppointmentSheetState extends State<ManualAppointmentSheet> {
                 DropdownButtonFormField<String>(
                   initialValue: _reason,
                   decoration: _decoration('Motivo de la cita'),
-                  items: _reasons
-                      .map((reason) =>
-                          DropdownMenuItem(value: reason, child: Text(reason)))
-                      .toList(),
+                  items: [
+                    for (final reason in appointmentReasons.entries)
+                      DropdownMenuItem(
+                          value: reason.key, child: Text(reason.value)),
+                  ],
                   onChanged: _saving
                       ? null
                       : (value) => setState(() => _reason = value),
@@ -277,6 +291,14 @@ class _ManualAppointmentSheetState extends State<ManualAppointmentSheet> {
                             : (_) => setState(() => _turn = turn),
                       );
                     }).toList(),
+                  ),
+                ],
+                if (_date != null && _reason != null && _slots.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  AppointmentPricePreview(
+                    key: _pricePreview,
+                    endpoint: appointmentPriceEndpoint(
+                        date: _formatDate(_date!), reason: _reason!),
                   ),
                 ],
                 const SizedBox(height: 18),

@@ -9,10 +9,12 @@ from app.models.appointments import Appointment, AppointmentStatus
 from app.models.patients import Patient
 from app.models.doctor_ratings import DoctorRating, DoctorPatientHistory
 from app.models.subscriptions import Subscription, SubscriptionStatus, SubscriptionPlan
-from app.schemas.doctors import DoctorResponse, DoctorUpdate, DoctorRatingCreate
+from app.schemas.doctors import AppointmentCategory, DoctorResponse, DoctorUpdate, DoctorRatingCreate
+from app.schemas.appointments import AppointmentPrice
+from app.core.appointment_pricing import appointment_price
 from app.schemas.availability import AvailabilityUpdate
 from app.api.v1.endpoints.users import get_current_user
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from app.core.subscription_service import GRACE_PERIOD_DAYS
 
@@ -177,6 +179,10 @@ async def update_doctor_me(
         raise HTTPException(status_code=404, detail="Doctor profile not found")
         
     update_data = doc_in.model_dump(exclude_unset=True)
+    if doc_in.consultation_fee is not None:
+        update_data["consultation_fee"] = float(doc_in.consultation_fee)
+    if doc_in.appointment_offer is not None:
+        update_data["appointment_offer"] = doc_in.appointment_offer.model_dump(mode="json")
     for field, value in update_data.items():
         setattr(doc, field, value)
         if field == "specialties":
@@ -207,6 +213,19 @@ async def update_doctor_me(
             is_vip = True
     doc.is_vip = is_vip
     return doc
+
+@router.get("/{doctor_id}/appointment-price", response_model=AppointmentPrice)
+async def get_appointment_price(
+    doctor_id: int,
+    appointment_date: date,
+    category: AppointmentCategory,
+    db: AsyncSession = Depends(get_db),
+):
+    doctor = await db.scalar(select(Doctor).where(Doctor.id == doctor_id, Doctor.is_approved.is_(True)))
+    if doctor is None:
+        raise HTTPException(status_code=404, detail="Médico no encontrado")
+    return appointment_price(doctor, category, appointment_date)
+
 
 @router.get("/{doctor_id}/availability")
 async def get_doctor_availability(
