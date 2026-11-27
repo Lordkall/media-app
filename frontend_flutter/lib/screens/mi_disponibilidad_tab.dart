@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../core/api_client.dart';
 import '../models/ve_catalogs.dart';
 import '../core/auth_helper.dart';
+import '../widgets/settings_ui.dart';
 import 'dart:convert';
 import 'dart:async';
 
@@ -219,6 +220,16 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
       initialTime:
           TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1])),
       initialEntryMode: TimePickerEntryMode.input,
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: const ColorScheme.light(
+            primary: Color(0xFF0056B3),
+            onPrimary: Colors.white,
+            surface: Colors.white,
+          ),
+        ),
+        child: child!,
+      ),
     );
     if (picked == null || !mounted) return;
     final formatted =
@@ -234,100 +245,143 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFFE0EAFC), Color(0xFFCFDEF3), Color(0xFFB3C6DF)],
+    return Scaffold(
+      backgroundColor: const Color(0xFFF4F7FB),
+      appBar: AppBar(
+        title: const Text(
+          'Mi Disponibilidad',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
+        backgroundColor: const Color(0xFF0056B3),
+        elevation: 0,
+        centerTitle: true,
+        automaticallyImplyLeading: false,
       ),
-      child: SafeArea(
-        child: Scaffold(
-          backgroundColor: Colors.transparent,
-          appBar: AppBar(
-            title: const Text('Mi Disponibilidad',
-                style: TextStyle(
-                    color: Color(0xFF0B2545), fontWeight: FontWeight.bold)),
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            centerTitle: true,
-            automaticallyImplyLeading:
-                false, // It's a tab, no back button usually
-          ),
-          body: _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(24.0),
+      body: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFF0056B3)),
+            )
+          : Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 680),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 18, 16, 32),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _buildSectionTitle('Hora de Inicio Laboral'),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Selecciona la hora en la que inician tus consultas.',
-                        style:
-                            TextStyle(color: Color(0xFF475569), fontSize: 14),
+                      const SettingsBanner(
+                        icon: Icons.calendar_month_rounded,
+                        title: 'Configura tu horario de atención',
+                        subtitle:
+                            'Define tu jornada laboral, la duración de cada consulta y tus días disponibles.',
                       ),
                       const SizedBox(height: 16),
-                      _timePickerTile('Hora de inicio', _selectedStartTime,
-                          () => _selectTime(isStart: true)),
-                      const SizedBox(height: 32),
-                      _buildSectionTitle('Hora de Fin Laboral'),
-                      const SizedBox(height: 8),
-                      const Text(
-                          'Selecciona la hora en la que finalizan tus consultas.',
-                          style: TextStyle(
-                              color: Color(0xFF475569), fontSize: 14)),
-                      const SizedBox(height: 16),
-                      _timePickerTile('Hora de fin', _selectedEndTime,
-                          () => _selectTime(isStart: false)),
-                      const SizedBox(height: 32),
-                      _buildSectionTitle('Duración de cada cita'),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Este bloque se aplicará a los turnos de los días seleccionados.',
-                        style:
-                            TextStyle(color: Color(0xFF475569), fontSize: 14),
-                      ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<int>(
-                        initialValue: _slotDurationMinutes,
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          prefixIcon: const Icon(Icons.timelapse,
-                              color: Color(0xFF0056B3)),
+
+                      // Tarjeta 1: Horario laboral (Inicio y Fin)
+                      SettingsCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SettingsSectionHeader(
+                              icon: Icons.schedule_rounded,
+                              iconColor: Color(0xFF0056B3),
+                              iconBg: Color(0xFFE0EAFC),
+                              title: 'Horario laboral',
+                              subtitle:
+                                  'Selecciona la hora en la que inician y finalizan tus consultas.',
+                            ),
+                            const SizedBox(height: 18),
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                final wide = constraints.maxWidth >= 420;
+                                final startTile = _timePickerTile(
+                                  'Hora de inicio',
+                                  _selectedStartTime,
+                                  Icons.wb_sunny_outlined,
+                                  () => _selectTime(isStart: true),
+                                );
+                                final endTile = _timePickerTile(
+                                  'Hora de fin',
+                                  _selectedEndTime,
+                                  Icons.nights_stay_outlined,
+                                  () => _selectTime(isStart: false),
+                                );
+                                if (wide) {
+                                  return Row(
+                                    children: [
+                                      Expanded(child: startTile),
+                                      const SizedBox(width: 12),
+                                      Expanded(child: endTile),
+                                    ],
+                                  );
+                                }
+                                return Column(
+                                  children: [
+                                    startTile,
+                                    const SizedBox(height: 12),
+                                    endTile,
+                                  ],
+                                );
+                              },
+                            ),
+                          ],
                         ),
-                        items: const [30, 60, 90, 120]
-                            .map((minutes) => DropdownMenuItem<int>(
-                                  value: minutes,
-                                  child: Text(minutes == 30
-                                      ? '30 minutos'
-                                      : minutes == 60
-                                          ? '1 hora'
-                                          : minutes == 90
-                                              ? '1 hora y 30 minutos'
-                                              : '2 horas'),
-                                ))
-                            .toList(),
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() => _slotDurationMinutes = value);
-                          }
-                        },
                       ),
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 16),
+
+                      // Tarjeta 2: Duración de cada cita
+                      SettingsCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SettingsSectionHeader(
+                              icon: Icons.timelapse_rounded,
+                              iconColor: Color(0xFF059669),
+                              iconBg: Color(0xFFD1FAE5),
+                              title: 'Duración de cada cita',
+                              subtitle:
+                                  'Este bloque se aplicará a los turnos de los días seleccionados.',
+                            ),
+                            const SizedBox(height: 18),
+                            DropdownButtonFormField<int>(
+                              initialValue: _slotDurationMinutes,
+                              decoration: settingsInputDecoration(
+                                label: 'Bloque por turno',
+                                icon: Icons.timer_outlined,
+                              ),
+                              items: const [30, 60, 90, 120]
+                                  .map((minutes) => DropdownMenuItem<int>(
+                                        value: minutes,
+                                        child: Text(minutes == 30
+                                            ? '30 minutos'
+                                            : minutes == 60
+                                                ? '1 hora'
+                                                : minutes == 90
+                                                    ? '1 hora y 30 minutos'
+                                                    : '2 horas'),
+                                      ))
+                                  .toList(),
+                              onChanged: (value) {
+                                if (value != null) {
+                                  setState(() => _slotDurationMinutes = value);
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+
+                      // Selección de Días Laborables (intacta tal como le gusta al usuario)
                       _buildSectionTitle('Días Laborables'),
                       const SizedBox(height: 16),
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.5),
+                          color: Colors.white.withValues(alpha: 0.75),
                           borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
                         ),
                         child: Column(
                           children: [
@@ -389,43 +443,43 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 32),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: _isLoading ? null : _saveAvailability,
-                          icon: _isLoading
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                      color: Colors.white, strokeWidth: 2))
-                              : Icon(_isSuccess ? Icons.check : Icons.save,
-                                  color: Colors.white),
-                          label: Text(
-                              _isSuccess
-                                  ? '¡Guardado!'
-                                  : 'Guardar Disponibilidad',
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _isSuccess
-                                ? Colors.green
-                                : const Color(0xFF0056B3),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                          ),
-                        ),
-                      ),
+                      const SizedBox(height: 24),
+                      _isSuccess
+                          ? SizedBox(
+                              height: 54,
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: _isLoading ? null : _saveAvailability,
+                                icon: const Icon(Icons.check,
+                                    color: Colors.white),
+                                label: const Text(
+                                  '¡Guardado!',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF059669),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(18),
+                                  ),
+                                ),
+                              ),
+                            )
+                          : SettingsGradientButton(
+                              label: 'Guardar Disponibilidad',
+                              icon: Icons.save_rounded,
+                              loading: _isLoading,
+                              onPressed: _isLoading ? null : _saveAvailability,
+                            ),
                       const SizedBox(height: 80),
                     ],
                   ),
                 ),
-        ),
-      ),
+              ),
+            ),
     );
   }
 
@@ -437,37 +491,62 @@ class _MiDisponibilidadTabState extends State<MiDisponibilidadTab> {
     );
   }
 
-  Widget _timePickerTile(String label, String value, VoidCallback onTap) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-                color: const Color(0xFF0056B3).withValues(alpha: 0.35)),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(label,
+  Widget _timePickerTile(
+      String label, String value, IconData icon, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0F9FF),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFBAE6FD)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: const Color(0xFF0056B3), size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
                     style: const TextStyle(
-                        color: Color(0xFF475569), fontSize: 12)),
-                const SizedBox(height: 4),
-                Text(value,
+                      color: Color(0xFF64748B),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    value,
                     style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: Color(0xFF0B2545))),
-              ]),
-              const Icon(Icons.access_time, color: Color(0xFF0056B3)),
-            ],
-          ),
+                      fontWeight: FontWeight.w800,
+                      fontSize: 18,
+                      color: Color(0xFF0B2545),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0056B3),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Text(
+                'Cambiar',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
