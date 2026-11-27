@@ -178,6 +178,22 @@ class MedicationReminderService {
   static Future<void> requestFullScreen() =>
       _channel.invokeMethod<void>('requestFullScreen');
 
+  static Future<bool> canDrawOverlays() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return true;
+    try {
+      return await _channel.invokeMethod<bool>('canDrawOverlays') ?? true;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  static Future<void> requestDrawOverlays() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+    try {
+      await _channel.invokeMethod<void>('requestDrawOverlays');
+    } catch (_) {}
+  }
+
   static Future<void> _readFullScreenPermission(
       List<MedicationReminder> items) async {
     fullScreenAllowed.value = defaultTargetPlatform == TargetPlatform.android &&

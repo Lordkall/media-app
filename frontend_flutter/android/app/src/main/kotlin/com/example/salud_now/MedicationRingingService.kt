@@ -1,5 +1,6 @@
 package com.saludnow.app
 
+import android.app.KeyguardManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -17,6 +18,7 @@ import android.os.Looper
 import android.os.PowerManager
 import android.os.VibrationEffect
 import android.os.Vibrator
+import android.provider.Settings
 
 class MedicationRingingService : Service() {
     private val handler = Handler(Looper.getMainLooper())
@@ -54,6 +56,7 @@ class MedicationRingingService : Service() {
                 MedicationAlarmReceiver.showNotification(this, reminder)
                 continue
             }
+            launchAlarmScreenIfActiveOrPermitted(id)
             startSoundAndVibration()
             val duration = if (id == MedicationAlarmReceiver.TEST_ID) 30_000L else RING_DURATION
             handler.postDelayed(timeout, duration)
@@ -61,6 +64,29 @@ class MedicationRingingService : Service() {
         }
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
+    }
+
+    private fun launchAlarmScreenIfActiveOrPermitted(id: Int) {
+        val keyguard = getSystemService(KeyguardManager::class.java)
+        val power = getSystemService(PowerManager::class.java)
+        val isScreenLockedOrOff = keyguard.isKeyguardLocked || !power.isInteractive
+        // Full-screen intent handles locked/off screens; when unlocked/in-use (inside app or with overlay permission),
+        // explicitly bring MedicationAlarmActivity to screen so it doesn't stay just as a banner notification.
+        if (!isScreenLockedOrOff || Settings.canDrawOverlays(this)) {
+            val activityIntent = Intent(this, MedicationAlarmActivity::class.java)
+                .putExtra("id", id)
+                .addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                        Intent.FLAG_ACTIVITY_REORDER_TO_FRONT,
+                )
+            try {
+                startActivity(activityIntent)
+            } catch (_: Exception) {
+                // Background Activity Launch restriction when overlay is disabled while in another app.
+            }
+        }
     }
 
     private fun notification(id: Int, name: String): Notification {

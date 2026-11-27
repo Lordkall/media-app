@@ -45,6 +45,26 @@ class MainActivity : FlutterFragmentActivity() {
                             }
                             result.success(null)
                         }
+                        "canDrawOverlays" -> result.success(Settings.canDrawOverlays(this))
+                        "requestDrawOverlays" -> {
+                            if (!Settings.canDrawOverlays(this)) {
+                                val overlayIntent = Intent(
+                                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                    Uri.parse("package:$packageName"),
+                                )
+                                try {
+                                    startActivity(overlayIntent)
+                                } catch (_: Exception) {
+                                    startActivity(
+                                        Intent(
+                                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                            Uri.parse("package:$packageName"),
+                                        ),
+                                    )
+                                }
+                            }
+                            result.success(null)
+                        }
                         else -> result.notImplemented()
                     }
                 } catch (_: Exception) {

@@ -20,15 +20,39 @@ class MedicationRemindersCard extends StatefulWidget {
       _MedicationRemindersCardState();
 }
 
-class _MedicationRemindersCardState extends State<MedicationRemindersCard> {
+class _MedicationRemindersCardState extends State<MedicationRemindersCard>
+    with WidgetsBindingObserver {
   static const _lockScreenTestedKey = 'medication_lockscreen_tested_v1';
   bool _busy = false;
   bool _lockScreenTested = false;
+  bool _overlayAllowed = true;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadLockScreenTested();
+    _refreshOverlayPermission();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshOverlayPermission();
+    }
+  }
+
+  Future<void> _refreshOverlayPermission() async {
+    final allowed = await MedicationReminderService.canDrawOverlays();
+    if (mounted && allowed != _overlayAllowed) {
+      setState(() => _overlayAllowed = allowed);
+    }
   }
 
   Future<void> _loadLockScreenTested() async {
@@ -592,6 +616,48 @@ class _MedicationRemindersCardState extends State<MedicationRemindersCard> {
                           ],
                         ),
                       ),
+              ),
+            if (android &&
+                items.any((item) => item.enabled && item.alarmMode) &&
+                !_overlayAllowed)
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFFBEB),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFFDE68A)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.layers_outlined,
+                        color: Color(0xFFD97706), size: 18),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'Permite mostrar sobre otras apps para que la alarma aparezca en pantalla mientras usas el teléfono.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF92400E),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        await MedicationReminderService.requestDrawOverlays();
+                        await _refreshOverlayPermission();
+                      },
+                      child: const Text(
+                        'Permitir',
+                        style: TextStyle(
+                            color: Color(0xFFD97706),
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             if (android && items.any((item) => item.enabled && item.alarmMode))
               Padding(
