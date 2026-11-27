@@ -1223,6 +1223,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                             Wrap(
                               crossAxisAlignment: WrapCrossAlignment.center,
                               spacing: 8,
+                              runSpacing: 2,
                               children: [
                                 Text(
                                   appointmentPriceLabel(totalCents),
@@ -1242,6 +1243,15 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
                                       decoration: TextDecoration.lineThrough,
+                                    ),
+                                  ),
+                                if (totalCents > 0)
+                                  const Text(
+                                    'BCV a la tasa del día.',
+                                    style: TextStyle(
+                                      color: Color(0xFF64748B),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                               ],

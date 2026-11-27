@@ -188,6 +188,15 @@ class AppointmentPricePreviewState extends State<AppointmentPricePreview> {
                         ),
                       ),
                     ],
+                    if (!isFree)
+                      const Text(
+                        'BCV a la tasa del día.',
+                        style: TextStyle(
+                          color: Color(0xFF64748B),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                   ],
                 ),
               ),
