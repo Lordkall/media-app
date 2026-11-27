@@ -1225,14 +1225,20 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                               spacing: 8,
                               runSpacing: 2,
                               children: [
-                                Text(
-                                  appointmentPriceLabel(totalCents),
-                                  style: TextStyle(
-                                    color: highlightPrice
-                                        ? const Color(0xFF059669)
-                                        : const Color(0xFF0B2545),
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w900,
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    appointmentPriceLabel(totalCents),
+                                    maxLines: 1,
+                                    softWrap: false,
+                                    style: TextStyle(
+                                      color: highlightPrice
+                                          ? const Color(0xFF059669)
+                                          : const Color(0xFF0B2545),
+                                      fontSize: 21,
+                                      fontWeight: FontWeight.w900,
+                                    ),
                                   ),
                                 ),
                                 if (hasDiscount || (isFree && baseCents > 0))
@@ -1243,15 +1249,6 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
                                       decoration: TextDecoration.lineThrough,
-                                    ),
-                                  ),
-                                if (totalCents > 0)
-                                  const Text(
-                                    'BCV a la tasa del día de la Cita.',
-                                    style: TextStyle(
-                                      color: Color(0xFF64748B),
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                               ],

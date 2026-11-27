@@ -340,21 +340,30 @@ class _MedicationRemindersCardState extends State<MedicationRemindersCard>
                       Row(
                         children: [
                           Expanded(
-                            child: OutlinedButton(
-                              onPressed: () => Navigator.pop(dialogCtx, false),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: const Color(0xFF64748B),
-                                side:
-                                    const BorderSide(color: Color(0xFFCBD5E1)),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14)),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 13),
-                              ),
-                              child: Text(
-                                firstTimeGuide ? 'Hacer después' : 'Cancelar',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w700),
+                            child: SizedBox(
+                              height: 46,
+                              child: OutlinedButton(
+                                onPressed: () => Navigator.pop(dialogCtx, false),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFF64748B),
+                                  side: const BorderSide(
+                                      color: Color(0xFFCBD5E1)),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14)),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10),
+                                ),
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    firstTimeGuide ? 'Más tarde' : 'Cancelar',
+                                    maxLines: 1,
+                                    softWrap: false,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w700),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -1680,34 +1689,6 @@ class _DigitalAmPmTimePickerDialogState
                             ],
                           ),
                         ],
-                      ),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        alignment: WrapAlignment.center,
-                        children: [0, 15, 30, 45].map((m) {
-                          final selected = _minute == m;
-                          return ChoiceChip(
-                            label: Text(':${m.toString().padLeft(2, '0')}'),
-                            selected: selected,
-                            selectedColor: const Color(0xFF059669),
-                            backgroundColor: const Color(0xFFF1F5F9),
-                            labelStyle: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: selected
-                                  ? Colors.white
-                                  : const Color(0xFF334155),
-                            ),
-                            onSelected: (_) {
-                              setState(() {
-                                _minute = m;
-                                _syncControllers();
-                              });
-                            },
-                          );
-                        }).toList(),
                       ),
                       const SizedBox(height: 18),
                       Row(
