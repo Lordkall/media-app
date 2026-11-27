@@ -1247,7 +1247,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                                   ),
                                 if (totalCents > 0)
                                   const Text(
-                                    'BCV a la tasa del día.',
+                                    'BCV a la tasa del día de la Cita.',
                                     style: TextStyle(
                                       color: Color(0xFF64748B),
                                       fontSize: 11,

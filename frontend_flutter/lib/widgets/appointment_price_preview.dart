@@ -190,7 +190,7 @@ class AppointmentPricePreviewState extends State<AppointmentPricePreview> {
                     ],
                     if (!isFree)
                       const Text(
-                        'BCV a la tasa del día.',
+                        'BCV a la tasa del día de la Cita.',
                         style: TextStyle(
                           color: Color(0xFF64748B),
                           fontSize: 11,
