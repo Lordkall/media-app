@@ -192,8 +192,8 @@ class PasswordChange(BaseModel):
     @classmethod
     def validate_new_password(cls, password: str) -> str:
         import re
-        if len(password) < 6 or not re.search(r"[A-Z]", password) or not re.search(r"[a-zA-Z]", password) or not re.search(r"[0-9]", password):
-            raise ValueError("La contraseña debe tener letras, números, una mayúscula y al menos 6 caracteres")
+        if len(password) < 8 or not re.search(r"[A-Z]", password) or not re.search(r"[a-zA-Z]", password) or not re.search(r"[0-9]", password):
+            raise ValueError("La contraseña debe tener letras, números, una mayúscula y al menos 8 caracteres")
         return password
 
 class UserResponse(BaseModel):

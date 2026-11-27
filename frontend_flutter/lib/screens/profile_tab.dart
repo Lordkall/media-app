@@ -1642,6 +1642,7 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
         controller: c,
         enabled: !busy,
         obscureText: obs,
+        onChanged: (_) => setState(() {}),
         style: const TextStyle(
           fontSize: 15,
           fontWeight: FontWeight.w600,
@@ -1677,7 +1678,7 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
   Future<void> _changePassword() async {
     final password = next.text;
     if (password != repeat.text ||
-        password.length < 6 ||
+        password.length < 8 ||
         !RegExp(r'[A-Z]').hasMatch(password) ||
         !RegExp(r'[0-9]').hasMatch(password)) {
       _showError('La nueva contraseña no cumple los requisitos o no coincide.');
@@ -1720,21 +1721,30 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
 
   Widget _reqRow(bool met, String label) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         children: [
-          Icon(
-            met ? Icons.check_circle_rounded : Icons.radio_button_unchecked,
-            size: 16,
-            color: met ? const Color(0xFF059669) : const Color(0xFF94A3B8),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            width: 18,
+            height: 18,
+            decoration: BoxDecoration(
+              color: met ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              met ? Icons.check_rounded : Icons.close_rounded,
+              size: 12,
+              color: Colors.white,
+            ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 9),
           Text(
             label,
             style: TextStyle(
               fontSize: 12,
-              fontWeight: met ? FontWeight.w700 : FontWeight.w500,
-              color: met ? const Color(0xFF065F46) : const Color(0xFF64748B),
+              fontWeight: met ? FontWeight.w700 : FontWeight.w600,
+              color: met ? const Color(0xFF065F46) : const Color(0xFFDC2626),
             ),
           ),
         ],
@@ -1745,7 +1755,7 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
   @override
   Widget build(BuildContext context) {
     final pwd = next.text;
-    final hasLen = pwd.length >= 6;
+    final hasLen = pwd.length >= 8;
     final hasUpper = RegExp(r'[A-Z]').hasMatch(pwd);
     final hasNum = RegExp(r'[0-9]').hasMatch(pwd);
     final matches = pwd.isNotEmpty && pwd == repeat.text;
@@ -1794,8 +1804,8 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
                       color: Color(0xFF0B2545),
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  _reqRow(hasLen, 'Mínimo 6 caracteres'),
+                  const SizedBox(height: 8),
+                  _reqRow(hasLen, 'Mínimo 8 caracteres'),
                   _reqRow(hasUpper, 'Al menos una letra mayúscula'),
                   _reqRow(hasNum, 'Al menos un número'),
                   _reqRow(matches, 'Las contraseñas coinciden'),
